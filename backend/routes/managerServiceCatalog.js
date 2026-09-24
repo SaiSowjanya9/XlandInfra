@@ -6,6 +6,7 @@ const { requireManagerScope } = require('../middleware/managerScope');
 const { getAssignedZones, getEmployeeIdForZoneLookup, getCreatorIdentifier, buildPropertyZoneOrCreatorFilter, buildOnboardedPropertyZoneOrCreatorFilter } = require('../middleware/zoneHelper');
 const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { parseService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
+const { isManualService, normalizeManualService } = require('../utils/estimateData');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const handleError = (res, error) => res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to process the manager service catalog request.' });
@@ -125,7 +126,9 @@ router.delete('/:id', (req, res) => res.status(403).json({ success: false, messa
 
 router.validatePackageEstimate = async (req, res, next) => {
   const addons = req.body.addons;
-  if (!Array.isArray(addons) || !addons.some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'))) return next();
+  // Hand-entered services engage this too: their prices are the creator's, but the estimate's
+  // totals still have to add up on the server before they are stored.
+  if (!Array.isArray(addons) || !addons.some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-') || isManualService(addon))) return next();
   try {
     if (req.user?.role !== 'manager' || !req.managerId) fail('Manager access required.', 403);
     req.catalogFpId = Number(req.franchisePartnerId) || 0;
@@ -142,13 +145,22 @@ router.validatePackageEstimate = async (req, res, next) => {
       req.body.property_code = property.property_id;
       req.body.property_type = property.entry_type;
     }
-    const [[pkg]] = await pool.execute('SELECT id, price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, scope.fpId]);
-    if (!pkg) fail('Package is outside your FP scope.', 403);
-    let subtotal = Number(pkg.price);
+    // A custom estimate has no package, so the package is only checked when one was chosen
+    let subtotal = 0;
+    if (req.body.package_id != null && req.body.package_id !== '') {
+      const [[pkg]] = await pool.execute('SELECT id, price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, scope.fpId]);
+      if (!pkg) fail('Package is outside your FP scope.', 403);
+      req.body.package_price = Number(pkg.price);
+      subtotal += Number(pkg.price);
+    }
     const saved = [];
     const seen = new Set();
     for (const addon of addons) {
-      if (addon.catalogServiceId || String(addon.addonId || '').startsWith('CAT-')) {
+      if (isManualService(addon)) {
+        const manual = normalizeManualService(addon);
+        saved.push(manual);
+        subtotal += manual.totalPrice;
+      } else if (addon.catalogServiceId || String(addon.addonId || '').startsWith('CAT-')) {
         const id = Number(addon.catalogServiceId);
         if (!Number.isSafeInteger(id) || id <= 0 || seen.has(id)) fail('Invalid or duplicate configured service.');
         seen.add(id);
@@ -177,7 +189,8 @@ router.validatePackageEstimate = async (req, res, next) => {
     if (![subtotal, discount, gst, total].every(Number.isFinite) || total > 999999999.99 || discount < 0 || discount > 100 || gst < 0 || gst > 100 ||
       !Number.isFinite(Number(req.body.subtotal)) || !Number.isFinite(Number(req.body.total_amount)) ||
       Math.abs(Number(req.body.subtotal) - subtotal) > 0.01 || Math.abs(Number(req.body.total_amount) - total) > 0.01) fail('Estimate totals do not match the configured pricing.');
-    Object.assign(req.body, { addons: saved, package_price: Number(pkg.price), subtotal, discount_percent: discount, discount_amount: discountAmount, gst_percent: gst, gst_amount: gstAmount, total_amount: total });
+    // package_price is set above when a package was chosen; a custom estimate keeps none
+    Object.assign(req.body, { addons: saved, subtotal, discount_percent: discount, discount_amount: discountAmount, gst_percent: gst, gst_amount: gstAmount, total_amount: total });
     next();
   } catch (error) { handleError(res, error); }
 };

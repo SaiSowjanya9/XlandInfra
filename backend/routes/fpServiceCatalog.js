@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
 const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
-const { normalizeEstimateService } = require('../utils/estimateData');
+const { normalizeEstimateService, isManualService, normalizeManualService } = require('../utils/estimateData');
 const { categoryOptions } = require('../utils/serviceCategories');
 const { parseService } = require('./serviceCatalog');
 const router = express.Router();
@@ -95,7 +95,9 @@ router.delete('/:id', async (req, res) => {
 // client-supplied price, and rebuilds the stored snapshot from the current catalog definition.
 router.validatePackageEstimate = async (req, res, next) => {
   const addons = req.body.addons;
-  if (!Array.isArray(addons) || !addons.some(isCatalogAddon)) return next();
+  // Hand-entered services engage this too: their prices are the creator's, but the estimate's
+  // totals still have to add up on the server before they are stored.
+  if (!Array.isArray(addons) || !addons.some(addon => isCatalogAddon(addon) || isManualService(addon))) return next();
   try {
     const fpId = catalogScope(req);
     if (addons.length > 100 || addons.some(addon => !addon || typeof addon !== 'object')) fail('Add at most 100 valid services.');
@@ -109,6 +111,12 @@ router.validatePackageEstimate = async (req, res, next) => {
     const saved = [];
     const seen = new Set();
     for (const addon of addons) {
+      if (isManualService(addon)) {
+        const manual = normalizeManualService(addon);
+        saved.push(manual);
+        subtotal += manual.totalPrice;
+        continue;
+      }
       if (!isCatalogAddon(addon)) {
         const [[legacy]] = await pool.execute('SELECT * FROM fp_addons WHERE id = ? AND franchise_partner_id = ?', [addon.id, fpId]);
         if (!legacy) fail('An additional service is outside your FP scope.', 403);

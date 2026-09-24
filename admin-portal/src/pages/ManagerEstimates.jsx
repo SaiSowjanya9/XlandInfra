@@ -23,6 +23,8 @@ import { getServiceDescription, getServiceMarkup, hasCatalogServices } from '../
 import { EstimateInput, PropertyIdInput } from '../components/estimates/EstimateFields';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
+import EstimateStructure from '../components/estimates/EstimateStructure';
+import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import * as XLSX from 'xlsx';
 
@@ -698,6 +700,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [selectedCatalogAddons, setSelectedCatalogAddons] = useState([]);
+  // How the estimate is put together: a pre-built AMC package, or services entered by hand
+  const [estimateStructure, setEstimateStructure] = useState('package');
+  const [customServices, setCustomServices] = useState([]);
   const [discountPercent, setDiscountPercent] = useState('');
   const [gstPercent, setGstPercent] = useState('');
   
@@ -723,9 +728,17 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   useEffect(() => { setSelectedCatalogAddons([]); }, [selectedProperty?.id, selectedProperty?.source_table, directForm.propertyType, estimateType]);
 
+  // Switching structure drops what belongs to the other choice, so neither a package price nor a
+  // hand-entered row can sit hidden in the total.
+  const changeEstimateStructure = (value) => {
+    setEstimateStructure(value);
+    if (value === 'custom') setSelectedAmcPackage('');
+    else setCustomServices([]);
+  };
+
   // Calculate price summary
   const calculatePriceSummary = () => {
-    let subTotal = selectedCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0);
+    let subTotal = selectedCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0) + customServicesTotal(customServices);
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += getPackagePrice(pkg);
     selectedAddons.forEach(addonId => {
@@ -749,8 +762,12 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       if (!directForm.customerName) { showToast('Enter Customer Name', 'error'); return; }
       if (!directForm.phone || directForm.phone.length !== 10) { showToast('Enter valid 10-digit phone number', 'error'); return; }
     }
-    if (!selectedAmcPackage) { showToast('Select AMC Package', 'error'); return; }
-    
+    // A package estimate needs its package; a custom one needs at least one service instead
+    if (estimateStructure === 'package' && !selectedAmcPackage) { showToast('Select AMC Package', 'error'); return; }
+    if (estimateStructure === 'custom' && !customServices.length && !selectedCatalogAddons.length && !selectedAddons.length) {
+      showToast('Add at least one service', 'error'); return;
+    }
+
     try {
       const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
       const pkgPrice = pkg ? getPackagePrice(pkg) : 0;
@@ -780,7 +797,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         flat_number: directForm.flatNumber || null,
         villa_number: directForm.villaNumber || null,
         plot_number: directForm.plotNumber || null,
-        package_id: selectedAmcPackage,
+        package_id: selectedAmcPackage || null,
         package_name: pkgName,
         package_price: pkgPrice,
         billing_duration: getPackageBillingDuration(pkg) || 'yearly',
@@ -814,7 +831,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         tower_name: selectedProperty?.tower_name || '',
         block_number: selectedProperty?.block_number || '',
         villa_plot_number: selectedProperty?.villa_plot_number || '',
-        package_id: selectedAmcPackage,
+        package_id: selectedAmcPackage || null,
         package_name: pkgName,
         package_price: pkgPrice,
         billing_duration: getPackageBillingDuration(pkg) || 'yearly',
@@ -829,7 +846,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         termsConditions
       };
 
-      payload.addons = [...payload.addons, ...selectedCatalogAddons];
+      // Hand-entered services travel with the add-ons; they carry their own customer price
+      payload.addons = [...payload.addons, ...selectedCatalogAddons, ...customServices];
       if (selectedCatalogAddons.length && estimateType === 'property-based') {
         if (!selectedProperty) { showToast('Select a valid property before adding configured services.', 'error'); return; }
         payload.catalog_property_id = selectedProperty.id;
@@ -861,6 +879,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     setSelectedProperty(null);
     setSelectedAmcPackage('');
     setSelectedAddons([]);
+    setSelectedCatalogAddons([]);
+    setCustomServices([]);
+    setEstimateStructure('package');
     setDiscountPercent('');
     setGstPercent('');
     setDirectForm({
@@ -913,15 +934,15 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   // AMC Package and Price Summary shared component
   const renderAmcAndPriceSummary = (showSaveButton = false) => (
     <>
-      {/* AMC Package Section */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-6 space-y-4">
-          <div>
+      {/* Estimate Structure: package or hand-entered services */}
+      <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure}>
+        {estimateStructure === 'package' && (
+          <div className="min-w-0 w-full">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
             <select
               value={selectedAmcPackage}
               onChange={(e) => setSelectedAmcPackage(e.target.value)}
-              className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
               <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
               {(() => {
@@ -935,6 +956,13 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </select>
           </div>
+        )}
+      </EstimateStructure>
+
+      {/* AMC Package Section */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="p-6 space-y-4">
+          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} />}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;
