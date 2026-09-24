@@ -712,7 +712,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           <h2 className="font-semibold text-gray-900">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
         </div>
         <div className="p-6 space-y-4">
-          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} />}
+          {/* The card header above already reads "Custom Services" */}
+          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} />}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;
