@@ -26,6 +26,7 @@ import AddServicePage from '../components/estimates/AddServicePage';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
+import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
@@ -222,6 +223,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // A package can apply to several property types, so the same one is configured once
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
   const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
+  // Open while the configured services are being browsed; Add Row still adds a blank row to type into
+  const [showPackageServicePicker, setShowPackageServicePicker] = useState(false);
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // FP Manager defaults to 'all-addons' (no create access)
@@ -3029,6 +3032,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
   const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
+  // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
+  // starter row is replaced rather than left above them.
+  const handleAddCatalogServices = (rows) => {
+    if (!rows.length) return;
+    setAmcForm(prev => ({ ...prev, serviceRows: [...prev.serviceRows.filter(row => String(row.service || '').trim() !== ''), ...rows] }));
+  };
   const handleUpdateServiceRow = (i, f, v) => { 
     const rows = [...amcForm.serviceRows]; 
     if (f === 'frequencyType') { 
@@ -3335,16 +3344,33 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Package Configuration Card - Only show after property type selected */}
           {selectedPropertyTypes.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              {/* Header with Add Button */}
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              {/* Header with Add Buttons */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
-                <button
-                  onClick={handleAddServiceRow}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  Add Row
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Add Row is for a service typed by hand; Add Service picks a configured one */}
+                  <button
+                    onClick={handleAddServiceRow}
+                    className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Add Row
+                  </button>
+                  <button
+                    onClick={() => setShowPackageServicePicker(true)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add Service
+                  </button>
+                </div>
               </div>
+              <PackageServicePicker
+                open={showPackageServicePicker}
+                onClose={() => setShowPackageServicePicker(false)}
+                onAdd={handleAddCatalogServices}
+                propertyTypes={selectedPropertyTypes}
+                apiPath={FP_CATALOG_API}
+                existing={amcForm.serviceRows.map(row => row.service)}
+              />
               
               <div className="p-6">
                 {/* Package Name */}

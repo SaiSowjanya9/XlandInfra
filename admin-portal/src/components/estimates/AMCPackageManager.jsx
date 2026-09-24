@@ -39,6 +39,7 @@ import {
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
 import { getPackagePropertyTypes, packageMatchesPropertyType } from '../../utils/estimatePackageUtils';
+import PackageServicePicker from './PackageServicePicker';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
 
@@ -88,6 +89,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
   // A package can apply to several property types, so the same one is configured once
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
+  // Open while the configured services are being browsed; Add Row still adds a blank row to type into
+  const [showServicePicker, setShowServicePicker] = useState(false);
 
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
@@ -143,6 +146,16 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     setAmcForm({
       ...amcForm,
       serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }]
+    });
+  };
+
+  // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
+  // starter row is replaced rather than left above them.
+  const handleAddCatalogServices = (rows) => {
+    if (!rows.length) return;
+    setAmcForm(prev => {
+      const existing = prev.serviceRows.filter(row => String(row.service || '').trim() !== '');
+      return { ...prev, serviceRows: [...existing, ...rows] };
     });
   };
 
@@ -670,14 +683,23 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           {selectedPropertyTypes.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             {/* Header with Add Button */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
-              <button
-                onClick={handleAddServiceRow}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                Add Row
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Add Row is for a service typed by hand; Add Service picks a configured one */}
+                <button
+                  onClick={handleAddServiceRow}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Add Row
+                </button>
+                <button
+                  onClick={() => setShowServicePicker(true)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add Service
+                </button>
+              </div>
             </div>
             
             <div className="p-6">
@@ -989,14 +1011,23 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
               {/* Service Rows */}
               <div className="border-t border-gray-100 pt-5">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between gap-3 mb-3">
                   <h4 className="text-sm font-semibold text-gray-700">Service Configuration</h4>
-                  <button
-                    onClick={handleAddServiceRow}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                  >
-                    Add Row
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Add Row is for a service typed by hand; Add Service picks a configured one */}
+                    <button
+                      onClick={handleAddServiceRow}
+                      className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      Add Row
+                    </button>
+                    <button
+                      onClick={() => setShowServicePicker(true)}
+                      className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Add Service
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Table Header */}
@@ -1214,6 +1245,16 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           </div>
         </div>
       )}
+
+      {/* Shared by the create form and the edit modal: both fill the same service rows */}
+      <PackageServicePicker
+        open={showServicePicker}
+        onClose={() => setShowServicePicker(false)}
+        onAdd={handleAddCatalogServices}
+        propertyTypes={selectedPropertyTypes}
+        fpId={selectedFp?.id}
+        existing={amcForm.serviceRows.map(row => row.service)}
+      />
     </div>
   );
 };
