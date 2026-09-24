@@ -22,7 +22,7 @@ const {
   getClientIP,
   hashIP
 } = require('../utils/paymentSecurity');
-const { markPaymentCompleted } = require('../services/schedulingWorkflow');
+const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
 
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
@@ -735,8 +735,8 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
 // Handle payment link paid
 async function handlePaymentLinkPaid(payload, webhookId) {
   const paymentLinkEntity = payload.payload.payment_link.entity;
-  const paymentEntity = payload.payload.payment?.entity;
-  
+  const paymentEntity = payload.payload.payment?.entity || null;
+
   const paymentLinkId = paymentLinkEntity.id;
   const internalInvoiceId = paymentLinkEntity.notes?.internal_invoice_id;
 
@@ -745,180 +745,24 @@ async function handlePaymentLinkPaid(payload, webhookId) {
     return;
   }
 
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
+  // The payment entity carries THIS payment; the link's amount_paid is cumulative and would
+  // double-count the first instalment when a second partial payment arrives.
+  const amountPaid = paymentEntity?.amount != null
+    ? paymentEntity.amount / 100
+    : paymentLinkEntity.amount_paid / 100;
 
-    // Get invoice
-    const [invoices] = await connection.execute(
-      'SELECT * FROM invoices WHERE id = ?',
-      [internalInvoiceId]
-    );
+  await recordRazorpayPayment({
+    invoiceId: internalInvoiceId,
+    amountPaid,
+    paymentEntity,
+    paymentLinkId,
+    source: 'webhook payment_link.paid'
+  });
 
-    if (invoices.length === 0) {
-      throw new Error(`Invoice ${internalInvoiceId} not found`);
-    }
-
-    const invoice = invoices[0];
-    const amountPaid = paymentLinkEntity.amount_paid / 100; // Convert from paise
-
-    // Generate payment ID string for human-readable reference
-    const paymentIdString = `PAY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-    // Insert payment record and get the auto-generated ID
-    const [paymentResult] = await connection.execute(`
-      INSERT INTO payments (
-        payment_id, invoice_id, property_id, estimate_id, customer_id, franchise_partner_id,
-        customer_name, amount, payment_method, payment_type,
-        transaction_reference, payment_date, status,
-        razorpay_payment_id, razorpay_order_id,
-        received_by_name, received_by_role, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)
-    `, [
-      paymentIdString,
-      invoice.id,
-      invoice.property_id,
-      invoice.estimate_id,
-      invoice.customer_id,
-      invoice.franchise_partner_id,
-      invoice.customer_name,
-      amountPaid,
-      'razorpay',
-      'online',
-      paymentEntity?.id || paymentLinkId,
-      'completed',
-      paymentEntity?.id || null,
-      paymentEntity?.order_id || null,
-      'Razorpay Online Payment',
-      'system',
-      `Online payment via Razorpay Payment Link`
-    ]);
-    
-    // Get the auto-generated payment ID (integer) for payment_history
-    const paymentDbId = paymentResult.insertId;
-
-    // Update invoice
-    const newAmountPaid = parseFloat(invoice.amount_paid) + amountPaid;
-    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
-    const newPaymentStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
-    const newStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
-
-    await connection.execute(`
-      UPDATE invoices SET
-        amount_paid = ?,
-        balance_amount = ?,
-        payment_status = ?,
-        status = ?,
-        payment_link_status = 'paid'
-      WHERE id = ?
-    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoice.id]);
-
-    // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
-    if (invoice.property_id) {
-      await connection.execute(`
-        UPDATE fp_estimates SET 
-          payment_status = ?, 
-          updated_at = NOW() 
-        WHERE property_id = ? AND status = 'approved'
-      `, [newPaymentStatus, invoice.property_id]);
-      
-      console.log(`[Webhook] Updated fp_estimates payment_status to ${newPaymentStatus} for property_id=${invoice.property_id}`);
-    }
-
-    // If fully paid and linked to work order, close it
-    if (newBalance <= 0 && invoice.work_order_id) {
-      await connection.execute(`
-        UPDATE work_orders SET
-          status = 'closed',
-          admin_notes = CONCAT(IFNULL(admin_notes, ''), '\nPayment verified (online) and closed on ', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')),
-          updated_at = NOW()
-        WHERE id = ? AND status = 'completed'
-      `, [invoice.work_order_id]);
-    }
-
-    // Trigger scheduling workflow when invoice is fully paid
-    // Property ID is required, estimate ID is optional (can be found by property_id)
-    if (newBalance <= 0 && invoice.property_id) {
-      try {
-        await markPaymentCompleted({
-          propertyId: invoice.property_id,
-          estimateId: invoice.estimate_id || null,
-          invoiceId: invoice.id,
-          paidAmount: newAmountPaid,
-          paidBy: 'Razorpay Online Payment'
-        });
-        console.log(`[Webhook] Scheduling workflow triggered for property ${invoice.property_id}`);
-      } catch (scheduleErr) {
-        console.error('[Webhook] Error triggering scheduling workflow:', scheduleErr);
-        // Don't fail payment if scheduling fails
-      }
-    }
-
-    // Extract Razorpay payment details for receipt
-    const paymentMethod = paymentEntity?.method || 'card'; // card, netbanking, upi, wallet
-    const cardLast4 = paymentEntity?.card?.last4 || null;
-    const cardNetwork = paymentEntity?.card?.network || null; // Visa, Mastercard, etc
-    const bankName = paymentEntity?.bank || null;
-    const razorpayReceiptId = paymentEntity?.receipt || paymentLinkEntity.receipt || null;
-    
-    // Build receipt description with payment method details
-    let receiptDescription = `Razorpay Payment Successful - ₹${amountPaid.toLocaleString('en-IN')}`;
-    if (paymentMethod === 'card' && cardLast4) {
-      receiptDescription += ` | ${cardNetwork || 'Card'}****${cardLast4}`;
-    } else if (paymentMethod === 'netbanking' && bankName) {
-      receiptDescription += ` | Net Banking - ${bankName}`;
-    } else if (paymentMethod === 'upi') {
-      receiptDescription += ` | UPI`;
-    }
-    receiptDescription += ` | Txn: ${paymentEntity?.id || paymentLinkId}`;
-
-    // Log in payment history with Razorpay receipt details
-    await connection.execute(`
-      INSERT INTO payment_history (
-        invoice_id, payment_id, action, new_status, amount, description, 
-        performed_by_name, performed_by_role,
-        razorpay_payment_id, razorpay_receipt_id, payment_method_details
-      )
-      VALUES (?, ?, 'paid', 'completed', ?, ?, 'Razorpay', 'system', ?, ?, ?)
-    `, [
-      invoice.id, 
-      paymentDbId,
-      amountPaid, 
-      receiptDescription,
-      paymentEntity?.id || null,
-      razorpayReceiptId,
-      JSON.stringify({
-        method: paymentMethod,
-        card_last4: cardLast4,
-        card_network: cardNetwork,
-        bank: bankName,
-        email: paymentEntity?.email || invoice.customer_email,
-        contact: paymentEntity?.contact || invoice.customer_phone,
-        invoice_id: invoice.invoice_id,
-        invoice_amount: parseFloat(invoice.total_amount),
-        amount_paid: amountPaid,
-        balance_remaining: Math.max(0, newBalance),
-        payment_date: new Date().toISOString(),
-        razorpay_payment_link_id: paymentLinkId
-      })
-    ]);
-
-    // Update webhook record
-    await connection.execute(
-      'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_link_id = ?, razorpay_payment_id = ? WHERE id = ?',
-      [invoice.id, paymentLinkId, paymentEntity?.id, webhookId]
-    );
-
-    await connection.commit();
-    console.log(`[Webhook] Payment recorded for invoice ${invoice.invoice_id}: ₹${amountPaid}`);
-
-  } catch (error) {
-    await connection.rollback();
-    console.error('[Webhook] Error processing payment:', error);
-    throw error;
-  } finally {
-    connection.release();
-  }
+  await pool.execute(
+    'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_link_id = ?, razorpay_payment_id = ? WHERE id = ?',
+    [internalInvoiceId, paymentLinkId, paymentEntity?.id || null, webhookId]
+  );
 }
 
 // Handle partial payment
@@ -946,11 +790,15 @@ async function handlePaymentLinkExpired(payload, webhookId) {
   console.log(`[Webhook] Payment link expired for invoice ${internalInvoiceId}`);
 }
 
-// Handle direct payment captured (for orders, not payment links)
+// Handle direct payment captured
+// Razorpay copies a payment link's notes onto the payment, so this event carries everything
+// needed to record the payment on its own. It used to only log, which left a deployment with
+// payment.captured enabled but payment_link.paid disabled silently losing every payment.
+// Recording here is safe: recordRazorpayPayment is keyed on razorpay_payment_id, so whichever
+// of the two events arrives first wins and the other is a no-op.
 async function handlePaymentCaptured(payload, webhookId) {
   const paymentEntity = payload.payload.payment.entity;
-  
-  // Check if this is related to our payment link
+
   const notes = paymentEntity.notes || {};
   const internalInvoiceId = notes.internal_invoice_id;
 
@@ -959,8 +807,18 @@ async function handlePaymentCaptured(payload, webhookId) {
     return;
   }
 
-  // The payment link webhook should handle this
-  console.log(`[Webhook] Payment captured for invoice ${internalInvoiceId}`);
+  await recordRazorpayPayment({
+    invoiceId: internalInvoiceId,
+    amountPaid: paymentEntity.amount / 100,
+    paymentEntity,
+    paymentLinkId: notes.payment_link_id || null,
+    source: 'webhook payment.captured'
+  });
+
+  await pool.execute(
+    'UPDATE razorpay_webhooks SET invoice_id = ?, razorpay_payment_id = ? WHERE id = ?',
+    [internalInvoiceId, paymentEntity.id, webhookId]
+  );
 }
 
 // Handle payment failed
@@ -1705,25 +1563,32 @@ router.get('/payment-details/:paymentId', async (req, res) => {
       });
     }
 
-    // Find payment in our records
+    // Find payment in our records. This reads the payments table: payment_history has no
+    // payment_method/status/transaction_id of its own, and a property's name lives on
+    // onboarded_properties, not on the invoice.
     const [payments] = await pool.execute(`
-      SELECT 
-        ph.id,
-        ph.invoice_id,
-        ph.amount,
-        ph.payment_method,
-        ph.transaction_id,
-        ph.razorpay_payment_id,
-        ph.status,
-        ph.created_at,
+      SELECT
+        p.id,
+        p.payment_id,
+        p.amount,
+        p.payment_method,
+        p.transaction_reference,
+        p.razorpay_payment_id,
+        p.status,
+        p.created_at,
         i.invoice_id as invoice_number,
-        i.property_name,
         i.customer_name,
         i.customer_email,
-        i.total_amount
-      FROM payment_history ph
-      LEFT JOIN invoices i ON ph.invoice_id = i.id
-      WHERE ph.razorpay_payment_id = ? OR ph.transaction_id = ?
+        i.total_amount,
+        i.balance_amount,
+        prop.community_name as property_name,
+        ph.payment_method_details
+      FROM payments p
+      LEFT JOIN invoices i ON p.invoice_id = i.id
+      LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
+      LEFT JOIN payment_history ph ON ph.payment_id = p.id AND ph.razorpay_payment_id = p.razorpay_payment_id
+      WHERE p.razorpay_payment_id = ? OR p.transaction_reference = ?
+      ORDER BY p.id DESC
       LIMIT 1
     `, [paymentId, paymentId]);
 
@@ -1733,12 +1598,17 @@ router.get('/payment-details/:paymentId', async (req, res) => {
         try {
           const razorpayPayment = await razorpay.payments.fetch(paymentId);
           
-          // Find invoice by payment link reference
-          const [invoices] = await pool.execute(`
-            SELECT * FROM invoices 
-            WHERE razorpay_payment_link_id = ?
-            LIMIT 1
-          `, [razorpayPayment.notes?.payment_link_id || '']);
+          // Find the invoice the same way the callback does, so a payment we have not
+          // recorded yet still shows the customer a meaningful receipt
+          const invoiceId = await resolveInvoiceIdForPayment(razorpayPayment, null);
+          const [invoices] = invoiceId
+            ? await pool.execute(`
+                SELECT i.*, prop.community_name as property_name
+                FROM invoices i
+                LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
+                WHERE i.id = ?
+              `, [invoiceId])
+            : [[]];
 
           const invoice = invoices[0] || {};
 
@@ -1769,19 +1639,26 @@ router.get('/payment-details/:paymentId', async (req, res) => {
     }
 
     const payment = payments[0];
+    let methodDetails = null;
+    try {
+      if (payment.payment_method_details) methodDetails = JSON.parse(payment.payment_method_details);
+    } catch (parseError) { /* receipt still renders without the method breakdown */ }
 
     res.json({
       success: true,
       data: {
-        paymentId: payment.razorpay_payment_id || payment.transaction_id,
+        paymentId: payment.razorpay_payment_id || payment.transaction_reference,
+        receiptNumber: payment.payment_id,
         amount: parseFloat(payment.amount) || 0,
         status: payment.status,
-        method: payment.payment_method,
+        method: methodDetails?.method || payment.payment_method,
+        methodDetails,
         invoiceId: payment.invoice_number,
         propertyName: payment.property_name,
         customerName: payment.customer_name,
         customerEmail: payment.customer_email,
         totalAmount: parseFloat(payment.total_amount) || 0,
+        balanceRemaining: parseFloat(payment.balance_amount) || 0,
         paidAt: payment.created_at
       }
     });
@@ -1796,329 +1673,158 @@ router.get('/payment-details/:paymentId', async (req, res) => {
 });
 
 // ============================================
-// VERIFY PAYMENT CALLBACK SIGNATURE
-// Public endpoint for verifying payment link callback params
+// VERIFY PAYMENT CALLBACK
+// Public endpoint hit by the customer's redirect back from Razorpay.
+//
+// The webhook is the primary record of a paid link. This is the fallback for when it is not
+// configured for the active mode, its secret does not match, or it simply has not arrived
+// yet -- previously that combination lost the payment entirely while still showing the
+// customer a success page.
+//
+// Nothing here trusts the query string: the signature is checked when present, and the
+// amount and status are re-read from Razorpay before anything is written. A forged callback
+// therefore cannot create a payment.
 // ============================================
+
+// The invoice a Razorpay payment belongs to. The payment link's notes are copied onto the
+// payment, so they are the direct answer; the link ID stored on the invoice is the fallback.
+async function resolveInvoiceIdForPayment(paymentEntity, paymentLinkId) {
+  const fromNotes = parseInt(paymentEntity?.notes?.internal_invoice_id, 10);
+  if (Number.isInteger(fromNotes)) {
+    const [rows] = await pool.execute('SELECT id FROM invoices WHERE id = ?', [fromNotes]);
+    if (rows.length > 0) return rows[0].id;
+  }
+
+  const linkId = paymentLinkId || paymentEntity?.notes?.payment_link_id || null;
+  if (linkId) {
+    const [rows] = await pool.execute(
+      'SELECT id FROM invoices WHERE razorpay_payment_link_id = ? ORDER BY id DESC LIMIT 1',
+      [linkId]
+    );
+    if (rows.length > 0) return rows[0].id;
+  }
+
+  return null;
+}
+
+async function recordPaymentFromCallback({ razorpayPaymentId, paymentLinkId }) {
+  if (!razorpayPaymentId) return null;
+
+  const already = await findRecordedPayment(razorpayPaymentId);
+  if (already) return already;
+
+  if (!razorpay) {
+    console.error('[Callback] Razorpay keys are not configured - cannot confirm payment', razorpayPaymentId);
+    return null;
+  }
+
+  const paymentEntity = await razorpay.payments.fetch(razorpayPaymentId);
+  if (paymentEntity.status !== 'captured') {
+    console.log(`[Callback] Payment ${razorpayPaymentId} is "${paymentEntity.status}", not captured - nothing to record`);
+    return null;
+  }
+
+  const invoiceId = await resolveInvoiceIdForPayment(paymentEntity, paymentLinkId);
+  if (!invoiceId) {
+    console.error(`[Callback] No invoice matches payment ${razorpayPaymentId} (link ${paymentLinkId}) - payment NOT recorded`);
+    return null;
+  }
+
+  const result = await recordRazorpayPayment({
+    invoiceId,
+    amountPaid: paymentEntity.amount / 100,
+    paymentEntity,
+    paymentLinkId: paymentLinkId || paymentEntity.notes?.payment_link_id || null,
+    source: 'callback'
+  });
+
+  return result.payment;
+}
+
 router.post('/verify-payment-callback', async (req, res) => {
+  const {
+    razorpay_payment_id,
+    razorpay_payment_link_id,
+    razorpay_payment_link_reference_id,
+    razorpay_payment_link_status,
+    razorpay_signature
+  } = req.body;
+
+  let verified = false;
+
   try {
-    const {
-      razorpay_payment_id,
-      razorpay_payment_link_id,
-      razorpay_payment_link_reference_id,
-      razorpay_payment_link_status,
-      razorpay_signature
-    } = req.body;
+    // For payment links the signature is HMAC-SHA256 of:
+    // payment_link_id|payment_link_reference_id|payment_link_status|razorpay_payment_id
+    if (razorpay_signature && RAZORPAY_KEY_SECRET) {
+      const payload = `${razorpay_payment_link_id}|${razorpay_payment_link_reference_id}|${razorpay_payment_link_status}|${razorpay_payment_id}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(payload)
+        .digest('hex');
 
-    // If no signature provided, still try to process payment if status is paid
-    if (!razorpay_signature) {
-      let paymentDetails = null;
-      
-      // Try to update payment if status is paid (fallback for missing webhook)
-      if (razorpay_payment_link_status === 'paid' && razorpay_payment_link_id && razorpay_payment_id) {
-        console.log('[Callback No-Sig] Processing payment without signature verification');
-        
+      try {
+        verified = crypto.timingSafeEqual(
+          Buffer.from(razorpay_signature),
+          Buffer.from(expectedSignature)
+        );
+      } catch (compareError) {
+        // Lengths don't match - signature is invalid
+        verified = false;
+      }
+
+      if (!verified) {
         try {
-          // Check if payment already exists
-          const [existingPayments] = await pool.execute(
-            'SELECT payment_id, amount, status FROM payments WHERE razorpay_payment_id = ?',
-            [razorpay_payment_id]
-          );
-
-          if (existingPayments.length > 0) {
-            paymentDetails = existingPayments[0];
-          } else {
-            // Find invoice and process payment
-            const [invoices] = await pool.execute(`
-              SELECT id, invoice_id, total_amount, balance_due, customer_name, property_name
-              FROM invoices WHERE razorpay_payment_link_id = ?
-            `, [razorpay_payment_link_id]);
-
-            if (invoices.length > 0) {
-              const invoice = invoices[0];
-              let amountPaid = invoice.balance_due || invoice.total_amount;
-
-              // Try to get actual amount from Razorpay
-              if (razorpay) {
-                try {
-                  const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
-                  amountPaid = rzpPayment.amount / 100;
-                } catch (e) { /* Use default */ }
-              }
-
-              const connection = await pool.getConnection();
-              try {
-                await connection.beginTransaction();
-
-                // Generate payment ID
-                const [lastPayment] = await connection.execute(
-                  'SELECT payment_id FROM payments ORDER BY id DESC LIMIT 1'
-                );
-                let paymentNumber = 1;
-                if (lastPayment.length > 0 && lastPayment[0].payment_id) {
-                  const match = lastPayment[0].payment_id.match(/PAY-(\d+)/);
-                  if (match) paymentNumber = parseInt(match[1]) + 1;
-                }
-                const newPaymentId = `PAY-${String(paymentNumber).padStart(6, '0')}`;
-
-                // Insert payment
-                await connection.execute(`
-                  INSERT INTO payments (
-                    payment_id, invoice_id, amount, payment_method, payment_type,
-                    status, transaction_reference, razorpay_payment_id, notes, created_by
-                  ) VALUES (?, ?, ?, 'razorpay', 'online', 'completed', ?, ?, 'Callback processed (no signature)', 1)
-                `, [newPaymentId, invoice.id, amountPaid, razorpay_payment_id, razorpay_payment_id]);
-
-                // Update invoice
-                const newBalanceDue = Math.max(0, (invoice.balance_due || invoice.total_amount) - amountPaid);
-                const newStatus = newBalanceDue <= 0 ? 'paid' : 'partial';
-
-                await connection.execute(`
-                  UPDATE invoices SET
-                    status = ?, balance_due = ?, paid_amount = COALESCE(paid_amount, 0) + ?,
-                    payment_status = ?, payment_link_status = 'paid', updated_at = NOW()
-                  WHERE id = ?
-                `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
-
-                // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
-                if (invoice.property_id) {
-                  await connection.execute(`
-                    UPDATE fp_estimates SET 
-                      payment_status = ?, 
-                      updated_at = NOW() 
-                    WHERE property_id = ? AND status = 'approved'
-                  `, [newStatus, invoice.property_id]);
-                }
-
-                await connection.commit();
-                console.log(`[Callback No-Sig] Payment recorded: ${newPaymentId} for invoice ${invoice.invoice_id}`);
-
-                paymentDetails = {
-                  paymentId: newPaymentId,
-                  amount: amountPaid,
-                  status: 'completed',
-                  invoiceId: invoice.invoice_id,
-                  customerName: invoice.customer_name
-                };
-              } catch (txErr) {
-                await connection.rollback();
-                console.error('[Callback No-Sig] Transaction error:', txErr);
-              } finally {
-                connection.release();
-              }
-            }
-          }
-        } catch (err) {
-          console.error('[Callback No-Sig] Error:', err.message);
+          await pool.execute(`
+            INSERT INTO payment_security_logs (event_type, severity, ip_hash, request_path, details)
+            VALUES (?, ?, ?, ?, ?)
+          `, [
+            'PAYMENT_CALLBACK_INVALID_SIGNATURE',
+            'WARNING',
+            hashIP(getClientIP(req)),
+            '/api/razorpay/verify-payment-callback',
+            JSON.stringify({ paymentId: razorpay_payment_id, paymentLinkId: razorpay_payment_link_id })
+          ]);
+        } catch (logErr) {
+          console.error('Failed to log security event:', logErr.message);
         }
+
+        return res.status(400).json({
+          success: false,
+          verified: false,
+          message: 'Invalid payment signature'
+        });
       }
-
-      return res.json({
-        success: true,
-        verified: false,
-        message: 'Payment processed without signature verification',
-        data: {
-          paymentId: razorpay_payment_id,
-          paymentLinkId: razorpay_payment_link_id,
-          status: razorpay_payment_link_status,
-          ...paymentDetails
-        }
-      });
     }
 
-    // Verify the signature
-    // For payment links, signature is HMAC-SHA256 of: payment_link_id|payment_link_reference_id|payment_link_status|razorpay_payment_id
-    const payload = `${razorpay_payment_link_id}|${razorpay_payment_link_reference_id}|${razorpay_payment_link_status}|${razorpay_payment_id}`;
-    
-    const expectedSignature = crypto
-      .createHmac('sha256', RAZORPAY_KEY_SECRET)
-      .update(payload)
-      .digest('hex');
-
-    let isValid = false;
+    let payment = null;
     try {
-      isValid = crypto.timingSafeEqual(
-        Buffer.from(razorpay_signature),
-        Buffer.from(expectedSignature)
+      payment = await recordPaymentFromCallback({
+        razorpayPaymentId: razorpay_payment_id,
+        paymentLinkId: razorpay_payment_link_id
+      });
+    } catch (recordError) {
+      // The money has left the customer's account, so they still see a success page - but
+      // this must be loud, because it means the Payments screen is now out of step with
+      // Razorpay until the webhook retries or someone reconciles by hand.
+      console.error(
+        `[Callback] FAILED TO RECORD Razorpay payment ${razorpay_payment_id} (link ${razorpay_payment_link_id}):`,
+        recordError
       );
-    } catch (compareError) {
-      // Lengths don't match - signature is invalid
-      isValid = false;
-    }
-
-    if (!isValid) {
-      // Log security event
-      try {
-        await pool.execute(`
-          INSERT INTO payment_security_logs (event_type, severity, ip_hash, request_path, details)
-          VALUES (?, ?, ?, ?, ?)
-        `, [
-          'PAYMENT_CALLBACK_INVALID_SIGNATURE',
-          'WARNING',
-          hashIP(getClientIP(req)),
-          '/api/razorpay/verify-payment-callback',
-          JSON.stringify({ paymentId: razorpay_payment_id, paymentLinkId: razorpay_payment_link_id })
-        ]);
-      } catch (logErr) {
-        console.error('Failed to log security event:', logErr.message);
-      }
-
-      return res.status(400).json({
-        success: false,
-        verified: false,
-        message: 'Invalid payment signature'
-      });
-    }
-
-    // Signature is valid - get payment details from database
-    let paymentDetails = null;
-    let needsUpdate = false;
-    
-    try {
-      // First check if payment already recorded
-      const [payments] = await pool.execute(`
-        SELECT p.payment_id, p.amount, p.status, p.payment_date,
-               i.invoice_id, i.customer_name, i.id as internal_invoice_id
-        FROM payments p
-        LEFT JOIN invoices i ON p.invoice_id = i.id
-        WHERE p.razorpay_payment_id = ?
-        ORDER BY p.created_at DESC
-        LIMIT 1
-      `, [razorpay_payment_id]);
-
-      if (payments.length > 0) {
-        paymentDetails = {
-          paymentId: payments[0].payment_id,
-          amount: payments[0].amount,
-          status: payments[0].status,
-          invoiceId: payments[0].invoice_id,
-          customerName: payments[0].customer_name,
-          paymentDate: payments[0].payment_date
-        };
-      } else {
-        // Payment not recorded yet - webhook may not have fired
-        // Try to update based on payment link ID
-        needsUpdate = true;
-      }
-    } catch (dbErr) {
-      console.error('Error fetching payment details:', dbErr.message);
-    }
-
-    // Fallback: If webhook hasn't processed yet and status is paid, update now
-    if (needsUpdate && razorpay_payment_link_status === 'paid' && razorpay_payment_link_id) {
-      console.log('[Callback Fallback] Webhook may not have fired, processing payment via callback');
-      
-      try {
-        // Find invoice by payment link ID
-        const [invoices] = await pool.execute(`
-          SELECT id, invoice_id, total_amount, balance_due, customer_name, property_name
-          FROM invoices 
-          WHERE razorpay_payment_link_id = ?
-        `, [razorpay_payment_link_id]);
-
-        if (invoices.length > 0) {
-          const invoice = invoices[0];
-          
-          // Fetch payment details from Razorpay API
-          let amountPaid = invoice.balance_due || invoice.total_amount;
-          
-          if (razorpay && razorpay_payment_id) {
-            try {
-              const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
-              amountPaid = rzpPayment.amount / 100; // Convert from paise
-            } catch (rzpErr) {
-              console.error('Error fetching Razorpay payment:', rzpErr.message);
-            }
-          }
-
-          const connection = await pool.getConnection();
-          try {
-            await connection.beginTransaction();
-
-            // Check if payment already exists (double-check)
-            const [existingPayments] = await connection.execute(
-              'SELECT id FROM payments WHERE razorpay_payment_id = ?',
-              [razorpay_payment_id]
-            );
-
-            if (existingPayments.length === 0) {
-              // Generate payment ID
-              const [lastPayment] = await connection.execute(
-                'SELECT payment_id FROM payments ORDER BY id DESC LIMIT 1'
-              );
-              let paymentNumber = 1;
-              if (lastPayment.length > 0 && lastPayment[0].payment_id) {
-                const match = lastPayment[0].payment_id.match(/PAY-(\d+)/);
-                if (match) paymentNumber = parseInt(match[1]) + 1;
-              }
-              const paymentId = `PAY-${String(paymentNumber).padStart(6, '0')}`;
-
-              // Insert payment
-              await connection.execute(`
-                INSERT INTO payments (
-                  payment_id, invoice_id, amount, payment_method, payment_type,
-                  status, transaction_reference, razorpay_payment_id, notes, created_by
-                ) VALUES (?, ?, ?, 'razorpay', 'online', 'completed', ?, ?, 'Callback fallback - paid via Razorpay', 1)
-              `, [paymentId, invoice.id, amountPaid, razorpay_payment_id, razorpay_payment_id]);
-
-              // Update invoice
-              const newBalanceDue = Math.max(0, (invoice.balance_due || invoice.total_amount) - amountPaid);
-              const newStatus = newBalanceDue <= 0 ? 'paid' : 'partial';
-
-              await connection.execute(`
-                UPDATE invoices SET
-                  status = ?,
-                  balance_due = ?,
-                  paid_amount = COALESCE(paid_amount, 0) + ?,
-                  payment_status = ?,
-                  payment_link_status = 'paid',
-                  updated_at = NOW()
-                WHERE id = ?
-              `, [newStatus, newBalanceDue, amountPaid, newStatus, invoice.id]);
-
-              // Update fp_estimates payment_status - PROPERTY_ID is the PRIMARY link
-              if (invoice.property_id) {
-                await connection.execute(`
-                  UPDATE fp_estimates SET 
-                    payment_status = ?, 
-                    updated_at = NOW() 
-                  WHERE property_id = ? AND status = 'approved'
-                `, [newStatus, invoice.property_id]);
-              }
-
-              await connection.commit();
-              console.log(`[Callback Fallback] Payment recorded for invoice ${invoice.invoice_id}: ₹${amountPaid}`);
-
-              paymentDetails = {
-                paymentId: paymentId,
-                amount: amountPaid,
-                status: 'completed',
-                invoiceId: invoice.invoice_id,
-                customerName: invoice.customer_name,
-                propertyName: invoice.property_name
-              };
-            }
-          } catch (txErr) {
-            await connection.rollback();
-            console.error('[Callback Fallback] Error:', txErr);
-          } finally {
-            connection.release();
-          }
-        }
-      } catch (fallbackErr) {
-        console.error('[Callback Fallback] Error:', fallbackErr.message);
-      }
     }
 
     res.json({
       success: true,
-      verified: true,
-      message: 'Payment signature verified successfully',
+      verified,
+      recorded: Boolean(payment),
+      message: payment
+        ? 'Payment confirmed and recorded'
+        : 'Payment received - recording is pending confirmation from Razorpay',
       data: {
         paymentId: razorpay_payment_id,
         paymentLinkId: razorpay_payment_link_id,
         status: razorpay_payment_link_status,
         referenceId: razorpay_payment_link_reference_id,
-        ...paymentDetails
+        ...payment
       }
     });
 

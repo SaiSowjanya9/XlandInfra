@@ -28,6 +28,8 @@ const {
 } = require('../utils/paymentSecurity');
 const { generateInvoicePDF } = require('../services/pdfService');
 const { markPaymentCompleted } = require('../services/schedulingWorkflow');
+// Shared with the Razorpay writer so online and manual payments draw the same sequence
+const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 
 /**
  * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
@@ -142,88 +144,6 @@ const generateInvoiceId = async (fpId = null) => {
     const [countResult] = await pool.execute('SELECT COUNT(*) as cnt FROM invoices');
     const nextNumber = (countResult[0]?.cnt || 0) + 1;
     return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
-  }
-};
-
-// Generate unique payment ID
-const generatePaymentId = async (fpId = null) => {
-  const year = new Date().getFullYear();
-  const prefix = 'PAY';
-  
-  try {
-    const [existing] = await pool.execute(
-      'SELECT current_number FROM payment_sequence WHERE franchise_partner_id <=> ? AND year = ?',
-      [fpId, year]
-    );
-    
-    let nextNumber;
-    if (existing.length > 0) {
-      nextNumber = existing[0].current_number + 1;
-      await pool.execute(
-        'UPDATE payment_sequence SET current_number = ? WHERE franchise_partner_id <=> ? AND year = ?',
-        [nextNumber, fpId, year]
-      );
-    } else {
-      nextNumber = 1;
-      await pool.execute(
-        'INSERT INTO payment_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
-        [fpId, year, nextNumber, prefix]
-      );
-    }
-    
-    return `${prefix}-${year}-${String(nextNumber).padStart(5, '0')}`;
-  } catch (error) {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
-  }
-};
-
-// Generate unique receipt ID (format: RCP-00001)
-const generateReceiptId = async (fpId = null) => {
-  const prefix = 'RCP';
-  
-  try {
-    // Get max receipt number across all receipts (global sequence)
-    const [existing] = await pool.execute(
-      'SELECT MAX(current_number) as max_number FROM receipt_sequence WHERE franchise_partner_id <=> ?',
-      [fpId]
-    );
-    
-    let nextNumber;
-    if (existing.length > 0 && existing[0].max_number) {
-      nextNumber = existing[0].max_number + 1;
-      await pool.execute(
-        'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
-        [nextNumber, fpId]
-      );
-    } else {
-      // Check if sequence record exists
-      const [seqExists] = await pool.execute(
-        'SELECT id FROM receipt_sequence WHERE franchise_partner_id <=> ?',
-        [fpId]
-      );
-      
-      nextNumber = 1;
-      if (seqExists.length > 0) {
-        await pool.execute(
-          'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
-          [nextNumber, fpId]
-        );
-      } else {
-        await pool.execute(
-          'INSERT INTO receipt_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
-          [fpId, new Date().getFullYear(), nextNumber, prefix]
-        );
-      }
-    }
-    
-    // Format: RCP-00001
-    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
-  } catch (error) {
-    console.error('Error generating receipt ID:', error);
-    const timestamp = Date.now().toString(36).toUpperCase();
-    return `${prefix}-${timestamp}`;
   }
 };
 
@@ -3135,9 +3055,10 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
       params.push(fpId, fpId);
     }
 
-    // Filter for Razorpay transactions only
+    // Filter for Razorpay transactions only. Matched on the Razorpay payment ID rather than
+    // the action alone, so rows written before the action was standardised still appear.
     if (type === 'razorpay') {
-      query += " AND ph.action = 'razorpay_payment'";
+      query += " AND (ph.razorpay_payment_id IS NOT NULL OR ph.action = 'razorpay_payment' OR p.payment_method = 'razorpay')";
     }
 
     if (invoiceId) {
@@ -3193,7 +3114,7 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
           performedByRole: h.performed_by_role,
           createdAt: h.created_at,
           // Razorpay specific fields
-          isRazorpay: h.action === 'razorpay_payment',
+          isRazorpay: Boolean(h.razorpay_payment_id) || h.action === 'razorpay_payment',
           razorpayPaymentId: h.razorpay_payment_id || null,
           razorpayReceiptId: h.razorpay_receipt_id || null,
           methodDetails: methodDetails
@@ -3226,7 +3147,7 @@ router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) 
       LEFT JOIN payments p ON ph.payment_id = p.id
       LEFT JOIN invoices i ON ph.invoice_id = i.id
       LEFT JOIN onboarded_properties prop ON i.property_id = prop.id
-      WHERE (ph.action = 'razorpay_payment' OR (p.payment_method = 'razorpay' AND ph.action = 'created'))
+      WHERE (ph.razorpay_payment_id IS NOT NULL OR ph.action = 'razorpay_payment' OR p.payment_method = 'razorpay')
     `;
     const params = [];
 
