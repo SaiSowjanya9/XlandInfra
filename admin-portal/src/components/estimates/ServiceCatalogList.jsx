@@ -138,9 +138,10 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
   // No card around the list: an open table has the page's full width, which is what lets every
   // column show at once.
   return <section className="min-w-0">
-    {/* The top row carries the title and the property type filter with its counts, so the whole
-        list can be narrowed from where it is introduced. */}
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+    {/* The title and the property type filter with its counts, so the whole list can be narrowed
+        from where it is introduced. The filter keeps its own row: the subtitle changes length with
+        the selection, and sharing a row with it made the chips jump on every click. */}
+    <div className="border-b border-slate-200 pb-3">
       <div>
         <h3 className="font-semibold text-slate-800">All Services</h3>
         {/* The count follows the filter, so the heading always describes the rows underneath it */}
@@ -150,7 +151,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             : `${shown.length} of ${services.length} service(s) apply to ${propertyTypeLabel(propertyFilter)}`} · Pricing configurations for estimates
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {/* A service is counted under every property type it applies to */}
         {availableTypes.length > 1 && <>
           <button type="button" onClick={() => setPropertyFilter('all')} className={chip(propertyFilter === 'all')}>

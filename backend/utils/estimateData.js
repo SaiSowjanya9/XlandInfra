@@ -144,6 +144,30 @@ const enrichLegacyEstimateAddon = (addon, candidates, propertyType) => {
     frequency_count: first(addon.frequency_count, addon.frequencyCount, addon.visits, inner.frequencyCount, inner.frequency_count, inner.frequency, source?.frequency_count) };
 };
 
+// A service typed in by hand on a custom estimate. There is no catalog row or add-on table behind
+// it, so the server cannot re-price it the way it re-prices a configured service: the creator's own
+// customer price is what the estimate carries. Only its own figures can be checked, which is why
+// the name, details, frequency, visits and price are each bounded here before they are stored.
+const isManualService = addon => addon?.customService === true || String(addon?.addonId || '').startsWith('CUSTOM-');
+
+const normalizeManualService = addon => {
+  const fail = message => { throw Object.assign(new Error(message), { status: 400 }); };
+  const name = String(first(addon.name, addon.service_name, addon.serviceName) ?? '').trim();
+  if (!name || name.length > 150) fail('Give every custom service a name of up to 150 characters.');
+  const description = String(addon.description ?? '').trim();
+  if (description.length > 255) fail(`Details for ${name} must be 255 characters or fewer.`);
+  const price = Number(first(addon.totalPrice, addon.price, 0));
+  if (!Number.isFinite(price) || price < 0 || price > 99999999) fail(`Enter a customer price for ${name} between 0 and 99,999,999.`);
+  const visits = Number(first(addon.frequency_count, addon.frequencyCount, 0));
+  if (!Number.isSafeInteger(visits) || visits < 0 || visits > 366) fail(`Enter a whole number of visits for ${name}, up to 366.`);
+  const frequencyType = String(first(addon.frequency_type, addon.frequencyType, 'One-time'));
+  if (frequencyType.length > 50) fail(`Enter a valid frequency for ${name}.`);
+  return { addonId: String(addon.addonId || '').startsWith('CUSTOM-') ? addon.addonId : `CUSTOM-${name}`,
+    customService: true, name, service_name: name, description,
+    frequency_type: frequencyType, frequency_count: visits, totalPrice: price, price,
+    services: [{ name, description, frequencyType, frequency: visits, price: visits ? price / visits : price }] };
+};
+
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices };
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };

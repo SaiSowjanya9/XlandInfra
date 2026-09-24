@@ -25,6 +25,8 @@ import AutocompleteInput from '../components/common/AutocompleteInput';
 import AddServicePage from '../components/estimates/AddServicePage';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
+import EstimateStructure from '../components/estimates/EstimateStructure';
+import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -237,6 +239,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [savingEstimate, setSavingEstimate] = useState(false);
   // Configured services picked from the service catalog, priced by the backend
   const [catalogAddons, setCatalogAddons] = useState([]);
+  // How the estimate is put together: a pre-built AMC package, or services entered by hand
+  const [estimateStructure, setEstimateStructure] = useState('package');
+  const [customServices, setCustomServices] = useState([]);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
@@ -690,6 +695,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     />
   );
 
+  // Switching structure drops what belongs to the other choice, so neither a package price nor a
+  // hand-entered row can sit hidden in the total.
+  const changeEstimateStructure = (value) => {
+    setEstimateStructure(value);
+    if (value === 'custom') setEstimateForm(prev => ({ ...prev, selectedPackage: '' }));
+    else setCustomServices([]);
+  };
+  // The package dropdown each form already had, shown on the structure row when a package applies
+  const renderStructure = (packageSelect) => (
+    <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure}>
+      {estimateStructure === 'package' ? packageSelect : null}
+    </EstimateStructure>
+  );
+  const renderCustomServices = () => estimateStructure === 'custom'
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} />
+    : null;
+
   // Helper to match property type for filtering
   const matchPropertyType = (value, filterId) => {
     if (!value || !filterId) return false;
@@ -1036,6 +1058,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Back navigation handler for estimate subsections
   const handleBackFromEstimate = useCallback(() => {
     setCatalogAddons([]);
+    setCustomServices([]);
+    setEstimateStructure('package');
     if (estimateType === 'property-based' && selectedProperty) {
       // If property is selected, go back to property ID entry
       setSelectedProperty(null);
@@ -1081,7 +1105,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const addon = addons.find(a => a.id == id);
       return sum + (parseFloat(addon?.price) || 0);
     }, 0);
-    const subtotal = pkgPrice + addonsPrice + catalogAddonsTotal;
+    const subtotal = pkgPrice + addonsPrice + catalogAddonsTotal + customServicesTotal(customServices);
     const discount = parseFloat(estimateForm.discount) || 0;
     const gst = parseFloat(estimateForm.gst) || 0;
     const discountAmt = (subtotal * discount) / 100;
@@ -1120,7 +1144,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const abort = (message) => { showToast(message, 'error'); setSavingEstimate(false); };
     if (!clientName?.trim()) return abort('Customer name is required');
     if (!clientPhone?.trim()) return abort('Phone number is required');
-    if (!estimateForm.selectedPackage) return abort('Please select an AMC package');
+    // A package estimate needs its package; a custom one needs at least one service instead
+    if (estimateStructure === 'package' && !estimateForm.selectedPackage) return abort('Please select an AMC package');
+    if (estimateStructure === 'custom' && !customServices.length && !catalogAddons.length && !estimateForm.selectedAddons.length) return abort('Add at least one service');
 
     const pkg = getSelectedPackage();
     const pricing = calculatePricing();
@@ -1159,7 +1185,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         // Villa/Plot-specific fields
         villa_plot_number: estimateForm.villaNumber || selectedProperty?.villa_plot_number || '',
         // Package and pricing
-        package_id: estimateForm.selectedPackage,
+        package_id: estimateForm.selectedPackage || null,
         package_name: pkg?.name || '',
         package_price: pkg?.price || 0,
         amc_package_description: pkg?.description || '',
@@ -1191,7 +1217,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             services: a.services,
             totalPrice: a.totalPrice,
             price: a.totalPrice
-          }))
+          })),
+          // Services typed in by hand on a custom estimate; they carry their own customer price
+          ...customServices
         ],
         subtotal: pricing.subtotal,
         discount_percent: estimateForm.discount,
@@ -1218,6 +1246,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setSelectedProperty(null);
         setPropertyIdInput('');
         setCatalogAddons([]);
+        setCustomServices([]);
+        setEstimateStructure('package');
         setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
         loadData();
       } else {
@@ -1538,30 +1568,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
             )}
 
-            {/* AMC Package */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex min-w-0 w-full flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <label htmlFor="estimate-amc-package" className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
-                  <select
-                    id="estimate-amc-package"
-                    value={estimateForm.selectedPackage}
-                    onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                    className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                  >
-                    <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                    {(() => {
-                      const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                      const searchType = normalizePropertyType(propertyType);
-                      const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
-                      if (!searchType) return <option disabled>Select property first</option>;
-                      if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
-                      return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
-                    })()}
-                  </select>
-                </div>
+            {/* Estimate Structure: package or hand-entered services */}
+            {renderStructure(
+              <div className="flex min-w-0 w-full flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <label htmlFor="estimate-amc-package" className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
+                <select
+                  id="estimate-amc-package"
+                  value={estimateForm.selectedPackage}
+                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
+                  className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                  {(() => {
+                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
+                    const searchType = normalizePropertyType(propertyType);
+                    const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
+                    if (!searchType) return <option disabled>Select property first</option>;
+                    if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
+                  })()}
+                </select>
               </div>
-            </div>
+            )}
+            {renderCustomServices()}
 
             {/* Services - package services + added services in one table */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -1876,29 +1905,34 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* AMC Package */}
+          {/* Estimate Structure: package or hand-entered services */}
+          {renderStructure(
+            <div className="min-w-0 w-full">
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+              <select
+                value={estimateForm.selectedPackage}
+                onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+              >
+                <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                {(() => {
+                  const searchType = normalizePropertyType(estimateForm.propertyType);
+                  const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
+                  if (!searchType) return <option disabled>Select property type first</option>;
+                  if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
+                  return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
+                })()}
+              </select>
+            </div>
+          )}
+
+          {/* Services: the package's own, plus anything added here */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">AMC Package</h2>
+              <h2 className="text-base font-semibold text-gray-900">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
-                <select 
-                  value={estimateForm.selectedPackage} 
-                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
-                  className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
-                >
-                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
-                  {(() => {
-                    const searchType = normalizePropertyType(estimateForm.propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
-                    if (!searchType) return <option disabled>Select property type first</option>;
-                    if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
-                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
-                  })()}
-                </select>
-              </div>
+              {renderCustomServices()}
 
               {/* Package Details Card */}
               {(() => {

@@ -141,4 +141,29 @@ test('FPs configure services in their own scope only, and estimates are re-price
   assert.equal(legacyOnly.data.subtotal, 1500);
   assert.equal(legacyOnly.data.package_price, 1);
   assert.equal((await request('/fp-estimate', 'POST', estimate, 'noFp')).status, 403);
+
+  // A custom estimate: no package, services typed in by hand. Their prices are the creator's, so
+  // they are kept as entered, but the estimate's totals are still added up on the server.
+  const manual = { addonId: 'CUSTOM-1', customService: true, name: 'Facade Cleaning', description: '4 Lifts',
+    frequency_type: 'Quarterly', frequency_count: 4, totalPrice: 8000, price: 8000 };
+  const customOnly = await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [manual], subtotal: 8000, discount_percent: 0, gst_percent: 18, total_amount: 9440 });
+  assert.equal(customOnly.status, 200);
+  assert.equal(customOnly.data.subtotal, 8000, 'a hand-entered service counts towards the subtotal');
+  assert.equal(customOnly.data.addons[0].name, 'Facade Cleaning');
+  assert.equal(customOnly.data.addons[0].frequency_count, 4);
+  assert.equal(customOnly.data.addons[0].services[0].price, 2000, 'the per-visit price is derived from the visits');
+  assert.equal(customOnly.data.gst_amount, 1440);
+  // Mixed with a configured service: the catalog one is re-priced, the hand-entered one is not
+  const mixed = await request('/fp-estimate', 'POST', { ...estimate,
+    addons: [estimate.addons[1], manual], subtotal: 22500, discount_percent: 0, gst_percent: 0, total_amount: 22500 });
+  assert.equal(mixed.status, 200);
+  assert.equal(mixed.data.addons[1].price, 8000);
+  assert.equal(mixed.data.subtotal, 22500);
+  assert.equal((await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [{ ...manual, name: '  ' }], subtotal: 8000, total_amount: 8000 })).status, 400, 'a nameless service is refused');
+  assert.equal((await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [{ ...manual, totalPrice: -5, price: -5 }], subtotal: -5, total_amount: -5 })).status, 400, 'a negative price is refused');
+  assert.equal((await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [manual], subtotal: 1, total_amount: 1 })).status, 400, 'a total that does not add up is refused');
 });

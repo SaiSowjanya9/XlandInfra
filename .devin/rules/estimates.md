@@ -7,9 +7,20 @@ tags: estimates, addons, pricing, tables, pdf, portals, ui
 
 Applies to: `CreateEstimate.jsx`, `ManagerEstimates.jsx`, `CoordinatorEstimates.jsx`, `ExecutiveEstimates.jsx`, `SupervisorEstimates.jsx`, `FPEstimates.jsx`, and `Properties.jsx` view sections.
 
+## Estimate Structure (Create Estimate)
+
+Every create-estimate form opens with the shared `components/estimates/EstimateStructure.jsx` card — two equal tiles, **Select AMC Package** ("Choose a pre-built AMC package and customize") and **Build Custom Services** ("Add individual services as per requirement"), with the page's own package dropdown passed in as children and shown only in package mode. It is wired into FP (property-based and direct), Manager, Coordinator, Supervisor and Executive; the admin `CreateEstimate.jsx` keeps its own equivalent card.
+
+- Switching structure clears what belongs to the other choice: going custom clears the selected package, going back to package clears the custom rows. Neither a package price nor a hand-entered row may sit hidden in the total.
+- A package estimate still requires its package. A custom estimate requires no package (`package_id` is sent as `null`) but at least one service.
+- **Build Custom Services shows `components/estimates/CustomServicesTable.jsx`**: committed rows plus a permanently empty last row, which is where a service is entered. Columns are `#`, Service, Input / Details, Frequency, Visits / Year, Customer Price (₹), Action; **Add Service** in the Action column commits the row and leaves a fresh empty row, and committed rows carry a remove action and a Total Custom Services footer. Deliberately absent, per the reference screenshots: Import Services, Method, Vendor Cost and Margin.
+- Custom rows are **free text**, not catalog services: the Service name and details are typed and the customer price is entered directly, so there is no vendor rate, method or margin behind them. Picking a frequency fills Visits / Year from the shared `FREQUENCY_OPTIONS`, and it stays editable.
+- The free-hand row belongs to custom mode only. In package mode, extra services come from the configured-service dropdown and its dialog, which remain available in both modes.
+- Custom rows travel in the estimate's `addons` array shaped like a configured-service add-on (`addonId: 'CUSTOM-…'`, `customService: true`, `services[0].price` = per-visit), so the existing tables, view modals and PDFs render them unchanged. `isManualService` / `normalizeManualService` in `backend/utils/estimateData.js` bound the name, details, frequency, visits and price on save; the FP and Manager `validatePackageEstimate` middlewares now engage for them and add them to the server-computed subtotal, so a custom-only estimate still has its totals verified.
+
 ## Add-on Pricing Display
 
-- Individual add-on prices **must not** be displayed in the Create Estimates section.
+- Individual add-on prices **must not** be displayed in the Create Estimates section. The one exception is the Customer Price column of the Custom Services entry table above, where the price is the value being entered.
 - Add-on dropdowns: show only the add-on name; do **not** show the price.
 - Selected add-ons table columns: **Service**, **Frequency**, **No. of Visits**, **Action**. Remove the **Price** column.
 - Show only a **Total Add-ons Price** row at the bottom that displays the sum of all selected add-ons.

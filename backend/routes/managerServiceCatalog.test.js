@@ -130,4 +130,14 @@ test('Manager catalog is read-only and estimate operations enforce FP, property-
   assert.equal((await request('-package', 'POST', { ...packageEstimate, catalog_property_id: 12 })).status, 403);
   assert.equal((await request('-package', 'POST', { ...packageEstimate, package_id: 99 })).status, 403);
   assert.equal((await request('-package', 'POST', packageEstimate, 'supervisor')).status, 403);
+  // A custom estimate: no package, services typed in by hand, totals still added up on the server
+  const manual = { addonId: 'CUSTOM-1', customService: true, name: 'Facade Cleaning', description: '4 Lifts',
+    frequency_type: 'Quarterly', frequency_count: 4, totalPrice: 8000, price: 8000 };
+  const customOnly = await request('-package', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [manual], subtotal: 8000, discount_percent: 0, gst_percent: 18, total_amount: 9440 });
+  assert.equal(customOnly.status, 200, 'a custom estimate saves without a package');
+  assert.equal(customOnly.data.addons[0].name, 'Facade Cleaning');
+  assert.equal(customOnly.data.subtotal, 8000);
+  assert.equal((await request('-package', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [{ ...manual, name: '' }], subtotal: 8000, total_amount: 8000 })).status, 400, 'a nameless service is refused');
 });

@@ -148,9 +148,11 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const [capacitySlabs, setCapacitySlabs] = useState([blankSlab(1)]);
   const [manpowerRanges, setManpowerRanges] = useState([]);
   const [exampleManpowerArea, setExampleManpowerArea] = useState('1500');
-  const [examplePersonnel, setExamplePersonnel] = useState('2');
+  // A counted input (persons, quantity, capacity) previews from one unit, so the figures beside it
+  // read as the rate itself; only an area starts at a realistic property size.
+  const [examplePersonnel, setExamplePersonnel] = useState('1');
   const [exampleOvertime, setExampleOvertime] = useState('0');
-  const [exampleCapacity, setExampleCapacity] = useState('10');
+  const [exampleCapacity, setExampleCapacity] = useState('1');
   const [exampleAmount, setExampleAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const setField = (field, value) => {
@@ -371,7 +373,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const rateBasis = formData.pricingMethod === 'manpower' && !isVisitManpower ? 'Month' : 'Visit';
   const xlandRate = markupValue == null || vendorRateValue == null ? null : vendorRateValue * markupValue / 100;
   const customerRate = xlandRate == null ? null : vendorRateValue + xlandRate;
-  const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '10' : '10000') : exampleAmount;
+  const exampleAmountValue = exampleAmount === '' ? (isQuantityBased || isCapacityBased ? '1' : '10000') : exampleAmount;
   const validExampleAmount = isFixedPrice || (String(exampleAmountValue).trim() !== '' && Number(exampleAmountValue) > 0 && Number(exampleAmountValue) <= 1e9);
   const examplePricing = isRatePricing && !isVisitManpower && formData[rateField] !== '' && validExampleAmount ? calculateExamplePricing() : null;
   const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
