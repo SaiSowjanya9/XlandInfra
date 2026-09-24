@@ -28,6 +28,9 @@ const PaymentSuccess = () => {
   const paymentId = searchParams.get('razorpay_payment_id');
   const paymentLinkId = searchParams.get('razorpay_payment_link_id');
   const paymentLinkStatus = searchParams.get('razorpay_payment_link_status');
+  // Razorpay signs the redirect; forward it so the backend can verify rather than trust it
+  const paymentLinkReferenceId = searchParams.get('razorpay_payment_link_reference_id');
+  const signature = searchParams.get('razorpay_signature');
 
   useEffect(() => {
     if (paymentId || paymentLinkId) {
@@ -49,7 +52,9 @@ const PaymentSuccess = () => {
         body: JSON.stringify({
           razorpay_payment_id: paymentId,
           razorpay_payment_link_id: paymentLinkId,
-          razorpay_payment_link_status: paymentLinkStatus
+          razorpay_payment_link_reference_id: paymentLinkReferenceId,
+          razorpay_payment_link_status: paymentLinkStatus,
+          razorpay_signature: signature
         })
       });
 

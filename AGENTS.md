@@ -236,6 +236,17 @@ Run schema files in order:
 6. `schema_v25_payment_status_fix.sql` - **Required for offline payment verification (bank transfer, cash, cheque)**
 7. `schema_v27_payment_history_action_fix.sql` - **Required fix for payment_history action column truncation error**
 8. `migrations/schema_v31_cheque_payment_details.sql` - **Required for cheque payments and for verifying any offline payment**: adds `cheque_number`, `cheque_date`, `bank_name`, `branch_name`, `payee_name`, `payment_location` and `transaction_id` to `payments`
+9. `migrations/schema_v36_razorpay_payment_unique.sql` - **Required for online payments**: unique index on `payments.razorpay_payment_id`, which is what keeps two webhooks racing each other from recording the same payment twice
+
+### Recording an Online Payment
+
+- **`backend/services/razorpayPayment.js` is the only thing that writes a paid Razorpay invoice.** Three events announce one payment — the `payment_link.paid` webhook, the `payment.captured` webhook, and the customer's redirect to `/payment/success` — so `recordRazorpayPayment()` is idempotent on `razorpay_payment_id` and every caller may fire it. Do not add a fourth hand-written INSERT; that is how the previous three drifted apart.
+- The callback fallback in `POST /api/razorpay/verify-payment-callback` existed for exactly this and never worked: it selected `invoices.balance_due` / `paid_amount` and inserted `payments.notes` / `created_by`, none of which exist (the columns are `balance_amount`, `amount_paid`, `remarks`, `received_by`), and every failure was swallowed behind `success: true`. Card payments were therefore only ever recorded if the webhook fired. When touching this code, check column names against the database, not against the surrounding code.
+- The callback never trusts its query string: the signature is verified when present, and the amount and `captured` status are re-read from the Razorpay API before anything is written.
+- Use **this** payment's amount (`payment.entity.amount`), never the link's `amount_paid`, which is cumulative and double-counts a second partial payment.
+- Every Razorpay payment writes `payment_history.action = 'razorpay_payment'`. The Razorpay tab used to filter on that string while the webhook wrote `'paid'`, so it was always empty; both filters now match on `razorpay_payment_id` so older rows still appear.
+- `PAY-`/`RCP-` numbers come from `backend/utils/paymentIds.js`, shared with `routes/payments.js`, so an online payment is numbered like every other one.
+- If online payments stop appearing, check `SELECT event_type, status, error_message FROM razorpay_webhooks ORDER BY id DESC` first. No rows at all usually means the webhook is registered in the wrong Razorpay mode — **test and live mode have separate webhook configurations**, and a test payment never reaches a live-mode webhook.
 
 ### Cheque Payments
 
