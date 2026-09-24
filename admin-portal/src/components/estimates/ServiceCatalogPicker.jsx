@@ -193,22 +193,18 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
               </div>
+              {/* The customer price is the only figure this dialog states: vendor cost, operating
+                  cost, markup and margin are internal and belong to the service configuration. */}
               {preview && !preview.requiresCustomQuote && (
-                <dl className="mt-5 grid gap-x-6 gap-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs sm:grid-cols-2">
-                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Vendor Cost (annual)</dt><dd className="font-medium text-slate-800">{currency(preview.vendorCost)}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="text-slate-500">XLAND Operating Cost</dt><dd className="font-medium text-slate-800">{currency(preview.operatingCost)}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Actual Cost</dt><dd className="font-medium text-slate-800">{currency(preview.actualCost)}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Markup</dt><dd className="font-medium text-slate-800">{preview.inputs?.markup_percentage}%</dd></div>
-                  <div className="flex justify-between gap-3 border-t border-slate-200 pt-2"><dt className="font-semibold text-slate-700">Customer Price</dt><dd className="font-semibold text-blue-600">{currency(preview.totalPrice)}</dd></div>
-                  <div className="flex justify-between gap-3 border-t border-slate-200 pt-2"><dt className="font-semibold text-slate-700">Margin</dt><dd className="font-semibold text-slate-800">{preview.marginPercentage}%</dd></div>
+                <dl className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
+                  <dt className="font-semibold text-slate-700">Customer Price</dt>
+                  <dd className="text-sm font-semibold text-emerald-600">{currency(preview.totalPrice)}</dd>
                 </dl>
               )}
               {error && <p role="alert" className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
             </fieldset>
           </div>
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-            {/* The price the row will carry, so OK is pressed knowing it */}
-            <p className="mr-auto text-xs text-slate-500">Customer Price<span className="ml-2 text-sm font-semibold text-blue-600">{currency(preview && !preview.requiresCustomQuote ? preview.totalPrice : null)}</span></p>
             <button type="button" onClick={() => selectService('')} disabled={saving}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
             <button type="button" onClick={addService} disabled={saving || incomplete}
