@@ -6,7 +6,7 @@ const { requireManagerScope } = require('../middleware/managerScope');
 const { getAssignedZones, getEmployeeIdForZoneLookup, getCreatorIdentifier, buildPropertyZoneOrCreatorFilter, buildOnboardedPropertyZoneOrCreatorFilter } = require('../middleware/zoneHelper');
 const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { parseService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
-const { isManualService, normalizeManualService } = require('../utils/estimateData');
+const { isManualService, normalizeManualService, catalogEstimateOverrides } = require('../utils/estimateData');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const handleError = (res, error) => res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to process the manager service catalog request.' });
@@ -169,7 +169,8 @@ router.validatePackageEstimate = async (req, res, next) => {
         const config = parseService(row);
         const quote = calculateServiceQuote(config, { ...addon.pricingInputs, property_type: req.body.property_type }, 'manager');
         if (quote.requiresCustomQuote || !Number.isFinite(Number(addon.totalPrice)) || Math.abs(Number(addon.totalPrice) - quote.totalPrice) > 0.01) fail('Service pricing changed. Remove and re-add the configured service.');
-        saved.push(...buildCatalogAddons([{ ...config, service_id: id, ...quote }], property));
+        saved.push(...buildCatalogAddons([{ ...config, service_id: id, ...quote }], property)
+          .map(item => ({ ...item, ...catalogEstimateOverrides(addon, config) })));
         subtotal += quote.totalPrice;
       } else {
         const [[legacy]] = await pool.execute('SELECT * FROM fp_addons WHERE id = ? AND franchise_partner_id = ?', [addon.id, scope.fpId]);

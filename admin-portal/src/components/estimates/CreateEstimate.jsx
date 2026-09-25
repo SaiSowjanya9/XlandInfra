@@ -1030,7 +1030,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       if (selectedAddons.length > 0) {
         estimateData.addons = selectedAddons.map(a => ({
           addonId: a.addonId,
-          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs } : {}),
+          // Settled per estimate on a Quantity Based service; the server validates and keeps them
+          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs, category: a.category, skip_vendor_assignment: a.skip_vendor_assignment } : {}),
           services: a.services,
           totalPrice: a.totalPrice,
           description: a.description || ''
@@ -1075,7 +1076,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       if (directSelectedAddons.length > 0) {
         estimateData.addons = directSelectedAddons.map(a => ({
           addonId: a.addonId,
-          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs } : {}),
+          // Settled per estimate on a Quantity Based service; the server validates and keeps them
+          ...(a.catalogServiceId ? { catalogServiceId: a.catalogServiceId, pricingInputs: a.pricingInputs, category: a.category, skip_vendor_assignment: a.skip_vendor_assignment } : {}),
           services: a.services,
           totalPrice: a.totalPrice,
           description: a.description || ''
