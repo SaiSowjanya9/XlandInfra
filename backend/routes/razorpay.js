@@ -670,53 +670,28 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
 
     const payload = JSON.parse(req.body.toString());
     const event = payload.event;
-    const eventId = payload.payload?.payment?.entity?.id || payload.payload?.payment_link?.entity?.id || Date.now().toString();
+    // The entity id alone is not unique per event: payment.captured and payment_link.paid carry the
+    // same payment, so keying on it made the second event overwrite the first's row instead of
+    // inserting -- which is why payment_link.paid never appeared in this table at all. Razorpay's own
+    // event id is preferred; the event name keeps the fallback distinct per event.
+    const entityId = payload.payload?.payment?.entity?.id || payload.payload?.payment_link?.entity?.id;
+    const eventId = req.headers['x-razorpay-event-id'] || (entityId ? `${event}:${entityId}` : `${event}:${Date.now()}`);
 
     console.log('[Razorpay Webhook] Event received:', event);
 
     // Log webhook
-    const [logResult] = await pool.execute(`
+    await pool.execute(`
       INSERT INTO razorpay_webhooks (event_id, event_type, payload, status)
       VALUES (?, ?, ?, 'received')
       ON DUPLICATE KEY UPDATE payload = ?, status = 'received'
     `, [eventId, event, JSON.stringify(payload), JSON.stringify(payload)]);
 
-    const webhookId = logResult.insertId || logResult.affectedRows;
+    // insertId is 0 on the duplicate-key path and affectedRows is 2, so the old
+    // `insertId || affectedRows` marked row 2 processed -- an unrelated payment's row.
+    const [[logged]] = await pool.execute('SELECT id FROM razorpay_webhooks WHERE event_id = ?', [eventId]);
+    const webhookId = logged?.id;
 
-    // Process different event types
-    switch (event) {
-      case 'payment_link.paid':
-        await handlePaymentLinkPaid(payload, webhookId);
-        break;
-      
-      case 'payment_link.partially_paid':
-        await handlePaymentLinkPartiallyPaid(payload, webhookId);
-        break;
-
-      case 'payment_link.expired':
-        await handlePaymentLinkExpired(payload, webhookId);
-        break;
-
-      case 'payment.captured':
-        await handlePaymentCaptured(payload, webhookId);
-        break;
-
-      case 'payment.failed':
-        await handlePaymentFailed(payload, webhookId);
-        break;
-
-      case 'payment_link.cancelled':
-        await handlePaymentLinkCancelled(payload, webhookId);
-        break;
-
-      case 'refund.created':
-      case 'refund.processed':
-        await handleRefund(payload, webhookId);
-        break;
-
-      default:
-        console.log('[Razorpay Webhook] Unhandled event type:', event);
-    }
+    await dispatchWebhookEvent(event, payload, webhookId);
 
     // Mark as processed
     await pool.execute(
@@ -731,6 +706,22 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// One place that maps an event to its handler, so replaying a stored payload takes exactly the
+// path a live delivery does. Exported for scripts/replayRazorpayWebhooks.js.
+async function dispatchWebhookEvent(event, payload, webhookId) {
+  switch (event) {
+    case 'payment_link.paid': return handlePaymentLinkPaid(payload, webhookId);
+    case 'payment_link.partially_paid': return handlePaymentLinkPartiallyPaid(payload, webhookId);
+    case 'payment_link.expired': return handlePaymentLinkExpired(payload, webhookId);
+    case 'payment.captured': return handlePaymentCaptured(payload, webhookId);
+    case 'payment.failed': return handlePaymentFailed(payload, webhookId);
+    case 'payment_link.cancelled': return handlePaymentLinkCancelled(payload, webhookId);
+    case 'refund.created':
+    case 'refund.processed': return handleRefund(payload, webhookId);
+    default: console.log('[Razorpay Webhook] Unhandled event type:', event);
+  }
+}
 
 // Handle payment link paid
 async function handlePaymentLinkPaid(payload, webhookId) {
@@ -1838,4 +1829,5 @@ router.post('/verify-payment-callback', async (req, res) => {
   }
 });
 
+router.dispatchWebhookEvent = dispatchWebhookEvent;
 module.exports = router;
