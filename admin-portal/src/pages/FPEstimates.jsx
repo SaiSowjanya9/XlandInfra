@@ -1713,7 +1713,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   )}
@@ -2076,7 +2076,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>

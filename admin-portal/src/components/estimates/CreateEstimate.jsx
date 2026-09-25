@@ -2662,7 +2662,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       <tfoot className="bg-blue-50 border-t border-blue-200">
                         <tr>
                           <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
-                          <td className="px-3 py-2.5 text-sm font-bold text-blue-700 text-right">₹{getAddonsTotal().toLocaleString()}</td>
+                          <td className="px-3 py-2.5 text-sm font-bold text-gray-900 text-right">₹{getAddonsTotal().toLocaleString()}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -3464,7 +3464,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-sm font-bold text-blue-700 text-right">₹{getDirectAddonsTotal().toLocaleString()}</td>
+                        <td className="px-3 py-2.5 text-sm font-bold text-gray-900 text-right">₹{getDirectAddonsTotal().toLocaleString()}</td>
                       </tr>
                     </tfoot>
                   </table>
