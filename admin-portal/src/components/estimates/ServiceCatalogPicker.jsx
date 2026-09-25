@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
@@ -32,7 +33,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   // repeating the picker in a panel of its own. `extraItems` are listed above the services.
   variant = 'panel', extraItems = [] }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  // The menu is drawn into document.body: every card it sits in clips its overflow, which cut the
+  // list off mid-item and hid Custom entirely. A portal with fixed coordinates escapes all of them.
+  const [menuPosition, setMenuPosition] = useState(null);
   const menuRef = useRef(null);
+  const menuPanelRef = useRef(null);
   const [services, setServices] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [inputs, setInputs] = useState({});
@@ -100,14 +105,43 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [service, saving, editing]);
-  // The menu closes on a click elsewhere or Escape, like any dropdown
+  // Anchored to the button: above it when there is room, below it when there is not, and right-aligned
+  // so a wide list never runs off the edge of the screen.
+  const MENU_HEIGHT = 320;
+  const openMenu = () => {
+    const rect = menuRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const above = rect.top > MENU_HEIGHT + 16;
+    setMenuPosition({
+      right: Math.max(8, window.innerWidth - rect.right),
+      ...(above ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }),
+      // Never collapse to nothing in a short viewport: it scrolls instead
+      maxHeight: Math.max(180, Math.min(MENU_HEIGHT, (above ? rect.top : window.innerHeight - rect.bottom) - 16)),
+      minWidth: Math.max(rect.width, 260)
+    });
+    setMenuOpen(true);
+  };
+  // Closes on a click elsewhere or Escape, like any dropdown. The panel is outside this component's
+  // DOM subtree, so a click inside it has to be excused explicitly.
   useEffect(() => {
     if (!menuOpen) return;
-    const onPointerDown = event => { if (!menuRef.current?.contains(event.target)) setMenuOpen(false); };
+    const onPointerDown = event => {
+      if (menuRef.current?.contains(event.target) || menuPanelRef.current?.contains(event.target)) return;
+      setMenuOpen(false);
+    };
     const onKeyDown = event => { if (event.key === 'Escape') setMenuOpen(false); };
+    // Fixed coordinates go stale the moment the page moves, so the menu closes rather than drifting
+    const onReflow = () => setMenuOpen(false);
     document.addEventListener('mousedown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
-    return () => { document.removeEventListener('mousedown', onPointerDown); window.removeEventListener('keydown', onKeyDown); };
+    window.addEventListener('resize', onReflow);
+    window.addEventListener('scroll', onReflow, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onReflow);
+      window.removeEventListener('scroll', onReflow, true);
+    };
   }, [menuOpen]);
   // Quote on the server as soon as the service has what it needs, so vendor cost, XLAND cost,
   // customer price and margin fill in by themselves rather than only after adding the service.
@@ -182,31 +216,35 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     || (requiresQuote && blank(inputs.custom_quote)));
 
   return (
-    <div className={variant === 'menu' ? 'relative' : inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}
+    <div className={variant === 'menu' ? 'inline-block shrink-0' : inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}
       ref={variant === 'menu' ? menuRef : undefined}>
       {variant === 'menu' ? (<>
-        <button type="button" onClick={() => setMenuOpen(open => !open)} disabled={loading || saving}
+        <button type="button" onClick={() => menuOpen ? setMenuOpen(false) : openMenu()} disabled={loading || saving}
           aria-haspopup="menu" aria-expanded={menuOpen}
           className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">
-          <Plus className="h-4 w-4" />Add Service<ChevronDown className="h-4 w-4" />
+          <Plus className="h-4 w-4" />Add Service<ChevronDown className={`h-4 w-4 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
         </button>
-        {/* Opens upward: this button sits at the bottom of its card */}
-        {menuOpen && (
-          <div role="menu" className="absolute bottom-full right-0 z-30 mb-2 max-h-72 w-72 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-            {extraItems.map(item => (
-              <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
-                className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">{item.label}</button>
-            ))}
-            {extraItems.length > 0 && <div className="my-1 border-t border-slate-100" />}
-            <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Configured Services</p>
-            {!propertyType ? <p className="px-3 py-2 text-sm text-slate-500">Select a property type first</p>
-              : available.length ? available.map(item => (
-                <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
-                  className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">{serviceOptionLabel(item, services)}</button>
-              )) : <p className="px-3 py-2 text-sm text-slate-500">No configured services available for this property type.</p>}
-            {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
-          </div>
-        )}
+        {menuOpen && menuPosition && createPortal(
+          <div ref={menuPanelRef} role="menu" style={{ position: 'fixed', ...menuPosition }}
+            className="z-50 flex max-w-[22rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="min-h-0 overflow-y-auto py-1">
+              {extraItems.map(item => (
+                <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <Plus className="h-4 w-4 shrink-0 text-slate-400" />{item.label}
+                </button>
+              ))}
+              {extraItems.length > 0 && <div className="my-1 border-t border-slate-100" />}
+              <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Configured Services</p>
+              {!propertyType ? <p className="px-3 py-2 text-sm text-slate-500">Select a property type first</p>
+                : available.length ? available.map(item => (
+                  <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
+                    className="block w-full truncate px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    title={serviceOptionLabel(item, services)}>{serviceOptionLabel(item, services)}</button>
+                )) : <p className="px-3 py-2 text-sm text-slate-500">No configured services for this property type.</p>}
+              {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
+            </div>
+          </div>, document.body)}
       </>) : (<>
         <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
           {label}
