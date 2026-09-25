@@ -938,6 +938,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const upsertCatalogAddon = (addon) => setSelectedCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId)
     ? prev.map(item => item.addonId === addon.addonId ? addon : item)
     : [...prev, addon]);
+  // In custom mode every service is listed in the Custom Services table, so the Additional
+  // Services table below must not repeat the catalog rows.
+  const tableCatalogAddons = estimateStructure === 'custom' ? [] : selectedCatalogAddons;
   const catalogPropertyType = selectedProperty?.entry_type || selectedProperty?.property_type || directForm.propertyType;
   const renderCatalogPicker = ({ inline = false, variant = 'panel', extraItems = [] } = {}) => (
     <ServiceCatalogPicker apiPath="/api/manager/service-catalog"
@@ -997,6 +1000,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Its Add Service button is the catalog menu, with Custom listed above the configured
               services: one control for both, instead of a second picker underneath. */}
           {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices}
+            extraRows={selectedCatalogAddons} renderExtraActions={catalogRowActions}
             addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
               { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
             ] })} />}
@@ -1072,7 +1076,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
           {/* Package mode shows the configured-service picker on the Estimate Structure row; custom
               mode offers it from the Custom Services table's own Add Service menu */}
-          {(selectedAddons.length > 0 || selectedCatalogAddons.length > 0) && (
+          {(selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
             <div className="border border-blue-200 rounded-xl overflow-hidden">
               <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
                 <span className="text-sm font-semibold text-blue-700">Additional Services</span>
@@ -1104,7 +1108,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       </tr>
                     );
                   })}
-                  {selectedCatalogAddons.map(addon => <tr key={addon.addonId}>
+                  {tableCatalogAddons.map(addon => <tr key={addon.addonId}>
                     <td className="px-3 py-2.5 text-gray-800">{decodeHtml(addon.name)}</td>
                     <td className="px-3 py-2.5 text-gray-600 whitespace-pre-wrap [overflow-wrap:anywhere]">{getServiceDescription(addon) || '—'}</td>
                     <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
@@ -1115,7 +1119,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 <tfoot className="bg-blue-50 border-t border-blue-200">
                   <tr>
                     <td colSpan={4} className="px-5 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                    <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0) + selectedCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0))}</td>
+                    <td className="px-5 py-2.5 text-right font-bold text-blue-700">{formatCurrency(selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0) + tableCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0))}</td>
                   </tr>
                 </tfoot>
               </table>

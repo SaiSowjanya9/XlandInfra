@@ -51,8 +51,14 @@ const complaint = values => {
 
 // `title` is null where the hosting card already names the section, so the heading is never shown
 // twice. `addControl` replaces the default Add Service button, which is how the FP form offers
-// configured services and a blank row from the one dropdown instead of a second picker beside it.
-export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null }) {
+// catalog services and a blank row from the one dropdown instead of a second picker beside it.
+//
+// `extraRows` are services added from the catalog. They are held in the caller's own array, because
+// the estimate payload prices them differently, but they belong in this table: whichever way a
+// service was added, the estimate has one list of them, numbered straight through. They are not
+// edited inline -- their figures come from the server -- so the caller supplies their actions.
+export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null,
+  extraRows = [], renderExtraActions = null }) {
   const [problem, setProblem] = useState('');
   // The row being typed or amended: its index plus the working values, so a half-finished row never
   // reaches the estimate and Cancel can put the original back.
@@ -109,7 +115,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
       {title && (
         <div className="border-b border-gray-200 bg-slate-50 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-800">{title} ({rows.length})</h3>
+          <h3 className="text-sm font-semibold text-gray-800">{title} ({rows.length + extraRows.length})</h3>
         </div>
       )}
       <table className="w-full table-fixed">
@@ -129,7 +135,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {!rows.length && (
+          {!rows.length && !extraRows.length && (
             <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-400">
               No services yet. Use Add Service to add one.
             </td></tr>
@@ -188,11 +194,23 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               </td>
             </tr>
           ))}
+          {/* Catalog services continue the same numbering: one list, however each row got here */}
+          {extraRows.map((row, index) => (
+            <tr key={row.addonId} className="align-top">
+              <td className={`${cell} text-center text-gray-500`}>{rows.length + index + 1}</td>
+              <td className={`${cell} break-words font-medium text-gray-800`}>{row.name}</td>
+              <td className={`${cell} break-words text-xs text-gray-500 ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
+              <td className={cell}>{row.frequency_type}</td>
+              <td className={`${cell} text-center`}>{row.frequency_count}</td>
+              <td className={`${cell} text-right font-medium text-gray-800`}>{currency(row.totalPrice ?? row.price)}</td>
+              <td className="px-3 py-2.5">{renderExtraActions?.(row)}</td>
+            </tr>
+          ))}
         </tbody>
-        {rows.length > 0 && <tfoot>
+        {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className="border-t border-gray-200 bg-slate-50">
-            <td colSpan={5} className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">Total Custom Services</td>
-            <td className="px-3 py-2.5 text-right text-sm font-bold text-gray-900">{currency(customServicesTotal(rows))}</td>
+            <td colSpan={5} className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">Total Services</td>
+            <td className="px-3 py-2.5 text-right text-sm font-bold text-gray-900">{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td />
           </tr>
         </tfoot>}
