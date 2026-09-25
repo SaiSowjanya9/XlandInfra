@@ -72,15 +72,17 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
       <table className="w-full table-fixed">
         <thead>
           {/* Every column is wide enough for its own label on one line -- "Customer Price (₹)" needs
-              the widest, which is why the price column is broader than its figures require. */}
-          <tr className="whitespace-nowrap border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <th className="w-[5%] px-3 py-2.5 text-center">#</th>
-            <th className="w-[19%] px-3 py-2.5 text-left">Service</th>
-            <th className="w-[22%] px-3 py-2.5 text-left">Input / Details</th>
-            <th className="w-[15%] px-3 py-2.5 text-left">Frequency</th>
-            <th className="w-[13%] px-3 py-2.5 text-center">Visits / Year</th>
-            <th className="w-[18%] px-3 py-2.5 text-right">Customer Price (₹)</th>
-            <th className="w-[8%] px-3 py-2.5 text-center">Action</th>
+              the widest, which is why the price column is broader than its figures require. The
+              nowrap sits on each cell rather than being inherited from the row, and the space before
+              "(₹)" is non-breaking, so the heading holds its line even if the utility is missing. */}
+          <tr className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center">#</th>
+            <th className="w-[19%] whitespace-nowrap px-3 py-2.5 text-left">Service</th>
+            <th className="w-[22%] whitespace-nowrap px-3 py-2.5 text-left">Input&nbsp;/&nbsp;Details</th>
+            <th className="w-[15%] whitespace-nowrap px-3 py-2.5 text-left">Frequency</th>
+            <th className="w-[13%] whitespace-nowrap px-3 py-2.5 text-center">Visits&nbsp;/&nbsp;Year</th>
+            <th className="w-[18%] whitespace-nowrap px-3 py-2.5 text-right">Customer&nbsp;Price&nbsp;(₹)</th>
+            <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
