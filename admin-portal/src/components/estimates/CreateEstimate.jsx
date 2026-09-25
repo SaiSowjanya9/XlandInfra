@@ -2519,7 +2519,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                               </option>
                             ))}
                             {propertyType && filteredAddons.length === 0 && (
-                              <option disabled>No add-ons available for {propertyType}</option>
+                              <option disabled>No services available for {propertyType}</option>
                             )}
                             {!propertyType && availableAddons.map(addon => (
                               <option key={addon.addonId} value={addon.addonId}>
@@ -2671,7 +2671,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
 
                 {selectedAddons.length === 0 && (
                   <div className="p-3 text-center text-gray-400 border border-dashed border-blue-200 rounded-lg bg-blue-50/30">
-                    <p className="text-sm">No add-ons selected. Use the dropdown above to add services.</p>
+                    <p className="text-sm">No services selected. Use the dropdown above to add one.</p>
                   </div>
                 )}
               </div>
@@ -3326,7 +3326,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                             </option>
                           ))}
                           {propertyType && filteredAddons.length === 0 && (
-                            <option disabled>No add-ons available for {propertyType}</option>
+                            <option disabled>No services available for {propertyType}</option>
                           )}
                           {!propertyType && availableAddons.map(addon => (
                             <option key={addon.addonId} value={addon.addonId}>
@@ -3473,7 +3473,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
 
               {directSelectedAddons.length === 0 && (
                 <div className="p-3 text-center text-gray-400 border border-dashed border-blue-200 rounded-lg bg-blue-50/30">
-                  <p className="text-sm">No add-ons selected. Use the dropdown above to add services.</p>
+                  <p className="text-sm">No services selected. Use the dropdown above to add one.</p>
                 </div>
               )}
             </div>

@@ -605,7 +605,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await response.json();
       if (response.ok || result.success) { setMessage({ type: 'success', text: 'Service created successfully!' }); setShowModal(false); resetAddonForm(); fetchData(); }
       else setMessage({ type: 'error', text: result.message || 'Operation failed' });
-    } catch (error) { setMessage({ type: 'error', text: 'Failed to create add-on' }); }
+    } catch (error) { setMessage({ type: 'error', text: 'Failed to create service' }); }
   };
 
   const resetAmcForm = () => { setAmcForm({ name: '', description: '', durationMonths: 12, basePrice: 0, services: '', termsConditions: '', hidePricing: true }); };
@@ -741,7 +741,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
-                if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
+                if (filteredAddons.length === 0) return <option disabled>No services available for {propertyType}</option>;
                 return filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>);
               })()}
             </select>
@@ -860,7 +860,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       'Zone': getEstimateZone(e) || '-',
       'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.package_name || '-',
-      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount_amount || 0,
       'GST': e.gst_amount || 0,

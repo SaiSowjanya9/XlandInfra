@@ -925,7 +925,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // Format addons list with descriptions - handle all possible field names
   const addonsHtml = addonsList.map(a => {
     // Get addon name - try all possible field names
-    const addonName = emailText(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Add-on');
+    const addonName = emailText(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Service');
     // Get frequency - try frequency_type, frequencyType, frequency
     const freqType = a.frequency_type || a.frequencyType || a.frequency || '';
     // Get visits/count - try frequency_count, frequencyCount, visits, quantity
@@ -1160,7 +1160,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
               <p style="color: #065f46; margin: 0; font-size: 14px;">
                 <strong>📎 Detailed estimate attached as PDF</strong><br>
-                <span style="font-size: 12px; color: #047857;">Please find the complete breakdown of AMC package services, add-ons, and pricing in the attached PDF document.</span>
+                <span style="font-size: 12px; color: #047857;">Please find the complete breakdown of AMC package services and pricing in the attached PDF document.</span>
               </p>
             </div>
             
@@ -2286,7 +2286,7 @@ const sendInvoiceEmail = async (invoice) => {
 
   // Generate addons HTML
   const addonsHtml = addonItems.map((item, idx) => {
-    const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+    const fullDesc = decodeHtml(item.description || item.name || 'Service');
     let addonName = fullDesc;
     let addonDesc = '-';
     
@@ -2481,15 +2481,15 @@ const sendInvoiceEmail = async (invoice) => {
             </div>
             ` : ''}
             
-            <!-- Add-ons -->
+            <!-- Services -->
             ${addonItems.length > 0 ? `
             <div style="margin-bottom: 20px;">
-              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Add-ons</h3>
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services</h3>
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <thead>
                   <tr style="background: #c9a227;">
                     <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Add-on</th>
+                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
                     <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
                     <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
                     <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>

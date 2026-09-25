@@ -273,7 +273,7 @@ const AMCPackage = ({ showToast }) => {
       {/* Section Header */}
       <div className="mb-2">
         <h2 className="text-xl font-semibold text-blue-600">Property-Based Estimate</h2>
-        <p className="text-sm text-gray-500">Select an AMC Package and customize with add-ons</p>
+        <p className="text-sm text-gray-500">Select an AMC Package and customise with services</p>
       </div>
 
       {/* Estimate Form */}
@@ -438,7 +438,7 @@ const AMCPackage = ({ showToast }) => {
                 }}
                 className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-200 focus:border-green-500 appearance-none bg-white"
               >
-                <option value="">Add Service from Add-ons</option>
+                <option value="">Add Service</option>
                 {availableAddons.map(addon => (
                     <option key={addon.addonId} value={addon.addonId}>
                       {addon.addonId} - {addon.services?.map(s => s.name).join(', ')} (₹{(addon.totalPrice || 0).toLocaleString()})
@@ -458,7 +458,7 @@ const AMCPackage = ({ showToast }) => {
           {/* Selected Add-ons List */}
           {selectedAddons.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600 mb-2">Selected Add-ons:</p>
+              <p className="text-xs font-medium text-gray-600 mb-2">Selected Services:</p>
               {selectedAddons.map((addon) => (
                 <div key={addon.addonId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -475,7 +475,7 @@ const AMCPackage = ({ showToast }) => {
                     <button
                       onClick={() => handleRemoveAddon(addon.addonId)}
                       className="p-1.5 text-red-500 hover:bg-red-100 rounded-md transition-colors"
-                      title="Remove Add-on"
+                      title="Remove service"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -607,7 +607,7 @@ const AMCPackage = ({ showToast }) => {
                         </div>
                         <p className="text-sm text-gray-500">
                           {estimate.customerName && `${estimate.customerName} • `}
-                          {estimate.addons?.length > 0 && `${estimate.addons.length} add-on(s) • `}
+                          {estimate.addons?.length > 0 && `${estimate.addons.length} service(s) • `}
                           {estimate.discount > 0 && `Discount: ₹${estimate.discount}`}
                         </p>
                       </div>

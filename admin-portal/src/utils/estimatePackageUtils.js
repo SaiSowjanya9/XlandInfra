@@ -60,7 +60,7 @@ export const packageMatchesPropertyType = (pkg, type) => {
 
 export const getAddonId = (addon) => (addon?.id ?? addon?.addonId ?? addon?.addon_id)?.toString();
 
-export const getAddonName = (addon) => addon?.service_name || addon?.name || addon?.serviceName || addon?.services?.[0]?.name || 'Add-on Service';
+export const getAddonName = (addon) => addon?.service_name || addon?.name || addon?.serviceName || addon?.services?.[0]?.name || 'Service';
 
 export const getAddonPrice = (addon) => {
   if (typeof addon === 'number') return addon;

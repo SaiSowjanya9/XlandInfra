@@ -1015,7 +1015,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                         <tr style="background: #fef3c7;">
                           <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 40px;">#</th>
-                          <th style="padding: 10px 12px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 120px;">Add-on</th>
+                          <th style="padding: 10px 12px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 120px;">Service</th>
                           <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a;">Description</th>
                           <th style="padding: 10px 12px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 80px;">Frequency</th>
                           <th style="padding: 10px 12px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid #fde68a; width: 50px;">Visits</th>

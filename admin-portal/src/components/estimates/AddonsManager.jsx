@@ -169,7 +169,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       resetForm();
       await loadData();
     } catch (error) {
-      showToast('Failed to create add-on', 'error');
+      showToast('Failed to create service', 'error');
     }
   };
 
@@ -185,7 +185,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   };
 
   const handleDeleteAddon = async (addon) => {
-    if (window.confirm('Are you sure you want to delete this add-on?')) {
+    if (window.confirm('Are you sure you want to delete this service?')) {
       try {
         // Use admin fp-addons endpoint for FP add-ons (have numeric id)
         // Use generic addons endpoint for global add-ons (have string addonId)
@@ -210,7 +210,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         }
       } catch (error) {
         console.error('Delete error:', error);
-        showToast('Failed to delete add-on', 'error');
+        showToast('Failed to delete service', 'error');
       }
     }
   };
@@ -296,7 +296,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       showToast('Service updated successfully');
       loadData(); // Refresh to get updated data
     } catch (error) {
-      showToast('Failed to update add-on', 'error');
+      showToast('Failed to update service', 'error');
     }
   };
 
@@ -486,7 +486,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <textarea
                     value={addonForm.description}
                     onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })}
-                    placeholder="Add notes or description for this add-on..."
+                    placeholder="Add notes or description for this service..."
                     rows={3}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 resize-y"
                     style={{ minHeight: '80px' }}
@@ -503,13 +503,13 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <h3 className="text-lg font-semibold text-gray-800">
                   Services for {PROPERTY_TYPE_OPTIONS.find(t => t.id === selectedPropertyType)?.label}
                 </h3>
-                <p className="text-sm text-gray-500">{filteredAddons.length} add-on(s) available</p>
+                <p className="text-sm text-gray-500">{filteredAddons.length} service(s) available</p>
               </div>
               {filteredAddons.length === 0 ? (
                 <div className="p-12 text-center">
                   <PlusCircle className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500">No add-ons for this property type yet</p>
-                  <p className="text-sm text-gray-400">Create your first add-on above</p>
+                  <p className="text-gray-500">No services for this property type yet</p>
+                  <p className="text-sm text-gray-400">Create your first service above</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
@@ -643,7 +643,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 if (filteredAddons.length === 0) {
                   return (
                     <div className="p-8 text-center">
-                      <p className="text-gray-500">No add-ons found for this property type</p>
+                      <p className="text-gray-500">No services found for this property type</p>
                       <button
                         onClick={() => setFilterPropertyType('all')}
                         className="mt-2 text-sm text-blue-600 hover:underline"

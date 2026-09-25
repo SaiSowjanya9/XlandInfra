@@ -490,7 +490,7 @@ const generatePDF = (data, type, filename) => {
         freqType = freqType.replace(/^\d+x\s*/i, '');
         return [
           String(idx + 1),
-          decodeHtml(String(a.name || a.serviceName || a.service_name || 'Add-on')),
+          decodeHtml(String(a.name || a.serviceName || a.service_name || 'Service')),
           decodeHtml(String(a.description || '-')),
           String(freqType),
           String(freqCount)
@@ -499,7 +499,7 @@ const generatePDF = (data, type, filename) => {
 
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on Service', 'Description', 'Frequency', 'Visits']],
+        head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
         body: addonsBody,
         margin: { left: margin, right: margin },
         styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
@@ -787,7 +787,7 @@ export const exportEstimateToPDF = (estimate) => {
     // Try addons array first
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
       addons = estimate.addons.map(a => ({
-        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
         frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
         description: getServiceDescription(a)
@@ -799,7 +799,7 @@ export const exportEstimateToPDF = (estimate) => {
         const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
         if (Array.isArray(parsed) && parsed.length > 0) {
           addons = parsed.map(a => ({
-            name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+            name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
             frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
             frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
             description: getServiceDescription(a)
@@ -810,7 +810,7 @@ export const exportEstimateToPDF = (estimate) => {
     // Try selectedAddons array (from form)
     if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
       addons = estimate.selectedAddons.map(a => ({
-        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Add-on',
+        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
         frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
         frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
         description: getServiceDescription(a)
@@ -1157,7 +1157,7 @@ export const exportInvoiceToPDF = (invoice) => {
 
     // Extract addons
     const addons = allItems.filter(item => isAddon(item)).map(item => {
-      const fullDesc = decodeHtml(String(item.description || item.name || 'Add-on'));
+      const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
       let addonName = fullDesc;
       let addonDesc = '-';
       
