@@ -720,10 +720,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Switching structure drops what belongs to the other choice, so neither a package price nor a
   // hand-entered row can sit hidden in the total.
+  // Switching structure starts the other choice clean. Anything already added belongs to the
+  // choice being left -- a package, hand-entered rows, or services picked alongside either -- and
+  // carrying it across would put services on the estimate the user never chose in this mode.
   const changeEstimateStructure = (value) => {
     setEstimateStructure(value);
-    if (value === 'custom') setEstimateForm(prev => ({ ...prev, selectedPackage: '' }));
-    else setCustomServices([]);
+    setCustomServices([]);
+    setCatalogAddons([]);
+    setEditingCatalogAddon(null);
+    setEstimateForm(prev => ({ ...prev, selectedAddons: [], ...(value === 'custom' ? { selectedPackage: '' } : {}) }));
   };
   // The package dropdown each form already had, shown on the structure row when a package applies.
   // In package mode the configured-service dropdown joins it there, so both ways of putting a service
