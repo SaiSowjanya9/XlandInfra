@@ -28,6 +28,7 @@ import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import EmptyState from '../components/common/EmptyState';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -2779,18 +2780,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderAllEstimates = () => (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4">
         <div className="flex gap-3">
-          <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
-          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
-          <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
-          <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
+          <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-accent" /><input type="text" placeholder="Search by Property ID, Customer, or Estimate #..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text placeholder:text-warm-muted focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" /></div>
+          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-warm-border text-warm-text bg-white rounded-[10px] flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium"><Filter className="w-4 h-4 text-warm-accent" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+          <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-700 text-white rounded-[10px] flex items-center gap-2 hover:bg-emerald-800 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
+          <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="px-4 py-2 border border-warm-border text-warm-muted bg-white rounded-[10px] flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
           {/* Archive Selected button - only visible when items are selected and not FP Manager */}
           {!isFPManager && selectedEstimates.length > 0 && (
             <button
               onClick={handleBulkArchive}
               disabled={archivingSelected}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center gap-2 hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-red-600 text-white rounded-[10px] flex items-center gap-2 hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
             >
               <Archive className="w-4 h-4" />
               {archivingSelected ? 'Archiving...' : `Archive Selected (${selectedEstimates.length})`}
@@ -2798,11 +2799,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           )}
         </div>
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-warm-border">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label>
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-warm-muted mb-1">Estimate Type</label>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Estimates</option>
                   <option value="property_based">Property Based</option>
                   <option value="direct">Direct</option>
@@ -2810,8 +2811,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-warm-muted mb-1">Status</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Statuses</option>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
@@ -2820,8 +2821,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label>
-                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <label className="block text-xs font-medium text-warm-muted mb-1">Property Category</label>
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Categories</option>
                   <option value="GC">Gated Community</option>
                   <option value="APT">Apartment</option>
@@ -2831,7 +2832,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+                <label className="block text-xs font-medium text-warm-muted mb-1">From Date</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -2847,16 +2848,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       if (parsed) setFilterFromDate(parsed);
                       else if (filterFromDateDisplay && filterFromDateDisplay.length < 10) setFilterFromDateDisplay('');
                     }}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm bg-white" 
+                    className="w-full px-3 py-2 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
                   />
                   <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
                     <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterFromDate(e.target.value); setFilterFromDateDisplay(formatDateIST(e.target.value)); }}} />
-                    <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Calendar className="w-4 h-4 text-warm-accent pointer-events-none" />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+                <label className="block text-xs font-medium text-warm-muted mb-1">To Date</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -2872,11 +2873,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       if (parsed) setFilterToDate(parsed);
                       else if (filterToDateDisplay && filterToDateDisplay.length < 10) setFilterToDateDisplay('');
                     }}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm bg-white" 
+                    className="w-full px-3 py-2 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
                   />
                   <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
                     <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterToDate(e.target.value); setFilterToDateDisplay(formatDateIST(e.target.value)); }}} />
-                    <Calendar className="w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Calendar className="w-4 h-4 text-warm-accent pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -2884,12 +2885,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         )}
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+        {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-warm-accent border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <EmptyState icon={FileText} title="No estimates found" description="Try adjusting your search or filters" /> : (
           <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-warm-section border-b border-warm-border">
                 <tr>
                   {/* Checkbox column - hidden for FP Manager */}
                   {!isFPManager && (
@@ -3800,22 +3801,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
-              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
+    <div className="min-h-screen bg-warm-page">
+      <div className="max-w-7xl mx-auto px-6 pt-6">
+        <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-warm-accent" /></div>
+              <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p></div>
             </div>
-            <div className="flex items-center gap-6">
-              <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
-                <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+            <div className="flex items-center gap-3 shrink-0 overflow-x-auto">
+              <button onClick={loadData} className="p-2.5 bg-white border border-warm-border rounded-[10px] hover:bg-warm-accent-soft transition-colors shrink-0" title="Refresh">
+                <RefreshCw className={`w-5 h-5 text-warm-accent ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAmcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
               {/* The retired add-on count is gone with its list; configured services are counted on their own panel */}
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
+              {[
+                { label: 'Active Estimates', value: filteredEstimates.length, tone: 'bg-warm-success border-[#CFEBDD] text-emerald-700' },
+                { label: 'AMC Packages', value: filteredAmcPackages.length, tone: 'bg-warm-info border-[#D8E2FA] text-indigo-600' },
+                { label: 'Archived', value: archivedEstimates.length, tone: 'bg-warm-warning border-[#F3E2B3] text-amber-700' }
+              ].map(card => (
+                <div key={card.label} className={`shrink-0 w-[108px] h-[62px] rounded-xl border flex flex-col items-center justify-center ${card.tone}`}>
+                  <p className="text-xl font-bold leading-none">{card.value}</p>
+                  <p className="mt-1 text-[11px] font-medium text-warm-muted whitespace-nowrap">{card.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
