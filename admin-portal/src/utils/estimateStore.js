@@ -69,7 +69,11 @@ export const normalizePropertyType = (type) => {
 
 // Frequency types (how often service occurs). 'Other' stays so a package can carry a manual count.
 export const FREQUENCY_TYPES = ['On Request', 'Monthly', 'Every 2 Months', 'Quarterly', 'Every 4 Months',
-  'Half Yearly', 'Yearly', 'Weekly', 'Bi-Weekly', 'Other'];
+  'Half Yearly', 'Yearly', 'Weekly', 'Bi-Weekly', 'Custom'];
+// Custom is the only frequency without an annual visit count of its own, so it is the only one whose
+// Visits / Year is typed rather than fixed. 'Other' is what it used to be called; rows saved under
+// that name keep behaving the same.
+export const isCustomFrequency = frequency => frequency === 'Custom' || frequency === 'Other';
 
 // Auto-calculate No. of visits per year based on frequency
 export const FREQUENCY_COUNT_MAP = {
@@ -85,7 +89,9 @@ export const FREQUENCY_COUNT_MAP = {
   // Retired labels, still resolvable so packages and estimates saved earlier show the right count
   'Half-Yearly': 2,
   'One-time': 1,
-  'Other': null  // Custom - user enters manually
+  // No count of their own: the visits are typed. 'Other' is the retired name for 'Custom'.
+  'Custom': null,
+  'Other': null
 };
 
 // Billing duration options with multipliers

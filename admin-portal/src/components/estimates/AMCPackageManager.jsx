@@ -35,6 +35,7 @@ import {
   BILLING_DURATIONS,
   FREQUENCY_TYPES,
   FREQUENCY_COUNT_MAP,
+  isCustomFrequency,
   seedTestData,
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
@@ -168,8 +169,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        // For 'Other', set to 0 (editable), otherwise use auto-calculated value
-        frequencyCount: autoCount !== null ? autoCount : 0
+        // Custom has no count of its own, so whatever is already typed stays to be edited
+        frequencyCount: autoCount !== null ? autoCount : newRows[index].frequencyCount
       };
     } else if (field === 'frequencyCount') {
       // Ensure frequencyCount is stored as a number - handle 0 explicitly
@@ -788,11 +789,11 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             type="number"
                             min="0"
                             value={row.frequencyCount}
-                            readOnly={row.frequencyType !== 'Other'}
+                            readOnly={!isCustomFrequency(row.frequencyType)}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                            title={row.frequencyType === 'Other' ? 'Enter custom visit count' : `Auto-set to ${FREQUENCY_COUNT_MAP[row.frequencyType] || 1} visits`}
-                            placeholder={row.frequencyType === 'Other' ? 'Enter visits' : ''}
-                            className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                            title={isCustomFrequency(row.frequencyType) ? 'Enter the visit count' : `${row.frequencyType} means ${FREQUENCY_COUNT_MAP[row.frequencyType] ?? 1} visits a year. Choose Custom to set your own.`}
+                            placeholder={isCustomFrequency(row.frequencyType) ? 'Enter visits' : ''}
+                            className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                             />
                         </div>
                         
@@ -1079,9 +1080,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           type="number"
                           min="0"
                           value={row.frequencyCount}
-                          readOnly={row.frequencyType !== 'Other'}
+                          readOnly={!isCustomFrequency(row.frequencyType)}
                           onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                          className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                          className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                         />
                       </div>
                       <div className="sm:col-span-1 flex justify-end sm:justify-center">

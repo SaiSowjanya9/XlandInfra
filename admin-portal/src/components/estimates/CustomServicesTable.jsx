@@ -8,6 +8,12 @@ import { FREQUENCY_OPTIONS } from './AddServicePage';
 // trailing a blank one, and a row can be edited in place or removed.
 const currency = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BLANK = { name: '', description: '', frequency_type: 'Monthly', frequency_count: 12, price: '' };
+// Every frequency carries its own annual visit count, so Visits / Year is read-only once one is
+// picked -- a schedule and a visit count that disagree is not a thing an estimate should be able to
+// say. Custom is the deliberate exception: it has no count of its own, so the figure is typed.
+const CUSTOM_FREQUENCY = 'Custom';
+const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: CUSTOM_FREQUENCY, label: 'Custom', defaultVisits: null }];
+const isCustomFrequency = frequency => frequency === CUSTOM_FREQUENCY || frequency === 'Other';
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
 // A row being typed reads as part of the table, not as a form dropped into it: no box at rest, a
 // faint one on hover so the cells are still discoverable, and a clear one only while focused.
@@ -81,7 +87,9 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
   const setEditField = (field, value) => {
     setProblem('');
     setEdit(prev => ({ ...prev, values: { ...prev.values, [field]: value,
-      ...(field === 'frequency_type' ? { frequency_count: visitsFor(value) } : {}) } }));
+      // Switching to Custom keeps the figure already there to be edited; any other frequency
+      // replaces it with the count that frequency means.
+      ...(field === 'frequency_type' && !isCustomFrequency(value) ? { frequency_count: visitsFor(value) } : {}) } }));
   };
   const saveEdit = () => {
     const issue = complaint(edit.values);
@@ -155,12 +163,21 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className="px-3 py-2.5">
                 <select value={edit.values.frequency_type} onChange={event => setEditField('frequency_type', event.target.value)}
                   aria-label="Frequency" className={inputClass}>
-                  {FREQUENCY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {FREQUENCY_CHOICES.map(option => (
+                    <option key={option.value} value={option.value}
+                      style={option.value === CUSTOM_FREQUENCY ? { backgroundColor: '#eff6ff', color: '#1d4ed8' } : undefined}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </td>
               <td className="px-3 py-2.5">
+                {/* Fixed by the frequency, unless the frequency is Custom */}
                 <input type="number" min="0" max="366" step="1" value={edit.values.frequency_count} onKeyDown={onKeyDown}
-                  onChange={event => setEditField('frequency_count', event.target.value)} aria-label="Visits per year" className={`${numberClass} text-center`} />
+                  readOnly={!isCustomFrequency(edit.values.frequency_type)}
+                  title={isCustomFrequency(edit.values.frequency_type) ? undefined : `${edit.values.frequency_type} means ${edit.values.frequency_count} visits a year. Choose Custom to set your own.`}
+                  onChange={event => setEditField('frequency_count', event.target.value)} aria-label="Visits per year"
+                  className={`${numberClass} text-center ${isCustomFrequency(edit.values.frequency_type) ? '' : 'cursor-not-allowed text-gray-500 hover:border-transparent'}`} />
               </td>
               <td className="px-3 py-2.5">
                 <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}

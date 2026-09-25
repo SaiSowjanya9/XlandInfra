@@ -5,7 +5,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
-  getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP
+  getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency
 } from '../../utils/estimateStore';
 
 // Property Type options for Add-ons (simple style matching other sections)
@@ -442,10 +442,10 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       type="number"
                       min="0"
                       value={addonForm.frequencyCount}
-                      readOnly={addonForm.frequencyType !== 'Other'}
+                      readOnly={!isCustomFrequency(addonForm.frequencyType)}
                       onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })}
-                      placeholder={addonForm.frequencyType === 'Other' ? 'Enter' : ''}
-                      className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${addonForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                      placeholder={isCustomFrequency(addonForm.frequencyType) ? 'Enter' : ''}
+                      className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${isCustomFrequency(addonForm.frequencyType) ? 'bg-white focus:ring-2 focus:ring-stone-200 focus:border-stone-400' : 'bg-gray-100 cursor-not-allowed'}`}
                     />
                   </div>
 
@@ -814,10 +814,10 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     type="number"
                     min="0"
                     value={editForm.frequencyCount}
-                    readOnly={editForm.frequencyType !== 'Other'}
+                    readOnly={!isCustomFrequency(editForm.frequencyType)}
                     onChange={(e) => setEditForm({ ...editForm, frequencyCount: e.target.value })}
-                    placeholder={editForm.frequencyType === 'Other' ? 'Enter' : ''}
-                    className={`w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none ${editForm.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-stone-500' : 'bg-gray-100 cursor-not-allowed'}`}
+                    placeholder={isCustomFrequency(editForm.frequencyType) ? 'Enter' : ''}
+                    className={`w-full px-4 py-2.5 border border-gray-200 rounded-xl outline-none ${isCustomFrequency(editForm.frequencyType) ? 'bg-white focus:ring-2 focus:ring-stone-500' : 'bg-gray-100 cursor-not-allowed'}`}
                   />
                 </div>
               </div>
