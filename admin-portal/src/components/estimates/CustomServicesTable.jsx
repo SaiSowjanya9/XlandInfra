@@ -133,18 +133,20 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
       )}
       <table className="w-full table-fixed">
         <thead>
-          {/* Every column is wide enough for its own label on one line -- "Customer Price (₹)" needs
-              the widest, which is why the price column is broader than its figures require. The
-              nowrap sits on each cell rather than being inherited from the row, and the space before
-              "(₹)" is non-breaking, so the heading holds its line even if the utility is missing. */}
+          {/* The table is fixed-width and often sits in a narrow form column, so a heading that
+              does not fit wraps onto a second line instead of running into its neighbour -- nowrap
+              on all seven had "Visits / Year" and "Customer Price (₹)" touching. Each long label
+              breaks after its first word and no further: the non-breaking spaces hold "/ Details",
+              "/ Year" and "Price (₹)" together, and align-bottom keeps one- and two-line headings
+              on the same baseline. */}
           <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
-            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center">#</th>
-            <th className="w-[19%] whitespace-nowrap px-3 py-2.5 text-left">Service</th>
-            <th className="w-[21%] whitespace-nowrap px-3 py-2.5 text-left">Input&nbsp;/&nbsp;Details</th>
-            <th className="w-[14%] whitespace-nowrap px-3 py-2.5 text-left">Frequency</th>
-            <th className="w-[12%] whitespace-nowrap px-3 py-2.5 text-center">Visits&nbsp;/&nbsp;Year</th>
-            <th className="w-[18%] whitespace-nowrap px-3 py-2.5 text-right">Customer&nbsp;Price&nbsp;(₹)</th>
-            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center">Action</th>
+            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center align-bottom">#</th>
+            <th className="w-[19%] whitespace-nowrap px-3 py-2.5 text-left align-bottom">Service</th>
+            <th className="w-[21%] px-3 py-2.5 text-left align-bottom">Input /&nbsp;Details</th>
+            <th className="w-[14%] whitespace-nowrap px-3 py-2.5 text-left align-bottom">Frequency</th>
+            <th className="w-[12%] px-3 py-2.5 text-center align-bottom">Visits /&nbsp;Year</th>
+            <th className="w-[18%] px-3 py-2.5 text-right align-bottom">Customer Price&nbsp;(₹)</th>
+            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center align-bottom">Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
