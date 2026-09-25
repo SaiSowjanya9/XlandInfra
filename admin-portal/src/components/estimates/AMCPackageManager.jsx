@@ -20,7 +20,9 @@ import {
 
 // Decode HTML entities (e.g., &#x2F; -> /)
 const decodeHtml = (html) => {
-  if (!html || typeof html !== 'string') return html;
+  if (html == null) return '';
+  // Never hand a non-string to JSX: React throws #31 and the whole page goes blank
+  if (typeof html !== 'string') return typeof html === 'number' || typeof html === 'boolean' ? String(html) : '';
   const txt = document.createElement('textarea');
   txt.innerHTML = html;
   return txt.value;

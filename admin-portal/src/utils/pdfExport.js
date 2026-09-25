@@ -12,7 +12,9 @@ const debug = (...args) => isDev && console.log(...args);
 // Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
 // Runs multiple times to handle multiple levels of encoding (e.g., &amp;amp;amp; -> &)
 const decodeHtml = (html) => {
-  if (!html || typeof html !== 'string') return html || '';
+  // A non-string would print as [object Object] in a customer PDF; render nothing instead
+  if (html == null || typeof html === 'object') return '';
+  if (typeof html !== 'string') return String(html);
   
   const decodeOnce = (str) => {
     const entities = {

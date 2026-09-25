@@ -22,7 +22,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
-  if (!html || typeof html !== 'string') return html;
+  if (html == null) return '';
+  // Never hand a non-string to JSX: React throws #31 and the whole page goes blank
+  if (typeof html !== 'string') return typeof html === 'number' || typeof html === 'boolean' ? String(html) : '';
   const txt = document.createElement('textarea');
   txt.innerHTML = html;
   return txt.value;
