@@ -11,7 +11,7 @@ const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import {
-  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
+  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency,
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
@@ -3081,7 +3081,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const rows = [...amcForm.serviceRows]; 
     if (f === 'frequencyType') { 
       const auto = FREQUENCY_COUNT_MAP[v]; 
-      rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : 0 }; 
+      // Custom has no count of its own, so whatever is already typed stays to be edited
+      rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : rows[i].frequencyCount }; 
     } else if (f === 'frequencyCount') {
       const parsed = parseInt(v);
       rows[i][f] = v === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
@@ -3497,10 +3498,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               type="number"
                               min="0"
                               value={row.frequencyCount}
-                              readOnly={row.frequencyType !== 'Other'}
+                              readOnly={!isCustomFrequency(row.frequencyType)}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                              placeholder={row.frequencyType === 'Other' ? 'Enter' : ''}
-                              className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${row.frequencyType === 'Other' ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                              placeholder={isCustomFrequency(row.frequencyType) ? 'Enter' : ''}
+                              className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                             />
                           </div>
                           
