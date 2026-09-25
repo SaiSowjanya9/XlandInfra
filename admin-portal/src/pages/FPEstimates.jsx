@@ -686,6 +686,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   useEffect(() => { setCatalogAddons([]); }, [createPropertyType, estimateType]);
   const catalogAddonsTotal = catalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
   const removeCatalogAddon = (addonId) => setCatalogAddons(prev => prev.filter(addon => addon.addonId !== addonId));
+  // The row being re-priced, or null. Editing reopens the picker's dialog on it.
+  const [editingCatalogAddon, setEditingCatalogAddon] = useState(null);
+  // Adding and editing both come back through here: the rebuilt row keeps its addonId, so an edit
+  // replaces the row in place instead of appending a second copy of the same service.
+  const upsertCatalogAddon = (addon) => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId)
+    ? prev.map(item => item.addonId === addon.addonId ? addon : item)
+    : [...prev, addon]);
 
   const renderCatalogPicker = () => (
     <ServiceCatalogPicker
@@ -693,8 +700,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       apiPath={FP_CATALOG_API}
       propertyType={createPropertyType}
       selectedAddons={catalogAddons}
-      onAdd={addon => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
+      onAdd={upsertCatalogAddon}
+      editing={editingCatalogAddon}
+      onEditClose={() => setEditingCatalogAddon(null)}
     />
+  );
+  // Shared by both service tables so the row actions cannot drift apart
+  const catalogRowActions = (addon) => (
+    <div className="flex items-center justify-center gap-1">
+      <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></button>
+      <button type="button" onClick={() => removeCatalogAddon(addon.addonId)} title={`Remove ${addon.name}`} aria-label={`Remove ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
   );
 
   // Switching structure drops what belongs to the other choice, so neither a package price nor a
@@ -1664,9 +1682,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
-                        <td className="px-3 py-2.5 text-center">
-                          <button onClick={() => removeCatalogAddon(addon.addonId)} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
-                        </td>
+                        <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2028,9 +2044,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <button onClick={() => removeCatalogAddon(addon.addonId)} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
-                          </td>
+                          <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
                         </tr>
                       ))}
                     </tbody>
