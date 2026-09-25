@@ -3795,8 +3795,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   return (
     // Everything on this page renders on the warm skin, including the shared catalog screens
     <EstimateThemeProvider value="warm">
-    <div className="min-h-screen bg-warm-page">
-      <div className="max-w-7xl mx-auto px-6 pt-6">
+    {/* The layout already pads the main area and paints it warm, so the page adds no inset of its own */}
+    <div className="bg-warm-page">
+      <div className="max-w-7xl mx-auto">
         <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -3822,7 +3823,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
+      <div className="max-w-7xl mx-auto mt-6">{renderContent()}</div>
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-[10px] shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
       
       {/* View Estimate Modal */}

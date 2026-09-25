@@ -67,6 +67,9 @@ const FPLayout = ({ admin, onLogout, children }) => {
     return (first + last).toUpperCase() || 'FP';
   };
 
+  // Screens already moved onto the warm beige system. Add a prefix here as each one is converted.
+  const isWarmSkinRoute = location.pathname.startsWith('/fp/estimates');
+
   const [workOrdersOpen, setWorkOrdersOpen] = useState(
     location.pathname.startsWith('/fp/work-orders')
   );
@@ -391,7 +394,10 @@ const FPLayout = ({ admin, onLogout, children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    // The main area is padded, so a page cannot paint the edges itself: a warm page inside that
+    // padding left a cold frame around it. Routes on the warm skin get the warm page colour here,
+    // and the rest keep the original slate gradient until they are converted too.
+    <div className={`min-h-screen ${isWarmSkinRoute ? 'bg-warm-page' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
 
       {/* Mobile Header */}
       <header className="lg:hidden bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/50 sticky top-0 z-40">
