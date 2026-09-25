@@ -15,22 +15,24 @@ const Sparkle = ({ className, size = 14 }) => (
   </svg>
 );
 
-// Warm empty state shared by the estimates panels: soft icon tile, sparkles and waves
+// Warm empty state shared by the estimates panels: soft icon tile, sparkles and waves.
+// The tile is 112px with a 48px glyph, which is the proportion the reference design uses -- the
+// panel reads as deliberately empty rather than as a small message lost in a large card.
 const EmptyState = ({ icon: Icon, title, description, action, className = '' }) => (
   <div className={`relative overflow-hidden px-6 py-16 text-center ${className}`}>
     <WavePattern />
     <div className="relative">
-      <div className="relative mx-auto mb-5 h-24 w-24">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-warm-accent-soft">
-          {Icon && <Icon className="h-10 w-10 text-warm-accent" strokeWidth={1.5} />}
+      <div className="relative mx-auto mb-6 h-28 w-28">
+        <div className="flex h-28 w-28 items-center justify-center rounded-full bg-warm-accent-soft">
+          {Icon && <Icon className="h-12 w-12 text-warm-accent" strokeWidth={1.5} />}
         </div>
-        <Sparkle className="-right-1 top-1" size={16} />
-        <Sparkle className="right-3 -top-3" size={10} />
-        <Sparkle className="-left-2 bottom-4" size={12} />
+        <Sparkle className="-right-1 top-2" size={18} />
+        <Sparkle className="right-4 -top-3" size={11} />
+        <Sparkle className="-left-3 bottom-5" size={14} />
       </div>
-      <p className="text-base font-semibold text-warm-text">{title}</p>
-      {description && <p className="mt-1 text-sm text-warm-muted">{description}</p>}
-      {action && <div className="mt-5 flex justify-center">{action}</div>}
+      <p className="text-lg font-semibold text-warm-text">{title}</p>
+      {description && <p className="mt-1.5 text-sm text-warm-muted">{description}</p>}
+      {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
   </div>
 );

@@ -3,6 +3,7 @@ import { ChevronDown, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { primaryInputLabel } from '../../utils/estimatePackageUtils';
 import AddServicePage, { methodLabel, propertyTypeLabel, PROPERTY_TYPES } from './AddServicePage';
+import { useSkinClasses } from '../../utils/estimateTheme';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Paise only when there are paise, so a column of rates stays narrow enough to read at a glance
@@ -54,6 +55,7 @@ const rateSummary = (service, factor = 1) => {
 export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '/api/admin/service-catalog',
   scoped = false, scopeLabel, embedded = false, showWhenEmpty = false,
   canEdit = service => admin?.role === 'admin' }) {
+  const sk = useSkinClasses();
   const [editingService, setEditingService] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,132 +139,132 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
   const chipCount = active => `ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`;
   // No card around the list: an open table has the page's full width, which is what lets every
   // column show at once.
-  return <section className="min-w-0">
+  return <section className={sk("min-w-0")}>
     {/* The title and the property type filter with its counts, so the whole list can be narrowed
         from where it is introduced. The filter keeps its own row: the subtitle changes length with
         the selection, and sharing a row with it made the chips jump on every click. */}
-    <div className="border-b border-slate-200 pb-3">
+    <div className={sk("border-b border-slate-200 pb-3")}>
       <div>
-        <h3 className="font-semibold text-slate-800">All Services</h3>
+        <h3 className={sk("font-semibold text-slate-800")}>All Services</h3>
         {/* The count follows the filter, so the heading always describes the rows underneath it */}
-        <p className="mt-1 text-xs text-slate-500">
+        <p className={sk("mt-1 text-xs text-slate-500")}>
           {loading ? 'Loading...'
             : propertyFilter === 'all' ? `${services.length} service(s)`
             : `${shown.length} of ${services.length} service(s) apply to ${propertyTypeLabel(propertyFilter)}`} · Pricing configurations for estimates
         </p>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className={sk("mt-3 flex flex-wrap items-center gap-2")}>
         {/* A service is counted under every property type it applies to */}
         {availableTypes.length > 1 && <>
-          <button type="button" onClick={() => setPropertyFilter('all')} className={chip(propertyFilter === 'all')}>
-            All<span className={chipCount(propertyFilter === 'all')}>{services.length}</span>
+          <button type="button" onClick={() => setPropertyFilter('all')} className={sk(chip(propertyFilter === 'all'))}>
+            All<span className={sk(chipCount(propertyFilter === 'all'))}>{services.length}</span>
           </button>
           {availableTypes.map(type => (
-            <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={chip(propertyFilter === type.id)}
+            <button key={type.id} type="button" onClick={() => setPropertyFilter(type.id)} className={sk(chip(propertyFilter === type.id))}
               title={`${type.count} of ${services.length} service(s) apply to ${type.label}`}>
-              {type.label}<span className={chipCount(propertyFilter === type.id)}>{type.count}</span>
+              {type.label}<span className={sk(chipCount(propertyFilter === type.id))}>{type.count}</span>
             </button>
           ))}
         </>}
         {/* No create action here: this list sits on the Add Service screen, which is where a service
             is created, so the button is not repeated. */}
-        <button type="button" aria-label="Refresh service catalog" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-lg border border-slate-200 p-2 text-slate-500"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+        <button type="button" aria-label="Refresh service catalog" onClick={() => setRefresh(value => value + 1)} disabled={loading} className={sk("rounded-lg border border-slate-200 p-2 text-slate-500")}><RefreshCw className={sk(`h-4 w-4 ${loading ? 'animate-spin' : ''}`)} /></button>
       </div>
     </div>
-    {error ? <p role="alert" className="py-4 text-sm text-red-600">{error}</p>
-      : !loading && !services.length ? <p className="py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No services yet. Use Add Service to create one.' : 'No services are available in your scope yet.'}</p>
-      : !shown.length ? <p className="py-6 text-sm text-slate-500">No services apply to {propertyTypeLabel(propertyFilter)}.</p>
+    {error ? <p role="alert" className={sk("py-4 text-sm text-red-600")}>{error}</p>
+      : !loading && !services.length ? <p className={sk("py-6 text-sm text-slate-500")}>{admin?.role === 'admin' ? 'No services yet. Use Add Service to create one.' : 'No services are available in your scope yet.'}</p>
+      : !shown.length ? <p className={sk("py-6 text-sm text-slate-500")}>No services apply to {propertyTypeLabel(propertyFilter)}.</p>
       : <div>
         {/* Fixed proportional widths: the table can never grow past the page, so there is no
             sideways scrollbar and every column stays visible at once. */}
-        <table className="w-full table-fixed text-left text-[11px]">
+        <table className={sk("w-full table-fixed text-left text-[11px]")}>
           {/* Every heading stays on one line, so the row keeps a single height */}
-          <thead className="whitespace-nowrap bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+          <thead className={sk("whitespace-nowrap bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500")}>
             <tr>
-              <th className="w-[3%] px-1.5 py-2.5 text-center">#</th>
-              <th className="w-[10%] px-1.5 py-2.5">Service</th>
-              <th className="w-[9%] px-1.5 py-2.5">Description</th>
-              <th className="w-[10%] px-1.5 py-2.5">Method</th>
-              <th className="w-[8%] px-1.5 py-2.5">Input</th>
-              <th className="w-[7%] px-1.5 py-2.5">Frequency</th>
-              <th className="w-[5%] px-1.5 py-2.5 text-center">Visits</th>
-              <th className="w-[9%] px-1.5 py-2.5">Vendor Cost</th>
-              <th className="w-[7%] px-1.5 py-2.5 text-center">Markup %</th>
-              <th className="w-[9%] px-1.5 py-2.5">XLAND Margin</th>
-              <th className="w-[10%] px-1.5 py-2.5">Customer Price</th>
-              <th className="w-[7%] px-1.5 py-2.5">Property</th>
-              <th className="w-[6%] px-1.5 py-2.5 text-center">Action</th>
+              <th className={sk("w-[3%] px-1.5 py-2.5 text-center")}>#</th>
+              <th className={sk("w-[10%] px-1.5 py-2.5")}>Service</th>
+              <th className={sk("w-[9%] px-1.5 py-2.5")}>Description</th>
+              <th className={sk("w-[10%] px-1.5 py-2.5")}>Method</th>
+              <th className={sk("w-[8%] px-1.5 py-2.5")}>Input</th>
+              <th className={sk("w-[7%] px-1.5 py-2.5")}>Frequency</th>
+              <th className={sk("w-[5%] px-1.5 py-2.5 text-center")}>Visits</th>
+              <th className={sk("w-[9%] px-1.5 py-2.5")}>Vendor Cost</th>
+              <th className={sk("w-[7%] px-1.5 py-2.5 text-center")}>Markup %</th>
+              <th className={sk("w-[9%] px-1.5 py-2.5")}>XLAND Margin</th>
+              <th className={sk("w-[10%] px-1.5 py-2.5")}>Customer Price</th>
+              <th className={sk("w-[7%] px-1.5 py-2.5")}>Property</th>
+              <th className={sk("w-[6%] px-1.5 py-2.5 text-center")}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className={sk("divide-y divide-slate-100")}>
             {shown.map((service, index) => <Fragment key={service.id}>
-            <tr className="hover:bg-slate-50/60">
-              <td className={`${cell} text-center text-slate-400`}>{index + 1}</td>
-              <td className={cell}>
-                <p className="font-semibold text-slate-900" title={service.service_name}>{service.service_name}</p>
+            <tr className={sk("hover:bg-slate-50/60")}>
+              <td className={sk(`${cell} text-center text-slate-400`)}>{index + 1}</td>
+              <td className={sk(cell)}>
+                <p className={sk("font-semibold text-slate-900")} title={service.service_name}>{service.service_name}</p>
               </td>
-              <td className={`${cell} text-slate-500`} title={service.description || ''}><p className="line-clamp-2">{service.description || '—'}</p></td>
+              <td className={sk(`${cell} text-slate-500`)} title={service.description || ''}><p className={sk("line-clamp-2")}>{service.description || '—'}</p></td>
               {/* Capacity Slab prices from a table of its own, so the row opens to show every slab */}
-              <td className={cell}>
+              <td className={sk(cell)}>
                 {service.pricing_method === 'capacity_slab' && service.capacity_slabs?.length
                   ? <button type="button" onClick={() => setOpenSlabs(current => current === service.id ? null : service.id)}
                       aria-expanded={openSlabs === service.id} aria-label={`${openSlabs === service.id ? 'Hide' : 'Show'} slabs for ${service.service_name}`}
-                      className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-1 font-medium hover:brightness-95 ${methodStyle(service.pricing_method)}`}>
+                      className={sk(`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-1 font-medium hover:brightness-95 ${methodStyle(service.pricing_method)}`)}>
                       {methodLabel(service.pricing_method)}
-                      <ChevronDown className={`h-3 w-3 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={sk(`h-3 w-3 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`)} />
                     </button>
-                  : <span className={`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`}>{methodLabel(service.pricing_method)}</span>}
+                  : <span className={sk(`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`)}>{methodLabel(service.pricing_method)}</span>}
               </td>
               {/* The input only: the vendor rate has its own column rather than sitting underneath */}
-              <td className={cell}><p className="line-clamp-2">{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
-              <td className={cell}>{service.default_frequency}</td>
-              <td className={`${nowrap} text-center`}>{service.default_visits_per_year}</td>
-              <td className={cell}>{rateSummary(service)}</td>
-              <td className={`${nowrap} text-center`}>{service.default_markup_percentage}%</td>
+              <td className={sk(cell)}><p className={sk("line-clamp-2")}>{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
+              <td className={sk(cell)}>{service.default_frequency}</td>
+              <td className={sk(`${nowrap} text-center`)}>{service.default_visits_per_year}</td>
+              <td className={sk(cell)}>{rateSummary(service)}</td>
+              <td className={sk(`${nowrap} text-center`)}>{service.default_markup_percentage}%</td>
               {/* Both derived from the vendor rate: XLAND takes the markup, the customer pays the sum */}
-              <td className={cell}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={`${cell} font-semibold text-emerald-700`}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
-              <td className={cell} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
+              <td className={sk(cell)}>{rateSummary(service, Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={sk(`${cell} font-semibold text-emerald-700`)}>{rateSummary(service, 1 + Number(service.default_markup_percentage || 0) / 100)}</td>
+              <td className={sk(cell)} title={service.applicable_property_types.map(propertyTypeLabel).join(', ')}>
                 {service.applicable_property_types.map(type => PROPERTY_CODES[type] || propertyTypeLabel(type)).join(', ')}
               </td>
-              <td className={`${nowrap} text-center`}>
-                {canEdit(service) ? <div className="flex items-center justify-center gap-0.5">
+              <td className={sk(`${nowrap} text-center`)}>
+                {canEdit(service) ? <div className={sk("flex items-center justify-center gap-0.5")}>
                   <button type="button" onClick={() => setEditingService(service)} title="Edit service" aria-label={`Edit ${service.service_name}`}
-                    className="rounded p-1 text-blue-600 hover:bg-blue-50"><Pencil className="h-3.5 w-3.5" /></button>
+                    className={sk("rounded p-1 text-blue-600 hover:bg-blue-50")}><Pencil className={sk("h-3.5 w-3.5")} /></button>
                   <button type="button" onClick={() => setConfirmDelete(service)} disabled={deletingId === service.id} title="Delete service" aria-label={`Delete ${service.service_name}`}
-                    className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
-                </div> : <span className="text-slate-300">—</span>}
+                    className={sk("rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-50")}><Trash2 className={sk("h-3.5 w-3.5")} /></button>
+                </div> : <span className={sk("text-slate-300")}>—</span>}
               </td>
             </tr>
-            {openSlabs === service.id && <tr className="bg-slate-50/70">
-              <td colSpan={13} className="px-6 py-4">
-                <p className="mb-2 font-semibold text-slate-700">Capacity slabs ({service.capacity_slabs.length})</p>
-                <table className="w-full text-left text-[11px]">
-                  <thead className="text-slate-500">
+            {openSlabs === service.id && <tr className={sk("bg-slate-50/70")}>
+              <td colSpan={13} className={sk("px-6 py-4")}>
+                <p className={sk("mb-2 font-semibold text-slate-700")}>Capacity slabs ({service.capacity_slabs.length})</p>
+                <table className={sk("w-full text-left text-[11px]")}>
+                  <thead className={sk("text-slate-500")}>
                     <tr>
-                      <th className="py-1.5 pr-4">Slab ({service.unit})</th>
-                      <th className="py-1.5 pr-4">Vendor Rate / Visit</th>
-                      <th className="py-1.5 pr-4">XLAND Margin / Visit</th>
-                      <th className="py-1.5 pr-4">Customer Price / Visit</th>
-                      <th className="py-1.5 pr-4">Frequency</th>
-                      <th className="py-1.5 text-center">Visits / Year</th>
+                      <th className={sk("py-1.5 pr-4")}>Slab ({service.unit})</th>
+                      <th className={sk("py-1.5 pr-4")}>Vendor Rate / Visit</th>
+                      <th className={sk("py-1.5 pr-4")}>XLAND Margin / Visit</th>
+                      <th className={sk("py-1.5 pr-4")}>Customer Price / Visit</th>
+                      <th className={sk("py-1.5 pr-4")}>Frequency</th>
+                      <th className={sk("py-1.5 text-center")}>Visits / Year</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className={sk("divide-y divide-slate-200")}>
                     {service.capacity_slabs.map((slab, slabIndex) => {
                       const markup = Number(service.default_markup_percentage || 0) / 100;
                       const rate = Number(slab.vendorRate);
-                      return <tr key={slabIndex} className="text-slate-700">
-                        <td className="py-1.5 pr-4">{slab.capacityFrom}{slab.capacityTo == null ? ' and above' : `–${slab.capacityTo}`}</td>
+                      return <tr key={slabIndex} className={sk("text-slate-700")}>
+                        <td className={sk("py-1.5 pr-4")}>{slab.capacityFrom}{slab.capacityTo == null ? ' and above' : `–${slab.capacityTo}`}</td>
                         {slab.isCustomQuote
-                          ? <td className="py-1.5 pr-4 text-amber-700" colSpan={3}>Custom quote required</td>
+                          ? <td className={sk("py-1.5 pr-4 text-amber-700")} colSpan={3}>Custom quote required</td>
                           : <>
-                            <td className="py-1.5 pr-4">{money(rate)}</td>
-                            <td className="py-1.5 pr-4">{money(rate * markup)}</td>
-                            <td className="py-1.5 pr-4 font-medium text-slate-900">{money(rate * (1 + markup))}</td>
+                            <td className={sk("py-1.5 pr-4")}>{money(rate)}</td>
+                            <td className={sk("py-1.5 pr-4")}>{money(rate * markup)}</td>
+                            <td className={sk("py-1.5 pr-4 font-medium text-slate-900")}>{money(rate * (1 + markup))}</td>
                           </>}
-                        <td className="py-1.5 pr-4">{slab.defaultFrequency ?? service.default_frequency}</td>
-                        <td className="py-1.5 text-center">{slab.defaultVisitsPerYear ?? service.default_visits_per_year}</td>
+                        <td className={sk("py-1.5 pr-4")}>{slab.defaultFrequency ?? service.default_frequency}</td>
+                        <td className={sk("py-1.5 text-center")}>{slab.defaultVisitsPerYear ?? service.default_visits_per_year}</td>
                       </tr>;
                     })}
                   </tbody>
@@ -275,20 +277,20 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       </div>}
 
     {/* Confirmation lives in the page, so deleting never hands over to a browser dialog */}
-    {confirmDelete && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-service-title">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50"><Trash2 className="h-5 w-5 text-red-500" /></span>
-          <div className="min-w-0">
-            <h3 id="delete-service-title" className="text-base font-semibold text-slate-900">Delete “{confirmDelete.service_name}”?</h3>
-            <p className="mt-2 text-sm text-slate-600">Estimates already saved with this service keep their pricing, but it can no longer be added to a new estimate. This cannot be undone.</p>
+    {confirmDelete && <div className={sk("fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4")} role="dialog" aria-modal="true" aria-labelledby="delete-service-title">
+      <div className={sk("w-full max-w-md rounded-xl bg-white p-6 shadow-xl")}>
+        <div className={sk("flex items-start gap-3")}>
+          <span className={sk("flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50")}><Trash2 className={sk("h-5 w-5 text-red-500")} /></span>
+          <div className={sk("min-w-0")}>
+            <h3 id="delete-service-title" className={sk("text-base font-semibold text-slate-900")}>Delete “{confirmDelete.service_name}”?</h3>
+            <p className={sk("mt-2 text-sm text-slate-600")}>Estimates already saved with this service keep their pricing, but it can no longer be added to a new estimate. This cannot be undone.</p>
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className={sk("mt-6 flex justify-end gap-3")}>
           <button type="button" onClick={() => setConfirmDelete(null)} disabled={deletingId === confirmDelete.id}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+            className={sk("rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50")}>Cancel</button>
           <button type="button" onClick={() => deleteService(confirmDelete)} disabled={deletingId === confirmDelete.id}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+            className={sk("rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50")}>
             {deletingId === confirmDelete.id ? 'Deleting...' : 'Delete Service'}
           </button>
         </div>

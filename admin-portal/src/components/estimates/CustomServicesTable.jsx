@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
+import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
 // services: there is no configured rate behind them, so the customer price is entered directly and
@@ -16,10 +17,10 @@ const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: 'Custom', label: 'Cust
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
 // A row being typed reads as part of the table, not as a form dropped into it: no box at rest, a
 // faint one on hover so the cells are still discoverable, and a clear one only while focused.
-const inputClass = 'w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100';
+const inlineInput = skin => `w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm focus:outline-none focus:ring-2 ${skin.inlineField}`;
 // Spinners add a second box inside the cell, which is the clutter this row is meant to be free of
-const numberClass = `${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`;
-const iconButton = 'rounded-lg p-1.5 text-gray-400 transition-colors focus:outline-none focus:ring-2';
+const noSpinner = '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+const iconButton = 'rounded-lg p-1.5 transition-colors focus:outline-none focus:ring-2';
 
 // The row an estimate carries. It keeps the shape of a configured-service add-on so the existing
 // service tables, view modals and PDFs render it without knowing where it came from, and `services`
@@ -63,7 +64,12 @@ const complaint = values => {
 // service was added, the estimate has one list of them, numbered straight through. They are not
 // edited inline -- their figures come from the server -- so the caller supplies their actions.
 export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null,
-  extraRows = [], renderExtraActions = null }) {
+  extraRows = [], renderExtraActions = null, theme }) {
+  // The hook runs every render; an explicit theme prop still wins over the page's own
+  const pageTheme = useEstimateTheme();
+  const skin = estimateSkin(theme ?? pageTheme);
+  const inputClass = inlineInput(skin);
+  const numberClass = `${inputClass} ${noSpinner}`;
   const [problem, setProblem] = useState('');
   // The row being typed or amended: its index plus the working values, so a half-finished row never
   // reaches the estimate and Cancel can put the original back.
@@ -116,13 +122,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
     saveEdit();
   };
   const addBlankRow = () => onChange([...rows, blankCustomService()]);
-  const cell = 'px-3 py-2.5 text-sm text-gray-700';
+  const cell = `px-3 py-2.5 text-sm ${skin.text}`;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+    <div className={`overflow-hidden rounded-xl border ${skin.panel}`}>
       {title && (
-        <div className="border-b border-gray-200 bg-slate-50 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-800">{title} ({rows.length + extraRows.length})</h3>
+        <div className={`border-b px-5 py-3 ${skin.panelHead}`}>
+          <h3 className={`text-sm font-semibold ${skin.heading}`}>{title} ({rows.length + extraRows.length})</h3>
         </div>
       )}
       <table className="w-full table-fixed">
@@ -131,7 +137,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               the widest, which is why the price column is broader than its figures require. The
               nowrap sits on each cell rather than being inherited from the row, and the space before
               "(₹)" is non-breaking, so the heading holds its line even if the utility is missing. */}
-          <tr className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
             <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center">#</th>
             <th className="w-[19%] whitespace-nowrap px-3 py-2.5 text-left">Service</th>
             <th className="w-[21%] whitespace-nowrap px-3 py-2.5 text-left">Input&nbsp;/&nbsp;Details</th>
@@ -141,16 +147,16 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
             <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className={`divide-y ${skin.rowDivide}`}>
           {!rows.length && !extraRows.length && (
-            <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-400">
+            <tr><td colSpan={7} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
               No services yet. Use Add Service to add one.
             </td></tr>
           )}
           {rows.map((row, index) => edit?.index === index ? (
             // Being typed or amended: the fields, with confirm and cancel in the Action cell
-            <tr key={row.addonId} className="bg-blue-50/40 align-top">
-              <td className={`${cell} text-center text-gray-500`}>{index + 1}</td>
+            <tr key={row.addonId} className={`align-top ${skin.editingRow}`}>
+              <td className={`${cell} text-center ${skin.muted}`}>{index + 1}</td>
               <td className="px-3 py-2.5">
                 <input autoFocus value={edit.values.name} onChange={event => setEditField('name', event.target.value)} onKeyDown={onKeyDown}
                   placeholder="Service name" maxLength={150} aria-label="Service name" className={inputClass} />
@@ -175,7 +181,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                   readOnly={!isCustomFrequency(edit.values.frequency_type)}
                   title={isCustomFrequency(edit.values.frequency_type) ? undefined : `${edit.values.frequency_type} means ${edit.values.frequency_count} visits a year. Choose Custom to set your own.`}
                   onChange={event => setEditField('frequency_count', event.target.value)} aria-label="Visits per year"
-                  className={`${numberClass} text-center ${isCustomFrequency(edit.values.frequency_type) ? '' : 'cursor-not-allowed text-gray-500 hover:border-transparent'}`} />
+                  className={`${numberClass} text-center ${isCustomFrequency(edit.values.frequency_type) ? '' : `cursor-not-allowed hover:border-transparent ${skin.muted}`}`} />
               </td>
               <td className="px-3 py-2.5">
                 <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
@@ -184,27 +190,27 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className="px-3 py-2.5">
                 <div className="flex items-center justify-center gap-1">
                   <button type="button" onClick={saveEdit} title="Save service" aria-label="Save service"
-                    className={`${iconButton} hover:bg-emerald-50 hover:text-emerald-600 focus:ring-emerald-100`}><Check className="h-4 w-4" /></button>
+                    className={`${iconButton} ${skin.faint} hover:bg-emerald-50 hover:text-emerald-600 focus:ring-emerald-100`}><Check className="h-4 w-4" /></button>
                   <button type="button" onClick={cancelEdit} title="Discard service" aria-label="Discard service"
-                    className={`${iconButton} hover:bg-gray-100 hover:text-gray-600 focus:ring-gray-200`}><X className="h-4 w-4" /></button>
+                    className={`${iconButton} ${skin.faint} ${skin.iconEdit}`}><X className="h-4 w-4" /></button>
                 </div>
               </td>
             </tr>
           ) : (
             <tr key={row.addonId} className="align-top">
-              <td className={`${cell} text-center text-gray-500`}>{index + 1}</td>
-              <td className={`${cell} break-words font-medium text-gray-800`}>{row.name}</td>
-              <td className={`${cell} break-words text-xs text-gray-500 ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
+              <td className={`${cell} text-center ${skin.muted}`}>{index + 1}</td>
+              <td className={`${cell} break-words font-medium ${skin.strong}`}>{row.name}</td>
+              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
-              <td className={`${cell} text-right font-medium text-gray-800`}>{currency(row.totalPrice ?? row.price)}</td>
+              <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5">
                 <div className="flex items-center justify-center gap-1">
                   <button type="button" onClick={() => startEdit(index)} title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`}
-                    className={`${iconButton} hover:bg-blue-50 hover:text-blue-600 focus:ring-blue-100`}><Pencil className="h-4 w-4" /></button>
+                    className={`${iconButton} ${skin.faint} ${skin.iconEdit}`}><Pencil className="h-4 w-4" /></button>
                   <button type="button" onClick={() => removeRow(index)} title={`Remove ${row.name}`} aria-label={`Remove ${row.name}`}
-                    className={`${iconButton} hover:bg-red-50 hover:text-red-600 focus:ring-red-100`}><Trash2 className="h-4 w-4" /></button>
+                    className={`${iconButton} ${skin.faint} hover:bg-red-50 hover:text-red-600 focus:ring-red-100`}><Trash2 className="h-4 w-4" /></button>
                 </div>
               </td>
             </tr>
@@ -212,29 +218,29 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           {/* Catalog services continue the same numbering: one list, however each row got here */}
           {extraRows.map((row, index) => (
             <tr key={row.addonId} className="align-top">
-              <td className={`${cell} text-center text-gray-500`}>{rows.length + index + 1}</td>
-              <td className={`${cell} break-words font-medium text-gray-800`}>{row.name}</td>
-              <td className={`${cell} break-words text-xs text-gray-500 ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
+              <td className={`${cell} text-center ${skin.muted}`}>{rows.length + index + 1}</td>
+              <td className={`${cell} break-words font-medium ${skin.strong}`}>{row.name}</td>
+              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
-              <td className={`${cell} text-right font-medium text-gray-800`}>{currency(row.totalPrice ?? row.price)}</td>
+              <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               <td className="px-3 py-2.5">{renderExtraActions?.(row)}</td>
             </tr>
           ))}
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
-          <tr className="border-t border-gray-200 bg-slate-50">
-            <td colSpan={5} className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">Total Services</td>
-            <td className="px-3 py-2.5 text-right text-sm font-bold text-gray-900">{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
+          <tr className={`border-t ${skin.panelFoot}`}>
+            <td colSpan={5} className={`px-3 py-2.5 text-right text-sm font-semibold ${skin.text}`}>Total Services</td>
+            <td className={`px-3 py-2.5 text-right text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td />
           </tr>
         </tfoot>}
       </table>
-      <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-slate-50 px-5 py-3">
+      <div className={`flex items-center justify-between gap-3 border-t px-5 py-3 ${skin.panelFoot}`}>
         <p role={problem ? 'alert' : undefined} className={`text-xs ${problem ? 'text-red-600' : 'text-transparent'}`}>{problem || '\u00a0'}</p>
         {addControl || (
           <button type="button" onClick={addBlankRow}
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${skin.primary}`}>
             <Plus className="h-4 w-4" />Add Service
           </button>
         )}

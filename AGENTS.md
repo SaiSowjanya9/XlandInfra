@@ -82,6 +82,39 @@ fetch('/api/manager/dashboard', { ... });
 
 - Keep dashboard summary cards equal in width and height in a single row, with consistent icon sizing, spacing, and label/count alignment. On narrow screens, scroll the card row instead of wrapping cards or overflowing the page. Keep date, notification, and refresh controls compact on the row below.
 
+## Warm Beige UI System
+
+The FP portal is being moved onto a warm beige skin, one page at a time (All Estimates and
+Create Estimate are converted). Every other portal still uses the original slate/blue look, so
+nothing here may be applied globally.
+
+- The palette lives in `admin-portal/tailwind.config.js` as the `warm` colors — `page #FAF7F2`,
+  `section #FFF9EE`, `border #EADFCF`, `accent #D4A574`, `accent-hover #C69250`,
+  `accent-soft #FEF3E2`, `text #1F2937`, `muted #6B7280`, `success #ECFDF5`, `info #EEF4FF`,
+  `warning #FEF3C7` — plus `shadow-warm` and `shadow-warm-hover`. Use these tokens, not raw hexes.
+- Cards are `rounded-xl` (12px) with `border-warm-border shadow-warm`; inputs and buttons are
+  `rounded-[10px]`.
+- The tan accent carries icons, highlights, active states and totals. **Solid calls to action stay
+  green** (`bg-emerald-700 hover:bg-emerald-800`): white text on the tan accent does not meet
+  contrast.
+- Empty states use `components/common/EmptyState.jsx` — the accent-soft icon tile, sparkles and
+  bottom wave pattern. Pass a Lucide icon, title and description rather than rolling a new one.
+- Components shared with other portals must never be restyled in place, or Manager, Coordinator,
+  Supervisor, Executive and Admin change with them. `admin-portal/src/utils/estimateTheme.js` offers
+  two ways in, both of which render byte-identical markup when no warm theme is in play:
+  - `estimateSkin(theme)` for semantic keys (`panel`, `heading`, `muted`, `primary`, `field` …).
+    Used by `EstimateStructure`, `CustomServicesTable`, `EstimateTerms`, `ServiceCatalogPicker`,
+    `PackageServicePicker`, `ManpowerFields` and `common/AutocompleteInput`. Add any key you need to
+    both skins, and keep the default value identical to the class the component already had.
+  - `useSkinClasses()` for a whole screen: every `className` value is wrapped in `sk(...)`, and the
+    warm class map rewrites the classes at render time. Used by the two large catalog screens,
+    `AddServicePage` and `ServiceCatalogList`.
+- A page announces its skin once with `<EstimateThemeProvider value="warm">` (see `FPEstimates`);
+  everything below it, including dialogs rendered through portals, picks it up. An explicit `theme`
+  prop still wins. Pages with no provider get the original look.
+- Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
+  are how a state is read at a glance, and the warm palette has a single accent.
+
 ## Customer Category UI
 
 - Property Management and Add Customer category panels must use the shared `components/common/CategorySelection.jsx` design across portals. Keep equal white cards, matching icons and spacing, teal Residential styling, and the disabled Commercial "Coming Soon" badge. Preserve each page's existing category-selection handler.
