@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, X } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
@@ -26,7 +26,13 @@ const INPUTS = {
 // rather than a delete and a re-add. `onAdd` receives the rebuilt row under the same addonId, so the
 // caller upserts rather than appends.
 const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog',
-  label = 'Configured Service', editing = null, onEditClose = () => {}, inline = false }) => {
+  label = 'Configured Service', editing = null, onEditClose = () => {}, inline = false,
+  // 'menu' replaces the dropdown panel with an Add Service button that opens the same list, so the
+  // custom-services table can offer configured services and a blank row from one control instead of
+  // repeating the picker in a panel of its own. `extraItems` are listed above the services.
+  variant = 'panel', extraItems = [] }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const [services, setServices] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [inputs, setInputs] = useState({});
@@ -94,6 +100,15 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [service, saving, editing]);
+  // The menu closes on a click elsewhere or Escape, like any dropdown
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = event => { if (!menuRef.current?.contains(event.target)) setMenuOpen(false); };
+    const onKeyDown = event => { if (event.key === 'Escape') setMenuOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('mousedown', onPointerDown); window.removeEventListener('keydown', onKeyDown); };
+  }, [menuOpen]);
   // Quote on the server as soon as the service has what it needs, so vendor cost, XLAND cost,
   // customer price and margin fill in by themselves rather than only after adding the service.
   useEffect(() => {
@@ -156,6 +171,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       if (!controller.signal.aborted) setSaving(false);
     }
   };
+  // A service already on the estimate is not offered again; it is changed through its own Edit action
+  const available = services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id));
   const input = service && INPUTS[service.pricing_method];
   // OK stays out of reach until the service has the figures it is priced from, so a row is never
   // added at a price the server could not work out.
@@ -165,18 +182,44 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     || (requiresQuote && blank(inputs.custom_quote)));
 
   return (
-    <div className={inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}>
-      <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
-        {label}
-        <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
-          className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'}`}>
-          <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : '+ Select service to add'}</option>
-          {services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id)).map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
-        </select>
-      </label>
-      {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}
-      {/* A load failure belongs on the panel; anything the dialog raises is shown inside it */}
-      {error && !service && <p role="alert" className="mt-3 text-sm text-red-600">{error} {!services.length && <button type="button" onClick={() => setAttempt(value => value + 1)} className="font-semibold underline">Retry</button>}</p>}
+    <div className={variant === 'menu' ? 'relative' : inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}
+      ref={variant === 'menu' ? menuRef : undefined}>
+      {variant === 'menu' ? (<>
+        <button type="button" onClick={() => setMenuOpen(open => !open)} disabled={loading || saving}
+          aria-haspopup="menu" aria-expanded={menuOpen}
+          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">
+          <Plus className="h-4 w-4" />Add Service<ChevronDown className="h-4 w-4" />
+        </button>
+        {/* Opens upward: this button sits at the bottom of its card */}
+        {menuOpen && (
+          <div role="menu" className="absolute bottom-full right-0 z-30 mb-2 max-h-72 w-72 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+            {extraItems.map(item => (
+              <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
+                className="block w-full px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">{item.label}</button>
+            ))}
+            {extraItems.length > 0 && <div className="my-1 border-t border-slate-100" />}
+            <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Configured Services</p>
+            {!propertyType ? <p className="px-3 py-2 text-sm text-slate-500">Select a property type first</p>
+              : available.length ? available.map(item => (
+                <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
+                  className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">{serviceOptionLabel(item, services)}</button>
+              )) : <p className="px-3 py-2 text-sm text-slate-500">No configured services available for this property type.</p>}
+            {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
+          </div>
+        )}
+      </>) : (<>
+        <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
+          {label}
+          <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
+            className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'}`}>
+            <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : '+ Select service to add'}</option>
+            {available.map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
+          </select>
+        </label>
+        {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}
+        {/* A load failure belongs on the panel; anything the dialog raises is shown inside it */}
+        {error && !service && <p role="alert" className="mt-3 text-sm text-red-600">{error} {!services.length && <button type="button" onClick={() => setAttempt(value => value + 1)} className="font-semibold underline">Retry</button>}</p>}
+      </>)}
 
       {/* Selecting a service opens its details here rather than expanding the panel: the estimate
           gets its row only once OK is pressed, so a service being looked at is never half-added. */}

@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
 // services: there is no configured rate behind them, so the customer price is entered directly and
-// no vendor cost, method or margin is shown. The table always ends in an empty row, which is where
-// a service is entered; Add Service commits it and leaves a fresh empty row behind. A committed row
-// can be edited in place or removed.
+// no vendor cost, method or margin is shown. Rows are added on request rather than the table always
+// trailing a blank one, and a row can be edited in place or removed.
 const currency = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BLANK = { name: '', description: '', frequency_type: 'Monthly', frequency_count: 12, price: '' };
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
-// An entry or edit row reads as part of the table, not as a form dropped into it: no box at rest, a
+// A row being typed reads as part of the table, not as a form dropped into it: no box at rest, a
 // faint one on hover so the cells are still discoverable, and a clear one only while focused.
 const inputClass = 'w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100';
 // Spinners add a second box inside the cell, which is the clutter this row is meant to be free of
@@ -34,10 +33,15 @@ export const buildCustomService = (values, addonId) => {
   };
 };
 
+// The empty row the Custom option drops in. It has no name, which is how the table knows to open it
+// for typing, so a caller only has to append one.
+export const blankCustomService = () => buildCustomService(BLANK);
+const isBlank = row => String(row?.name || '').trim() === '';
+
 export const customServicesTotal = rows => (rows || []).reduce((sum, row) => sum + (Number(row.totalPrice ?? row.price) || 0), 0);
 
-// What a row must have before it can go on the estimate. Reported on the press rather than by
-// disabling the button, which read as broken rather than as waiting for input.
+// What a row must have before it counts. Reported when it is confirmed rather than by disabling the
+// control, which read as broken rather than as waiting for input.
 const complaint = values => {
   if (String(values.name || '').trim() === '') return 'Enter a service name.';
   const price = String(values.price ?? '').trim();
@@ -45,38 +49,33 @@ const complaint = values => {
   return '';
 };
 
-// `title` is null where the hosting card already names the section, so the heading is never shown twice.
-export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services' }) {
-  const [draft, setDraft] = useState(BLANK);
+// `title` is null where the hosting card already names the section, so the heading is never shown
+// twice. `addControl` replaces the default Add Service button, which is how the FP form offers
+// configured services and a blank row from the one dropdown instead of a second picker beside it.
+export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null }) {
   const [problem, setProblem] = useState('');
-  // The committed row being amended: its index plus the values being typed, so a half-finished edit
-  // never reaches the estimate and Cancel can put the original back.
+  // The row being typed or amended: its index plus the working values, so a half-finished row never
+  // reaches the estimate and Cancel can put the original back.
   const [edit, setEdit] = useState(null);
 
-  // Picking a frequency fills the annual visits from the same table the catalog uses; it stays editable
-  const withFrequency = (values, field, value) => ({ ...values, [field]: value,
-    ...(field === 'frequency_type' ? { frequency_count: visitsFor(value) } : {}) });
-  const setField = (field, value) => {
-    setProblem('');
-    setDraft(prev => withFrequency(prev, field, value));
-  };
-  const setEditField = (field, value) => {
-    setProblem('');
-    setEdit(prev => ({ ...prev, values: withFrequency(prev.values, field, value) }));
-  };
-
-  const addDraft = () => {
-    const issue = complaint(draft);
-    if (issue) return setProblem(issue);
-    onChange([...rows, buildCustomService(draft)]);
-    setDraft(BLANK);
-    setProblem('');
-  };
   const startEdit = index => {
     const row = rows[index];
     setProblem('');
     setEdit({ index, values: { name: row.name, description: row.description, frequency_type: row.frequency_type,
-      frequency_count: row.frequency_count, price: row.totalPrice ?? row.price } });
+      frequency_count: row.frequency_count, price: isBlank(row) ? '' : (row.totalPrice ?? row.price) } });
+  };
+  // A row arrives blank from the Custom option, so it opens for typing without another click
+  useEffect(() => {
+    if (edit) return;
+    const index = rows.findIndex(isBlank);
+    if (index >= 0) startEdit(index);
+  }, [rows, edit]);
+
+  // Picking a frequency fills the annual visits from the same table the catalog uses; it stays editable
+  const setEditField = (field, value) => {
+    setProblem('');
+    setEdit(prev => ({ ...prev, values: { ...prev.values, [field]: value,
+      ...(field === 'frequency_type' ? { frequency_count: visitsFor(value) } : {}) } }));
   };
   const saveEdit = () => {
     const issue = complaint(edit.values);
@@ -90,42 +89,21 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
     setProblem('');
     onChange(rows.filter((_, i) => i !== index));
   };
-  // Enter commits the row like the button does, rather than submitting the estimate around it
-  const commitOnEnter = commit => event => {
+  // Abandoning a row that was never filled in takes it back out rather than leaving it empty
+  const cancelEdit = () => {
+    const index = edit.index;
+    setEdit(null);
+    setProblem('');
+    if (isBlank(rows[index])) onChange(rows.filter((_, i) => i !== index));
+  };
+  // Enter confirms the row, rather than submitting the estimate around it
+  const onKeyDown = event => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    commit();
+    saveEdit();
   };
+  const addBlankRow = () => onChange([...rows, blankCustomService()]);
   const cell = 'px-3 py-2.5 text-sm text-gray-700';
-
-  // The entry row and an edit row hold the same six fields, so they are described once
-  const fields = (values, onField, commit) => {
-    const onKeyDown = commitOnEnter(commit);
-    return (<>
-      <td className="px-3 py-2.5">
-        <input value={values.name} onChange={event => onField('name', event.target.value)} onKeyDown={onKeyDown}
-          placeholder="Service name" maxLength={150} aria-label="Service name" className={inputClass} />
-      </td>
-      <td className="px-3 py-2.5">
-        <input value={values.description} onChange={event => onField('description', event.target.value)} onKeyDown={onKeyDown}
-          placeholder="e.g. 4 Lifts, 15,000 Sq Ft" maxLength={255} aria-label="Input / details" className={inputClass} />
-      </td>
-      <td className="px-3 py-2.5">
-        <select value={values.frequency_type} onChange={event => onField('frequency_type', event.target.value)}
-          aria-label="Frequency" className={inputClass}>
-          {FREQUENCY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-      </td>
-      <td className="px-3 py-2.5">
-        <input type="number" min="0" max="366" step="1" value={values.frequency_count} onKeyDown={onKeyDown}
-          onChange={event => onField('frequency_count', event.target.value)} aria-label="Visits per year" className={`${numberClass} text-center`} />
-      </td>
-      <td className="px-3 py-2.5">
-        <input type="number" min="0" step="0.01" value={values.price} onChange={event => onField('price', event.target.value)} onKeyDown={onKeyDown}
-          placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
-      </td>
-    </>);
-  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -151,16 +129,42 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
+          {!rows.length && (
+            <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-400">
+              No services yet. Use Add Service to add a configured service or a custom one.
+            </td></tr>
+          )}
           {rows.map((row, index) => edit?.index === index ? (
-            // Being amended: the same fields as the entry row, with confirm and cancel in its place
+            // Being typed or amended: the fields, with confirm and cancel in the Action cell
             <tr key={row.addonId} className="bg-blue-50/40 align-top">
               <td className={`${cell} text-center text-gray-500`}>{index + 1}</td>
-              {fields(edit.values, setEditField, saveEdit)}
+              <td className="px-3 py-2.5">
+                <input autoFocus value={edit.values.name} onChange={event => setEditField('name', event.target.value)} onKeyDown={onKeyDown}
+                  placeholder="Service name" maxLength={150} aria-label="Service name" className={inputClass} />
+              </td>
+              <td className="px-3 py-2.5">
+                <input value={edit.values.description} onChange={event => setEditField('description', event.target.value)} onKeyDown={onKeyDown}
+                  placeholder="e.g. 4 Lifts, 15,000 Sq Ft" maxLength={255} aria-label="Input / details" className={inputClass} />
+              </td>
+              <td className="px-3 py-2.5">
+                <select value={edit.values.frequency_type} onChange={event => setEditField('frequency_type', event.target.value)}
+                  aria-label="Frequency" className={inputClass}>
+                  {FREQUENCY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </td>
+              <td className="px-3 py-2.5">
+                <input type="number" min="0" max="366" step="1" value={edit.values.frequency_count} onKeyDown={onKeyDown}
+                  onChange={event => setEditField('frequency_count', event.target.value)} aria-label="Visits per year" className={`${numberClass} text-center`} />
+              </td>
+              <td className="px-3 py-2.5">
+                <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
+                  placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
+              </td>
               <td className="px-3 py-2.5">
                 <div className="flex items-center justify-center gap-1">
-                  <button type="button" onClick={saveEdit} title="Save changes" aria-label="Save changes"
+                  <button type="button" onClick={saveEdit} title="Save service" aria-label="Save service"
                     className={`${iconButton} hover:bg-emerald-50 hover:text-emerald-600 focus:ring-emerald-100`}><Check className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => { setEdit(null); setProblem(''); }} title="Cancel editing" aria-label="Cancel editing"
+                  <button type="button" onClick={cancelEdit} title="Discard service" aria-label="Discard service"
                     className={`${iconButton} hover:bg-gray-100 hover:text-gray-600 focus:ring-gray-200`}><X className="h-4 w-4" /></button>
                 </div>
               </td>
@@ -173,28 +177,17 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               <td className={`${cell} text-right font-medium text-gray-800`}>{currency(row.totalPrice ?? row.price)}</td>
-              {/* Every committed row can be amended or taken back off the estimate */}
+              {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5">
                 <div className="flex items-center justify-center gap-1">
-                  <button type="button" onClick={() => startEdit(index)} title={`Edit ${row.name || 'service'}`} aria-label={`Edit ${row.name || 'service'}`}
+                  <button type="button" onClick={() => startEdit(index)} title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`}
                     className={`${iconButton} hover:bg-blue-50 hover:text-blue-600 focus:ring-blue-100`}><Pencil className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => removeRow(index)} title={`Remove ${row.name || 'service'}`} aria-label={`Remove ${row.name || 'service'}`}
+                  <button type="button" onClick={() => removeRow(index)} title={`Remove ${row.name}`} aria-label={`Remove ${row.name}`}
                     className={`${iconButton} hover:bg-red-50 hover:text-red-600 focus:ring-red-100`}><Trash2 className="h-4 w-4" /></button>
                 </div>
               </td>
             </tr>
           ))}
-          {/* The empty row: the estimate's services are entered here, one at a time. It is marked with
-              a plus rather than the next row number, which read as a service that had been added
-              already. Committing is the Add Service button below, which has room for its label. */}
-          <tr className="bg-slate-50/60 align-top">
-            <td className={`${cell} text-center`}>
-              <Plus className="mx-auto h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-              <span className="sr-only">New service</span>
-            </td>
-            {fields(draft, setField, addDraft)}
-            <td className="px-3 py-2.5" />
-          </tr>
         </tbody>
         {rows.length > 0 && <tfoot>
           <tr className="border-t border-gray-200 bg-slate-50">
@@ -204,14 +197,14 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           </tr>
         </tfoot>}
       </table>
-      {/* One Add Service control for this table. It is never disabled; pressing it with the row
-          incomplete says what is missing instead. */}
       <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-slate-50 px-5 py-3">
         <p role={problem ? 'alert' : undefined} className={`text-xs ${problem ? 'text-red-600' : 'text-transparent'}`}>{problem || '\u00a0'}</p>
-        <button type="button" onClick={addDraft}
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-          <Plus className="h-4 w-4" />Add Service
-        </button>
+        {addControl || (
+          <button type="button" onClick={addBlankRow}
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            <Plus className="h-4 w-4" />Add Service
+          </button>
+        )}
       </div>
     </div>
   );
