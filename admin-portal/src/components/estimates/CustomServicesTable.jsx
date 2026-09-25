@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
+import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
 // services: there is no configured rate behind them, so the customer price is entered directly and
@@ -11,9 +12,7 @@ const BLANK = { name: '', description: '', frequency_type: 'Monthly', frequency_
 // Every frequency carries its own annual visit count, so Visits / Year is read-only once one is
 // picked -- a schedule and a visit count that disagree is not a thing an estimate should be able to
 // say. Custom is the deliberate exception: it has no count of its own, so the figure is typed.
-const CUSTOM_FREQUENCY = 'Custom';
-const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: CUSTOM_FREQUENCY, label: 'Custom', defaultVisits: null }];
-const isCustomFrequency = frequency => frequency === CUSTOM_FREQUENCY || frequency === 'Other';
+const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: 'Custom', label: 'Custom', defaultVisits: null }];
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
 // A row being typed reads as part of the table, not as a form dropped into it: no box at rest, a
 // faint one on hover so the cells are still discoverable, and a clear one only while focused.
@@ -164,8 +163,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                 <select value={edit.values.frequency_type} onChange={event => setEditField('frequency_type', event.target.value)}
                   aria-label="Frequency" className={inputClass}>
                   {FREQUENCY_CHOICES.map(option => (
-                    <option key={option.value} value={option.value}
-                      style={option.value === CUSTOM_FREQUENCY ? { backgroundColor: '#eff6ff', color: '#1d4ed8' } : undefined}>
+                    <option key={option.value} value={option.value} style={frequencyOptionStyle(option.value)}>
                       {option.label}
                     </option>
                   ))}

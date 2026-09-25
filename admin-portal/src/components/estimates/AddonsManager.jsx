@@ -5,7 +5,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
-  getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency
+  getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle
 } from '../../utils/estimateStore';
 
 // Property Type options for Add-ons (simple style matching other sections)
@@ -428,7 +428,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-stone-200 focus:border-stone-400 bg-white appearance-none"
                       >
                         {FREQUENCY_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                          <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -804,7 +804,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-stone-500 outline-none"
                   >
                     {FREQUENCY_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
+                      <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                     ))}
                   </select>
                 </div>

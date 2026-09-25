@@ -17,7 +17,7 @@ import { EstimateInput, PropertyIdInput } from './EstimateFields';
 import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
-  getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP,
+  getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle,
   getAMCPackages, getAddons, fetchAMCPackages, fetchAddons, seedTestData, getAMCPackageByPropertyType,
   migratePackagesToServiceRows, getAMCPackagesByPropertyType
 } from '../../utils/estimateStore';
@@ -2574,7 +2574,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white"
                         >
                           {FREQUENCY_TYPES.map(type => (
-                            <option key={type} value={type}>{type}</option>
+                            <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                           ))}
                         </select>
                       </div>
@@ -2585,8 +2585,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                           type="number"
                           min="0"
                           value={customAddonForm.frequencyCount}
-                          readOnly
-                          className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
+                          onChange={(e) => handleCustomAddonChange('frequencyCount', e.target.value)}
+                          readOnly={!isCustomFrequency(customAddonForm.frequencyType)}
+                          className={`w-full px-3 py-2 text-sm border border-gray-200 rounded-md text-center ${isCustomFrequency(customAddonForm.frequencyType) ? 'bg-white focus:ring-2 focus:ring-blue-200' : 'bg-gray-100 cursor-not-allowed'}`}
                         />
                       </div>
                       {/* Price */}
@@ -3378,7 +3379,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-400 bg-white"
                       >
                         {FREQUENCY_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                          <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                         ))}
                       </select>
                     </div>
@@ -3388,8 +3389,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         type="number"
                         min="0"
                         value={directCustomAddonForm.frequencyCount}
-                        readOnly
-                        className="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-100 rounded-md text-center cursor-not-allowed"
+                        onChange={(e) => handleDirectCustomAddonChange('frequencyCount', e.target.value)}
+                        readOnly={!isCustomFrequency(directCustomAddonForm.frequencyType)}
+                        className={`w-full px-3 py-2 text-sm border border-gray-200 rounded-md text-center ${isCustomFrequency(directCustomAddonForm.frequencyType) ? 'bg-white focus:ring-2 focus:ring-blue-200' : 'bg-gray-100 cursor-not-allowed'}`}
                       />
                     </div>
                     <div className="lg:col-span-2">

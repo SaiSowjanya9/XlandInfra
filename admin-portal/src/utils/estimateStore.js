@@ -74,6 +74,11 @@ export const FREQUENCY_TYPES = ['On Request', 'Monthly', 'Every 2 Months', 'Quar
 // Visits / Year is typed rather than fixed. 'Other' is what it used to be called; rows saved under
 // that name keep behaving the same.
 export const isCustomFrequency = frequency => frequency === 'Custom' || frequency === 'Other';
+// Custom is set apart in the list because it is the one choice that changes what the row lets you
+// do: it unlocks Visits / Year. A native <option> takes inline colours, not Tailwind classes.
+export const frequencyOptionStyle = frequency => isCustomFrequency(frequency)
+  ? { backgroundColor: '#eff6ff', color: '#1d4ed8' }
+  : undefined;
 
 // Auto-calculate No. of visits per year based on frequency
 export const FREQUENCY_COUNT_MAP = {

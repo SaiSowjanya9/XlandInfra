@@ -34,6 +34,7 @@ import {
   deleteAMCPackage,
   BILLING_DURATIONS,
   FREQUENCY_TYPES,
+  frequencyOptionStyle,
   FREQUENCY_COUNT_MAP,
   isCustomFrequency,
   seedTestData,
@@ -777,7 +778,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                           >
                             {FREQUENCY_TYPES.map(type => (
-                              <option key={type} value={type}>{type}</option>
+                              <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                             ))}
                           </select>
                           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -1070,7 +1071,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                         >
                           {FREQUENCY_TYPES.map(type => (
-                            <option key={type} value={type}>{type}</option>
+                            <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                           ))}
                         </select>
                       </div>
