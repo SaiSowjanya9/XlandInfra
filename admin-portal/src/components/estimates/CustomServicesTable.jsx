@@ -71,14 +71,15 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
       )}
       <table className="w-full table-fixed">
         <thead>
-          <tr className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          {/* Every column is wide enough for its own label on one line -- "Customer Price (₹)" needs
+              the widest, which is why the price column is broader than its figures require. */}
+          <tr className="whitespace-nowrap border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <th className="w-[5%] px-3 py-2.5 text-center">#</th>
-            <th className="w-[21%] px-3 py-2.5 text-left">Service</th>
-            <th className="w-[26%] px-3 py-2.5 text-left">Input / Details</th>
+            <th className="w-[19%] px-3 py-2.5 text-left">Service</th>
+            <th className="w-[22%] px-3 py-2.5 text-left">Input / Details</th>
             <th className="w-[15%] px-3 py-2.5 text-left">Frequency</th>
-            <th className="w-[11%] px-3 py-2.5 text-center">Visits / Year</th>
-            <th className="w-[14%] px-3 py-2.5 text-right">Customer Price (₹)</th>
-            {/* Wide enough for the word itself: at 5% "Action" overflowed and was sliced by the card */}
+            <th className="w-[13%] px-3 py-2.5 text-center">Visits / Year</th>
+            <th className="w-[18%] px-3 py-2.5 text-right">Customer Price (₹)</th>
             <th className="w-[8%] px-3 py-2.5 text-center">Action</th>
           </tr>
         </thead>
@@ -91,9 +92,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               <td className={`${cell} text-right font-medium text-gray-800`}>{currency(row.totalPrice ?? row.price)}</td>
+              {/* Every committed row can be taken back off the estimate */}
               <td className={`${cell} text-center`}>
                 <button type="button" onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                  title="Remove service" className="text-gray-400 transition-colors hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                  title={`Remove ${row.name || 'service'}`} aria-label={`Remove ${row.name || 'service'}`}
+                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100">
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </td>
             </tr>
           ))}
