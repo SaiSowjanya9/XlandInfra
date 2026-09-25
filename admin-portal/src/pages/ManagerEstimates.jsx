@@ -24,7 +24,7 @@ import { EstimateInput, PropertyIdInput } from '../components/estimates/Estimate
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
-import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import * as XLSX from 'xlsx';
 
@@ -700,6 +700,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedAmcPackage, setSelectedAmcPackage] = useState('');
   const [selectedAddons, setSelectedAddons] = useState([]);
   const [selectedCatalogAddons, setSelectedCatalogAddons] = useState([]);
+  // The catalog row being re-priced, or null. Editing reopens the picker's dialog on it.
+  const [editingCatalogAddon, setEditingCatalogAddon] = useState(null);
   // How the estimate is put together: a pre-built AMC package, or services entered by hand
   const [estimateStructure, setEstimateStructure] = useState('package');
   const [customServices, setCustomServices] = useState([]);
@@ -931,20 +933,48 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [defaultTab, estimateType, handleBackFromEstimate]);
 
+  // Adding and editing both come back through here: the rebuilt row keeps its addonId, so an edit
+  // replaces the row in place instead of appending a second copy of the same service.
+  const upsertCatalogAddon = (addon) => setSelectedCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId)
+    ? prev.map(item => item.addonId === addon.addonId ? addon : item)
+    : [...prev, addon]);
+  const catalogPropertyType = selectedProperty?.entry_type || selectedProperty?.property_type || directForm.propertyType;
+  const renderCatalogPicker = ({ inline = false, variant = 'panel', extraItems = [] } = {}) => (
+    <ServiceCatalogPicker apiPath="/api/manager/service-catalog"
+      propertyType={catalogPropertyType}
+      selectedAddons={selectedCatalogAddons}
+      onAdd={upsertCatalogAddon}
+      editing={editingCatalogAddon}
+      onEditClose={() => setEditingCatalogAddon(null)}
+      inline={inline} variant={variant} extraItems={extraItems} />
+  );
+  const catalogRowActions = (addon) => (
+    <div className="flex items-center justify-center gap-1">
+      <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></button>
+      <button type="button" onClick={() => setSelectedCatalogAddons(prev => prev.filter(item => item.addonId !== addon.addonId))}
+        title={`Remove ${addon.name}`} aria-label={`Remove ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+  );
+
   // AMC Package and Price Summary shared component
   const renderAmcAndPriceSummary = (showSaveButton = false) => (
     <>
-      {/* Estimate Structure: package or hand-entered services */}
+      {/* Estimate Structure: package or hand-entered services. In package mode the configured-service
+          dropdown joins the package dropdown here, so both are chosen in one place. */}
       <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure}>
         {estimateStructure === 'package' && (
-          <div className="min-w-0 w-full">
+          <div className="flex min-w-0 w-full flex-col gap-3 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
+            {/* Unchosen reads as a placeholder, not as a value */}
             <select
               value={selectedAmcPackage}
               onChange={(e) => setSelectedAmcPackage(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              className={`w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500 ${selectedAmcPackage ? 'text-gray-800' : 'text-gray-400'}`}
             >
-              <option value="">Select a package</option>
+              <option value="" className="text-gray-400">Select a package</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];
@@ -956,13 +986,20 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </select>
           </div>
+          <div className="min-w-0 flex-1">{renderCatalogPicker({ inline: true })}</div>
+          </div>
         )}
       </EstimateStructure>
 
       {/* AMC Package Section */}
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="p-6 space-y-4">
-          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} />}
+          {/* Its Add Service button is the catalog menu, with Custom listed above the configured
+              services: one control for both, instead of a second picker underneath. */}
+          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices}
+            addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
+              { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
+            ] })} />}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;
@@ -1007,8 +1044,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
             );
           })()}
+          {/* The legacy add-on list, kept so saved estimates stay readable. Named apart from the
+              configured-service control, which is the one that says Add Service. */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Add Service</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Add-on Service</label>
             <select
               onChange={(e) => {
                 if (e.target.value) {
@@ -1016,9 +1055,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 }
                 e.target.value = '';
               }}
-              className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-400 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
-              <option value="">+ Select Service to add</option>
+              <option value="" className="text-gray-400">Select add-on</option>
               {(() => {
                 // Get property type from selected property, direct form, or selected AMC package
                 const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
@@ -1031,9 +1070,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
             </select>
           </div>
-          <ServiceCatalogPicker apiPath="/api/manager/service-catalog"
-            propertyType={selectedProperty?.entry_type || selectedProperty?.property_type || directForm.propertyType}
-            selectedAddons={selectedCatalogAddons} onAdd={addon => setSelectedCatalogAddons(prev => [...prev, addon])} />
+          {/* Package mode shows the configured-service picker on the Estimate Structure row; custom
+              mode offers it from the Custom Services table's own Add Service menu */}
           {(selectedAddons.length > 0 || selectedCatalogAddons.length > 0) && (
             <div className="border border-blue-200 rounded-xl overflow-hidden">
               <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
@@ -1071,7 +1109,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     <td className="px-3 py-2.5 text-gray-600 whitespace-pre-wrap [overflow-wrap:anywhere]">{getServiceDescription(addon) || '—'}</td>
                     <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
                     <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
-                    <td className="px-3 py-2.5 text-center"><button type="button" aria-label={`Remove ${addon.name}`} onClick={() => setSelectedCatalogAddons(prev => prev.filter(item => item.addonId !== addon.addonId))} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
+                    <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
                   </tr>)}
                 </tbody>
                 <tfoot className="bg-blue-50 border-t border-blue-200">

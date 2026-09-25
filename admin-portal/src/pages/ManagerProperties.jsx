@@ -29,7 +29,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Truck
+  Truck,
+  Mail
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;

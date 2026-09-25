@@ -8,7 +8,7 @@ import {
   Eye, ChevronDown, ChevronLeft, ChevronRight, AlertCircle, Bell, Clock, Briefcase, Lock, 
   ArrowLeft, Download, ExternalLink, Layers, LayoutGrid, FileText,
   Package, Plus, Calendar, DollarSign, Receipt, Tag, Users, UserCheck, RefreshCw,
-  Edit2, Save, Truck, UserPlus
+  Edit2, Save, Truck, UserPlus, Mail, Phone
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
