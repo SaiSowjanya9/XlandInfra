@@ -27,7 +27,7 @@ const INPUTS = {
 // rather than a delete and a re-add. `onAdd` receives the rebuilt row under the same addonId, so the
 // caller upserts rather than appends.
 const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog',
-  label = 'Configured Service', editing = null, onEditClose = () => {}, inline = false,
+  label = 'Add Service', editing = null, onEditClose = () => {}, inline = false,
   // 'menu' replaces the dropdown panel with an Add Service button that opens the same list, so the
   // custom-services table can offer configured services and a blank row from one control instead of
   // repeating the picker in a panel of its own. `extraItems` are listed above the services.
@@ -63,7 +63,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
     }).then(async response => {
       const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load configured services.');
+      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load services.');
       setServices(result.data);
     }).catch(error => {
       if (error.name !== 'AbortError') setError(error.message);
@@ -230,18 +230,18 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
             <div className="min-h-0 overflow-y-auto py-1">
               {extraItems.map(item => (
                 <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
                   <Plus className="h-4 w-4 shrink-0 text-slate-400" />{item.label}
                 </button>
               ))}
               {extraItems.length > 0 && <div className="my-1 border-t border-slate-100" />}
-              <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Configured Services</p>
+              <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Services</p>
               {!propertyType ? <p className="px-3 py-2 text-sm text-slate-500">Select a property type first</p>
                 : available.length ? available.map(item => (
                   <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
-                    className="block w-full truncate px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="block w-full truncate px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
                     title={serviceOptionLabel(item, services)}>{serviceOptionLabel(item, services)}</button>
-                )) : <p className="px-3 py-2 text-sm text-slate-500">No configured services for this property type.</p>}
+                )) : <p className="px-3 py-2 text-sm text-slate-500">No services for this property type.</p>}
               {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
             </div>
           </div>, document.body)}
@@ -255,7 +255,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
             {available.map(item => <option key={item.id} value={item.id} className="text-slate-800">{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
-        {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}
+        {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No services available for this property type.</p>}
         {/* A load failure belongs on the panel; anything the dialog raises is shown inside it */}
         {error && !service && <p role="alert" className="mt-3 text-sm text-red-600">{error} {!services.length && <button type="button" onClick={() => setAttempt(value => value + 1)} className="font-semibold underline">Retry</button>}</p>}
       </>)}

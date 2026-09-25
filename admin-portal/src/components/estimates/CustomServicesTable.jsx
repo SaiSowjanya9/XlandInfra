@@ -131,7 +131,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         <tbody className="divide-y divide-gray-100">
           {!rows.length && (
             <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-400">
-              No services yet. Use Add Service to add a configured service or a custom one.
+              No services yet. Use Add Service to add one.
             </td></tr>
           )}
           {rows.map((row, index) => edit?.index === index ? (

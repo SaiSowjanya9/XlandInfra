@@ -943,7 +943,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Open edit estimate modal for property-based estimates
   const openEditEstimate = (estimate) => {
-    if (hasCatalogServices(estimate)) { showToast('Saved configured services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
+    if (hasCatalogServices(estimate)) { showToast('Saved services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
     // Allow editing both property-based and direct estimates
     
     // Parse addons data with quantities
@@ -3618,7 +3618,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {/* Managers cannot author, so the configured catalog is a list tab for them */}
       {isFPManager && (
         <button type="button" onClick={() => setAddonActiveTab('configured')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <ClipboardList className="w-4 h-4" />Configured Services
+          <ClipboardList className="w-4 h-4" />Services
         </button>
       )}
       <button type="button" onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>

@@ -158,7 +158,7 @@ const EstimatesList = ({
 
   // Open edit estimate modal
   const openEditEstimate = (estimate) => {
-    if (hasCatalogServices(estimate)) { showToast?.('Saved configured services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
+    if (hasCatalogServices(estimate)) { showToast?.('Saved services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
     let selectedAddonsWithQty = [];
     if (estimate.addons_data || estimate.addons) {
       try {

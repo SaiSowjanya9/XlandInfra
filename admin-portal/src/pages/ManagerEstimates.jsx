@@ -559,7 +559,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Edit estimate functions for DIRECT estimates only
   const openEditEstimate = (estimate) => {
-    if (hasCatalogServices(estimate)) { showToast('Saved configured services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
+    if (hasCatalogServices(estimate)) { showToast('Saved services are read-only in this editor. Create a new estimate to change them.', 'error'); return; }
     if (estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') {
       showToast('Property-based estimates cannot be edited here', 'error');
       return;
@@ -851,7 +851,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       // Hand-entered services travel with the add-ons; they carry their own customer price
       payload.addons = [...payload.addons, ...selectedCatalogAddons, ...customServices];
       if (selectedCatalogAddons.length && estimateType === 'property-based') {
-        if (!selectedProperty) { showToast('Select a valid property before adding configured services.', 'error'); return; }
+        if (!selectedProperty) { showToast('Select a valid property before adding services.', 'error'); return; }
         payload.catalog_property_id = selectedProperty.id;
         payload.catalog_property_source = selectedProperty.source_table || 'onboarded_properties';
       }
