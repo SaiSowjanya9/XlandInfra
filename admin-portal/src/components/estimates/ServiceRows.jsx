@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import ServiceSelector from './ServiceSelector';
-import { FREQUENCY_TYPES } from '../../utils/estimateStore';
+import { FREQUENCY_TYPES, frequencyOptionStyle } from '../../utils/estimateStore';
 
 const ServiceRows = ({ 
   services: serviceList, 
@@ -50,7 +50,7 @@ const ServiceRows = ({
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
               >
                 {FREQUENCY_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                 ))}
               </select>
             </div>

@@ -11,7 +11,7 @@ const ITEMS_PER_PAGE = 10;
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import {
-  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency,
+  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle,
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
@@ -3486,7 +3486,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                             >
                               {FREQUENCY_TYPES.map(type => (
-                                <option key={type} value={type}>{type}</option>
+                                <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                               ))}
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
