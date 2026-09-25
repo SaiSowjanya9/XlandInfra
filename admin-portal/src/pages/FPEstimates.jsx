@@ -27,7 +27,7 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
-import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -694,7 +694,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     ? prev.map(item => item.addonId === addon.addonId ? addon : item)
     : [...prev, addon]);
 
-  const renderCatalogPicker = ({ inline = false } = {}) => (
+  const renderCatalogPicker = ({ inline = false, variant = 'panel', extraItems = [] } = {}) => (
     <ServiceCatalogPicker
       key={`${estimateType}-${createPropertyType}`}
       apiPath={FP_CATALOG_API}
@@ -704,6 +704,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       editing={editingCatalogAddon}
       onEditClose={() => setEditingCatalogAddon(null)}
       inline={inline}
+      variant={variant}
+      extraItems={extraItems}
     />
   );
   // Shared by both service tables so the row actions cannot drift apart
@@ -736,9 +738,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       ) : null}
     </EstimateStructure>
   );
-  // The hosting card already reads "Custom Services", so the table carries no heading of its own
+  // The hosting card already reads "Custom Services", so the table carries no heading of its own.
+  // Its Add Service button is the catalog menu, with Custom listed above the configured services:
+  // one control for both, instead of the picker repeated in a panel underneath.
   const renderCustomServices = () => estimateStructure === 'custom'
-    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} />
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null}
+        addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
+          { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
+        ] })} />
     : null;
 
   // Helper to match property type for filtering
@@ -1627,8 +1634,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
                 <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + catalogAddons.length})</h3>
               </div>
-              {/* Package mode shows this on the Estimate Structure row instead */}
-              {estimateStructure === 'custom' && <div className="px-5 pt-4">{renderCatalogPicker()}</div>}
+              {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
+                  from the Custom Services table's own Add Service menu */}
               {pkgServices.length === 0 && selectedAddonRows.length === 0 && catalogAddons.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
               ) : (
@@ -2013,8 +2020,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Package mode shows this on the Estimate Structure row instead */}
-              {estimateStructure === 'custom' && <div className="pt-2">{renderCatalogPicker()}</div>}
+              {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
+                  from the Custom Services table's own Add Service menu */}
 
               {/* Additional Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (
