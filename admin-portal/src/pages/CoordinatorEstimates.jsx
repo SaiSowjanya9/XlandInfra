@@ -737,7 +737,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
-                if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
+                if (filteredAddons.length === 0) return <option disabled>No services available for {propertyType}</option>;
                 return filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>);
               })()}
             </select>
@@ -1276,7 +1276,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       'Zone': getEstimateZone(e) || '-',
       'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.package_name || '-',
-      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount_amount || 0,
       'GST': e.gst_amount || 0,
@@ -1838,9 +1838,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await res.json();
       if (res.ok || result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create add-on', 'error'); }
+    } catch (e) { showToast('Failed to create service', 'error'); }
   };
-  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`${API_BASE}/api/coordinator/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this service?')) return; try { const res = await fetch(`${API_BASE}/api/coordinator/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
   const renderAddons = () => (
     <div className="space-y-6">
@@ -1909,7 +1909,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
-              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and add-ons</p></div>
+              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
             </div>
             <div className="flex items-center gap-6">
               <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">

@@ -837,7 +837,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       }
     }
     
-    console.log('PDF Export - Estimate:', estimate.estimate_id, 'Package Services:', packageServices, 'Addons:', addonsArray);
+    console.log('PDF Export - Estimate:', estimate.estimate_id, 'Package Services:', packageServices, 'Services:', addonsArray);
     
     // Prepare estimate data for PDF
     const pdfData = {
@@ -1684,7 +1684,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + i + 1}</td>
                           <td className="px-3 py-2.5">
                             <p className="font-medium text-gray-800">{decodeHtml(addon.service_name)}</p>
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700 border border-amber-100">Add-on</span>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700 border border-amber-100">Service</span>
                           </td>
                           <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
@@ -1712,7 +1712,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   {(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) && (
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
                         <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
@@ -1747,7 +1747,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <h3 className="text-sm font-semibold text-gray-800 mb-4">Pricing Summary</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-gray-500">Package Price</span><span className="font-medium text-gray-800">{formatCurrency(pkgPrice)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Add-ons</span><span className="font-medium text-gray-800">{formatCurrency(addonsTotal)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Services</span><span className="font-medium text-gray-800">{formatCurrency(addonsTotal)}</span></div>
                 <div className="flex justify-between border-t border-gray-100 pt-3"><span className="text-gray-600">Service Subtotal</span><span className="font-semibold text-gray-900">{formatCurrency(pricing.subtotal)}</span></div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Discount (%)</span>
@@ -2075,7 +2075,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
                         <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
@@ -2699,7 +2699,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       'Zone': getEstimateZone(e) || '-',
       'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.package_name || '-',
-      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount || 0,
       'GST': e.gst || 0,

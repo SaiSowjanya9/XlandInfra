@@ -371,7 +371,7 @@ const generateEstimatePDF = async (estimate) => {
         doc.rect(50, y, 500, 20).fill('#1e3a5f');
         doc.fontSize(8).fillColor('#ffffff');
         doc.text('#', 55, y + 6, { continued: false });
-        doc.text('Add-on Service', 75, y + 6, { continued: false });
+        doc.text('Service', 75, y + 6, { continued: false });
         doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
         doc.text('Frequency', 400, y + 6, { continued: false });
         doc.text('Visits', 490, y + 6, { continued: false });
@@ -395,7 +395,7 @@ const generateEstimatePDF = async (estimate) => {
           doc.fontSize(8).fillColor('#333333');
           doc.text(String(idx + 1), 55, y + 6, { continued: false });
           // Handle all possible addon name fields
-          const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.service || 'Add-on');
+          const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.service || 'Service');
           doc.text(addonName, 75, y + 6, { width: 110, continued: false });
           // Full description with height constraint to prevent page overflow
           doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
@@ -831,7 +831,7 @@ const generateInvoicePDF = async (invoice) => {
         doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
         doc.fontSize(8).fillColor(white);
         doc.text('#', colNum, y + 6);
-        doc.text('Add-on', colAddon, y + 6);
+        doc.text('Service', colAddon, y + 6);
         doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
         doc.text('Frequency', colFreq, y + 6);
         doc.text('Visits', colVisits, y + 6);
@@ -865,7 +865,7 @@ const generateInvoicePDF = async (invoice) => {
             doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
             doc.fontSize(8).fillColor(white);
             doc.text('#', colNum, y + 6);
-            doc.text('Add-on', colAddon, y + 6);
+            doc.text('Service', colAddon, y + 6);
             doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
             doc.text('Frequency', colFreq, y + 6);
             doc.text('Visits', colVisits, y + 6);
@@ -876,7 +876,7 @@ const generateInvoicePDF = async (invoice) => {
 
         addonItems.forEach((item, idx) => {
           // Parse addon name and description
-          const fullDesc = decodeHtml(item.description || item.name || 'Add-on');
+          const fullDesc = decodeHtml(item.description || item.name || 'Service');
           let addonName = fullDesc;
           let addonDesc = '-';
           

@@ -358,7 +358,7 @@ const EstimatesList = ({
       'Zone': getEstimateZone(e) || '-',
       'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.packageName || e.package_name || '-',
-      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount || 0,
       'GST': e.gst || 0,
@@ -529,7 +529,7 @@ const EstimatesList = ({
           } catch (e) { console.log('Package services parse error:', e); }
         }
         
-        console.log('PDF Export - Package Services:', packageServices, 'Addons:', addonsArray);
+        console.log('PDF Export - Package Services:', packageServices, 'Services:', addonsArray);
         
         // Prepare estimate data for PDF (same mapping as FP portal)
         const pdfData = {

@@ -346,7 +346,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       'Type': est.estimate_type === 'custom' ? 'Custom Estimate' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property Based' : 'Direct',
       'No. of Units': getEstimateUnits(est),
       'Package': est.package_name || '',
-      'Add-on Services': formatAddonsForExport(est),
+      'Services': formatAddonsForExport(est),
       'Subtotal': parseFloat(est.subtotal) || 0,
       'Discount %': parseFloat(est.discount_percent) || 0,
       'GST %': parseFloat(est.gst_percent) || 0,
@@ -1051,7 +1051,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           {/* The legacy add-on list, kept so saved estimates stay readable. Named apart from the
               configured-service control, which is the one that says Add Service. */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Add-on Service</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Saved Service</label>
             <select
               onChange={(e) => {
                 if (e.target.value) {
@@ -1061,7 +1061,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               }}
               className="w-full md:w-96 px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-400 focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             >
-              <option value="" className="text-gray-400">Select add-on</option>
+              <option value="" className="text-gray-400">Select saved service</option>
               {(() => {
                 // Get property type from selected property, direct form, or selected AMC package
                 const selectedPkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
@@ -1069,7 +1069,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
-                if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
+                if (filteredAddons.length === 0) return <option disabled>No services available for {propertyType}</option>;
                 return filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>);
               })()}
             </select>
@@ -2258,9 +2258,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await res.json();
       if (result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create add-on', 'error'); }
+    } catch (e) { showToast('Failed to create service', 'error'); }
   };
-  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`${API_BASE}/api/manager/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this service?')) return; try { const res = await fetch(`${API_BASE}/api/manager/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
   const renderAddons = () => (
     <div className="space-y-6">

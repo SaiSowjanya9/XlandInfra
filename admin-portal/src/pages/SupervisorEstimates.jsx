@@ -693,7 +693,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType || pkgPropertyType;
                 if (!propertyType) return <option disabled>Select property type first</option>;
                 const filteredAddons = addons.filter(addon => matchPropertyType(addon.property_type || addon.propertyType, propertyType));
-                if (filteredAddons.length === 0) return <option disabled>No add-ons available for {propertyType}</option>;
+                if (filteredAddons.length === 0) return <option disabled>No services available for {propertyType}</option>;
                 return filteredAddons.map(addon => <option key={getAddonId(addon)} value={getAddonId(addon)}>{getAddonName(addon)}</option>);
               })()}
             </select>
@@ -1263,7 +1263,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       'Zone': getEstimateZone(e) || '-',
       'No. of Units': getEstimateUnits(e) || '-',
       'AMC Package': e.package_name || '-',
-      'Add-on Services': formatAddonsForExport(e) || '-',
+      'Services': formatAddonsForExport(e) || '-',
       'Subtotal': e.subtotal || 0,
       'Discount': e.discount_amount || 0,
       'GST': e.gst_amount || 0,
@@ -1825,9 +1825,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       const result = await res.json();
       if (result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
       else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create add-on', 'error'); }
+    } catch (e) { showToast('Failed to create service', 'error'); }
   };
-  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this add-on?')) return; try { const res = await fetch(`${API_BASE}/api/supervisor/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this service?')) return; try { const res = await fetch(`${API_BASE}/api/supervisor/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
   const renderAddons = () => (
     <div className="space-y-6">
