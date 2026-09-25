@@ -178,8 +178,10 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
         {/* Fixed proportional widths: the table can never grow past the page, so there is no
             sideways scrollbar and every column stays visible at once. */}
         <table className={sk("w-full table-fixed text-left text-[11px]")}>
-          {/* Every heading stays on one line, so the row keeps a single height */}
-          <thead className={sk("whitespace-nowrap bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500")}>
+          {/* Thirteen columns on one fixed width: a two-word heading wraps onto a second line in a
+              narrow window rather than overflowing into the column beside it. align-bottom keeps
+              the wrapped ones sitting on the same baseline as the rest. */}
+          <thead className={sk("bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500 [&_th]:align-bottom")}>
             <tr>
               <th className={sk("w-[3%] px-1.5 py-2.5 text-center")}>#</th>
               <th className={sk("w-[10%] px-1.5 py-2.5")}>Service</th>

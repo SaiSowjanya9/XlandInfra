@@ -1664,14 +1664,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <table className="w-full text-sm">
                   <thead className="bg-warm-section border-b border-warm-border">
                     <tr>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[5%]">#</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[4%]">#</th>
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
-                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase ${hasRowActions ? 'w-[41%]' : 'w-[51%]'}`}>Description</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[12%]">Frequency</th>
+                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase ${hasRowActions ? 'w-[36%]' : 'w-[51%]'}`}>Description</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[13%]">Frequency</th>
                       <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Visits</th>
                       {/* A package's own services cannot be removed one by one, so with nothing else
                           in the table the column held only dashes. It appears when a row can act. */}
-                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Action</th>}
+                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-warm-border/70">
@@ -1730,8 +1730,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   {(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) && (
                     <tfoot className="bg-warm-accent-soft border-t border-warm-border">
                       <tr>
-                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
+                        <td colSpan={3} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
+                        <td colSpan={3} className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   )}
@@ -2015,8 +2015,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <table className="w-full text-sm bg-white">
                       <thead>
                         <tr className="border-y border-warm-border/70">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[43%]">Description</th>
                           <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[20%]">Frequency</th>
                           <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Visits</th>
                         </tr>
@@ -2059,11 +2059,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-warm-border/70 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Action</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[16%]">Service</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[40%]">Description</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[16%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[12%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[16%]">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-warm-border/70 bg-white">
@@ -2095,8 +2095,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </tbody>
                     <tfoot className="bg-warm-accent-soft border-t border-warm-border">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-warm-text">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
+                        <td colSpan={2} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
+                        <td colSpan={3} className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
