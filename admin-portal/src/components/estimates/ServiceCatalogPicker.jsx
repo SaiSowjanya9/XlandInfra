@@ -5,16 +5,18 @@ import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
+import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-// The dropdown sits on the panel's blue tint; the dialog's own fields sit on white, so they follow
-// the slate borders the rest of the estimate forms use.
-const selectClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
+// The dropdown sits on the panel's own tint; the dialog's fields sit on white and follow the
+// borders the rest of the estimate forms use. Both come from the skin, so a portal on the warm
+// system gets warm fields and every other portal keeps the original slate/blue ones.
+const selectClass = skin => `w-full rounded-lg border bg-white px-3 py-2 text-sm ${skin.selectBorder} ${skin.disabledField}`;
 // `inline` drops the panel so the dropdown can sit on a row beside another one -- on the Estimate
 // Structure row next to Select AMC Package -- rather than in a tinted box of its own.
-const inlineSelectClass = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-50 disabled:text-slate-500';
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
-const fieldLabel = 'block text-xs font-semibold text-slate-600';
+const inlineSelectClass = skin => `w-full min-w-0 rounded-lg border bg-white px-3 py-2.5 text-sm ${skin.inputBorder} ${skin.disabledField}`;
+const inputClassFor = skin => `w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${skin.fieldSoft} ${skin.disabledField}`;
+const fieldLabelFor = skin => `block text-xs font-semibold ${skin.label}`;
 const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
 const categoryName = value => (typeof value === 'string' ? value : value?.name) || '';
 const INPUTS = {
@@ -32,7 +34,12 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   // 'menu' replaces the dropdown panel with an Add Service button that opens the same list, so the
   // custom-services table can offer configured services and a blank row from one control instead of
   // repeating the picker in a panel of its own. `extraItems` are listed above the services.
-  variant = 'panel', extraItems = [] }) => {
+  variant = 'panel', extraItems = [], theme }) => {
+  // The hook runs every render; an explicit theme prop still wins over the page's own
+  const pageTheme = useEstimateTheme();
+  const skin = estimateSkin(theme ?? pageTheme);
+  const inputClass = inputClassFor(skin);
+  const fieldLabel = fieldLabelFor(skin);
   // Quantity Based alone lets these two be settled per estimate: whether this property's job needs
   // a vendor, and which category it is booked under. Both start from the service and are sent as
   // explicit overrides -- the server rebuilds every other field from the catalog.
@@ -252,46 +259,46 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     || (requiresQuote && blank(inputs.custom_quote)));
 
   return (
-    <div className={variant === 'menu' ? 'inline-block shrink-0' : inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}
+    <div className={variant === 'menu' ? 'inline-block shrink-0' : inline ? 'min-w-0' : `mb-4 rounded-lg border p-4 ${skin.tint}`}
       ref={variant === 'menu' ? menuRef : undefined}>
       {variant === 'menu' ? (<>
         <button type="button" onClick={() => menuOpen ? setMenuOpen(false) : openMenu()} disabled={loading || saving}
           aria-haspopup="menu" aria-expanded={menuOpen}
-          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">
+          className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${skin.disabledSolid} ${skin.primary}`}>
           <Plus className="h-4 w-4" />Add Service<ChevronDown className={`h-4 w-4 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
         </button>
         {menuOpen && menuPosition && createPortal(
           <div ref={menuPanelRef} role="menu" style={{ position: 'fixed', ...menuPosition }}
-            className="z-50 flex max-w-[22rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            className={`z-50 flex max-w-[22rem] flex-col overflow-hidden rounded-xl border bg-white shadow-xl ${skin.border}`}>
             <div className="min-h-0 overflow-y-auto py-1">
               {extraItems.map(item => (
                 <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
-                  <Plus className="h-4 w-4 shrink-0 text-slate-400" />{item.label}
+                  className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium transition-colors ${skin.menuItem}`}>
+                  <Plus className={`h-4 w-4 shrink-0 ${skin.faint}`} />{item.label}
                 </button>
               ))}
-              {extraItems.length > 0 && <div className="my-1 border-t border-slate-100" />}
-              <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Services</p>
-              {!propertyType ? <p className="px-3 py-2 text-sm text-slate-500">Select a property type first</p>
+              {extraItems.length > 0 && <div className={`my-1 border-t ${skin.borderSoft}`} />}
+              <p className={`px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide ${skin.faint}`}>Services</p>
+              {!propertyType ? <p className={`px-3 py-2 text-sm ${skin.muted}`}>Select a property type first</p>
                 : available.length ? available.map(item => (
                   <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
-                    className="block w-full truncate px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                    className={`block w-full truncate px-3 py-2.5 text-left text-sm transition-colors ${skin.menuItem}`}
                     title={serviceOptionLabel(item, services)}>{serviceOptionLabel(item, services)}</button>
-                )) : <p className="px-3 py-2 text-sm text-slate-500">No services for this property type.</p>}
+                )) : <p className={`px-3 py-2 text-sm ${skin.muted}`}>No services for this property type.</p>}
               {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
             </div>
           </div>, document.body)}
       </>) : (<>
-        <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
+        <label className={`block text-sm font-medium ${inline ? 'min-w-0' : 'max-w-md'} ${inline ? skin.label : skin.text}`}>
           {label}
           {/* Unchosen reads as a placeholder, not as a value */}
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
-            className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'} ${selectedId ? 'text-slate-800' : 'text-slate-400'}`}>
-            <option value="" className="text-slate-400">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service'}</option>
-            {available.map(item => <option key={item.id} value={item.id} className="text-slate-800">{serviceOptionLabel(item, services)}</option>)}
+            className={`${inline ? inlineSelectClass(skin) : selectClass(skin)} ${inline ? 'mt-1.5' : 'mt-2'} ${selectedId ? skin.strong : skin.faint}`}>
+            <option value="" className={skin.faint}>{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service'}</option>
+            {available.map(item => <option key={item.id} value={item.id} className={skin.strong}>{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
-        {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No services available for this property type.</p>}
+        {!loading && !services.length && !error && <p className={`mt-2 text-xs ${skin.muted}`}>No services available for this property type.</p>}
         {/* A load failure belongs on the panel; anything the dialog raises is shown inside it */}
         {error && !service && <p role="alert" className="mt-3 text-sm text-red-600">{error} {!services.length && <button type="button" onClick={() => setAttempt(value => value + 1)} className="font-semibold underline">Retry</button>}</p>}
       </>)}
@@ -300,37 +307,37 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
           gets its row only once OK is pressed, so a service being looked at is never half-added. */}
       {service && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-service-title">
         <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-          <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+          <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
             <div className="min-w-0">
-              <h3 id="catalog-service-title" className="truncate text-base font-semibold text-slate-900">{service.service_name}</h3>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span className="rounded bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">{methodLabel(service.pricing_method)}</span>
+              <h3 id="catalog-service-title" className={`truncate text-base font-semibold ${skin.strong}`}>{service.service_name}</h3>
+              <div className={`mt-1.5 flex flex-wrap items-center gap-2 text-xs ${skin.muted}`}>
+                <span className={`rounded px-2 py-0.5 font-semibold ${skin.badge}`}>{methodLabel(service.pricing_method)}</span>
                 {categoryName(service.category) && <span>{categoryName(service.category)}</span>}
                 <span>Priced per {service.unit}</span>
               </div>
             </div>
             <button type="button" onClick={closeDialog} disabled={saving} aria-label="Cancel service selection"
-              className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"><X className="h-4 w-4" /></button>
+              className={`shrink-0 rounded-lg p-1.5 disabled:opacity-50 ${skin.faint} ${skin.iconEdit}`}><X className="h-4 w-4" /></button>
           </div>
           {/* The scroll lives on the wrapper: a fieldset is an unreliable flex/scroll container */}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <fieldset disabled={saving} className="min-w-0 px-6 py-5">
-              {service.description && <p className="mb-5 text-xs leading-relaxed text-slate-500">{service.description}</p>}
+              {service.description && <p className={`mb-5 text-xs leading-relaxed ${skin.muted}`}>{service.description}</p>}
               <div className="grid gap-4 sm:grid-cols-2">
-                <ManpowerFields service={service} inputs={inputs} onChange={setInput} />
+                <ManpowerFields service={service} inputs={inputs} onChange={setInput} theme={theme} />
                 {/* The figure the service is priced from, so the dialog opens on it */}
                 {input && <label className={fieldLabel}>{input[1]} ({service.unit}) *<input autoFocus aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 <label className={fieldLabel}>Frequency<select disabled={!service.allow_frequency_override || !overrideFrequency || saving} value={inputs.frequency} onChange={event => {
                   const frequency = event.target.value;
                   setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
                 }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select>
-                  {service.allow_frequency_override && <span className="mt-2 flex items-center gap-2 text-xs font-normal text-slate-600">
+                  {service.allow_frequency_override && <span className={`mt-2 flex items-center gap-2 text-xs font-normal ${skin.muted}`}>
                     <input type="checkbox" checked={overrideFrequency} onChange={event => {
                       setOverrideFrequency(event.target.checked);
                       if (!event.target.checked) setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) }));
-                    }} className="accent-blue-600" />Override frequency
+                    }} className={skin.control} />Override frequency
                   </span>}</label>
-                <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 bg-slate-50`} /></label>
+                <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 ${skin.readOnlyBg}`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {/* Quantity Based only: settled per estimate rather than taken from the service */}
@@ -343,8 +350,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 {isQuantityBased && <div className={fieldLabel}>Vendor Required
                   <button type="button" role="switch" aria-checked={overrides.vendorRequired} aria-label="Vendor required"
                     onClick={() => setOverrides(prev => ({ ...prev, vendorRequired: !prev.vendorRequired }))}
-                    className={`mt-2 flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-normal transition-colors ${overrides.vendorRequired ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600'}`}>
-                    <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${overrides.vendorRequired ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                    className={`mt-2 flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-normal transition-colors ${overrides.vendorRequired ? skin.toggleOn : skin.toggleOff}`}>
+                    <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${overrides.vendorRequired ? skin.toggleTrackOn : skin.toggleTrackOff}`}>
                       <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${overrides.vendorRequired ? 'left-[1.125rem]' : 'left-0.5'}`} />
                     </span>
                     {overrides.vendorRequired ? 'Yes' : 'No'}
@@ -354,19 +361,19 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               {/* The customer price is the only figure this dialog states: vendor cost, operating
                   cost, markup and margin are internal and belong to the service configuration. */}
               {preview && !preview.requiresCustomQuote && (
-                <dl className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
-                  <dt className="font-semibold text-slate-700">Customer Price</dt>
+                <dl className={`mt-5 flex items-center justify-between gap-3 rounded-xl border p-4 text-xs ${skin.previewBox}`}>
+                  <dt className={`font-semibold ${skin.text}`}>Customer Price</dt>
                   <dd className="text-sm font-semibold text-emerald-600">{currency(preview.totalPrice)}</dd>
                 </dl>
               )}
               {error && <p role="alert" className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
             </fieldset>
           </div>
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className={`flex items-center justify-end gap-3 border-t px-6 py-4 ${skin.panelFoot}`}>
             <button type="button" onClick={closeDialog} disabled={saving}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+              className={`rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50 ${skin.secondary}`}>Cancel</button>
             <button type="button" onClick={addService} disabled={saving || incomplete}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              className={`inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold text-white disabled:opacity-50 ${skin.primary}`}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editing ? 'Save Changes' : 'OK'}
             </button>
           </div>

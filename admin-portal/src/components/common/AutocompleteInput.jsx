@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Check } from 'lucide-react';
+import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 
 /**
  * AutocompleteInput - A reusable typeahead/autocomplete component
@@ -22,6 +23,7 @@ import { ChevronDown, X, Check } from 'lucide-react';
  * - maxResults: Maximum number of results to show (default: 10)
  * - showAllOnOpen: Opening the list with the arrow or on focus shows every option, like a plain
  *   select; typing then filters as usual (default: false)
+ * - theme: 'warm' renders the beige estimate skin; anything else keeps the original slate/blue one
  */
 const AutocompleteInput = ({
   value = '',
@@ -41,7 +43,11 @@ const AutocompleteInput = ({
   maxResults = 10,
   showAllOnOpen = false,
   id,
+  theme,
 }) => {
+  // The hook runs every render; an explicit theme prop still wins over the page's own
+  const pageTheme = useEstimateTheme();
+  const skin = estimateSkin(theme ?? pageTheme);
   const [isOpen, setIsOpen] = useState(false);
   // True while the list was opened without typing, so every option is listed
   const [browsing, setBrowsing] = useState(false);
@@ -193,7 +199,7 @@ const AutocompleteInput = ({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className={`block text-sm font-medium mb-1 ${skin.inputLabel}`}>
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -211,8 +217,8 @@ const AutocompleteInput = ({
           placeholder={placeholder}
           disabled={disabled}
           className={`w-full px-3 py-2 pr-16 border rounded-lg text-sm transition-colors
-            ${error ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : 'border-gray-300 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}
-            ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
+            ${error ? 'border-red-300 focus:ring-red-200 focus:border-red-400' : `focus:ring-2 ${skin.inputField}`}
+            ${disabled ? `${skin.disabledBg} cursor-not-allowed` : 'bg-white'}
             ${inputClassName}`}
           autoComplete="off"
         />
@@ -222,7 +228,7 @@ const AutocompleteInput = ({
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+              className={`p-1 rounded ${skin.faint} ${skin.iconMuted}`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -230,7 +236,7 @@ const AutocompleteInput = ({
           <button
             type="button"
             onClick={() => { if (disabled) return; setBrowsing(true); setIsOpen(!isOpen); }}
-            className={`p-1 hover:bg-gray-100 rounded text-gray-400 ${disabled ? 'cursor-not-allowed' : ''}`}
+            className={`p-1 rounded ${skin.faint} ${skin.iconMuted} ${disabled ? 'cursor-not-allowed' : ''}`}
             disabled={disabled}
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -246,15 +252,14 @@ const AutocompleteInput = ({
       {isOpen && filteredOptions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto ${skin.border}`}
         >
           {filteredOptions.map((option, index) => (
             <div
               key={option.value}
               onClick={() => handleSelect(option)}
               className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between
-                ${index === highlightedIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}
-                ${option.value === value ? 'bg-blue-50' : ''}
+                ${index === highlightedIndex || option.value === value ? skin.optionActive : skin.optionHover}
               `}
             >
               {renderOption ? (
@@ -263,7 +268,7 @@ const AutocompleteInput = ({
                 <span>{option.label}</span>
               )}
               {option.value === value && (
-                <Check className="w-4 h-4 text-blue-600" />
+                <Check className={`w-4 h-4 ${skin.tileActiveText}`} />
               )}
             </div>
           ))}
@@ -272,8 +277,8 @@ const AutocompleteInput = ({
 
       {/* No results message */}
       {isOpen && inputValue && filteredOptions.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-          <div className="px-3 py-2 text-sm text-gray-500">
+        <div className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg ${skin.border}`}>
+          <div className={`px-3 py-2 text-sm ${skin.muted}`}>
             {allowCustom ? (
               <span>No matches found. Press Enter to use "<strong>{inputValue}</strong>"</span>
             ) : (

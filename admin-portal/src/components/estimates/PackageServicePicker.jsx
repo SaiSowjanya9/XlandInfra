@@ -3,6 +3,7 @@ import { Check, Loader2, Search, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { FREQUENCY_COUNT_MAP } from '../../utils/estimateStore';
 import { methodLabel, propertyTypeLabel } from './AddServicePage';
+import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -11,7 +12,10 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // price comes across, because the package carries a single price of its own. Add Row stays beside
 // this for a service the catalog does not have, which is typed in by hand.
 export default function PackageServicePicker({ open, onClose, onAdd, propertyTypes = [], fpId,
-  apiPath = '/api/admin/service-catalog', existing = [] }) {
+  apiPath = '/api/admin/service-catalog', existing = [], theme }) {
+  // The hook runs every render; an explicit theme prop still wins over the page's own
+  const pageTheme = useEstimateTheme();
+  const skin = estimateSkin(theme ?? pageTheme);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -71,25 +75,25 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="package-service-picker-title">
       <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+        <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div className="min-w-0">
-            <h3 id="package-service-picker-title" className="text-base font-semibold text-slate-900">Add Service</h3>
-            <p className="mt-1 text-xs text-slate-500">{typeLabels ? `Services for ${typeLabels}` : 'Services'}</p>
+            <h3 id="package-service-picker-title" className={`text-base font-semibold ${skin.strong}`}>Add Service</h3>
+            <p className={`mt-1 text-xs ${skin.muted}`}>{typeLabels ? `Services for ${typeLabels}` : 'Services'}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close service list"
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-4 w-4" /></button>
+            className={`shrink-0 rounded-lg p-1.5 ${skin.faint} ${skin.iconMuted}`}><X className="h-4 w-4" /></button>
         </div>
-        <div className="border-b border-slate-100 px-6 py-3">
+        <div className={`border-b px-6 py-3 ${skin.borderSoft}`}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${skin.faint}`} />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search services"
-              className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+              className={`w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 ${skin.fieldSoft}`} />
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          {loading ? <p className="flex items-center gap-2 py-6 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Loading services...</p>
+          {loading ? <p className={`flex items-center gap-2 py-6 text-sm ${skin.muted}`}><Loader2 className="h-4 w-4 animate-spin" />Loading services...</p>
             : error ? <p role="alert" className="py-6 text-sm text-red-600">{error}</p>
-            : !shown.length ? <p className="py-6 text-center text-sm text-slate-500">
+            : !shown.length ? <p className={`py-6 text-center text-sm ${skin.muted}`}>
                 {available.length ? 'No service matches this search.' : `No services apply to ${typeLabels || 'this package'}.`}
               </p>
             : <ul className="space-y-2">
@@ -98,20 +102,20 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
                 const checked = picked.includes(service.id);
                 return (
                   <li key={service.id}>
-                    <label className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${disabled ? 'border-slate-100 bg-slate-50' : `cursor-pointer ${checked ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}`}>
+                    <label className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${disabled ? `${skin.borderSoft} ${skin.readOnlyBg}` : `cursor-pointer ${checked ? skin.tileActive : skin.tileIdle}`}`}>
                       <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggle(service.id)}
-                        className="mt-0.5 h-4 w-4 accent-blue-600" />
+                        className={`mt-0.5 h-4 w-4 ${skin.control}`} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium text-slate-800">{service.service_name}</span>
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">{methodLabel(service.pricing_method)}</span>
-                          {disabled && <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Added</span>}
+                          <span className={`text-sm font-medium ${skin.strong}`}>{service.service_name}</span>
+                          <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${skin.badge}`}>{methodLabel(service.pricing_method)}</span>
+                          {disabled && <span className="rounded bg-warm-success px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Added</span>}
                         </span>
-                        <span className="mt-1 block text-xs text-slate-500">
+                        <span className={`mt-1 block text-xs ${skin.muted}`}>
                           {[service.category, `${service.default_frequency || 'Monthly'} - ${service.default_visits_per_year ?? 0} visits`,
                             service.applicable_property_types?.map(propertyTypeLabel).filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
                         </span>
-                        {service.description && <span className="mt-1 block truncate text-xs text-slate-400">{service.description}</span>}
+                        {service.description && <span className={`mt-1 block truncate text-xs ${skin.faint}`}>{service.description}</span>}
                       </span>
                     </label>
                   </li>
@@ -119,11 +123,11 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
               })}
             </ul>}
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        <div className={`flex items-center justify-end gap-3 border-t px-6 py-4 ${skin.panelFoot}`}>
           <button type="button" onClick={onClose}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+            className={`rounded-lg border px-4 py-2 text-sm font-medium ${skin.secondary}`}>Cancel</button>
           <button type="button" onClick={addPicked} disabled={!picked.length}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">
+            className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-white disabled:opacity-40 ${skin.primary}`}>
             <Check className="h-4 w-4" />{picked.length > 1 ? `Add ${picked.length} Services` : 'Add Service'}
           </button>
         </div>

@@ -29,6 +29,7 @@ import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EmptyState from '../components/common/EmptyState';
+import { EstimateThemeProvider } from '../utils/estimateTheme';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -112,6 +113,9 @@ const BILLING_DURATIONS = [
   { value: 'half-yearly', label: 'Half-Yearly' },
   { value: 'yearly', label: 'Yearly' }
 ];
+
+// Every field and button on a filter or action row is this tall, so a row lines up whatever it holds
+const CONTROL_H = 'h-[42px]';
 
 const TAB_TITLES = {
   'create': 'Create Estimate', 'list': 'All Estimates', 'amc': 'AMC Packages', 'addons': 'Add Service', 'archived': 'Archived Estimates'
@@ -709,15 +713,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       inline={inline}
       variant={variant}
       extraItems={extraItems}
+      theme="warm"
     />
   );
   // Shared by both service tables so the row actions cannot drift apart
   const catalogRowActions = (addon) => (
     <div className="flex items-center justify-center gap-1">
       <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
-        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></button>
+        className="rounded-[10px] p-1.5 text-warm-muted transition-colors hover:bg-warm-accent-soft hover:text-warm-accent-hover"><Edit className="w-4 h-4" /></button>
       <button type="button" onClick={() => removeCatalogAddon(addon.addonId)} title={`Remove ${addon.name}`} aria-label={`Remove ${addon.name}`}
-        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+        className="rounded-[10px] p-1.5 text-warm-muted transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
     </div>
   );
 
@@ -737,7 +742,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // In package mode the configured-service dropdown joins it there, so both ways of putting a service
   // on the estimate are chosen in one place. Custom mode leaves the picker where it was, below.
   const renderStructure = (packageSelect) => (
-    <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure}>
+    <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure} theme="warm">
       {estimateStructure === 'package' ? (
         <div className="flex min-w-0 w-full flex-col gap-3 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1">{packageSelect}</div>
@@ -750,7 +755,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // Its Add Service button is the catalog menu, with Custom listed above the configured services:
   // one control for both, instead of the picker repeated in a panel underneath.
   const renderCustomServices = () => estimateStructure === 'custom'
-    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null}
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm"
         extraRows={catalogAddons} renderExtraActions={catalogRowActions}
         addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
           { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
@@ -1322,14 +1327,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={handleBackFromEstimate}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            className="flex items-center gap-2 text-warm-muted hover:text-warm-text transition-colors group"
             title="Go back (Esc)"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-medium">Back</span>
           </button>
-          <span className="text-gray-300">|</span>
-          <h2 className="text-lg font-semibold text-gray-800">
+          <span className="text-warm-border">|</span>
+          <h2 className="text-lg font-semibold text-warm-text">
             {estimateType === 'property-based' 
               ? (selectedProperty ? 'Property Estimate Form' : 'Select Property')
               : estimateType === 'work_order'
@@ -1340,27 +1345,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       )}
 
       {!estimateType && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Select Estimate Type</h2>
+        <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
+          <h2 className="text-lg font-semibold text-warm-text mb-2">Select Estimate Type</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            {/* Property-Based Estimate */}
-            <button onClick={() => setEstimateType('property-based')} className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group">
-              <Building2 className="w-10 h-10 text-gray-400 group-hover:text-blue-500 mx-auto mb-3" />
-              <p className="font-semibold text-gray-800 group-hover:text-blue-600">Property-Based Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Enter Property ID to auto-fill details</p>
-            </button>
-            {/* Direct-Based Estimate */}
-            <button onClick={() => { setEstimateType('direct'); setSelectedProperty(null); setPropertyIdInput(''); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all group">
-              <User className="w-10 h-10 text-gray-400 group-hover:text-amber-500 mx-auto mb-3" />
-              <p className="font-semibold text-gray-800 group-hover:text-amber-600">Direct-Based Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Enter customer details manually</p>
-            </button>
-            {/* Work Order Estimate */}
-            <button onClick={() => { setEstimateType('work_order'); setWorkOrderStep('input'); setWorkOrderData(null); setWorkOrderError(''); setWorkOrderIdInput(''); fetchCompletedWorkOrders(); }} className="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all group">
-              <ClipboardList className="w-10 h-10 text-gray-400 group-hover:text-orange-500 mx-auto mb-3" />
-              <p className="font-semibold text-gray-800 group-hover:text-orange-600">Work Order Estimate</p>
-              <p className="text-sm text-gray-500 mt-1">Create estimate from existing Work Order</p>
-            </button>
+            {[
+              { icon: Building2, title: 'Property-Based Estimate', description: 'Enter Property ID to auto-fill details', onClick: () => setEstimateType('property-based') },
+              { icon: User, title: 'Direct-Based Estimate', description: 'Enter customer details manually', onClick: () => { setEstimateType('direct'); setSelectedProperty(null); setPropertyIdInput(''); } },
+              { icon: ClipboardList, title: 'Work Order Estimate', description: 'Create estimate from existing Work Order', onClick: () => { setEstimateType('work_order'); setWorkOrderStep('input'); setWorkOrderData(null); setWorkOrderError(''); setWorkOrderIdInput(''); fetchCompletedWorkOrders(); } }
+            ].map(({ icon: Icon, title, description, onClick }) => (
+              <button key={title} onClick={onClick} className="group h-full p-6 bg-white border border-warm-border rounded-xl text-center transition-all hover:border-warm-accent hover:bg-warm-section hover:shadow-warm-hover">
+                <span className="mx-auto mb-3 flex w-14 h-14 items-center justify-center rounded-full bg-warm-accent-soft transition-colors group-hover:bg-warm-accent/25">
+                  <Icon className="w-7 h-7 text-warm-accent" strokeWidth={1.5} />
+                </span>
+                <p className="font-semibold text-warm-text group-hover:text-warm-accent-hover">{title}</p>
+                <p className="text-sm text-warm-muted mt-1">{description}</p>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -1392,21 +1392,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         let pkgSvcData = selectedPkg?.services;
         if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
         const billingDuration = pkgSvcData?.billing_duration || selectedPkg?.billing_duration || (selectedPkg ? getPackageBillingDuration(selectedPkg) : '') || 'yearly';
-        const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm leading-6 text-gray-900 whitespace-pre-wrap [overflow-wrap:anywhere]';
+        const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-warm-border rounded-[10px] text-sm leading-6 text-warm-text whitespace-pre-wrap [overflow-wrap:anywhere]';
         const readOnlyValue = (value, white = false) => (
-          <div className={`${readOnlyCls} ${white ? 'bg-white' : 'bg-gray-50'}`}>
-            {value === '' || value == null ? <span className="text-gray-400">Auto-filled</span> : String(value)}
+          <div className={`${readOnlyCls} ${white ? 'bg-white' : 'bg-warm-section'}`}>
+            {value === '' || value == null ? <span className="text-warm-muted">Auto-filled</span> : String(value)}
           </div>
         );
         return (
         <div className="flex flex-col xl:flex-row gap-6">
           {/* Left column - main form */}
           <div className="flex-1 min-w-0 space-y-4">
-            {/* Property header - details auto-populate from Property ID */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            {/* Property header - details auto-populate from Property ID. Same 24px padding as the
+                cards below it, so every field in this column starts on one line */}
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
                 <div className="min-w-0">
-                  <label htmlFor="estimate-property-id" className="block text-xs font-medium text-slate-600 mb-1">Property ID <span className="text-red-500">*</span></label>
+                  <label htmlFor="estimate-property-id" className="block text-xs font-medium text-warm-muted mb-1.5">Property ID <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <textarea
                       id="estimate-property-id"
@@ -1424,22 +1425,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       onFocus={() => setShowPropertySuggestions(true)}
                       onBlur={() => setTimeout(() => setShowPropertySuggestions(false), 200)}
                       placeholder="GC-DMMN-20260520"
-                      className="block w-full min-h-[42px] resize-none overflow-hidden pl-3 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500 text-sm leading-6 [overflow-wrap:anywhere]"
+                      className="block w-full min-h-[42px] resize-none overflow-hidden pl-3 pr-9 py-2 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent text-sm leading-6 [overflow-wrap:anywhere]"
                     />
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
                     {showPropertySuggestions && !selectedProperty && propertySuggestions.length > 0 && (
-                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-warm-border rounded-[10px] shadow-lg max-h-56 overflow-y-auto">
                         {propertySuggestions.map(p => (
                           <button
                             key={p.id || p.property_id}
                             type="button"
                             onClick={() => { setPropertyIdInput(p.property_id); applyProperty(p); setShowPropertySuggestions(false); }}
-                            className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-3"
+                            className="w-full px-3 py-2 text-left hover:bg-warm-section flex items-center gap-3"
                           >
-                            <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
+                            <Building2 className="w-4 h-4 text-warm-muted shrink-0" />
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-800 [overflow-wrap:anywhere]">{p.property_id}</p>
-                              <p className="text-xs text-gray-500 [overflow-wrap:anywhere]">{p.name || p.community_name || p.property_name || '-'}</p>
+                              <p className="text-sm font-medium text-warm-text [overflow-wrap:anywhere]">{p.property_id}</p>
+                              <p className="text-xs text-warm-muted [overflow-wrap:anywhere]">{p.name || p.community_name || p.property_name || '-'}</p>
                             </div>
                           </button>
                         ))}
@@ -1448,19 +1449,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Property Name</label>
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Property Name</label>
                   {readOnlyValue(selectedProperty?.name || selectedProperty?.community_name || selectedProperty?.property_name)}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Property Type</label>
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Property Type</label>
                   {readOnlyValue(propertyTypeRaw ? getPropertyTypeLabel(propertyTypeRaw) : '')}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Customer</label>
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Customer</label>
                   {readOnlyValue(customerName)}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Zone</label>
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Zone</label>
                   {readOnlyValue(selectedProperty?.zone_name || selectedProperty?.zoneName || selectedProperty?.zone)}
                 </div>
               </div>
@@ -1468,44 +1469,44 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
             {/* Property Details - remaining auto-populated fields */}
             {selectedProperty && (
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-800">Property Details</h3>
+              <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+                <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+                  <h3 className="text-sm font-semibold text-warm-text">Property Details</h3>
                 </div>
-                <div className="p-5 space-y-4">
+                <div className="p-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Phone</label>
+                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Contact Phone</label>
                       {readOnlyValue(selectedProperty.contact_phone || selectedProperty.phone)}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Contact Email</label>
+                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Contact Email</label>
                       {readOnlyValue(selectedProperty.contact_email || selectedProperty.email)}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Area</label>
+                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Area</label>
                       {readOnlyValue(selectedProperty.area || selectedProperty.area_name)}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">City</label>
+                      <label className="block text-xs font-medium text-warm-muted mb-1.5">City</label>
                       {readOnlyValue(selectedProperty.city)}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
+                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Units</label>
                       {readOnlyValue(selectedProperty.units ?? selectedProperty.total_units ?? 1)}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Address</label>
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Address</label>
                     {readOnlyValue(selectedProperty.address)}
                   </div>
 
                   {/* Unit Details - Property Type Specific */}
-                  <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="bg-warm-section rounded-[10px] p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <Building2 className="w-4 h-4 text-slate-600" />
-                      <span className="text-sm font-medium text-slate-700">Unit Details</span>
-                      <span className="text-xs px-2 py-0.5 bg-slate-200 text-slate-600 rounded">{selectedProperty.property_type?.toUpperCase() || 'GC'}</span>
+                      <Building2 className="w-4 h-4 text-warm-muted" />
+                      <span className="text-sm font-medium text-warm-text">Unit Details</span>
+                      <span className="text-xs px-2 py-0.5 bg-warm-accent-soft text-warm-text border border-warm-border rounded">{selectedProperty.property_type?.toUpperCase() || 'GC'}</span>
                     </div>
                     {(() => {
                       const propType = (selectedProperty.property_type || '').toUpperCase();
@@ -1515,7 +1516,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Flat Number</label>
+                              <label className="block text-xs font-medium text-warm-muted mb-1.5">Flat Number</label>
                               {readOnlyValue(selectedProperty.flat_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
@@ -1527,7 +1528,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Villa Number</label>
+                              <label className="block text-xs font-medium text-warm-muted mb-1.5">Villa Number</label>
                               {readOnlyValue(selectedProperty.villa_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
@@ -1539,7 +1540,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         return (
                           <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <label className="block text-xs font-medium text-slate-500 mb-1">Plot Number</label>
+                              <label className="block text-xs font-medium text-warm-muted mb-1.5">Plot Number</label>
                               {readOnlyValue(selectedProperty.plot_number || selectedProperty.villa_plot_number || selectedProperty.unit_number || '-', true)}
                             </div>
                           </div>
@@ -1563,21 +1564,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
-                                <div key={blockNum} className="bg-white border border-gray-200 rounded-lg p-3">
+                                <div key={blockNum} className="bg-white border border-warm-border rounded-[10px] p-3">
                                   <div className="flex justify-between items-start mb-2">
                                     <div className="min-w-0 pr-2">
-                                      <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
-                                      <p className="text-sm font-semibold text-gray-800 [overflow-wrap:anywhere]">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
+                                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Block Name</label>
+                                      <p className="text-sm font-semibold text-warm-text [overflow-wrap:anywhere]">{blockNames?.[blockNum] || blockNames?.[String(blockNum)] || `Block ${blockNum}`}</p>
                                     </div>
                                     <div className="text-right">
-                                      <label className="block text-xs font-medium text-slate-500 mb-1">Units</label>
-                                      <p className="text-sm font-medium text-gray-700">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                      <label className="block text-xs font-medium text-warm-muted mb-1.5">Units</label>
+                                      <p className="text-sm font-medium text-warm-text">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
                                   {hasUnitTypes && (
-                                    <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-100">
+                                    <div className="flex flex-wrap gap-1 pt-2 border-t border-warm-border/70">
                                       {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                        <span key={type} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">
+                                        <span key={type} className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">
                                           {unitTypeLabels[type] || type}: {count}
                                         </span>
                                       ))}
@@ -1597,22 +1598,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                               <div className="min-w-0">
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Block Name</label>
+                                <label className="block text-xs font-medium text-warm-muted mb-1.5">Block Name</label>
                                 {readOnlyValue(selectedProperty.block_name || selectedProperty.block_info || blockNames?.[1] || blockNames?.['1'] || 'A', true)}
                               </div>
                               <div className="min-w-0">
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Number of Units</label>
+                                <label className="block text-xs font-medium text-warm-muted mb-1.5">Number of Units</label>
                                 {readOnlyValue(`${selectedProperty.units ?? selectedProperty.total_units ?? unitsPerBlock?.[1] ?? 1} Units`, true)}
                               </div>
                             </div>
                             {isAPT && (
-                              <div className="flex flex-wrap gap-2 p-3 bg-white border border-gray-200 rounded-lg">
-                                <span className="text-xs font-medium text-slate-500 mr-2">Unit Types:</span>
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">Studio: {unitTypes.studio || 0}</span>
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">1 BHK: {unitTypes.oneBed || 0}</span>
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">2 BHK: {unitTypes.twoBed || 0}</span>
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">3 BHK: {unitTypes.threeBed || 0}</span>
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-100">4 BHK: {unitTypes.fourBed || 0}</span>
+                              <div className="flex flex-wrap gap-2 p-3 bg-white border border-warm-border rounded-[10px]">
+                                <span className="text-xs font-medium text-warm-muted mr-2">Unit Types:</span>
+                                <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">Studio: {unitTypes.studio || 0}</span>
+                                <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">1 BHK: {unitTypes.oneBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">2 BHK: {unitTypes.twoBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">3 BHK: {unitTypes.threeBed || 0}</span>
+                                <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">4 BHK: {unitTypes.fourBed || 0}</span>
                               </div>
                             )}
                           </div>
@@ -1628,15 +1629,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {renderStructure(
               // Stacked, so it lines up with the configured-service dropdown beside it
               <div className="min-w-0 w-full">
-                <label htmlFor="estimate-amc-package" className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+                <label htmlFor="estimate-amc-package" className="block text-xs font-medium text-warm-muted mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
                 {/* Unchosen reads as a placeholder, not as a value */}
                 <select
                   id="estimate-amc-package"
                   value={estimateForm.selectedPackage}
                   onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                  className={`w-full min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white ${estimateForm.selectedPackage ? 'text-gray-800' : 'text-gray-400'}`}
+                  className={`w-full min-w-0 px-3 py-2.5 border border-warm-border rounded-[10px] text-sm bg-white ${estimateForm.selectedPackage ? 'text-warm-text' : 'text-warm-muted'}`}
                 >
-                  <option value="" className="text-gray-400">Select a package</option>
+                  <option value="" className="text-warm-muted">Select a package</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
                     const searchType = normalizePropertyType(propertyType);
@@ -1651,43 +1652,43 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {renderCustomServices()}
 
             {/* Services - package services + added services in one table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + tableCatalogAddons.length})</h3>
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+              <div className="bg-warm-section px-6 py-4 border-b border-warm-border flex flex-col sm:flex-row sm:items-center gap-3">
+                <h3 className="text-sm font-semibold text-warm-text">Services ({pkgServices.length + selectedAddonRows.length + tableCatalogAddons.length})</h3>
               </div>
               {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
                   from the Custom Services table's own Add Service menu */}
               {pkgServices.length === 0 && selectedAddonRows.length === 0 && tableCatalogAddons.length === 0 ? (
-                <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
+                <div className="py-10 text-center text-sm text-warm-muted">Select an AMC package to see its services, or add services individually</div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-warm-section border-b border-warm-border">
                     <tr>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[5%]">#</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-[22%]">Service</th>
-                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase ${hasRowActions ? 'w-[41%]' : 'w-[51%]'}`}>Description</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[12%]">Frequency</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Visits</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[5%]">#</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
+                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase ${hasRowActions ? 'w-[41%]' : 'w-[51%]'}`}>Description</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[12%]">Frequency</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Visits</th>
                       {/* A package's own services cannot be removed one by one, so with nothing else
                           in the table the column held only dashes. It appears when a row can act. */}
-                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Action</th>}
+                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Action</th>}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-warm-border/70">
                     {pkgServices.map((svc, idx) => {
                       const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
                       const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
                       const desc = decodeHtml(svc.description)?.trim();
                       return (
                         <tr key={`pkg-${idx}`} className="align-top">
-                          <td className="px-3 py-2.5 text-center text-gray-500">{idx + 1}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{idx + 1}</td>
                           <td className="px-3 py-2.5">
-                            <p className="font-medium text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</p>
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 text-blue-700 border border-blue-100">Package</span>
+                            <p className="font-medium text-warm-text">{decodeHtml(svc.service || svc.name) || '-'}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-info text-warm-text border border-[#D8E2FA]">Package</span>
                           </td>
-                          <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                          <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
                           {hasRowActions && <td className="px-3 py-2.5" />}
                         </tr>
                       );
@@ -1698,14 +1699,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       const desc = decodeHtml(addon.description || addon.services?.[0]?.description)?.trim();
                       return (
                         <tr key={`addon-${idx}`} className="align-top">
-                          <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + i + 1}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{pkgServices.length + i + 1}</td>
                           <td className="px-3 py-2.5">
-                            <p className="font-medium text-gray-800">{decodeHtml(addon.service_name)}</p>
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700 border border-amber-100">Service</span>
+                            <p className="font-medium text-warm-text">{decodeHtml(addon.service_name)}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-warning text-amber-700 border border-[#F3E2B3]">Service</span>
                           </td>
-                          <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                          <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
                           <td className="px-3 py-2.5 text-center">
                             <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, j) => j !== idx)})} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
                           </td>
@@ -1714,23 +1715,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     })}
                     {tableCatalogAddons.map((addon, i) => (
                       <tr key={`catalog-${addon.addonId}`} className="align-top">
-                        <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
+                        <td className="px-3 py-2.5 text-center text-warm-muted">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
                         <td className="px-3 py-2.5">
-                          <p className="font-medium text-gray-800">{addon.name}</p>
-                          <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Configured</span>
+                          <p className="font-medium text-warm-text">{addon.name}</p>
+                          <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-success text-emerald-700 border border-[#CFEBDD]">Configured</span>
                         </td>
-                        <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
-                        <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
-                        <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
+                        <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
+                        <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type}</td>
+                        <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_count}</td>
                         <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
                       </tr>
                     ))}
                   </tbody>
                   {(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) && (
-                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                    <tfoot className="bg-warm-accent-soft border-t border-warm-border">
                       <tr>
-                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
+                        <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   )}
@@ -1739,62 +1740,62 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
 
             {/* Notes */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-800">Notes</h3>
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+              <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+                <h3 className="text-sm font-semibold text-warm-text">Notes</h3>
               </div>
-              <div className="p-5">
+              <div className="p-6">
                 <textarea
                   value={estimateForm.description}
                   onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
                   placeholder="Add a note for this estimate..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[90px]"
+                  className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[90px]"
                 />
               </div>
             </div>
 
             {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-            <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms}
+            <TermsConditionsField theme="warm" include={includeTerms} onIncludeChange={setIncludeTerms}
               terms={termsConditions} onTermsChange={setTermsConditions} />
           </div>
 
           {/* Right column - pricing & package summary */}
           <div className="w-full xl:w-80 shrink-0 space-y-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-800 mb-4">Pricing Summary</h3>
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
+              <h3 className="text-sm font-semibold text-warm-text mb-4">Pricing Summary</h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Package Price</span><span className="font-medium text-gray-800">{formatCurrency(pkgPrice)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Services</span><span className="font-medium text-gray-800">{formatCurrency(addonsTotal)}</span></div>
-                <div className="flex justify-between border-t border-gray-100 pt-3"><span className="text-gray-600">Service Subtotal</span><span className="font-semibold text-gray-900">{formatCurrency(pricing.subtotal)}</span></div>
+                <div className="flex justify-between"><span className="text-warm-muted">Package Price</span><span className="font-medium text-warm-text">{formatCurrency(pkgPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-warm-muted">Services</span><span className="font-medium text-warm-text">{formatCurrency(addonsTotal)}</span></div>
+                <div className="flex justify-between border-t border-warm-border/70 pt-3"><span className="text-warm-muted">Service Subtotal</span><span className="font-semibold text-warm-text">{formatCurrency(pricing.subtotal)}</span></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Discount (%)</span>
-                  <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right" min="0" max="100" />
+                  <span className="text-warm-muted">Discount (%)</span>
+                  <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="h-9 w-20 px-2 border border-warm-border rounded-[8px] text-sm text-right focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" min="0" max="100" />
                 </div>
-                <div className="flex justify-between"><span className="text-gray-500">Discount Amount</span><span className="text-red-600">- {formatCurrency(pricing.discountAmt)}</span></div>
-                <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-                  <span className="text-gray-500">GST (%)</span>
-                  <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-20 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-right text-blue-700" placeholder="0" />
+                <div className="flex justify-between"><span className="text-warm-muted">Discount Amount</span><span className="text-red-600">- {formatCurrency(pricing.discountAmt)}</span></div>
+                <div className="flex justify-between items-center border-t border-warm-border/70 pt-3">
+                  <span className="text-warm-muted">GST (%)</span>
+                  <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="h-9 w-20 px-2 border border-warm-accent bg-warm-accent-soft rounded-[8px] text-sm text-right text-warm-text" placeholder="0" />
                 </div>
-                <div className="flex justify-between"><span className="text-gray-500">GST Amount</span><span className="text-gray-800">+ {formatCurrency(pricing.gstAmt)}</span></div>
-                <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-                  <p className="text-xs font-medium text-blue-700">Grand Total (Incl. GST)</p>
-                  <p className="text-xl font-bold text-blue-800">{formatCurrency(pricing.total)}</p>
+                <div className="flex justify-between"><span className="text-warm-muted">GST Amount</span><span className="text-warm-text">+ {formatCurrency(pricing.gstAmt)}</span></div>
+                <div className="mt-2 rounded-xl bg-warm-accent-soft border border-warm-accent/50 px-4 py-3">
+                  <p className="text-xs font-semibold text-warm-accent-hover">Grand Total (Incl. GST)</p>
+                  <p className="text-xl font-bold text-warm-text">{formatCurrency(pricing.total)}</p>
                 </div>
               </div>
             </div>
 
             {selectedPkg && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-800 mb-4">Package Details</h3>
+              <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
+                <h3 className="text-sm font-semibold text-warm-text mb-4">Package Details</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between gap-3"><span className="text-gray-500">Billing</span><span className="font-medium text-gray-800 capitalize text-right">{String(billingDuration).replace('-', ' ')} Billing</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-500">Package Price</span><span className="font-medium text-gray-800">{formatCurrency(pkgPrice)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-500">Services Included</span><span className="font-medium text-gray-800">{pkgServices.length}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-gray-500">Applicable For</span><span className="font-medium text-gray-800 text-right">{getPropertyTypeLabel(getPkgPropertyType(selectedPkg))}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Billing</span><span className="font-medium text-warm-text capitalize text-right">{String(billingDuration).replace('-', ' ')} Billing</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Package Price</span><span className="font-medium text-warm-text">{formatCurrency(pkgPrice)}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Services Included</span><span className="font-medium text-warm-text">{pkgServices.length}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Applicable For</span><span className="font-medium text-warm-text text-right">{getPropertyTypeLabel(getPkgPropertyType(selectedPkg))}</span></div>
                   {selectedPkg.description && (
                     <div className="pt-1">
-                      <p className="text-gray-500 mb-1">Description</p>
-                      <p className="text-xs text-gray-700 leading-relaxed break-words">{decodeHtml(selectedPkg.description)}</p>
+                      <p className="text-warm-muted mb-1">Description</p>
+                      <p className="text-xs text-warm-text leading-relaxed break-words">{decodeHtml(selectedPkg.description)}</p>
                     </div>
                   )}
                 </div>
@@ -1803,8 +1804,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
             {/* Actions */}
             <div className="flex gap-3">
-              <button onClick={handleBackFromEstimate} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
-              <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${savingEstimate ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
+              <button onClick={handleBackFromEstimate} className="flex-1 px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
+              <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`flex-1 px-4 py-2.5 rounded-[10px] text-sm font-medium text-white transition-colors ${savingEstimate ? 'bg-warm-border cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
@@ -1815,50 +1816,50 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {estimateType === 'direct' && (
         <div className="space-y-6">
           {/* Customer Information */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Customer Information</h2>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+              <h2 className="text-base font-semibold text-warm-text">Customer Information</h2>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="min-w-0">
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Customer Name <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="Enter customer name" value={estimateForm.customerName} onChange={(e) => setEstimateForm({...estimateForm, customerName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Customer Name <span className="text-red-500">*</span></label>
+                  <input type="text" placeholder="Enter customer name" value={estimateForm.customerName} onChange={(e) => setEstimateForm({...estimateForm, customerName: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
                 <div className="min-w-0">
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Phone <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Phone <span className="text-red-500">*</span></label>
                   <div className="flex w-full">
-                    <select value={estimateForm.countryCode || '+91'} onChange={(e) => setEstimateForm({...estimateForm, countryCode: e.target.value})} className="shrink-0 px-2 py-2.5 border border-gray-300 border-r-0 rounded-l-lg text-sm bg-gray-50">
+                    <select value={estimateForm.countryCode || '+91'} onChange={(e) => setEstimateForm({...estimateForm, countryCode: e.target.value})} className="shrink-0 px-2 py-2.5 border border-warm-border border-r-0 rounded-l-[10px] text-sm bg-warm-section">
                       <option value="+91">+91</option>
                     </select>
-                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-gray-300 rounded-r-lg text-sm" />
+                    <input type="tel" placeholder="10-digit phone number" value={estimateForm.phone} maxLength={10} onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); setEstimateForm({...estimateForm, phone: val}); }} className="min-w-0 flex-1 px-3 py-2.5 border border-warm-border rounded-r-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                 </div>
                 <div className="min-w-0">
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Email</label>
-                  <input type="email" placeholder="Enter email address" value={estimateForm.email} onChange={(e) => setEstimateForm({...estimateForm, email: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Email</label>
+                  <input type="email" placeholder="Enter email address" value={estimateForm.email} onChange={(e) => setEstimateForm({...estimateForm, email: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Property Details */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Property Details</h2>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+              <h2 className="text-base font-semibold text-warm-text">Property Details</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Property Type <span className="text-red-500">*</span></label>
-                  <select value={estimateForm.propertyType} onChange={(e) => setEstimateForm({...estimateForm, propertyType: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Property Type <span className="text-red-500">*</span></label>
+                  <select value={estimateForm.propertyType} onChange={(e) => setEstimateForm({...estimateForm, propertyType: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                     <option value="">Select Property Type</option>
                     {PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Property Name</label>
-                  <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Property Name</label>
+                  <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
                 <div>
                   <AutocompleteInput
@@ -1869,6 +1870,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     placeholder="Type or select zone..."
                     allowCustom={true}
                     inputClassName="text-sm"
+                    theme="warm"
                   />
                 </div>
                 <div>
@@ -1880,84 +1882,85 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     placeholder="Type or select city..."
                     allowCustom={true}
                     inputClassName="text-sm"
+                    theme="warm"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">Address</label>
-                <input type="text" placeholder="Enter full address" value={estimateForm.address} onChange={(e) => setEstimateForm({...estimateForm, address: e.target.value})} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">Address</label>
+                <input type="text" placeholder="Enter full address" value={estimateForm.address} onChange={(e) => setEstimateForm({...estimateForm, address: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
               </div>
               
               {/* Blocks & Units - Only for GC - Dynamic blocks */}
               {estimateForm.propertyType === 'GC' && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
+                <div className="mt-4 p-4 bg-warm-accent-soft rounded-[10px] border border-warm-border">
+                  <h4 className="text-sm font-semibold text-warm-text mb-3">Block Details</h4>
                   <div className="mb-4 max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
-                    <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Number of Blocks <span className="text-red-500">*</span></label>
+                    <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {Array.from({ length: parseInt(estimateForm.numberOfBlocks) || 1 }, (_, i) => i + 1).map(blockNum => (
                       <React.Fragment key={blockNum}>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>
-                          <input type="text" value={estimateForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(estimateForm.blockNames || {}), [blockNum]: e.target.value}; setEstimateForm({...estimateForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                          <label className="block text-xs font-medium text-warm-muted mb-1.5">Block Name</label>
+                          <input type="text" value={estimateForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(estimateForm.blockNames || {}), [blockNum]: e.target.value}; setEstimateForm({...estimateForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Units <span className="text-red-500">*</span></label>
-                          <input type="number" min="1" value={estimateForm.unitsPerBlock?.[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...(estimateForm.unitsPerBlock || {}), [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits, numberOfUnits: totalUnits}); }} placeholder="No. of units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                          <label className="block text-xs font-medium text-warm-muted mb-1.5">Units <span className="text-red-500">*</span></label>
+                          <input type="number" min="1" value={estimateForm.unitsPerBlock?.[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...(estimateForm.unitsPerBlock || {}), [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setEstimateForm({...estimateForm, unitsPerBlock: newUnitsPerBlock, totalUnits, numberOfUnits: totalUnits}); }} placeholder="No. of units" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                         </div>
                       </React.Fragment>
                     ))}
                   </div>
-                  {(estimateForm.totalUnits > 0 || estimateForm.numberOfUnits > 0) && (<div className="mt-3 p-2 bg-blue-100 rounded inline-block"><span className="text-sm text-blue-700 font-medium">Total Units: {estimateForm.totalUnits || estimateForm.numberOfUnits}</span></div>)}
+                  {(estimateForm.totalUnits > 0 || estimateForm.numberOfUnits > 0) && (<div className="mt-3 p-2 bg-warm-accent-soft rounded inline-block"><span className="text-sm text-warm-text font-medium">Total Units: {estimateForm.totalUnits || estimateForm.numberOfUnits}</span></div>)}
                 </div>
               )}
 
               {/* Apartment */}
               {estimateForm.propertyType === 'APT' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-warm-accent-soft rounded-[10px] border border-warm-border">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tower/Building Name</label>
-                    <input type="text" value={estimateForm.blockName || ''} onChange={(e) => setEstimateForm({...estimateForm, blockName: e.target.value})} placeholder="Tower/Building name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Tower/Building Name</label>
+                    <input type="text" value={estimateForm.blockName || ''} onChange={(e) => setEstimateForm({...estimateForm, blockName: e.target.value})} placeholder="Tower/Building name" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Block Number</label>
-                    <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Block Number</label>
+                    <input type="text" value={estimateForm.blockNumber} onChange={(e) => setEstimateForm({...estimateForm, blockNumber: e.target.value})} placeholder="e.g., A, B, 1, 2" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Units <span className="text-red-500">*</span></label>
-                    <input type="number" min="1" value={estimateForm.numberOfUnits} onChange={(e) => setEstimateForm({...estimateForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Number of Units <span className="text-red-500">*</span></label>
+                    <input type="number" min="1" value={estimateForm.numberOfUnits} onChange={(e) => setEstimateForm({...estimateForm, numberOfUnits: e.target.value})} placeholder="Total units" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                 </div>
               )}
 
               {/* Villa */}
               {estimateForm.propertyType === 'VILLA' && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-4 p-4 bg-warm-accent-soft rounded-[10px] border border-warm-border">
                   <div className="max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Villa Number <span className="text-red-500">*</span></label>
-                    <input type="text" value={estimateForm.villaNumber} onChange={(e) => setEstimateForm({...estimateForm, villaNumber: e.target.value})} placeholder="Enter villa number" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Villa Number <span className="text-red-500">*</span></label>
+                    <input type="text" value={estimateForm.villaNumber} onChange={(e) => setEstimateForm({...estimateForm, villaNumber: e.target.value})} placeholder="Enter villa number" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                 </div>
               )}
 
               {/* Flat */}
               {estimateForm.propertyType === 'FLAT' && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mt-4 p-4 bg-warm-accent-soft rounded-[10px] border border-warm-border">
                   <div className="max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Flat Number <span className="text-red-500">*</span></label>
-                    <input type="text" value={estimateForm.flatNumber} onChange={(e) => setEstimateForm({...estimateForm, flatNumber: e.target.value})} placeholder="Enter flat number" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Flat Number <span className="text-red-500">*</span></label>
+                    <input type="text" value={estimateForm.flatNumber} onChange={(e) => setEstimateForm({...estimateForm, flatNumber: e.target.value})} placeholder="Enter flat number" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                 </div>
               )}
 
               {/* Plot */}
               {estimateForm.propertyType === 'PLOT' && (
-                <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="mt-4 p-4 bg-red-50 rounded-[10px] border border-red-200">
                   <div className="max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Plot Number <span className="text-red-500">*</span></label>
-                    <input type="text" value={estimateForm.plotNumber} onChange={(e) => setEstimateForm({...estimateForm, plotNumber: e.target.value})} placeholder="Enter plot number" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Plot Number <span className="text-red-500">*</span></label>
+                    <input type="text" value={estimateForm.plotNumber} onChange={(e) => setEstimateForm({...estimateForm, plotNumber: e.target.value})} placeholder="Enter plot number" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                 </div>
               )}
@@ -1967,14 +1970,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Estimate Structure: package or hand-entered services */}
           {renderStructure(
             <div className="min-w-0 w-full">
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-warm-muted mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
               {/* Unchosen reads as a placeholder, not as a value */}
               <select
                 value={estimateForm.selectedPackage}
                 onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
-                className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white ${estimateForm.selectedPackage ? 'text-gray-800' : 'text-gray-400'}`}
+                className={`w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white ${estimateForm.selectedPackage ? 'text-warm-text' : 'text-warm-muted'}`}
               >
-                <option value="" className="text-gray-400">Select a package</option>
+                <option value="" className="text-warm-muted">Select a package</option>
                 {(() => {
                   const searchType = normalizePropertyType(estimateForm.propertyType);
                   const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
@@ -1987,9 +1990,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           )}
 
           {/* Services: the package's own, plus anything added here */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+              <h2 className="text-base font-semibold text-warm-text">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
             </div>
             <div className="p-6 space-y-4">
               {renderCustomServices()}
@@ -2003,42 +2006,42 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
                 const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
                 return (
-                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-blue-50/30">
+                  <div className="border border-warm-border rounded-xl overflow-hidden bg-warm-section/60">
                     <div className="px-5 py-3 flex items-center gap-3">
-                      <Package className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-gray-900">{decodeHtml(pkg.name)}</span>
-                      <span className="px-2 py-0.5 bg-slate-700 text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
+                      <Package className="w-5 h-5 text-warm-accent-hover" />
+                      <span className="font-semibold text-warm-text">{decodeHtml(pkg.name)}</span>
+                      <span className="px-2 py-0.5 bg-warm-text text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
                     </div>
                     <table className="w-full text-sm bg-white">
                       <thead>
-                        <tr className="border-y border-blue-100">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[12%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[53%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[20%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[15%]">Visits</th>
+                        <tr className="border-y border-warm-border/70">
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[12%]">Service</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[53%]">Description</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[20%]">Frequency</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Visits</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-warm-border/70">
                         {services.length > 0 ? services.map((svc, idx) => {
                           const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
                           const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
                           return (
                             <tr key={idx} className="align-top">
-                              <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
-                              <td className="px-3 py-2.5 text-gray-600">{freqType}</td>
-                              <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                              <td className="px-3 py-2.5 text-warm-text font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
+                              <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                              <td className="px-3 py-2.5 text-warm-muted">{freqType}</td>
+                              <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
                             </tr>
                           );
-                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-400">No services in package</td></tr>}
+                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-warm-muted">No services in package</td></tr>}
                       </tbody>
                     </table>
-                    <div className="px-5 py-3 bg-blue-50 border-t border-blue-100">
+                    <div className="px-5 py-3 bg-warm-accent-soft border-t border-warm-border/70">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-blue-700">Total Package Price</span>
-                        <span className="text-lg font-bold text-gray-900">{formatCurrency(pkg.price)}</span>
+                        <span className="text-sm font-semibold text-warm-text">Total Package Price</span>
+                        <span className="text-lg font-bold text-warm-text">{formatCurrency(pkg.price)}</span>
                       </div>
-                      <div className="text-xs text-blue-600 mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
+                      <div className="text-xs text-warm-muted mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
                     </div>
                   </div>
                 );
@@ -2049,31 +2052,31 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {/* Additional Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
-                <div className="border border-blue-200 rounded-xl overflow-hidden">
-                  <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-700">Additional Services</span>
+                <div className="border border-warm-border rounded-xl overflow-hidden">
+                  <div className="bg-warm-accent-soft px-5 py-2.5 border-b border-warm-border">
+                    <span className="text-sm font-semibold text-warm-text">Additional Services</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-blue-100 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-blue-600 uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-blue-600 uppercase w-[10%]">Action</th>
+                      <tr className="border-b border-warm-border/70 bg-white">
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[10%]">Service</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[48%]">Description</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[18%]">Frequency</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[14%]">Visits</th>
+                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
+                    <tbody className="divide-y divide-warm-border/70 bg-white">
                       {estimateForm.selectedAddons.map((id, idx) => {
                         const addon = addons.find(a => a.id == id || a.id === parseInt(id));
                         if (!addon) return null;
                         const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[addon.frequency_type] ?? 0);
                         return (
                           <tr key={idx} className="align-top">
-                            <td className="px-3 py-2.5 text-gray-800 font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
-                            <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type || 'Monthly'}</td>
-                            <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
+                            <td className="px-3 py-2.5 text-warm-text font-medium">{decodeHtml(addon.service_name)}</td>
+                            <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
+                            <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type || 'Monthly'}</td>
+                            <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
                             <td className="px-3 py-2.5 text-center">
                               <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                             </td>
@@ -2082,18 +2085,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       })}
                       {tableCatalogAddons.map(addon => (
                         <tr key={`catalog-${addon.addonId}`} className="align-top">
-                          <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.name}</td>
-                          <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_count}</td>
+                          <td className="px-3 py-2.5 text-warm-text font-medium">{addon.name}</td>
+                          <td className="px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_count}</td>
                           <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-blue-50 border-t border-blue-200">
+                    <tfoot className="bg-warm-accent-soft border-t border-warm-border">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-gray-900">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
+                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-warm-text">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -2105,9 +2108,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Price Summary - Only show when package selected */}
           {estimateForm.selectedPackage && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Price Summary</h2>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+              <h2 className="text-base font-semibold text-warm-text">Price Summary</h2>
             </div>
             <div className="p-6">
               {(() => {
@@ -2115,24 +2118,24 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 return (
                   <div className="max-w-md ml-auto space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Sub Total</span>
+                      <span className="text-sm text-warm-muted">Sub Total</span>
                       <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Discount (%)</span>
+                      <span className="text-sm text-warm-muted">Discount (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" min="0" max="100" />
-                        <span className="text-gray-500">- {formatCurrency(pricing.discountAmt)}</span>
+                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="h-9 w-20 px-2 border border-warm-border rounded-[8px] text-sm text-center focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" min="0" max="100" />
+                        <span className="text-warm-muted">- {formatCurrency(pricing.discountAmt)}</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">GST (%)</span>
+                      <span className="text-sm text-warm-muted">GST (%)</span>
                       <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="w-16 px-2 py-1 border border-blue-300 bg-blue-50 rounded text-sm text-center text-blue-700" placeholder="0" />
-                        <span className="text-gray-500">+ {formatCurrency(pricing.gstAmt)}</span>
+                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="h-9 w-20 px-2 border border-warm-accent bg-warm-accent-soft rounded-[8px] text-sm text-center text-warm-text" placeholder="0" />
+                        <span className="text-warm-muted">+ {formatCurrency(pricing.gstAmt)}</span>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center bg-slate-800 text-white px-4 py-3 rounded-lg mt-4">
+                    <div className="flex justify-between items-center bg-warm-text text-white px-4 py-3 rounded-[10px] mt-4">
                       <span className="font-medium">Total Amount</span>
                       <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
                     </div>
@@ -2144,55 +2147,55 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           )}
 
           {/* Description / Notes - Under Price Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-slate-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">Description / Notes</h2>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+              <h2 className="text-base font-semibold text-warm-text">Description / Notes</h2>
             </div>
             <div className="p-6">
               <textarea 
                 value={estimateForm.description} 
                 onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
                 placeholder="Add any additional notes or description for this estimate..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm resize-y min-h-[100px]"
+                className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[100px]"
               />
             </div>
           </div>
 
           {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-          <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms}
+          <TermsConditionsField theme="warm" include={includeTerms} onIncludeChange={setIncludeTerms}
             terms={termsConditions} onTermsChange={setTermsConditions} />
 
           {/* Footer Note */}
-          <div className="text-xs text-gray-500 border-t border-gray-200 pt-4">
+          <div className="text-xs text-warm-muted border-t border-warm-border pt-4">
             * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3">
-            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
-            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-lg text-sm font-medium ${savingEstimate ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
+            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
+            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-[10px] text-sm font-medium transition-colors ${savingEstimate ? "bg-warm-border cursor-not-allowed" : "bg-emerald-700 hover:bg-emerald-800"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
           </div>
         </div>
       )}
 
       {/* Work Order Estimate Form */}
       {estimateType === 'work_order' && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
           {/* Completed Work Orders List */}
           {workOrderStep === 'input' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <ClipboardList className="w-5 h-5 text-orange-600" />
+                <div className="p-2 bg-warm-accent-soft rounded-[10px]">
+                  <ClipboardList className="w-5 h-5 text-warm-accent-hover" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-gray-800">Pending Work Orders</h3>
-                  <p className="text-xs text-gray-500">Select a work order to create an estimate</p>
+                  <h3 className="text-base font-semibold text-warm-text">Pending Work Orders</h3>
+                  <p className="text-xs text-warm-muted">Select a work order to create an estimate</p>
                 </div>
               </div>
               
               {workOrderError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-600">{workOrderError}</p>
                 </div>
@@ -2200,26 +2203,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
               {loadingCompletedWO ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                  <span className="ml-2 text-gray-500">Loading work orders...</span>
+                  <Loader2 className="w-6 h-6 animate-spin text-warm-accent" />
+                  <span className="ml-2 text-warm-muted">Loading work orders...</span>
                 </div>
               ) : completedWorkOrders.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium">No pending work orders found</p>
-                  <p className="text-sm mt-1">Create work orders first to generate estimates</p>
-                </div>
+                <EmptyState icon={ClipboardList} title="No pending work orders found" description="Create work orders first to generate estimates" />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Work Order ID</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Customer</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Category</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Status</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Created</th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Property</th>
+                      <tr className="border-b border-warm-border bg-warm-section">
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Work Order ID</th>
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Category</th>
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Status</th>
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Created</th>
+                        <th className="text-left py-3 px-3 font-medium text-warm-muted">Property</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2246,28 +2245,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               setWorkOrderLoading(false);
                             }
                           }}
-                          className="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors"
+                          className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
                         >
-                          <td className="py-3 px-3 font-medium text-gray-900">{wo.work_order_id}</td>
+                          <td className="py-3 px-3 font-medium text-warm-text">{wo.work_order_id}</td>
                           <td className="py-3 px-3">
-                            <div className="font-medium text-gray-800">{wo.customer_name || wo.client_name || '-'}</div>
-                            <div className="text-xs text-gray-500">{wo.property_name || wo.community_name || '-'}</div>
+                            <div className="font-medium text-warm-text">{wo.customer_name || wo.client_name || '-'}</div>
+                            <div className="text-xs text-warm-muted">{wo.property_name || wo.community_name || '-'}</div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-medium">{wo.category_name || '-'}</div>
-                            <div className="text-xs text-gray-500">{wo.subcategory_name || '-'}</div>
+                            <div className="text-xs text-warm-muted">{wo.subcategory_name || '-'}</div>
                           </td>
                           <td className="py-3 px-3">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-warm-warning text-amber-700 border border-[#F3E2B3]">
                               {wo.status || 'Pending'}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-gray-600">
+                          <td className="py-3 px-3 text-warm-muted">
                             {wo.created_at ? new Date(wo.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                           </td>
                           <td className="py-3 px-3">
-                            <div className="font-medium text-gray-800">{wo.customer_name || wo.client_name || '-'}</div>
-                            <div className="text-xs text-gray-500">{wo.property_code || wo.property_id || '-'}</div>
+                            <div className="font-medium text-warm-text">{wo.customer_name || wo.client_name || '-'}</div>
+                            <div className="text-xs text-warm-muted">{wo.property_code || wo.property_id || '-'}</div>
                           </td>
                         </tr>
                       ))}
@@ -2278,9 +2277,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               
               {workOrderLoading && (
                 <div className="fixed inset-0 bg-black bg-opacity-30 flex items-start justify-center z-50 pt-20 overflow-y-auto">
-                  <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                    <span className="text-gray-700">Loading work order details...</span>
+                  <div className="bg-white p-6 rounded-[10px] shadow-xl flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-warm-accent" />
+                    <span className="text-warm-text">Loading work order details...</span>
                   </div>
                 </div>
               )}
@@ -2291,85 +2290,85 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {workOrderStep === 'review' && workOrderData && (
             <div className="p-6 space-y-6">
               {/* Work Order Info */}
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <h4 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+              <div className="p-4 bg-warm-section border border-warm-border rounded-[10px]">
+                <h4 className="text-sm font-semibold text-warm-text mb-3 flex items-center gap-2">
                   <ClipboardList className="w-4 h-4" /> Work Order Information
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div><span className="text-xs text-gray-500 block">Work Order ID</span><span className="font-medium text-orange-700">{workOrderData.work_order_id}</span></div>
-                  <div><span className="text-xs text-gray-500 block">Category</span><span className="font-medium">{workOrderData.category_name || '-'}</span></div>
-                  <div><span className="text-xs text-gray-500 block">Subcategory</span><span className="font-medium">{workOrderData.subcategory_name || '-'}</span></div>
-                  <div><span className="text-xs text-gray-500 block">Priority</span><span className={`font-medium uppercase ${workOrderData.priority === 'high' ? 'text-red-600' : workOrderData.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>{workOrderData.priority || '-'}</span></div>
-                  <div><span className="text-xs text-gray-500 block">Created</span><span className="font-medium">{workOrderData.created_at ? new Date(workOrderData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</span></div>
+                  <div><span className="text-xs text-warm-muted block">Work Order ID</span><span className="font-medium text-warm-text">{workOrderData.work_order_id}</span></div>
+                  <div><span className="text-xs text-warm-muted block">Category</span><span className="font-medium">{workOrderData.category_name || '-'}</span></div>
+                  <div><span className="text-xs text-warm-muted block">Subcategory</span><span className="font-medium">{workOrderData.subcategory_name || '-'}</span></div>
+                  <div><span className="text-xs text-warm-muted block">Priority</span><span className={`font-medium uppercase ${workOrderData.priority === 'high' ? 'text-red-600' : workOrderData.priority === 'medium' ? 'text-yellow-600' : 'text-emerald-600'}`}>{workOrderData.priority || '-'}</span></div>
+                  <div><span className="text-xs text-warm-muted block">Created</span><span className="font-medium">{workOrderData.created_at ? new Date(workOrderData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</span></div>
                 </div>
                 {workOrderData.description && (
-                  <div className="mt-3 pt-3 border-t border-orange-200">
-                    <span className="text-xs text-gray-500 block mb-1">Description</span>
-                    <p className="text-sm text-gray-700">{workOrderData.description}</p>
+                  <div className="mt-3 pt-3 border-t border-warm-border">
+                    <span className="text-xs text-warm-muted block mb-1">Description</span>
+                    <p className="text-sm text-warm-text">{workOrderData.description}</p>
                   </div>
                 )}
               </div>
 
               {/* Property & Customer Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+                <div className="p-4 bg-warm-accent-soft border border-warm-border rounded-[10px]">
+                  <h4 className="text-sm font-semibold text-warm-text mb-3">Property Details</h4>
                   <div className="space-y-2 text-sm">
-                    <div><span className="text-gray-500">Property:</span> <span className="font-medium">{workOrderData.property_name || workOrderData.community_name || '-'}</span></div>
-                    <div><span className="text-gray-500">Property ID:</span> <span className="font-medium">{workOrderData.property_code || workOrderData.property_id || '-'}</span></div>
-                    <div><span className="text-gray-500">Type:</span> <span className="font-medium">{workOrderData.property_type || '-'}</span></div>
-                    <div><span className="text-gray-500">Zone / Division:</span> <span className="font-medium">{workOrderData.zone || '-'} / {workOrderData.division || '-'}</span></div>
-                    <div><span className="text-gray-500">Address:</span> <span className="font-medium">{workOrderData.address || '-'}</span></div>
+                    <div><span className="text-warm-muted">Property:</span> <span className="font-medium">{workOrderData.property_name || workOrderData.community_name || '-'}</span></div>
+                    <div><span className="text-warm-muted">Property ID:</span> <span className="font-medium">{workOrderData.property_code || workOrderData.property_id || '-'}</span></div>
+                    <div><span className="text-warm-muted">Type:</span> <span className="font-medium">{workOrderData.property_type || '-'}</span></div>
+                    <div><span className="text-warm-muted">Zone / Division:</span> <span className="font-medium">{workOrderData.zone || '-'} / {workOrderData.division || '-'}</span></div>
+                    <div><span className="text-warm-muted">Address:</span> <span className="font-medium">{workOrderData.address || '-'}</span></div>
                   </div>
                 </div>
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h4 className="text-sm font-semibold text-green-800 mb-3">Customer Details</h4>
+                <div className="p-4 bg-warm-success border border-[#CFEBDD] rounded-[10px]">
+                  <h4 className="text-sm font-semibold text-emerald-800 mb-3">Customer Details</h4>
                   <div className="space-y-2 text-sm">
-                    <div><span className="text-gray-500">Name:</span> <span className="font-medium">{workOrderData.client_name || workOrderData.customer_name || '-'}</span></div>
-                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{workOrderData.client_email || workOrderData.customer_email || '-'}</span></div>
-                    <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{workOrderData.client_phone || workOrderData.customer_phone || '-'}</span></div>
+                    <div><span className="text-warm-muted">Name:</span> <span className="font-medium">{workOrderData.client_name || workOrderData.customer_name || '-'}</span></div>
+                    <div><span className="text-warm-muted">Email:</span> <span className="font-medium">{workOrderData.client_email || workOrderData.customer_email || '-'}</span></div>
+                    <div><span className="text-warm-muted">Phone:</span> <span className="font-medium">{workOrderData.client_phone || workOrderData.customer_phone || '-'}</span></div>
                   </div>
                 </div>
               </div>
 
               {/* Pricing */}
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <h4 className="text-sm font-semibold text-gray-800 mb-4">Estimate Pricing</h4>
+              <div className="p-4 bg-warm-section border border-warm-border rounded-[10px]">
+                <h4 className="text-sm font-semibold text-warm-text mb-4">Estimate Pricing</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
-                    <input type="number" value={workOrderAmount} onChange={(e) => setWorkOrderAmount(e.target.value)} placeholder="Enter amount" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
+                    <input type="number" value={workOrderAmount} onChange={(e) => setWorkOrderAmount(e.target.value)} placeholder="Enter amount" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
-                    <input type="number" value={workOrderDiscount} onChange={(e) => setWorkOrderDiscount(e.target.value)} placeholder="0" min="0" max="100" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">Discount (%)</label>
+                    <input type="number" value={workOrderDiscount} onChange={(e) => setWorkOrderDiscount(e.target.value)} placeholder="0" min="0" max="100" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">GST (%)</label>
-                    <input type="number" value={workOrderGst} onChange={(e) => setWorkOrderGst(e.target.value)} placeholder="18" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                    <label className="block text-xs font-medium text-warm-muted mb-1.5">GST (%)</label>
+                    <input type="number" value={workOrderGst} onChange={(e) => setWorkOrderGst(e.target.value)} placeholder="18" className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />
                   </div>
                 </div>
                 
                 {/* Price Summary */}
                 {workOrderAmount && parseFloat(workOrderAmount) > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between text-sm mb-1"><span className="text-gray-500">Subtotal</span><span>₹{parseFloat(workOrderAmount || 0).toLocaleString('en-IN')}</span></div>
-                    {parseFloat(workOrderDiscount || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-green-600"><span>Discount ({workOrderDiscount}%)</span><span>-₹{(parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100).toLocaleString('en-IN')}</span></div>}
-                    {parseFloat(workOrderGst || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-gray-600"><span>GST ({workOrderGst}%)</span><span>+₹{((parseFloat(workOrderAmount || 0) - (parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100)) * parseFloat(workOrderGst || 0) / 100).toLocaleString('en-IN')}</span></div>}
-                    <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-[#c9a227]/30"><span className="text-[#c9a227]">Grand Total</span><span className="text-[#c9a227]">₹{(() => { const amt = parseFloat(workOrderAmount || 0); const disc = amt * parseFloat(workOrderDiscount || 0) / 100; const afterDisc = amt - disc; const gst = afterDisc * parseFloat(workOrderGst || 0) / 100; return (afterDisc + gst).toLocaleString('en-IN'); })()}</span></div>
+                  <div className="mt-4 pt-4 border-t border-warm-border">
+                    <div className="flex justify-between text-sm mb-1"><span className="text-warm-muted">Subtotal</span><span>₹{parseFloat(workOrderAmount || 0).toLocaleString('en-IN')}</span></div>
+                    {parseFloat(workOrderDiscount || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-emerald-600"><span>Discount ({workOrderDiscount}%)</span><span>-₹{(parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    {parseFloat(workOrderGst || 0) > 0 && <div className="flex justify-between text-sm mb-1 text-warm-muted"><span>GST ({workOrderGst}%)</span><span>+₹{((parseFloat(workOrderAmount || 0) - (parseFloat(workOrderAmount || 0) * parseFloat(workOrderDiscount || 0) / 100)) * parseFloat(workOrderGst || 0) / 100).toLocaleString('en-IN')}</span></div>}
+                    <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t border-warm-accent/40"><span className="text-warm-accent-hover">Grand Total</span><span className="text-warm-text">₹{(() => { const amt = parseFloat(workOrderAmount || 0); const disc = amt * parseFloat(workOrderDiscount || 0) / 100; const afterDisc = amt - disc; const gst = afterDisc * parseFloat(workOrderGst || 0) / 100; return (afterDisc + gst).toLocaleString('en-IN'); })()}</span></div>
                   </div>
                 )}
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                <textarea value={workOrderNotes} onChange={(e) => setWorkOrderNotes(e.target.value)} rows={3} placeholder="Add any additional notes..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400" />
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">Notes (Optional)</label>
+                <textarea value={workOrderNotes} onChange={(e) => setWorkOrderNotes(e.target.value)} rows={3} placeholder="Add any additional notes..." className="w-full px-3 py-2 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button onClick={() => { setWorkOrderStep('input'); setWorkOrderData(null); }} className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
+              <div className="flex justify-end gap-3 pt-4 border-t border-warm-border">
+                <button onClick={() => { setWorkOrderStep('input'); setWorkOrderData(null); }} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
                 <button
                   onClick={async () => {
                     if (!workOrderAmount || parseFloat(workOrderAmount) <= 0) { showToast('Please enter a valid amount', 'error'); return; }
@@ -2447,7 +2446,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     }
                   }}
                   disabled={savingWorkOrder || !workOrderAmount || parseFloat(workOrderAmount) <= 0}
-                  className="px-6 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2.5 bg-emerald-700 text-white rounded-[10px] text-sm font-medium hover:bg-emerald-800 disabled:bg-warm-border disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                 >
                   {savingWorkOrder ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Estimate'}
                 </button>
@@ -2459,27 +2458,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* FP Portal Links Section - Only show when estimate type is not selected */}
       {!estimateType && (
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-6">
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden mt-6">
+        <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Link className="w-5 h-5 text-indigo-600" />
+            <div className="p-2 bg-warm-accent-soft rounded-[10px]">
+              <Link className="w-5 h-5 text-warm-accent-hover" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">FP Portal Links</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Share up to 2 custom links with your employees (Google Drive, Sheets, Docs, or any URL)</p>
+              <h2 className="text-base font-semibold text-warm-text">FP Portal Links</h2>
+              <p className="text-xs text-warm-muted mt-0.5">Share up to 2 custom links with your employees (Google Drive, Sheets, Docs, or any URL)</p>
             </div>
           </div>
         </div>
         
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Link Block 1 */}
-          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 hover:bg-white transition-colors">
+          <div className="border border-warm-border rounded-xl p-4 bg-warm-section/60 hover:bg-white transition-colors">
             <div className="flex items-center gap-2 mb-4">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold">1</span>
-              <span className="text-sm font-medium text-gray-700">Link Block 1</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-warm-accent-soft text-warm-accent-hover text-xs font-bold">1</span>
+              <span className="text-sm font-medium text-warm-text">Link Block 1</span>
               {linkForms[1].id && !linkForms[1].isEditing && (
-                <span className="ml-auto flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <span className="ml-auto flex items-center gap-1 text-xs text-emerald-700 bg-warm-success px-2 py-1 rounded-full">
                   <Check className="w-3 h-3" /> Saved
                 </span>
               )}
@@ -2494,10 +2493,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   onChange={(e) => handleLinkFormChange(1, 'heading', e.target.value)}
                   placeholder="Enter Link Heading (e.g., Floor Plan Documents)"
                   disabled={linkForms[1].id && !linkForms[1].isEditing}
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                  className={`w-full px-4 py-2.5 border rounded-[10px] text-sm transition-colors ${
                     linkForms[1].id && !linkForms[1].isEditing 
-                      ? 'bg-gray-100 border-gray-200 text-gray-700' 
-                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400'
+                      ? 'bg-warm-page border-warm-border text-warm-text' 
+                      : 'bg-white border-warm-border focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent'
                   }`}
                 />
               </div>
@@ -2505,13 +2504,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleEditLink(1)} 
-                    className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1"
+                    className="px-3 py-2 text-sm text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors flex items-center gap-1"
                   >
                     <Edit2 className="w-4 h-4" /> Edit
                   </button>
                   <button 
                     onClick={() => handleDeletePortalLink(1)} 
-                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-[10px] transition-colors flex items-center gap-1"
                   >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
@@ -2520,7 +2519,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <button 
                   onClick={() => handleSavePortalLink(1)} 
                   disabled={linkForms[1].isSaving}
-                  className="px-4 py-2.5 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-medium hover:bg-indigo-200 disabled:bg-indigo-50 disabled:text-indigo-400 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-warm-accent-soft text-warm-text border border-warm-border rounded-[10px] text-sm font-medium hover:bg-warm-accent/30 disabled:bg-warm-section disabled:text-warm-muted transition-colors flex items-center gap-1.5"
                 >
                   {linkForms[1].isSaving ? (
                     <>
@@ -2536,7 +2535,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {linkForms[1].isEditing && (
                 <button 
                   onClick={() => handleCancelEdit(1)} 
-                  className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="px-3 py-2 text-sm text-warm-muted hover:bg-warm-section rounded-[10px] transition-colors"
                 >
                   Cancel
                 </button>
@@ -2546,17 +2545,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* URL Row */}
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
-                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted" />
                 <input
                   type="url"
                   value={linkForms[1].url}
                   onChange={(e) => handleLinkFormChange(1, 'url', e.target.value)}
                   placeholder="Paste any external URL (Google Drive, Sheets, etc.)"
                   disabled={linkForms[1].id && !linkForms[1].isEditing}
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-[10px] text-sm transition-colors ${
                     linkForms[1].id && !linkForms[1].isEditing 
-                      ? 'bg-gray-100 border-gray-200 text-gray-600' 
-                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400'
+                      ? 'bg-warm-page border-warm-border text-warm-muted' 
+                      : 'bg-white border-warm-border focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent'
                   }`}
                 />
               </div>
@@ -2565,7 +2564,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   href={linkForms[1].url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-4 py-2.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1.5 border border-indigo-200"
+                  className="px-4 py-2.5 text-sm text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors flex items-center gap-1.5 border border-warm-border"
                 >
                   <ExternalLink className="w-4 h-4" /> Open Link
                 </a>
@@ -2581,12 +2580,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
 
           {/* Link Block 2 */}
-          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50 hover:bg-white transition-colors">
+          <div className="border border-warm-border rounded-xl p-4 bg-warm-section/60 hover:bg-white transition-colors">
             <div className="flex items-center gap-2 mb-4">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">2</span>
-              <span className="text-sm font-medium text-gray-700">Link Block 2</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-warm-accent-soft text-warm-accent-hover text-xs font-bold">2</span>
+              <span className="text-sm font-medium text-warm-text">Link Block 2</span>
               {linkForms[2].id && !linkForms[2].isEditing && (
-                <span className="ml-auto flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                <span className="ml-auto flex items-center gap-1 text-xs text-emerald-700 bg-warm-success px-2 py-1 rounded-full">
                   <Check className="w-3 h-3" /> Saved
                 </span>
               )}
@@ -2601,10 +2600,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   onChange={(e) => handleLinkFormChange(2, 'heading', e.target.value)}
                   placeholder="Enter Link Heading (e.g., Material Selection Sheet)"
                   disabled={linkForms[2].id && !linkForms[2].isEditing}
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                  className={`w-full px-4 py-2.5 border rounded-[10px] text-sm transition-colors ${
                     linkForms[2].id && !linkForms[2].isEditing 
-                      ? 'bg-gray-100 border-gray-200 text-gray-700' 
-                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'
+                      ? 'bg-warm-page border-warm-border text-warm-text' 
+                      : 'bg-white border-warm-border focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent'
                   }`}
                 />
               </div>
@@ -2612,13 +2611,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleEditLink(2)} 
-                    className="px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1"
+                    className="px-3 py-2 text-sm text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors flex items-center gap-1"
                   >
                     <Edit2 className="w-4 h-4" /> Edit
                   </button>
                   <button 
                     onClick={() => handleDeletePortalLink(2)} 
-                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-[10px] transition-colors flex items-center gap-1"
                   >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
@@ -2627,7 +2626,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <button 
                   onClick={() => handleSavePortalLink(2)} 
                   disabled={linkForms[2].isSaving}
-                  className="px-4 py-2.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-sm font-medium hover:bg-purple-200 disabled:bg-purple-50 disabled:text-purple-400 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-warm-accent-soft text-warm-text border border-warm-border rounded-[10px] text-sm font-medium hover:bg-warm-accent/30 disabled:bg-warm-section disabled:text-warm-muted transition-colors flex items-center gap-1.5"
                 >
                   {linkForms[2].isSaving ? (
                     <>
@@ -2643,7 +2642,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {linkForms[2].isEditing && (
                 <button 
                   onClick={() => handleCancelEdit(2)} 
-                  className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="px-3 py-2 text-sm text-warm-muted hover:bg-warm-section rounded-[10px] transition-colors"
                 >
                   Cancel
                 </button>
@@ -2653,17 +2652,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* URL Row */}
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
-                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted" />
                 <input
                   type="url"
                   value={linkForms[2].url}
                   onChange={(e) => handleLinkFormChange(2, 'url', e.target.value)}
                   placeholder="Paste any external URL (Google Drive, Sheets, etc.)"
                   disabled={linkForms[2].id && !linkForms[2].isEditing}
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm transition-colors ${
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-[10px] text-sm transition-colors ${
                     linkForms[2].id && !linkForms[2].isEditing 
-                      ? 'bg-gray-100 border-gray-200 text-gray-600' 
-                      : 'bg-white border-gray-300 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'
+                      ? 'bg-warm-page border-warm-border text-warm-muted' 
+                      : 'bg-white border-warm-border focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent'
                   }`}
                 />
               </div>
@@ -2672,7 +2671,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   href={linkForms[2].url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1.5 border border-purple-200"
+                  className="px-4 py-2.5 text-sm text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors flex items-center gap-1.5 border border-warm-border"
                 >
                   <ExternalLink className="w-4 h-4" /> Open Link
                 </a>
@@ -2689,7 +2688,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
         
         {/* Footer Note */}
-        <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+        <div className="px-6 py-3 bg-warm-section border-t border-warm-border text-xs text-warm-muted">
           Links shared here will be visible to all employees assigned to you. Maximum 2 links allowed.
         </div>
       </div>
@@ -2781,17 +2780,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderAllEstimates = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4">
-        <div className="flex gap-3">
-          <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-accent" /><input type="text" placeholder="Search by Property ID, Customer, or Estimate #..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text placeholder:text-warm-muted focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" /></div>
-          <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-warm-border text-warm-text bg-white rounded-[10px] flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium"><Filter className="w-4 h-4 text-warm-accent" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
-          <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-700 text-white rounded-[10px] flex items-center gap-2 hover:bg-emerald-800 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
-          <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="px-4 py-2 border border-warm-border text-warm-muted bg-white rounded-[10px] flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
+        {/* One row of equal-height controls: the search field takes the slack, every button keeps
+            its own width, and they wrap as a group rather than shrinking out of alignment */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[16rem] flex-1 max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-accent" /><input type="text" placeholder="Search by Property ID, Customer, or Estimate #..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className={`${CONTROL_H} w-full pl-10 pr-4 border border-warm-border rounded-[10px] text-sm text-warm-text placeholder:text-warm-muted focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`} /></div>
+          <button onClick={() => setShowFilters(!showFilters)} className={`${CONTROL_H} px-4 border border-warm-border text-warm-text bg-white rounded-[10px] inline-flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium`}><Filter className="w-4 h-4 text-warm-accent" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+          <button onClick={exportAllEstimates} className={`${CONTROL_H} px-4 bg-emerald-700 text-white rounded-[10px] inline-flex items-center gap-2 hover:bg-emerald-800 transition-colors text-sm font-medium`}><Download className="w-4 h-4" />Export All</button>
+          <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className={`${CONTROL_H} px-4 border border-warm-border text-warm-muted bg-white rounded-[10px] inline-flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium whitespace-nowrap`}><X className="w-4 h-4" />Clear all filters</button>
           {/* Archive Selected button - only visible when items are selected and not FP Manager */}
           {!isFPManager && selectedEstimates.length > 0 && (
             <button
               onClick={handleBulkArchive}
               disabled={archivingSelected}
-              className="px-4 py-2 bg-red-600 text-white rounded-[10px] flex items-center gap-2 hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+              className={`${CONTROL_H} px-4 bg-red-600 text-white rounded-[10px] inline-flex items-center gap-2 hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50`}
             >
               <Archive className="w-4 h-4" />
               {archivingSelected ? 'Archiving...' : `Archive Selected (${selectedEstimates.length})`}
@@ -2802,8 +2803,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="mt-4 pt-4 border-t border-warm-border">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block text-xs font-medium text-warm-muted mb-1">Estimate Type</label>
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">Estimate Type</label>
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Estimates</option>
                   <option value="property_based">Property Based</option>
                   <option value="direct">Direct</option>
@@ -2811,8 +2812,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-warm-muted mb-1">Status</label>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">Status</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Statuses</option>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
@@ -2821,8 +2822,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-warm-muted mb-1">Property Category</label>
-                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">Property Category</label>
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20">
                   <option value="all">All Categories</option>
                   <option value="GC">Gated Community</option>
                   <option value="APT">Apartment</option>
@@ -2832,7 +2833,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-warm-muted mb-1">From Date</label>
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">From Date</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -2848,7 +2849,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       if (parsed) setFilterFromDate(parsed);
                       else if (filterFromDateDisplay && filterFromDateDisplay.length < 10) setFilterFromDateDisplay('');
                     }}
-                    className="w-full px-3 py-2 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
+                    className="w-full h-[42px] px-3 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
                   />
                   <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
                     <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterFromDate(e.target.value); setFilterFromDateDisplay(formatDateIST(e.target.value)); }}} />
@@ -2857,7 +2858,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-warm-muted mb-1">To Date</label>
+                <label className="block text-xs font-medium text-warm-muted mb-1.5">To Date</label>
                 <div className="relative">
                   <input 
                     type="text" 
@@ -2873,7 +2874,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       if (parsed) setFilterToDate(parsed);
                       else if (filterToDateDisplay && filterToDateDisplay.length < 10) setFilterToDateDisplay('');
                     }}
-                    className="w-full px-3 py-2 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
+                    className="w-full h-[42px] px-3 pr-10 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" 
                   />
                   <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
                     <input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFilterToDate(e.target.value); setFilterToDateDisplay(formatDateIST(e.target.value)); }}} />
@@ -2897,78 +2898,80 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <th className="px-3 py-3 text-center w-10">
                       <button
                         onClick={handleSelectAll}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        className="p-1 hover:bg-warm-accent-soft rounded transition-colors"
                         title={selectedEstimates.length === filteredEstimates.length ? 'Deselect all' : 'Select all'}
                       >
                         {selectedEstimates.length === filteredEstimates.length && filteredEstimates.length > 0 ? (
-                          <CheckSquare className="w-4 h-4 text-indigo-600" />
+                          <CheckSquare className="w-4 h-4 text-warm-accent" />
                         ) : (
-                          <Square className="w-4 h-4 text-gray-400" />
+                          <Square className="w-4 h-4 text-warm-muted" />
                         )}
                       </button>
                     </th>
                   )}
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Estimate ID</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Type</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Division</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Client</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Total</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Created By</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-500 uppercase text-xs tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-500 uppercase text-xs tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Date</th>
+                  {/* Money reads down its own edge, so the figures and the heading are both right-aligned */}
+                  <th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Created By</th>
+                  <th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-warm-border/70">
                 {paginatedEstimates.map((est) => {
                   const isSelected = selectedEstimates.includes(est.id);
                   return (
-                  <tr key={est.id} className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
+                  <tr key={est.id} className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : 'hover:bg-warm-section'}`}>
                     {/* Checkbox cell - hidden for FP Manager */}
                     {!isFPManager && (
                       <td className="px-3 py-4 text-center">
                         <button
                           onClick={() => handleSelectEstimate(est.id)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                          className="p-1 hover:bg-warm-accent-soft rounded transition-colors"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                            <CheckSquare className="w-4 h-4 text-warm-accent" />
                           ) : (
-                            <Square className="w-4 h-4 text-gray-400" />
+                            <Square className="w-4 h-4 text-warm-muted" />
                           )}
                         </button>
                       </td>
                     )}
-                    <td className="px-4 py-4 font-mono text-sm text-gray-900">{est.estimate_id}</td>
+                    <td className="px-4 py-4 font-mono text-sm text-warm-text">{est.estimate_id}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
-                        est.estimate_type === 'work_order' ? 'bg-orange-50 text-orange-600' :
-                        est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-50 text-blue-600' : 
-                        'bg-purple-50 text-purple-600'
+                      {/* Three tints from the warm palette: still one glance per type, no stray pastels */}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${
+                        est.estimate_type === 'work_order' ? 'bg-warm-warning text-amber-700 border-[#F3E2B3]' :
+                        est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-warm-info text-indigo-700 border-[#D8E2FA]' : 
+                        'bg-warm-accent-soft text-warm-text border-warm-border'
                       }`}>
                         <Link2 className="w-3 h-3" />
                         {est.estimate_type === 'work_order' ? 'Work Order' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
+                    <td className="px-4 py-4 text-sm text-warm-muted">
                       {(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') 
                         ? (est.division || est.property_division || '-') 
                         : '-'}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="font-medium text-gray-900">{est.client_name}</div>
-                      {est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}
+                      <div className="font-medium text-warm-text">{est.client_name}</div>
+                      {est.property_code && <div className="text-xs text-warm-muted">{est.property_code}</div>}
                     </td>
-                    <td className="px-4 py-4 text-gray-600">
+                    <td className="px-4 py-4 text-warm-muted">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        <Calendar className="w-3.5 h-3.5 text-warm-accent" />
                         {formatDateIST(est.created_at)}
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-semibold text-gray-900">{formatCurrency(est.total_amount)}</td>
+                    <td className="px-4 py-4 text-right font-semibold text-warm-text whitespace-nowrap">{formatCurrency(est.total_amount)}</td>
                     <td className="px-4 py-4">
-                      <div className="font-medium text-gray-900">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</div>
-                      <div className="text-xs text-gray-400 capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
+                      <div className="font-medium text-warm-text">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</div>
+                      <div className="text-xs text-warm-muted capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
                     <td className="px-4 py-4">
                       {isFPManager ? (
@@ -2982,7 +2985,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <select
                             value={(est.status || 'draft').toLowerCase()}
                             onChange={(e) => handleEstimateStatusChange(est.id, e.target.value)}
-                            className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${getEstimateStatusColor(est.status)}`}
+                            className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-warm-accent/30 ${getEstimateStatusColor(est.status)}`}
                           >
                             <option value="draft" className="bg-white text-gray-900">Draft</option>
                             <option value="sent" className="bg-white text-gray-900">Sent</option>
@@ -2995,13 +2998,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                         {!isFPManager && (
-                          <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => openEditEstimate(est)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
                         )}
-                        <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
-                        <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded ${sendingEmailId === est.id ? 'text-indigo-400 cursor-wait' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
-                        <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleExportPDF(est)} className="p-1.5 text-warm-muted hover:text-emerald-700 hover:bg-warm-success rounded-[10px] transition-colors" title="Download PDF"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id} className={`p-1.5 rounded-[10px] transition-colors ${sendingEmailId === est.id ? 'text-warm-accent cursor-wait' : 'text-warm-muted hover:text-indigo-600 hover:bg-warm-info'}`} title="Send Email"><Send className={`w-4 h-4 ${sendingEmailId === est.id ? 'animate-pulse' : ''}`} /></button>
+                        <button onClick={() => handleArchiveEstimate(est.id)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded-[10px] transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -3013,15 +3016,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Pagination Controls */}
           {filteredEstimates.length > 0 && (
-            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-gray-500">
+            <div className="px-4 sm:px-6 py-4 border-t border-warm-border bg-warm-section/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-warm-muted">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredEstimates.length)} of {filteredEstimates.length} estimates
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-[10px] border border-warm-border bg-white text-warm-muted hover:bg-warm-accent-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -3041,10 +3044,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-8 h-8 rounded-lg text-sm font-medium ${
+                        className={`w-8 h-8 rounded-[10px] text-sm font-medium transition-colors ${
                           currentPage === pageNum
-                            ? 'bg-indigo-600 text-white'
-                            : 'hover:bg-gray-100 text-gray-600'
+                            ? 'bg-warm-accent text-white'
+                            : 'text-warm-muted hover:bg-warm-accent-soft'
                         }`}
                       >
                         {pageNum}
@@ -3055,7 +3058,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-[10px] border border-warm-border bg-white text-warm-muted hover:bg-warm-accent-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -3114,42 +3117,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
-      case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'quarterly': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'half-yearly': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'yearly': return 'bg-green-50 text-green-700 border-green-200';
-      default: return 'bg-blue-50 text-blue-700 border-blue-200';
+      // Four tints a billing column can still be scanned by, drawn from the warm palette
+      case 'monthly': return 'bg-warm-info text-indigo-700 border-[#D8E2FA]';
+      case 'quarterly': return 'bg-warm-accent-soft text-warm-text border-warm-border';
+      case 'half-yearly': return 'bg-warm-warning text-amber-700 border-[#F3E2B3]';
+      case 'yearly': return 'bg-warm-success text-emerald-700 border-[#CFEBDD]';
+      default: return 'bg-warm-info text-indigo-700 border-[#D8E2FA]';
     }
   };
 
   const renderAmcPackages = () => (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-            <Package className="w-5 h-5 text-slate-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">AMC Packages</h1>
-            <p className="text-sm text-gray-500">Create and manage service packages</p>
-          </div>
-        </div>
-      </div>
-
+      {/* The page header already names this screen, so the list does not repeat the title */}
       {/* The list is the landing view; Create Package is the highlighted action on the
           right and stays there while the form is open. Hidden for FP Manager. */}
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      {/* The segmented control and the action beside it are both 42px, so the row has one height */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-1 bg-warm-page p-1 rounded-xl w-fit">
           <button
             onClick={() => setAmcActiveTab('all-packages')}
-            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-slate-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+            className={`h-[34px] px-4 text-sm font-medium rounded-[10px] transition-all ${amcActiveTab === 'all-packages' ? 'bg-white text-warm-text shadow-warm' : 'text-warm-muted hover:text-warm-text'}`}
           >
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4" />
               All Packages
               {amcPackages.length > 0 && (
-                <span className="px-1.5 py-0.5 bg-slate-600 text-white rounded-full text-xs">{amcPackages.length}</span>
+                <span className="px-1.5 py-0.5 bg-warm-text text-white rounded-full text-xs">{amcPackages.length}</span>
               )}
             </div>
           </button>
@@ -3157,7 +3150,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         {!isFPManager && (
           <button
             onClick={() => { resetAmcForm(); setAmcActiveTab('create'); }}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-800"
           >
             <Plus className="w-4 h-4" />
             Create Package
@@ -3167,12 +3160,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* All Packages Tab */}
       {amcActiveTab === 'all-packages' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+          <div className="px-6 py-4 border-b border-warm-border">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">All Packages</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="text-lg font-semibold text-warm-text">All Packages</h3>
+                <p className="text-sm text-warm-muted">
                   {filterPropertyType === 'all' 
                     ? `${amcPackages.length} package(s) available` 
                     : `${filteredAmcPackages.length} package(s) for ${PROPERTY_TYPE_OPTIONS.find(t => t.id === filterPropertyType)?.label}`}
@@ -3184,11 +3177,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setFilterPropertyType('all')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === 'all' ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                className={`px-4 py-2 text-sm font-medium rounded-[10px] border transition-all ${filterPropertyType === 'all' ? 'bg-warm-text text-white border-warm-text' : 'bg-white text-warm-muted border-warm-border hover:border-warm-accent hover:bg-warm-section'}`}
               >
                 All
                 {amcPackages.length > 0 && (
-                  <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{amcPackages.length}</span>
+                  <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-warm-page text-warm-muted'}`}>{amcPackages.length}</span>
                 )}
               </button>
               {PROPERTY_TYPE_OPTIONS.map((type) => {
@@ -3197,11 +3190,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <button
                     key={type.id}
                     onClick={() => setFilterPropertyType(type.id)}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${filterPropertyType === type.id ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 text-sm font-medium rounded-[10px] border transition-all ${filterPropertyType === type.id ? 'bg-warm-text text-white border-warm-text' : 'bg-white text-warm-muted border-warm-border hover:border-warm-accent hover:bg-warm-section'}`}
                   >
                     {type.label}
                     {count > 0 && (
-                      <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === type.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{count}</span>
+                      <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${filterPropertyType === type.id ? 'bg-white/20 text-white' : 'bg-warm-page text-warm-muted'}`}>{count}</span>
                     )}
                   </button>
                 );
@@ -3210,35 +3203,33 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
 
           {amcPackages.length === 0 ? (
-            <div className="p-12 text-center">
-              <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">No AMC packages yet</p>
-              <p className="text-sm text-gray-400 mb-4">Create your first package to get started</p>
-              <button onClick={() => setAmcActiveTab('create')} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                Create Package
-              </button>
-            </div>
+            <EmptyState icon={Package} title="No AMC packages yet" description="Create your first package to get started"
+              action={isFPManager ? null : (
+                <button onClick={() => setAmcActiveTab('create')} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-[10px] hover:bg-emerald-800 transition-colors">
+                  <Plus className="w-4 h-4" />Create Package
+                </button>
+              )} />
           ) : filteredAmcPackages.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No packages found for this property type</p>
-              <button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">
-                Show all packages
-              </button>
-            </div>
+            <EmptyState icon={Package} title="No packages found for this property type"
+              action={(
+                <button onClick={() => setFilterPropertyType('all')} className="px-4 py-2 text-sm font-medium text-warm-muted bg-white border border-warm-border rounded-[10px] hover:bg-warm-section transition-colors">
+                  Show all packages
+                </button>
+              )} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-gray-200">
+                <thead className="bg-warm-section border-b border-warm-border">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Package Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Property Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Services Included</th>
-                    {!isFPManager && <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Rate</th>}
-                    {!isFPManager && <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>}
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-warm-muted uppercase tracking-wider">Package Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-warm-muted uppercase tracking-wider">Property Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-warm-muted uppercase tracking-wider">Billing</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-warm-muted uppercase tracking-wider">Services Included</th>
+                    {!isFPManager && <th className="px-4 py-3 text-right text-xs font-semibold text-warm-muted uppercase tracking-wider">Total Rate</th>}
+                    {!isFPManager && <th className="px-4 py-3 text-center text-xs font-semibold text-warm-muted uppercase tracking-wider">Actions</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-warm-border/70">
                   {filteredAmcPackages.map((pkg) => {
                     // Parse services JSON if needed
                     let servicesData = pkg.services;
@@ -3250,14 +3241,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     const propertyType = servicesData?.property_type || pkg.property_type;
                     const billingDuration = servicesData?.billing_duration || pkg.billing_duration;
                     return (
-                      <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={pkg.id} className="hover:bg-warm-section transition-colors">
                         <td className="px-6 py-4">
-                          <span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span>
+                          <span className="font-semibold text-warm-text">{pkg.name || 'Unnamed Package'}</span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex flex-wrap gap-1">
                             {getPkgPropertyTypes(pkg).map(type => (
-                              <span key={type} className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">
+                              <span key={type} className="px-2.5 py-1 text-xs font-medium bg-warm-accent-soft text-warm-text rounded-full border border-warm-border whitespace-nowrap">
                                 {getPropertyTypeLabel(type)}
                               </span>
                             ))}
@@ -3269,12 +3260,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </span>
                         </td>
                         <td className="px-4 py-4 max-w-xs">
-                          <p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p>
+                          <p className="text-sm text-warm-muted truncate" title={servicesText}>{servicesText}</p>
                         </td>
                         {/* Price - Hidden for FP Manager */}
                         {!isFPManager && (
                           <td className="px-4 py-4 text-right">
-                            <span className="text-lg font-bold text-slate-800">{formatCurrency(pkg.price)}</span>
+                            <span className="text-lg font-bold text-warm-text">{formatCurrency(pkg.price)}</span>
                           </td>
                         )}
                         {/* Action buttons - Hidden for FP Manager */}
@@ -3288,7 +3279,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                   e.stopPropagation();
                                   openViewPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration });
                                 }}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer" 
+                                className="p-2 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors cursor-pointer" 
                                 title="View"
                               >
                                 <Eye className="w-4 h-4" />
@@ -3312,7 +3303,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                   setAmcActiveTab('create');
                                   showToast('Editing package - make changes and save', 'info');
                                 }}
-                                className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+                                className="p-2 text-warm-muted hover:text-warm-muted hover:bg-warm-accent-soft rounded-[10px] transition-colors" 
                                 title="Edit"
                               >
                                 <Edit className="w-4 h-4" />
@@ -3352,12 +3343,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                     showToast('Failed to export PDF', 'error');
                                   }
                                 }}
-                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
+                                className="p-2 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded-[10px] transition-colors" 
                                 title="Export PDF"
                               >
                                 <Download className="w-4 h-4" />
                               </button>
-                                                            <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                            <button onClick={() => handleDeleteAmcPackage(pkg.id)} className="p-2 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded-[10px] transition-colors" title="Delete">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -3377,19 +3368,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {amcActiveTab === 'create' && (
         <div className="space-y-6">
           {/* Property Type Selection */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
-            <p className="text-sm text-gray-500 mb-4">Choose every property type this package applies to</p>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
+            <h2 className="text-base font-semibold text-warm-text mb-2">Select Property Type</h2>
+            <p className="text-sm text-warm-muted mb-4">Choose every property type this package applies to</p>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {PROPERTY_TYPE_OPTIONS.map((type) => (
                 <button
                   key={type.id}
                   onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
-                  className={`px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
+                  className={`px-4 py-3 rounded-[10px] border transition-all duration-200 text-sm font-medium text-center ${
                     selectedPropertyTypes.includes(type.id)
-                      ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      ? 'border-warm-accent bg-warm-accent-soft text-warm-text shadow-sm'
+                      : 'border-warm-border bg-white text-warm-muted hover:border-warm-accent hover:bg-warm-section'
                   }`}
                 >
                   {type.label}
@@ -3400,21 +3391,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
           {/* Package Configuration Card - Only show after property type selected */}
           {selectedPropertyTypes.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm">
               {/* Header with Add Buttons */}
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
+              <div className="px-6 py-4 border-b border-warm-border/70 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-warm-text">Package Configuration</h2>
                 <div className="flex items-center gap-2">
                   {/* Add Row is for a service typed by hand; Add Service picks a configured one */}
                   <button
                     onClick={handleAddServiceRow}
-                    className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-warm-muted bg-white border border-warm-border rounded-[10px] hover:bg-warm-section transition-colors"
                   >
                     Add Row
                   </button>
                   <button
                     onClick={() => setShowPackageServicePicker(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-[10px] hover:bg-emerald-800 transition-colors"
                   >
                     Add Service
                   </button>
@@ -3427,12 +3418,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 propertyTypes={selectedPropertyTypes}
                 apiPath={FP_CATALOG_API}
                 existing={amcForm.serviceRows.map(row => row.service)}
+                theme="warm"
               />
               
               <div className="p-6">
                 {/* Package Name */}
                 <div className="mb-6">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <label className="flex items-center gap-2 text-xs font-medium text-warm-muted mb-1.5">
                     Package Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -3440,7 +3432,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     value={amcForm.packageName}
                     onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
                     placeholder="e.g., Gold Package"
-                    className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
+                    className="w-full max-w-md px-4 py-2.5 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                   />
                 </div>
 
@@ -3448,31 +3440,31 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="flex gap-6">
                   {/* Service Rows Section */}
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
+                    <h3 className="text-sm font-semibold text-warm-text mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-3">
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-warm-section rounded-[10px] mb-3">
                       <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Service</span>
                       </div>
                       <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Description</span>
                       </div>
                       <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Frequency</span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Visits</span>
                       </div>
                       <div className="col-span-1">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Action</span>
                       </div>
                     </div>
 
                     {/* Service Rows */}
                     <div className="space-y-3">
                       {amcForm.serviceRows.map((row, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-warm-section rounded-[10px] border border-warm-border">
                           {/* Service Name */}
                           <div className="col-span-3">
                             <input
@@ -3480,7 +3472,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               value={row.service}
                               onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
                               placeholder="e.g., Deep Cleaning"
-                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                              className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                             />
                           </div>
                           
@@ -3491,7 +3483,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               value={row.description || ''}
                               onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
                               placeholder="Service description..."
-                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                              className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                             />
                           </div>
                           
@@ -3500,13 +3492,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                              className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
+                              className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent bg-white appearance-none"
                             >
                               {FREQUENCY_TYPES.map(type => (
                                 <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
                               ))}
                             </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
                           </div>
                           
                           {/* Frequency Count */}
@@ -3518,7 +3510,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               readOnly={!isCustomFrequency(row.frequencyType)}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
                               placeholder={isCustomFrequency(row.frequencyType) ? 'Enter' : ''}
-                              className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
+                              className={`w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent' : 'bg-warm-page cursor-not-allowed'}`}
                             />
                           </div>
                           
@@ -3527,9 +3519,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <button
                               onClick={() => handleRemoveServiceRow(index)}
                               disabled={amcForm.serviceRows.length === 1}
-                              className={`p-2 rounded-lg transition-colors ${
+                              className={`p-2 rounded-[10px] transition-colors ${
                                 amcForm.serviceRows.length === 1
-                                  ? 'text-gray-300 cursor-not-allowed'
+                                  ? 'text-warm-border cursor-not-allowed'
                                   : 'text-red-500 hover:bg-red-50'
                               }`}
                             >
@@ -3543,55 +3535,55 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
                   {/* Price Section - Right Side */}
                   <div className="w-72 flex-shrink-0">
-                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 h-full">
-                      <h3 className="text-gray-600 text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
+                    <div className="bg-warm-section rounded-xl p-6 border border-warm-border h-full">
+                      <h3 className="text-warm-muted text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
                       
                       {/* Price Input */}
                       <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹) <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-muted text-lg">₹</span>
                           <input
                             type="text"
                             inputMode="numeric"
                             value={amcForm.price}
                             onChange={(e) => setAmcForm({ ...amcForm, price: e.target.value.replace(/[^0-9]/g, '') })}
                             placeholder="0"
-                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-2xl font-bold text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                            className="w-full pl-10 pr-4 py-3 bg-white border border-warm-border rounded-[10px] text-2xl font-bold text-warm-text placeholder-warm-muted focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                           />
                         </div>
                       </div>
                       
                       {/* Service Period */}
                       <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Service Period</label>
+                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Service Period</label>
                         <div className="relative">
                           <select
                             value={amcForm.billingDuration}
                             onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-gray-200 focus:border-gray-400 appearance-none"
+                            className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent appearance-none"
                           >
                             {BILLING_DURATIONS.map(duration => (
                               <option key={duration.value} value={duration.value}>{duration.label}</option>
                             ))}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
                         </div>
                       </div>
                       
                       {/* Summary */}
-                      <div className="border-t border-gray-200 pt-4 space-y-3">
+                      <div className="border-t border-warm-border pt-4 space-y-3">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Package</span>
-                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || '-'}</span>
+                          <span className="text-warm-muted">Package</span>
+                          <span className="font-medium text-warm-text truncate ml-2">{amcForm.packageName || '-'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Services</span>
-                          <span className="font-medium text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
+                          <span className="text-warm-muted">Services</span>
+                          <span className="font-medium text-warm-text">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
                         </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                          <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                          <span className="text-2xl font-bold text-gray-800">{formatCurrency(amcForm.price)}</span>
+                        <div className="flex justify-between items-center pt-3 border-t border-warm-border">
+                          <span className="text-sm font-semibold text-warm-text">Total Rate</span>
+                          <span className="text-2xl font-bold text-warm-text">{formatCurrency(amcForm.price)}</span>
                         </div>
                       </div>
                     </div>
@@ -3605,20 +3597,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Action Buttons - Only show after property type selected */}
           {selectedPropertyTypes.length > 0 && (
             <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-warm-muted">
                 <span className="text-red-500">*</span> Required fields
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={resetAmcForm}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 text-sm font-medium text-warm-muted border border-warm-border rounded-[10px] hover:bg-warm-section transition-colors flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Reset
                 </button>
                 <button
                   onClick={handleSaveAmcPackage}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                  className="px-6 py-2.5 text-sm font-medium text-white bg-emerald-700 rounded-[10px] hover:bg-emerald-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   Save
@@ -3640,11 +3632,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <div className="flex gap-2">
       {/* Managers cannot author, so the configured catalog is a list tab for them */}
       {isFPManager && (
-        <button type="button" onClick={() => setAddonActiveTab('configured')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+        <button type="button" onClick={() => setAddonActiveTab('configured')} className={`${CONTROL_H} px-4 text-sm font-medium rounded-[10px] border transition-all inline-flex items-center gap-2 ${addonActiveTab === 'configured' ? 'bg-white border-warm-border text-warm-text shadow-sm' : 'border-transparent text-warm-muted hover:text-warm-text'}`}>
           <ClipboardList className="w-4 h-4" />Services
         </button>
       )}
-      <button type="button" onClick={() => setAddonActiveTab('all-addons')} className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-gray-300 text-gray-800 shadow-sm' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+      <button type="button" onClick={() => setAddonActiveTab('all-addons')} className={`${CONTROL_H} px-4 text-sm font-medium rounded-[10px] border transition-all inline-flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white border-warm-border text-warm-text shadow-sm' : 'border-transparent text-warm-muted hover:text-warm-text'}`}>
         <Layers className="w-4 h-4" />All Services
       </button>
     </div>
@@ -3654,7 +3646,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // repeated inside the form: that screen is already Add Service, and its row ends with Save.
   const renderAddServiceAction = () => isFPManager ? null : (
     <button type="button" onClick={() => { setAddonActiveTab('configured'); setCatalogEntry(value => value + 1); }}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700">
+      className="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-800">
       <Plus className="w-4 h-4" />Add Service
     </button>
   );
@@ -3716,7 +3708,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
       case 'sent': return 'bg-blue-100 text-blue-700';
       case 'rejected': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-600';
+      default: return 'bg-warm-page text-warm-muted';
     }
   };
 
@@ -3782,10 +3774,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderArchived = () => (
     <div className="space-y-4">
-      {archivedEstimates.length > 0 && !isFPManager && <div className="flex justify-end"><div className="flex items-center gap-2 mr-auto"><label className="text-sm text-gray-600">Type:</label><select value={archivedTypeFilter} onChange={(e) => setArchivedTypeFilter(e.target.value)} className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="all">All Types</option><option value="property">Property Based</option><option value="direct">Direct</option></select></div><button onClick={() => setShowDeleteAllConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name}</div>{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
-      {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
-      {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Delete All Archived?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete All</button></div></div></div>}
+      {archivedEstimates.length > 0 && !isFPManager && <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4 flex flex-wrap items-center gap-3"><label className="text-sm font-medium text-warm-muted">Type:</label><select value={archivedTypeFilter} onChange={(e) => setArchivedTypeFilter(e.target.value)} className={`${CONTROL_H} px-3 text-sm text-warm-text bg-white border border-warm-border rounded-[10px] focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`}><option value="all">All Types</option><option value="property">Property Based</option><option value="direct">Direct</option></select><button onClick={() => setShowDeleteAllConfirm(true)} className={`${CONTROL_H} ml-auto inline-flex items-center gap-2 px-4 bg-red-600 text-white rounded-[10px] hover:bg-red-700 transition-colors text-sm font-medium`}><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <tr key={e.id} className="hover:bg-warm-section"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name}</div>{e.property_code && <div className="text-xs text-warm-muted">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-warm-text mb-2">Delete Permanently?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete</button></div></div></div>}
+      {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Delete All Archived?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
   );
 
@@ -3801,6 +3793,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   return (
+    // Everything on this page renders on the warm skin, including the shared catalog screens
+    <EstimateThemeProvider value="warm">
     <div className="min-h-screen bg-warm-page">
       <div className="max-w-7xl mx-auto px-6 pt-6">
         <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4">
@@ -3829,21 +3823,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
-      {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
+      {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-[10px] shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
       
       {/* View Estimate Modal */}
       {viewEstimate && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-20 overflow-y-auto">
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={closeViewEstimate} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            <div className="sticky top-0 bg-white border-b border-warm-border/70 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-warm-text">Estimate Details</h3>
+              <button onClick={closeViewEstimate} className="p-2 hover:bg-warm-section rounded-[10px]"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Basic Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div><p className="text-xs text-warm-muted">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
+                <div><p className="text-xs text-warm-muted">Status</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
                     viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
@@ -3851,19 +3845,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
                   }`}>{getStatusLabel(viewEstimate.status)}</span>
                 </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className={`font-medium text-sm capitalize ${viewEstimate.estimate_type === 'work_order' ? 'text-orange-600' : ''}`}>{viewEstimate.estimate_type === 'work_order' ? 'Work Order' : viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
+                <div><p className="text-xs text-warm-muted">Type</p><p className={`font-medium text-sm capitalize ${viewEstimate.estimate_type === 'work_order' ? 'text-warm-accent-hover' : ''}`}>{viewEstimate.estimate_type === 'work_order' ? 'Work Order' : viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
+                <div><p className="text-xs text-warm-muted">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
               </div>
 
               {/* Work Order Details - Only for Work Order Estimates */}
               {viewEstimate.estimate_type === 'work_order' && viewEstimate.work_order_id && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-orange-700 mb-3">Work Order Details</p>
-                  <div className="bg-orange-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                    <div><p className="text-xs text-gray-500">Work Order ID</p><p className="font-medium text-sm font-mono text-orange-700">{viewEstimate.work_order_id}</p></div>
-                    <div><p className="text-xs text-gray-500">Category</p><p className="font-medium text-sm">{viewEstimate.work_order_category || '-'}</p></div>
-                    <div><p className="text-xs text-gray-500">Subcategory</p><p className="font-medium text-sm">{viewEstimate.work_order_subcategory || '-'}</p></div>
-                    <div><p className="text-xs text-gray-500">Priority</p>
+                <div className="border-t border-warm-border/70 pt-4">
+                  <p className="text-sm font-semibold text-warm-text mb-3">Work Order Details</p>
+                  <div className="bg-warm-section p-4 rounded-[10px] grid grid-cols-2 gap-3">
+                    <div><p className="text-xs text-warm-muted">Work Order ID</p><p className="font-medium text-sm font-mono text-warm-text">{viewEstimate.work_order_id}</p></div>
+                    <div><p className="text-xs text-warm-muted">Category</p><p className="font-medium text-sm">{viewEstimate.work_order_category || '-'}</p></div>
+                    <div><p className="text-xs text-warm-muted">Subcategory</p><p className="font-medium text-sm">{viewEstimate.work_order_subcategory || '-'}</p></div>
+                    <div><p className="text-xs text-warm-muted">Priority</p>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         viewEstimate.work_order_priority === 'urgent' ? 'bg-red-100 text-red-700' :
                         viewEstimate.work_order_priority === 'high' ? 'bg-orange-100 text-orange-700' :
@@ -3872,32 +3866,32 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       }`}>{viewEstimate.work_order_priority?.toUpperCase() || 'N/A'}</span>
                     </div>
                     {viewEstimate.work_order_description && (
-                      <div className="col-span-2"><p className="text-xs text-gray-500">Work Order Description</p><p className="font-medium text-sm">{viewEstimate.work_order_description}</p></div>
+                      <div className="col-span-2"><p className="text-xs text-warm-muted">Work Order Description</p><p className="font-medium text-sm">{viewEstimate.work_order_description}</p></div>
                     )}
                   </div>
                 </div>
               )}
 
               {/* Property Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
-                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
+              <div className="border-t border-warm-border/70 pt-4">
+                <p className="text-sm font-semibold text-warm-text mb-3">Property Details</p>
+                <div className="bg-warm-section p-4 rounded-[10px] grid grid-cols-2 gap-3">
                   {viewEstimate.property_code && (
-                    <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code}</p></div>
+                    <div><p className="text-xs text-warm-muted">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code}</p></div>
                   )}
-                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
-                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
+                  <div><p className="text-xs text-warm-muted">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
+                  <div><p className="text-xs text-warm-muted">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
+                  <div><p className="text-xs text-warm-muted">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
                   {(viewEstimate.estimate_type === 'property_based' || viewEstimate.property_id) && viewEstimate.division && (
-                    <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
+                    <div><p className="text-xs text-warm-muted">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
                   )}
-                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
+                  <div><p className="text-xs text-warm-muted">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-warm-muted">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
                   {/* GC-specific: Number of Blocks, Block Names, Units per Block with Bedroom Counts */}
                   {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
                     <>
-                      <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
-                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
+                      <div><p className="text-xs text-warm-muted">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
+                      <div><p className="text-xs text-warm-muted">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
                       {(() => {
                         const blockNames = viewEstimate.block_names ? (typeof viewEstimate.block_names === 'string' ? JSON.parse(viewEstimate.block_names) : viewEstimate.block_names) : {};
                         const unitsPerBlock = viewEstimate.units_per_block ? (typeof viewEstimate.units_per_block === 'string' ? JSON.parse(viewEstimate.units_per_block) : viewEstimate.units_per_block) : {};
@@ -3908,23 +3902,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const numBlocks = viewEstimate.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || Object.keys(blockUnitTypes).length || 1;
                         return (
                           <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="bg-blue-50 p-3 rounded-lg space-y-3">
+                            <p className="text-xs text-warm-muted mb-2">Block Details</p>
+                            <div className="bg-warm-accent-soft p-3 rounded-[10px] space-y-3">
                               {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
                                 const blockName = blockNames[blockNum] || `Block ${blockNum}`;
                                 const blockUnits = unitsPerBlock[blockNum] || 0;
                                 const unitTypes = blockUnitTypes[blockNum] || {};
                                 const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                                 return (
-                                  <div key={blockNum} className="bg-white p-3 rounded border border-blue-100">
+                                  <div key={blockNum} className="bg-white p-3 rounded border border-warm-border/70">
                                     <div className="flex justify-between items-center mb-2">
-                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
-                                      <p className="text-sm text-gray-700 font-medium">{blockUnits} units</p>
+                                      <p className="text-sm text-warm-accent-hover font-semibold">{blockName}</p>
+                                      <p className="text-sm text-warm-text font-medium">{blockUnits} units</p>
                                     </div>
                                     {hasUnitTypes && (
-                                      <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-50">
+                                      <div className="flex flex-wrap gap-2 pt-2 border-t border-warm-border/70">
                                         {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                          <span key={type} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
                                             {unitTypeLabels[type] || type}: {count}
                                           </span>
                                         ))}
@@ -3942,8 +3936,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   {/* Apartment-specific: Block Details with Unit Type Breakdown - Same UI as GC */}
                   {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
                     <>
-                      {viewEstimate.block_number && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
-                      <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.number_of_units || '-'}</p></div>
+                      {viewEstimate.block_number && <div><p className="text-xs text-warm-muted">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
+                      <div><p className="text-xs text-warm-muted">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.number_of_units || '-'}</p></div>
                       {(() => {
                         const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
                         const unitTypes = blockUnitTypes['apt'] || {};
@@ -3954,16 +3948,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         const totalUnits = viewEstimate.total_units || viewEstimate.number_of_units || 0;
                         return (
                           <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="bg-blue-50 p-3 rounded-lg space-y-3">
-                              <div className="bg-white p-3 rounded border border-blue-100">
+                            <p className="text-xs text-warm-muted mb-2">Block Details</p>
+                            <div className="bg-warm-accent-soft p-3 rounded-[10px] space-y-3">
+                              <div className="bg-white p-3 rounded border border-warm-border/70">
                                 <div className="flex justify-between items-center mb-2">
-                                  <p className="text-sm text-blue-600 font-semibold">{buildingName}</p>
-                                  <p className="text-sm text-gray-700 font-medium">{totalUnits} units</p>
+                                  <p className="text-sm text-warm-accent-hover font-semibold">{buildingName}</p>
+                                  <p className="text-sm text-warm-text font-medium">{totalUnits} units</p>
                                 </div>
-                                <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-50">
+                                <div className="flex flex-wrap gap-2 pt-2 border-t border-warm-border/70">
                                   {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                    <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                    <span key={type} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
                                       {unitTypeLabels[type] || type}: {count}
                                     </span>
                                   ))}
@@ -3977,26 +3971,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   )}
                   {/* Villa-specific fields */}
                   {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
+                    <div><p className="text-xs text-warm-muted">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
                   )}
                   {/* Flat-specific fields */}
                   {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
+                    <div><p className="text-xs text-warm-muted">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
                   )}
                   {/* Plot-specific fields */}
                   {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
+                    <div><p className="text-xs text-warm-muted">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
                   )}
                 </div>
               </div>
 
               {/* Customer Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
+              <div className="border-t border-warm-border/70 pt-4">
+                <p className="text-sm font-semibold text-warm-text mb-3">Customer Details</p>
+                <div className="bg-warm-accent-soft p-4 rounded-[10px] grid grid-cols-2 gap-3">
+                  <div><p className="text-xs text-warm-muted">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
+                  <div><p className="text-xs text-warm-muted">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-warm-muted">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
                 </div>
               </div>
 
@@ -4048,40 +4042,40 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 
                 console.log('[ViewEstimate] Final pkgServices count:', pkgServices.length);
                 return (
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
+                  <div className="border-t border-warm-border/70 pt-4">
+                    <p className="text-sm font-semibold text-warm-text mb-3">AMC Package</p>
                     {pkgDescription && (
-                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
+                      <p className="text-sm text-warm-muted mb-3">{pkgDescription}</p>
                     )}
                     {/* Package Services - Horizontal Table */}
                     {pkgServices.length > 0 && (
                       <div className="mt-3">
                         {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
-                          <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-warm-accent-soft rounded-t-[10px]">
+                          <div className="col-span-1 text-xs font-semibold text-warm-text">#</div>
+                          <div className="col-span-3 text-xs font-semibold text-warm-text">Service</div>
+                          <div className="col-span-4 text-xs font-semibold text-warm-text">Description</div>
+                          <div className="col-span-2 text-xs font-semibold text-warm-text text-center">Frequency</div>
+                          <div className="col-span-2 text-xs font-semibold text-warm-text text-right">Visits</div>
                         </div>
                         {/* Rows */}
-                        <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
+                        <div className="border border-warm-border rounded-b-[10px] divide-y divide-warm-border/70">
                           {pkgServices.map((svc, idx) => (
                             <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
                               <div className="col-span-1">
-                                <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                                <span className="w-5 h-5 bg-warm-accent-soft0 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                               </div>
                               <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
+                                <p className="font-medium text-warm-text text-sm">{decodeHtml(svc.name || svc.service)}</p>
                               </div>
                               <div className="col-span-4 overflow-hidden">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
+                                <p className={`text-xs text-warm-muted break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
                               </div>
                               <div className="col-span-2 text-center">
-                                <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
+                                <p className="text-sm text-warm-accent-hover">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
                               </div>
                               <div className="col-span-2 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
+                                <p className="text-sm text-warm-text font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
                               </div>
                             </div>
                           ))}
@@ -4106,11 +4100,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 if (!Array.isArray(addonsList) || addonsList.length === 0) return null;
                 
                 return (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
+                <div className="border-t border-warm-border/70 pt-4">
+                  <p className="text-sm font-semibold text-warm-text mb-3">Additional Services</p>
                   <div>
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-[10px]">
                       <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
                       <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
                       <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
@@ -4142,11 +4136,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                             </div>
                             <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
+                              <p className="font-medium text-warm-text text-sm">{addonName}</p>
                             </div>
                             <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
-                              {addonMarkup != null && <p className="mt-1 text-[10px] text-gray-400">Markup: {addonMarkup}% (internal)</p>}
+                              <p className="text-xs text-warm-muted break-words whitespace-normal">{addonDescription || '-'}</p>
+                              {addonMarkup != null && <p className="mt-1 text-[10px] text-warm-muted">Markup: {addonMarkup}% (internal)</p>}
                             </div>
                             <div className="col-span-2 text-center">
                               <p className="text-sm text-green-600">{frequencyType}</p>
@@ -4159,7 +4153,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       })}
                     </div>
                     {/* Total Services Price */}
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
+                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-[10px]">
                       <p className="font-semibold text-green-800">Total Services Price</p>
                       <p className="font-bold text-green-700">{formatCurrency(addonsList.reduce((sum, a) => sum + Number(a.price || a.totalPrice || a.calculatedPrice || 0), 0))}</p>
                     </div>
@@ -4169,40 +4163,40 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               })()}
 
               {/* Billing Duration */}
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-warm-border/70 pt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Billing</span>
+                  <span className="text-warm-muted">Billing</span>
                   <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
                 </div>
               </div>
 
               {/* Price Summary */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount || 0)}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+              <div className="border-t border-warm-border/70 pt-4">
+                <p className="text-sm font-semibold text-warm-text mb-3">Price Summary</p>
+                <div className="bg-warm-section p-4 rounded-[10px] space-y-2">
+                  <div className="flex justify-between text-sm"><span className="text-warm-muted">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
+                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-warm-muted">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
+                  <div className="flex justify-between text-sm"><span className="text-warm-muted">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount || 0)}</span></div>
+                  <div className="flex justify-between items-center pt-3 border-t border-warm-border">
                     <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">{formatCurrency(viewEstimate.total_amount)}</p>
+                    <p className="text-2xl font-bold text-warm-accent-hover">{formatCurrency(viewEstimate.total_amount)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Description / Notes - After Price Summary */}
               {viewEstimate.description && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
+                <div className="border-t border-warm-border/70 pt-4">
+                  <p className="text-sm font-semibold text-warm-text mb-2">Description / Notes</p>
+                  <p className="text-sm text-warm-muted bg-warm-section p-3 rounded-[10px]">{viewEstimate.description}</p>
                 </div>
               )}
 
               {/* Terms & Conditions - shown only when this estimate carries them */}
-              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
+              <EstimateTermsSection estimate={viewEstimate} className="border-t border-warm-border/70 pt-4" />
 
               {/* Created By */}
-              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
+              <div className="border-t border-warm-border/70 pt-4 text-xs text-warm-muted">
                 Created by: {viewEstimate.created_by_name || '-'}
               </div>
             </div>
@@ -4215,91 +4209,91 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={closeViewPackage}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold text-gray-800">AMC Package Details</h3>
-              <button onClick={closeViewPackage} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
+            <div className="sticky top-0 bg-white border-b border-warm-border/70 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="text-lg font-semibold text-warm-text">AMC Package Details</h3>
+              <button onClick={closeViewPackage} className="p-2 hover:bg-warm-section rounded-[10px] transition-colors">
+                <X className="w-5 h-5 text-warm-muted" />
               </button>
             </div>
             
             <div className="p-6 space-y-6">
               {/* Package Header */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-5 rounded-xl border border-indigo-100">
-                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name}</h4>
-                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
+              <div className="bg-warm-section p-5 rounded-xl border border-warm-border">
+                <h4 className="text-xl font-bold text-warm-text">{viewAmcPackage.name}</h4>
+                <p className="text-sm text-warm-accent-hover mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
               </div>
 
               {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Property Type</p>
-                  <p className="font-semibold text-gray-900">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-warm-section p-4 rounded-xl">
+                  <p className="text-xs text-warm-muted mb-1">Property Type</p>
+                  <p className="font-semibold text-warm-text">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Billing</p>
-                  <p className="font-semibold text-gray-900 capitalize">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Yearly'}</p>
+                <div className="bg-warm-section p-4 rounded-xl">
+                  <p className="text-xs text-warm-muted mb-1">Billing</p>
+                  <p className="font-semibold text-warm-text capitalize">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Yearly'}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Total Price</p>
+                  <p className="text-xs text-warm-muted mb-1">Total Price</p>
                   <p className="font-bold text-xl text-green-600">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
                 </div>
               </div>
 
               {/* Services Included */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-4">Services Included</p>
+                <p className="text-sm font-semibold text-warm-text mb-4">Services Included</p>
                 {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="border border-warm-border rounded-xl overflow-hidden">
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Visits</div>
+                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-warm-section border-b border-warm-border">
+                      <div className="col-span-1 text-xs font-semibold text-warm-muted">#</div>
+                      <div className="col-span-2 text-xs font-semibold text-warm-muted">Service</div>
+                      <div className="col-span-5 text-xs font-semibold text-warm-muted text-center">Description</div>
+                      <div className="col-span-2 text-xs font-semibold text-warm-muted text-center">Frequency</div>
+                      <div className="col-span-2 text-xs font-semibold text-warm-muted text-center">Visits</div>
                     </div>
                     {/* Service Rows */}
                     {viewAmcPackage.servicesData.map((svc, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-4 bg-blue-50/50 border-b border-blue-100 last:border-b-0">
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-4 bg-warm-accent-soft/50 border-b border-warm-border/70 last:border-b-0">
                         <div className="col-span-1">
-                          <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
+                          <span className="w-7 h-7 bg-warm-text text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
                         </div>
                         <div className="col-span-2 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm" style={{wordBreak: 'break-word'}}>{decodeHtml(svc.name || svc.service) || 'Service'}</p>
+                          <p className="font-medium text-warm-text text-sm" style={{wordBreak: 'break-word'}}>{decodeHtml(svc.name || svc.service) || 'Service'}</p>
                         </div>
                         <div className="col-span-5 min-w-0 overflow-hidden">
-                          <p className="text-sm text-gray-600 text-center" style={{wordBreak: 'break-word', overflowWrap: 'anywhere'}}>
+                          <p className="text-sm text-warm-muted text-center" style={{wordBreak: 'break-word', overflowWrap: 'anywhere'}}>
                             {decodeHtml(svc.description)?.trim() || '-'}
                           </p>
                         </div>
                         <div className="col-span-2 text-center min-w-0">
-                          <p className="text-sm text-gray-700 truncate">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
+                          <p className="text-sm text-warm-text truncate">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
                         </div>
                         <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
+                          <p className="text-sm font-medium text-warm-text">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 italic">No services listed</p>
+                  <p className="text-sm text-warm-muted italic">No services listed</p>
                 )}
               </div>
 
               {/* Price Summary */}
               <div>
-                <h4 className="text-sm font-bold text-gray-800 mb-4 text-center uppercase">Price Summary</h4>
-                <div className="bg-gray-50 rounded-xl p-5 space-y-3">
+                <h4 className="text-sm font-bold text-warm-text mb-4 text-center uppercase">Price Summary</h4>
+                <div className="bg-warm-section rounded-xl p-5 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
+                    <span className="text-warm-muted">Subtotal:</span>
+                    <span className="font-semibold text-warm-text">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
+                    <span className="text-warm-muted">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
+                    <span className="font-semibold text-warm-text">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <span className="font-bold text-gray-800">TOTAL:</span>
+                  <div className="flex justify-between items-center pt-3 border-t border-warm-border">
+                    <span className="font-bold text-warm-text">TOTAL:</span>
                     <span className="font-bold text-xl text-green-600">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
                   </div>
                 </div>
@@ -4313,40 +4307,41 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {editEstimate && editEstimateForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-              <div><h3 className="text-lg font-semibold text-gray-800">Edit Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id} - {editEstimate.estimate_type === 'work_order' ? 'Work Order' : editEstimate.estimate_type === 'property_based' || editEstimate.estimate_type === 'property-based' ? 'Property Based' : 'Direct'}</p></div>
-              <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
+            <div className="sticky top-0 bg-white border-b border-warm-border/70 px-6 py-4 flex items-center justify-between z-10">
+              <div><h3 className="text-lg font-semibold text-warm-text">Edit Estimate</h3><p className="text-sm text-warm-muted">{editEstimate.estimate_id} - {editEstimate.estimate_type === 'work_order' ? 'Work Order' : editEstimate.estimate_type === 'property_based' || editEstimate.estimate_type === 'property-based' ? 'Property Based' : 'Direct'}</p></div>
+              <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-warm-section rounded-[10px]"><X className="w-5 h-5 text-warm-muted" /></button>
             </div>
             <div className="p-6 space-y-6">
-              <div><p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Customer Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
-              <div><p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{editEstimate.property_code && <div><label className="block text-xs font-medium text-gray-600 mb-1">Property ID</label><input type="text" value={editEstimate.property_code} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" /></div>}<div><label className="block text-xs font-medium text-gray-600 mb-1">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div></div>
+              <div><p className="text-sm font-semibold text-warm-text mb-3">Customer Details</p><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Customer Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div></div></div>
+              <div><p className="text-sm font-semibold text-warm-text mb-3">Property Details</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{editEstimate.property_code && <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Property ID</label><input type="text" value={editEstimate.property_code} readOnly disabled className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-warm-page text-warm-muted cursor-not-allowed" /></div>}<div><label className="block text-xs font-medium text-warm-muted mb-1.5">Property Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div></div></div>
               {editEstimate.estimate_type === 'work_order' ? (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-orange-800 mb-3">Work Order Details</p>
+                <div className="bg-warm-section border border-warm-border rounded-[10px] p-4">
+                  <p className="text-sm font-semibold text-warm-text mb-3">Work Order Details</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-xs font-medium text-gray-600 mb-1">Work Order ID</label><input type="text" value={editEstimate.work_order_id || ''} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-orange-700 font-mono cursor-not-allowed" /></div>
-                    <div><label className="block text-xs font-medium text-gray-600 mb-1">Category</label><input type="text" value={editEstimate.work_order_category || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed" /></div>
-                    <div><label className="block text-xs font-medium text-gray-600 mb-1">Subcategory</label><input type="text" value={editEstimate.work_order_subcategory || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed" /></div>
-                    <div><label className="block text-xs font-medium text-gray-600 mb-1">Priority</label><input type="text" value={editEstimate.work_order_priority || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed" /></div>
+                    <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Work Order ID</label><input type="text" value={editEstimate.work_order_id || ''} readOnly disabled className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-warm-page text-warm-text font-mono cursor-not-allowed" /></div>
+                    <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Category</label><input type="text" value={editEstimate.work_order_category || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-warm-page cursor-not-allowed" /></div>
+                    <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Subcategory</label><input type="text" value={editEstimate.work_order_subcategory || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-warm-page cursor-not-allowed" /></div>
+                    <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Priority</label><input type="text" value={editEstimate.work_order_priority || '-'} readOnly disabled className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-warm-page cursor-not-allowed" /></div>
                   </div>
                   {editEstimate.work_order_description && (
-                    <div className="mt-3"><label className="block text-xs font-medium text-gray-600 mb-1">Work Order Description</label><p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">{editEstimate.work_order_description}</p></div>
+                    <div className="mt-3"><label className="block text-xs font-medium text-warm-muted mb-1.5">Work Order Description</label><p className="text-sm text-warm-text bg-white p-2 rounded border border-warm-border">{editEstimate.work_order_description}</p></div>
                   )}
                 </div>
               ) : (
                 <>
-                  <div><p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
-                  <div><p className="text-sm font-semibold text-gray-700 mb-3">Add Service</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
+                  <div><p className="text-sm font-semibold text-warm-text mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+                  <div><p className="text-sm font-semibold text-warm-text mb-3">Add Service</p><div className="space-y-2 max-h-48 overflow-y-auto border border-warm-border rounded-[10px] p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-warm-section p-2 rounded"><span className="text-sm text-warm-text flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-warm-border text-warm-muted hover:bg-warm-section disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-warm-accent-hover hover:bg-warm-accent-soft">+</button></div></div>); })}</div></div>
                 </>
               )}
-              <div><p className="text-sm font-semibold text-gray-700 mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-gray-600 mb-1">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div><div><label className="block text-xs font-medium text-gray-600 mb-1">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
-              <div><label className="block text-xs font-medium text-gray-600 mb-1">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
-              <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
+              <div><p className="text-sm font-semibold text-warm-text mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div></div><div className="mt-4 bg-warm-section p-4 rounded-[10px] space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-warm-accent-hover">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
+              <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div>
+              <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-warm-muted border border-warm-border rounded-[10px] hover:bg-warm-section">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-[10px] hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
           </div>
         </div>
       )}
     </div>
+    </EstimateThemeProvider>
   );
 };
 
