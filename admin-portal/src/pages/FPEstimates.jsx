@@ -1609,13 +1609,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               // Stacked, so it lines up with the configured-service dropdown beside it
               <div className="min-w-0 w-full">
                 <label htmlFor="estimate-amc-package" className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+                {/* Unchosen reads as a placeholder, not as a value */}
                 <select
                   id="estimate-amc-package"
                   value={estimateForm.selectedPackage}
                   onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                  className="w-full min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                  className={`w-full min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white ${estimateForm.selectedPackage ? 'text-gray-800' : 'text-gray-400'}`}
                 >
-                  <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                  <option value="" className="text-gray-400">Select a package</option>
                   {(() => {
                     const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
                     const searchType = normalizePropertyType(propertyType);
@@ -1945,12 +1946,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {renderStructure(
             <div className="min-w-0 w-full">
               <label className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+              {/* Unchosen reads as a placeholder, not as a value */}
               <select
                 value={estimateForm.selectedPackage}
                 onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
+                className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white ${estimateForm.selectedPackage ? 'text-gray-800' : 'text-gray-400'}`}
               >
-                <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                <option value="" className="text-gray-400">Select a package</option>
                 {(() => {
                   const searchType = normalizePropertyType(estimateForm.propertyType);
                   const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];

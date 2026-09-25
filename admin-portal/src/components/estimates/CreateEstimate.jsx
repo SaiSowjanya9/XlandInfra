@@ -2336,7 +2336,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       onChange={(e) => handlePackageSelect(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                     >
-                      <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                      <option value="">Select a package</option>
                       {/* Show packages filtered by property type first, then all packages */}
                       {(() => {
                         const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
@@ -3141,7 +3141,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     onChange={(e) => handleDirectPackageSelect(e.target.value)}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
                   >
-                    <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
+                    <option value="">Select a package</option>
                     {(() => {
                       const propertyType = estimateForm.propertyType;
                       const filteredPkgs = propertyType 

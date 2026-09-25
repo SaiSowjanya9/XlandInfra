@@ -210,10 +210,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       </>) : (<>
         <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
           {label}
+          {/* Unchosen reads as a placeholder, not as a value */}
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
-            className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'}`}>
-            <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : '+ Select service to add'}</option>
-            {available.map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
+            className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'} ${selectedId ? 'text-slate-800' : 'text-slate-400'}`}>
+            <option value="" className="text-slate-400">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service'}</option>
+            {available.map(item => <option key={item.id} value={item.id} className="text-slate-800">{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
         {!loading && !services.length && !error && <p className="mt-2 text-xs text-slate-500">No configured services available for this property type.</p>}
