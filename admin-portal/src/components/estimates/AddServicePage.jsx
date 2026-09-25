@@ -119,7 +119,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     defaultFrequency: 'Monthly',
     defaultVisitsPerYear: 12,
     allowFrequencyOverride: false,
-    allowManualVisits: false,
     // On means no vendor is assigned and nothing is scheduled for this service
     skipVendorAssignment: false,
     // Markup & Margin
@@ -162,7 +161,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
 
   useEffect(() => {
     if (!service) return;
-    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', allowManualVisits: 'allow_manual_visits', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
+    const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
     setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
       manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
       overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
@@ -297,7 +296,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         default_frequency: formData.defaultFrequency,
         default_visits_per_year: Number(formData.defaultVisitsPerYear),
         allow_frequency_override: formData.allowFrequencyOverride,
-        allow_manual_visits: formData.allowManualVisits,
+        allow_manual_visits: false,
         skip_vendor_assignment: formData.skipVendorAssignment,
         default_markup_percentage: Number(formData.defaultMarkupPercentage),
         // XLAND's margin is the markup on the vendor cost, so nothing separate is stored: a quote
@@ -393,10 +392,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
   const slabXlandCost = slabVendorCost == null || markupValue == null ? null : slabVendorCost * markupValue / 100;
   const slabCustomerPrice = slabXlandCost == null ? null : slabVendorCost + slabXlandCost;
-  const toggleManualVisits = () => {
-    if (formData.allowManualVisits) setCapacitySlabs(prev => prev.map(slab => ({ ...slab, defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === slab.defaultFrequency).defaultVisits })));
-    setFormData(prev => ({ ...prev, allowManualVisits: !prev.allowManualVisits, defaultVisitsPerYear: prev.allowManualVisits ? FREQUENCY_OPTIONS.find(item => item.value === prev.defaultFrequency).defaultVisits : prev.defaultVisitsPerYear }));
-  };
 
   const categoryNames = [...new Set(categories.map(category => category.name).filter(Boolean))];
   const scopeText = scopeLabel ?? (service
@@ -509,7 +504,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                       <label className="flex items-center gap-2 text-xs text-slate-500"><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className="accent-blue-600" />Custom Quote</label>
                     </div></td>
                     <td className="px-3 py-3"><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={`${inputClass} min-w-[130px]`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
-                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="0" max="366" step="1" required readOnly={!formData.allowManualVisits} value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] ${!formData.allowManualVisits ? 'bg-slate-50' : ''}`} /></td>
+                    <td className="px-3 py-3"><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="0" max="366" step="1" required readOnly value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={`${inputClass} min-w-[90px] bg-slate-50`} /></td>
                     <td className="px-3 py-3 text-center"><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button></td>
                   </tr>)}</tbody>
                 </table>
@@ -529,14 +524,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 {/* Rate, frequency and visit count on one row */}
                 {isRatePricing && <Field label={isVisitManpower ? 'Rate per Person per Visit (₹) *' : isFixedPrice ? 'Fixed Rate per Visit (₹) *' : `Rate per ${formData.unit} (₹) *`}>{numberInput(rateField, { max: 1e9 })}</Field>}
                 <Field label="Default Frequency *"><select value={formData.defaultFrequency} onChange={event => changeFrequency(event.target.value)} className={inputClass}>{FREQUENCY_OPTIONS.map(frequency => <option key={frequency.value}>{frequency.value}</option>)}</select></Field>
-                <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 0, max: 366, step: 1, readOnly: !formData.allowManualVisits, className: `${inputClass} ${!formData.allowManualVisits ? 'bg-slate-50' : ''}` })}</Field>
+                <Field label="Default Visits Per Year *">{numberInput('defaultVisitsPerYear', { min: 0, max: 366, step: 1, readOnly: true, className: `${inputClass} ${true ? 'bg-slate-50' : ''}` })}</Field>
               </div>
               {/* The three toggles on the row below, aligned to the same columns. The third is on
                   every pricing method: on means this service is arranged without a vendor, so no
                   vendor is assigned to it and nothing is scheduled for it. */}
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Toggle label="Allow Frequency Override" checked={formData.allowFrequencyOverride} onChange={() => setField('allowFrequencyOverride', !formData.allowFrequencyOverride)} />
-                <Toggle label="Allow Manual Visits" checked={formData.allowManualVisits} onChange={toggleManualVisits} />
                 <Toggle label="Do Not Assign Vendor" checked={formData.skipVendorAssignment} onChange={() => setField('skipVendorAssignment', !formData.skipVendorAssignment)} />
               </div>
               {isVisitManpower && <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

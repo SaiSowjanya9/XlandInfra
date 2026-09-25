@@ -294,7 +294,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                       if (!event.target.checked) setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) }));
                     }} className="accent-blue-600" />Override frequency
                   </span>}</label>
-                <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly={!service.allow_manual_visits} value={inputs.visits} onChange={event => setInput('visits', event.target.value)} className={`${inputClass} mt-2 ${!service.allow_manual_visits ? 'bg-slate-50' : ''}`} /></label>
+                <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 bg-slate-50`} /></label>
                 <label className={fieldLabel}>XLAND Operating Cost (Annual) (₹)<input type="number" min="0" step="0.01" value={inputs.operating_cost ?? 0} onChange={event => setInput('operating_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
