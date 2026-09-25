@@ -1262,7 +1262,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             frequency_count: a.frequency_count,
             services: a.services,
             totalPrice: a.totalPrice,
-            price: a.totalPrice
+            price: a.totalPrice,
+            // Settled per estimate on a Quantity Based service; the server validates and keeps them
+            category: a.category,
+            skip_vendor_assignment: a.skip_vendor_assignment
           })),
           // Services typed in by hand on a custom estimate; they carry their own customer price
           ...customServices

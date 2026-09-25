@@ -168,6 +168,29 @@ const normalizeManualService = addon => {
     services: [{ name, description, frequencyType, frequency: visits, price: visits ? price / visits : price }] };
 };
 
+/**
+ * The only parts of a catalog service an estimate may settle for itself.
+ *
+ * Every other field of a catalog row is rebuilt from the catalog on save, so the client cannot
+ * alter a saved service. These two are read from the request instead, and only for Quantity Based:
+ * whether this property's job needs a vendor, and which category it is booked under.
+ */
+const catalogEstimateOverrides = (addon, config) => {
+  const fail = message => { throw Object.assign(new Error(message), { status: 400 }); };
+  if (config?.pricing_method !== 'quantity_based') return {};
+  const overrides = {};
+  const category = addon?.category == null ? '' : String(addon.category).trim();
+  if (category) {
+    if (category.length > 100) fail('Category must be 100 characters or fewer.');
+    overrides.category = category;
+  }
+  if (addon?.skip_vendor_assignment !== undefined) {
+    if (typeof addon.skip_vendor_assignment !== 'boolean') fail('Vendor required must be true or false.');
+    overrides.skip_vendor_assignment = addon.skip_vendor_assignment;
+  }
+  return overrides;
+};
+
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService, catalogEstimateOverrides };

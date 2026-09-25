@@ -32,6 +32,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   // custom-services table can offer configured services and a blank row from one control instead of
   // repeating the picker in a panel of its own. `extraItems` are listed above the services.
   variant = 'panel', extraItems = [] }) => {
+  // Quantity Based alone lets these two be settled per estimate: whether this property's job needs
+  // a vendor, and which category it is booked under. Both start from the service and are sent as
+  // explicit overrides -- the server rebuilds every other field from the catalog.
+  const [overrides, setOverrides] = useState({ category: '', vendorRequired: true });
+  const [categories, setCategories] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   // The menu is drawn into document.body: every card it sits in clips its overflow, which cut the
   // list off mid-item and hid Custom entirely. A portal with fixed coordinates escapes all of them.
@@ -53,6 +58,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   const quoteRequest = useRef(null);
   const token = getAuthToken();
   const service = services.find(item => String(item.id) === selectedId);
+  const isQuantityBased = service?.pricing_method === 'quantity_based';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,6 +84,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setOverrideFrequency(false);
     setRequiresQuote(item?.pricing_method === 'custom_quote');
     setPreview(null);
+    setOverrides({ category: item?.category || '', vendorRequired: !item?.skip_vendor_assignment });
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
       // Carried from the service so the quote is unchanged, but not shown or editable here: what
       // XLAND spends running the service is internal, and this dialog states only the customer price.
@@ -97,6 +104,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setRequiresQuote(Boolean(editing.pricingInputs?.custom_quote));
     // The checkbox reflects what was actually saved: ticked only where the row left the service's schedule
     setOverrideFrequency(Boolean(item.allow_frequency_override) && editing.frequency_type !== item.default_frequency);
+    // Reopen on what the row was saved with, not on the service's defaults
+    setOverrides({
+      category: editing.category || item.category || '',
+      vendorRequired: editing.skip_vendor_assignment === undefined ? !item.skip_vendor_assignment : !editing.skip_vendor_assignment
+    });
     setInputs({ ...editing.pricingInputs, frequency: editing.frequency_type, visits: editing.frequency_count });
   }, [editing, services]);
   // Escape dismisses the dialog, the way the other estimate dialogs behave. Never mid-save: the
@@ -123,6 +135,17 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     });
     setMenuOpen(true);
   };
+  // The category list is only needed once a Quantity Based service is open
+  useEffect(() => {
+    if (!isQuantityBased || categories.length) return;
+    const controller = new AbortController();
+    fetch(`${API_BASE}${apiPath}/categories?${new URLSearchParams({ fpId: fpId || 'all' })}`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
+    }).then(response => response.json())
+      .then(result => { if (result?.success) setCategories(Array.isArray(result.data) ? result.data : []); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [isQuantityBased, apiPath, fpId, token, categories.length]);
   // Closes on a click elsewhere or Escape, like any dropdown. The panel is outside this component's
   // DOM subtree, so a click inside it has to be excused explicitly.
   useEffect(() => {
@@ -195,7 +218,10 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         addonId: `CAT-${service.id}`, catalogServiceId: service.id,
         name: service.service_name, service_name: service.service_name, description: service.description,
         pricing_method: service.pricing_method, unit: service.unit, manpower_basis: service.manpower_basis, role_designation: service.role_designation,
-        category: service.category, applicable_property_types: service.applicable_property_types,
+        // Quantity Based can settle these per estimate; every other method takes the service's own
+        category: isQuantityBased ? (overrides.category || service.category) : service.category,
+        ...(isQuantityBased ? { skip_vendor_assignment: !overrides.vendorRequired } : {}),
+        applicable_property_types: service.applicable_property_types,
         frequency_type: quote.frequency, frequency_count: quote.visits,
         totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
         services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }]
@@ -299,6 +325,23 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 bg-slate-50`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
+                {/* Quantity Based only: settled per estimate rather than taken from the service */}
+                {isQuantityBased && <label className={fieldLabel}>Category
+                  <select value={overrides.category} onChange={event => setOverrides(prev => ({ ...prev, category: event.target.value }))} className={`${inputClass} mt-2`}>
+                    <option value="">Select category</option>
+                    {[...new Set([overrides.category, ...categories].filter(Boolean))].map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>}
+                {isQuantityBased && <div className={fieldLabel}>Vendor Required
+                  <button type="button" role="switch" aria-checked={overrides.vendorRequired} aria-label="Vendor required"
+                    onClick={() => setOverrides(prev => ({ ...prev, vendorRequired: !prev.vendorRequired }))}
+                    className={`mt-2 flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-normal transition-colors ${overrides.vendorRequired ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600'}`}>
+                    <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${overrides.vendorRequired ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${overrides.vendorRequired ? 'left-[1.125rem]' : 'left-0.5'}`} />
+                    </span>
+                    {overrides.vendorRequired ? 'Yes' : 'No'}
+                  </button>
+                </div>}
               </div>
               {/* The customer price is the only figure this dialog states: vendor cost, operating
                   cost, markup and margin are internal and belong to the service configuration. */}

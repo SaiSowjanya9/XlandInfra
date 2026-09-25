@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
 const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
-const { normalizeEstimateService, isManualService, normalizeManualService } = require('../utils/estimateData');
+const { normalizeEstimateService, isManualService, normalizeManualService, catalogEstimateOverrides } = require('../utils/estimateData');
 const { categoryOptions } = require('../utils/serviceCategories');
 const { parseService } = require('./serviceCatalog');
 const router = express.Router();
@@ -141,7 +141,8 @@ router.validatePackageEstimate = async (req, res, next) => {
         addonId: `CAT-${id}`, catalogServiceId: id, name: config.service_name, service_name: config.service_name,
         description: config.description, frequency_type: quote.frequency, frequency_count: quote.visits,
         services: [{ name: config.service_name, description: config.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }],
-        totalPrice: quote.totalPrice, price: quote.totalPrice, pricingInputs: quote.inputs, pricingSnapshot: { ...config, ...quote }
+        totalPrice: quote.totalPrice, price: quote.totalPrice, pricingInputs: quote.inputs, pricingSnapshot: { ...config, ...quote },
+        ...catalogEstimateOverrides(addon, config)
       }));
       subtotal += quote.totalPrice;
     }
