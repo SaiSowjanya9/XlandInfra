@@ -16,6 +16,7 @@ const inlineSelectClass = 'w-full min-w-0 rounded-lg border border-gray-300 bg-w
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 const fieldLabel = 'block text-xs font-semibold text-slate-600';
 const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
+const categoryName = value => (typeof value === 'string' ? value : value?.name) || '';
 const INPUTS = {
   quantity_based: ['quantity', 'Quantity', 1], area_based: ['area', 'Area', 0.01],
   capacity_based: ['capacity', 'Capacity', 0.01], capacity_slab: ['capacity', 'Capacity', 1],
@@ -84,7 +85,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setOverrideFrequency(false);
     setRequiresQuote(item?.pricing_method === 'custom_quote');
     setPreview(null);
-    setOverrides({ category: item?.category || '', vendorRequired: !item?.skip_vendor_assignment });
+    setOverrides({ category: categoryName(item?.category), vendorRequired: !item?.skip_vendor_assignment });
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
       // Carried from the service so the quote is unchanged, but not shown or editable here: what
       // XLAND spends running the service is internal, and this dialog states only the customer price.
@@ -106,7 +107,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setOverrideFrequency(Boolean(item.allow_frequency_override) && editing.frequency_type !== item.default_frequency);
     // Reopen on what the row was saved with, not on the service's defaults
     setOverrides({
-      category: editing.category || item.category || '',
+      category: categoryName(editing.category) || categoryName(item.category),
       vendorRequired: editing.skip_vendor_assignment === undefined ? !item.skip_vendor_assignment : !editing.skip_vendor_assignment
     });
     setInputs({ ...editing.pricingInputs, frequency: editing.frequency_type, visits: editing.frequency_count });
@@ -142,7 +143,14 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     fetch(`${API_BASE}${apiPath}/categories?${new URLSearchParams({ fpId: fpId || 'all' })}`, {
       headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
     }).then(response => response.json())
-      .then(result => { if (result?.success) setCategories(Array.isArray(result.data) ? result.data : []); })
+      // The endpoint answers with { name } objects, not strings. Rendering one as an option killed
+      // the whole page with React #31, so the names are taken out here.
+      .then(result => {
+        if (!result?.success || !Array.isArray(result.data)) return;
+        setCategories([...new Set(result.data
+          .map(item => (typeof item === 'string' ? item : item?.name))
+          .filter(name => typeof name === 'string' && name.trim()))]);
+      })
       .catch(() => {});
     return () => controller.abort();
   }, [isQuantityBased, apiPath, fpId, token, categories.length]);
@@ -297,7 +305,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               <h3 id="catalog-service-title" className="truncate text-base font-semibold text-slate-900">{service.service_name}</h3>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span className="rounded bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">{methodLabel(service.pricing_method)}</span>
-                {service.category && <span>{service.category}</span>}
+                {categoryName(service.category) && <span>{categoryName(service.category)}</span>}
                 <span>Priced per {service.unit}</span>
               </div>
             </div>
@@ -329,7 +337,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 {isQuantityBased && <label className={fieldLabel}>Category
                   <select value={overrides.category} onChange={event => setOverrides(prev => ({ ...prev, category: event.target.value }))} className={`${inputClass} mt-2`}>
                     <option value="">Select category</option>
-                    {[...new Set([overrides.category, ...categories].filter(Boolean))].map(item => <option key={item} value={item}>{item}</option>)}
+                    {[...new Set([overrides.category, ...categories].map(categoryName).filter(Boolean))].map(item => <option key={item} value={item}>{item}</option>)}
                   </select>
                 </label>}
                 {isQuantityBased && <div className={fieldLabel}>Vendor Required

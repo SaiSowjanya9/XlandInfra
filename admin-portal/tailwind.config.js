@@ -34,6 +34,20 @@ export default {
         slate: {
           750: '#293548',
           850: '#172032',
+        },
+        // Warm beige design system (FP portal Estimates onwards)
+        warm: {
+          page: '#FAF7F2',
+          section: '#FFF9EE',
+          border: '#EADFCF',
+          accent: '#D4A574',
+          'accent-hover': '#C69250',
+          'accent-soft': '#FEF3E2',
+          text: '#1F2937',
+          muted: '#6B7280',
+          success: '#ECFDF5',
+          info: '#EEF4FF',
+          warning: '#FEF3C7',
         }
       },
       fontFamily: {
@@ -43,6 +57,8 @@ export default {
       boxShadow: {
         'gold': '0 4px 14px 0 rgba(251, 191, 36, 0.25)',
         'gold-lg': '0 10px 25px -3px rgba(251, 191, 36, 0.25)',
+        'warm': '0 3px 8px rgba(0, 0, 0, 0.04)',
+        'warm-hover': '0 4px 16px rgba(0, 0, 0, 0.06)',
       }
     },
   },
