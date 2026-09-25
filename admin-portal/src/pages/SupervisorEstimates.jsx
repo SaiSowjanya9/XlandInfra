@@ -605,9 +605,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
             <select
               value={selectedAmcPackage}
               onChange={(e) => setSelectedAmcPackage(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              className={`w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500 ${selectedAmcPackage ? "text-gray-800" : "text-gray-400"}`}
             >
-              <option value="">Select a package</option>
+              <option value="" className="text-gray-400">Select a package</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];

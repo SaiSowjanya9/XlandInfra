@@ -239,6 +239,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   const [subcategories, setSubcategories] = useState(SUBCATEGORIES); // Dynamic subcategories
   const [directSelectedPackage, setDirectSelectedPackage] = useState(null); // Package for Direct estimate
   const [directSelectedAddons, setDirectSelectedAddons] = useState([]); // Add-ons for Direct estimate
+  // The catalog row being re-priced in each form, or null. Editing reopens the picker's dialog on it.
+  const [editingCatalogAddon, setEditingCatalogAddon] = useState(null);
+  const [editingDirectCatalogAddon, setEditingDirectCatalogAddon] = useState(null);
   const [directShowCustomAddon, setDirectShowCustomAddon] = useState(false);
   const [directCustomAddonForm, setDirectCustomAddonForm] = useState({
     serviceName: '',
@@ -716,6 +719,26 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   };
 
   // Handle removing an add-on
+  // The backend's /api/admin/service-catalog is adminOnly, which includes the Operations Manager,
+  // so the picker is offered to both rather than to admin alone.
+  const canUseCatalog = ['admin', 'operations_manager'].includes(admin?.role);
+  // Adding and editing both come back through here: the rebuilt row keeps its addonId, so an edit
+  // replaces the row in place instead of appending a second copy of the same service.
+  const upsertAddon = (setRows) => (addon) => setRows(prev => prev.some(item => item.addonId === addon.addonId)
+    ? prev.map(item => item.addonId === addon.addonId ? addon : item)
+    : [...prev, addon]);
+  // Only a configured service can be re-priced; a legacy add-on carries a fixed price and no inputs
+  const catalogRowActions = (addon, onEdit, onRemove) => (
+    <div className="flex items-center justify-center gap-1">
+      {addon.catalogServiceId && (
+        <button type="button" onClick={() => onEdit(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
+          className="rounded p-1 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil className="w-4 h-4" /></button>
+      )}
+      <button type="button" onClick={() => onRemove(addon.addonId)} title="Remove" aria-label={`Remove ${addon.name}`}
+        className="rounded p-1 text-red-500 transition-colors hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
+    </div>
+  );
+
   const handleRemoveAddon = (addonId) => {
     setSelectedAddons(selectedAddons.filter(a => a.addonId !== addonId));
   };
@@ -2331,12 +2354,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     Select AMC Package <span className="text-red-500">*</span>
                   </label>
                   <div className="relative max-w-md">
+                    {/* Unchosen reads as a placeholder, not as a value */}
                     <select
                       value={getPackageId(selectedPackage) || ''}
                       onChange={(e) => handlePackageSelect(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
+                      className={`w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white ${getPackageId(selectedPackage) ? 'text-gray-800' : 'text-gray-400'}`}
                     >
-                      <option value="">Select a package</option>
+                      <option value="" className="text-gray-400">Select a package</option>
                       {/* Show packages filtered by property type first, then all packages */}
                       {(() => {
                         const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType;
@@ -2379,6 +2403,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       No packages available. Create packages in AMC Packages first.
                     </p>
                   )}
+                  {/* The configured-service dropdown belongs beside the package one, so both ways of
+                      putting a service on the estimate are chosen in the same place */}
+                  {canUseCatalog && <div className="mt-4 max-w-md">
+                    <ServiceCatalogPicker
+                      key={`property-${selectedFp?.id}-${selectedProperty?.propertyId}-${selectedProperty?.entryType}`}
+                      fpId={selectedFp?.id}
+                      propertyType={selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType}
+                      selectedAddons={selectedAddons}
+                      onAdd={upsertAddon(setSelectedAddons)}
+                      editing={editingCatalogAddon}
+                      onEditClose={() => setEditingCatalogAddon(null)}
+                      inline
+                    />
+                  </div>}
                 </div>
 
                 {/* Selected Package Details - Auto-populated */}
@@ -2446,17 +2484,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
 
               {/* Additional Services Section - Blue themed, attached under AMC Package */}
               <div className="px-6 py-4 border-t border-gray-100">
-                {admin?.role === 'admin' && <ServiceCatalogPicker
-                  key={`property-${selectedFp?.id}-${selectedProperty?.propertyId}-${selectedProperty?.entryType}`}
-                  fpId={selectedFp?.id}
-                  propertyType={selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType}
-                  selectedAddons={selectedAddons}
-                  onAdd={addon => setSelectedAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
-                />}
-                {/* Add-on Dropdown - Reduced width */}
+                {/* The configured-service picker now sits beside the package dropdown above */}
+                {/* Add-on Dropdown - Reduced width. The legacy list, named apart from the
+                    configured-service control so two things are not both called Add Service. */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add Service
+                    Add-on Service
                   </label>
                   <div className="relative max-w-sm">
                     <select
@@ -2617,14 +2650,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                               <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
                               <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
                               <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
-                              <td className="px-3 py-2.5 text-center">
-                                <button
-                                  onClick={() => handleRemoveAddon(addon.addonId)}
-                                  className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                                  title="Remove"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                              <td className="px-3 py-2.5">
+                                {catalogRowActions(addon, setEditingCatalogAddon, handleRemoveAddon)}
                               </td>
                             </tr>
                           ))
@@ -3136,12 +3163,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   Select AMC Package <span className="text-red-500">*</span>
                 </label>
                 <div className="relative max-w-md">
+                  {/* Unchosen reads as a placeholder, not as a value */}
                   <select
                     value={getPackageId(directSelectedPackage) || ''}
                     onChange={(e) => handleDirectPackageSelect(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white"
+                    className={`w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 appearance-none bg-white ${getPackageId(directSelectedPackage) ? 'text-gray-800' : 'text-gray-400'}`}
                   >
-                    <option value="">Select a package</option>
+                    <option value="" className="text-gray-400">Select a package</option>
                     {(() => {
                       const propertyType = estimateForm.propertyType;
                       const filteredPkgs = propertyType 
@@ -3181,6 +3209,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     No packages available. Create packages in AMC Packages first.
                   </p>
                 )}
+                {/* The configured-service dropdown belongs beside the package one, so both ways of
+                    putting a service on the estimate are chosen in the same place */}
+                {canUseCatalog && <div className="mt-4 max-w-md">
+                  <ServiceCatalogPicker
+                    key={`direct-${selectedFp?.id}-${estimateForm.propertyType}`}
+                    fpId={selectedFp?.id}
+                    propertyType={estimateForm.propertyType}
+                    selectedAddons={directSelectedAddons}
+                    onAdd={upsertAddon(setDirectSelectedAddons)}
+                    editing={editingDirectCatalogAddon}
+                    onEditClose={() => setEditingDirectCatalogAddon(null)}
+                    inline
+                  />
+                </div>}
               </div>
 
               {/* Selected Package Details - Auto-populated */}
@@ -3248,17 +3290,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
 
             {/* Additional Services Section - Add-ons */}
             <div className="px-6 py-4 border-t border-gray-100">
-              {admin?.role === 'admin' && <ServiceCatalogPicker
-                key={`direct-${selectedFp?.id}-${estimateForm.propertyType}`}
-                fpId={selectedFp?.id}
-                propertyType={estimateForm.propertyType}
-                selectedAddons={directSelectedAddons}
-                onAdd={addon => setDirectSelectedAddons(prev => prev.some(item => item.addonId === addon.addonId) ? prev : [...prev, addon])}
-              />}
-              {/* Add-on Dropdown */}
+              {/* The configured-service picker now sits beside the package dropdown above */}
+              {/* Add-on Dropdown. The legacy list, named apart from the configured-service control
+                  so two things are not both called Add Service. */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Service
+                  Add-on Service
                 </label>
                 <div className="relative max-w-sm">
                   <select
@@ -3414,14 +3451,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                             <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
                             <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
                             <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <button
-                                onClick={() => handleDirectRemoveAddon(addon.addonId)}
-                                className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
-                                title="Remove"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            <td className="px-3 py-2.5">
+                              {catalogRowActions(addon, setEditingDirectCatalogAddon, handleDirectRemoveAddon)}
                             </td>
                           </tr>
                         ))

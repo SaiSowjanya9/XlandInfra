@@ -5,7 +5,7 @@ import { TermsConditionsField, EstimateTermsSection } from '../components/estima
 import { newEstimateTerms } from '../utils/estimateTerms';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
@@ -691,8 +691,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         {estimateStructure === 'package' && (
           <div className="min-w-0 w-full">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select AMC Package <span className="text-red-500">*</span></label>
-            <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
-              <option value="">Select a package</option>
+            <select value={selectedAmcPackage} onChange={(e) => setSelectedAmcPackage(e.target.value)} className={`w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500 ${selectedAmcPackage ? "text-gray-800" : "text-gray-400"}`}>
+              <option value="" className="text-gray-400">Select a package</option>
               {(() => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];
