@@ -1378,6 +1378,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           .map((id, idx) => ({ idx, addon: addons.find(a => a.id == id || a.id === parseInt(id)) }))
           .filter(r => r.addon);
         const addonsTotal = selectedAddonRows.reduce((sum, r) => sum + (parseFloat(r.addon.price) || 0), 0);
+        // Only services added to the estimate can be removed or re-priced; a package's own cannot.
+        // With none of those in the table the Action column held nothing but dashes, so it is not
+        // drawn at all. Same condition as the totals row, so the two cannot disagree.
+        const hasRowActions = selectedAddonRows.length > 0 || tableCatalogAddons.length > 0;
         const pricing = calculatePricing();
         let pkgSvcData = selectedPkg?.services;
         if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
@@ -1655,10 +1659,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <tr>
                       <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[5%]">#</th>
                       <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-[22%]">Service</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[41%]">Description</th>
+                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase ${hasRowActions ? 'w-[41%]' : 'w-[51%]'}`}>Description</th>
                       <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[12%]">Frequency</th>
                       <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Visits</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Action</th>
+                      {/* A package's own services cannot be removed one by one, so with nothing else
+                          in the table the column held only dashes. It appears when a row can act. */}
+                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase w-[10%]">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1675,7 +1681,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{visits}</td>
-                          <td className="px-3 py-2.5 text-center text-gray-300">-</td>
+                          {hasRowActions && <td className="px-3 py-2.5" />}
                         </tr>
                       );
                     })}
