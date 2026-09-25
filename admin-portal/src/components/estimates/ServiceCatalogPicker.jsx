@@ -79,6 +79,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     setRequiresQuote(item?.pricing_method === 'custom_quote');
     setPreview(null);
     setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
+      // Carried from the service so the quote is unchanged, but not shown or editable here: what
+      // XLAND spends running the service is internal, and this dialog states only the customer price.
       operating_cost: item.default_operating_cost ?? 0,
       ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) } : {});
   };
@@ -295,7 +297,6 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                     }} className="accent-blue-600" />Override frequency
                   </span>}</label>
                 <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 bg-slate-50`} /></label>
-                <label className={fieldLabel}>XLAND Operating Cost (Annual) (₹)<input type="number" min="0" step="0.01" value={inputs.operating_cost ?? 0} onChange={event => setInput('operating_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
               </div>
