@@ -30,7 +30,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
       headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
     }).then(async response => {
       const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load configured services.');
+      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load services.');
       setServices(Array.isArray(result.data) ? result.data : []);
     }).catch(error => {
       if (error.name !== 'AbortError') setError(error.message);
@@ -74,7 +74,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <div className="min-w-0">
             <h3 id="package-service-picker-title" className="text-base font-semibold text-slate-900">Add Service</h3>
-            <p className="mt-1 text-xs text-slate-500">{typeLabels ? `Configured services for ${typeLabels}` : 'Configured services'}</p>
+            <p className="mt-1 text-xs text-slate-500">{typeLabels ? `Services for ${typeLabels}` : 'Services'}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close service list"
             className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-4 w-4" /></button>
@@ -90,7 +90,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
           {loading ? <p className="flex items-center gap-2 py-6 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Loading services...</p>
             : error ? <p role="alert" className="py-6 text-sm text-red-600">{error}</p>
             : !shown.length ? <p className="py-6 text-center text-sm text-slate-500">
-                {available.length ? 'No service matches this search.' : `No configured services apply to ${typeLabels || 'this package'}.`}
+                {available.length ? 'No service matches this search.' : `No services apply to ${typeLabels || 'this package'}.`}
               </p>
             : <ul className="space-y-2">
               {shown.map(service => {

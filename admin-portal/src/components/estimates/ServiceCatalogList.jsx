@@ -170,8 +170,8 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       </div>
     </div>
     {error ? <p role="alert" className="py-4 text-sm text-red-600">{error}</p>
-      : !loading && !services.length ? <p className="py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No configured services yet. Use Add Service to create one.' : 'No configured services are available in your scope yet.'}</p>
-      : !shown.length ? <p className="py-6 text-sm text-slate-500">No configured services apply to {propertyTypeLabel(propertyFilter)}.</p>
+      : !loading && !services.length ? <p className="py-6 text-sm text-slate-500">{admin?.role === 'admin' ? 'No services yet. Use Add Service to create one.' : 'No services are available in your scope yet.'}</p>
+      : !shown.length ? <p className="py-6 text-sm text-slate-500">No services apply to {propertyTypeLabel(propertyFilter)}.</p>
       : <div>
         {/* Fixed proportional widths: the table can never grow past the page, so there is no
             sideways scrollbar and every column stays visible at once. */}
