@@ -480,7 +480,7 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...navy);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(data.estimateType === 'custom' ? 'SERVICES' : 'ADD-ONS', margin, y);
+      doc.text('SERVICES', margin, y);
       y += 6;
 
       const addonsBody = data.addons.map((a, idx) => {
@@ -1288,7 +1288,7 @@ export const exportInvoiceToPDF = (invoice) => {
       doc.setTextColor(...primaryText);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('ADD-ONS', margin, y + 5);
+      doc.text('SERVICES', margin, y + 5);
       
       y += 10;
 
@@ -1296,7 +1296,7 @@ export const exportInvoiceToPDF = (invoice) => {
       const addonGold = [201, 162, 39]; // #c9a227 - same as services for consistency
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Add-on', 'Description', 'Frequency', 'Visits', 'Price']],
+        head: [['#', 'Service', 'Description', 'Frequency', 'Visits', 'Price']],
         body: addons.map((item, idx) => [
           String(idx + 1),
           decodeHtml(String(item.name)),

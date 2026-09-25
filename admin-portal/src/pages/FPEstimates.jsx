@@ -1677,6 +1677,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-3 py-2.5 text-center text-gray-500">{idx + 1}</td>
                           <td className="px-3 py-2.5">
                             <p className="font-medium text-gray-800">{decodeHtml(svc.service || svc.name) || '-'}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 text-blue-700 border border-blue-100">Package</span>
                           </td>
                           <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
@@ -1694,6 +1695,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + i + 1}</td>
                           <td className="px-3 py-2.5">
                             <p className="font-medium text-gray-800">{decodeHtml(addon.service_name)}</p>
+                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-700 border border-amber-100">Service</span>
                           </td>
                           <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{freqType}</td>
@@ -1709,6 +1711,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
                         <td className="px-3 py-2.5">
                           <p className="font-medium text-gray-800">{addon.name}</p>
+                          <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Configured</span>
                         </td>
                         <td className={`px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
                         <td className="px-3 py-2.5 text-center text-gray-600">{addon.frequency_type}</td>
