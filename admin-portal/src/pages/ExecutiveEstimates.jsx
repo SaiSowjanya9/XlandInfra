@@ -300,10 +300,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Switching structure drops what belongs to the other choice, so neither a package price nor a
   // hand-entered row can sit hidden in the total.
+  // Switching structure starts the other choice clean. Anything already added belongs to the
+  // choice being left -- a package, hand-entered rows, or services picked alongside either -- and
+  // carrying it across would put services on the estimate the user never chose in this mode.
   const changeEstimateStructure = (value) => {
     setEstimateStructure(value);
+    setCustomServices([]);
+    setSelectedAddons([]);
     if (value === 'custom') setSelectedAmcPackage('');
-    else setCustomServices([]);
   };
 
   // Calculate price summary

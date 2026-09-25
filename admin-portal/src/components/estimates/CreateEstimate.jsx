@@ -722,6 +722,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   // The backend's /api/admin/service-catalog is adminOnly, which includes the Operations Manager,
   // so the picker is offered to both rather than to admin alone.
   const canUseCatalog = ['admin', 'operations_manager'].includes(admin?.role);
+  // Switching structure starts the other choice clean. Anything already added belongs to the choice
+  // being left -- a package, or services picked alongside it -- and carrying it across would put
+  // services on the estimate the user never chose in this mode.
+  const changeEstimateStructure = (value) => {
+    setEstimateStructure(value);
+    setSelectedAddons([]);
+    setDirectSelectedAddons([]);
+    setEditingCatalogAddon(null);
+    setEditingDirectCatalogAddon(null);
+    if (value === 'custom') {
+      setSelectedPackage(null);
+      setDirectSelectedPackage(null);
+    }
+  };
   // Adding and editing both come back through here: the rebuilt row keeps its addonId, so an edit
   // replaces the row in place instead of appending a second copy of the same service.
   const upsertAddon = (setRows) => (addon) => setRows(prev => prev.some(item => item.addonId === addon.addonId)
@@ -1769,7 +1783,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     name="estimateStructure"
                     value="package"
                     checked={estimateStructure === 'package'}
-                    onChange={() => setEstimateStructure('package')}
+                    onChange={() => changeEstimateStructure('package')}
                     className="w-4 h-4 text-blue-600"
                   />
                   <div>
@@ -1784,7 +1798,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     name="estimateStructure"
                     value="custom"
                     checked={estimateStructure === 'custom'}
-                    onChange={() => onSelectCustomEstimate ? onSelectCustomEstimate() : setEstimateStructure('custom')}
+                    onChange={() => onSelectCustomEstimate ? onSelectCustomEstimate() : changeEstimateStructure('custom')}
                     className="w-4 h-4 text-gray-600"
                   />
                   <div>
