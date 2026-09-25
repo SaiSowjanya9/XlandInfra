@@ -9,6 +9,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // The dropdown sits on the panel's blue tint; the dialog's own fields sit on white, so they follow
 // the slate borders the rest of the estimate forms use.
 const selectClass = 'w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500';
+// `inline` drops the panel so the dropdown can sit on a row beside another one -- on the Estimate
+// Structure row next to Select AMC Package -- rather than in a tinted box of its own.
+const inlineSelectClass = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-slate-50 disabled:text-slate-500';
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 const fieldLabel = 'block text-xs font-semibold text-slate-600';
 const currency = value => value == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
@@ -23,7 +26,7 @@ const INPUTS = {
 // rather than a delete and a re-add. `onAdd` receives the rebuilt row under the same addonId, so the
 // caller upserts rather than appends.
 const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog',
-  label = 'Configured Service', editing = null, onEditClose = () => {} }) => {
+  label = 'Configured Service', editing = null, onEditClose = () => {}, inline = false }) => {
   const [services, setServices] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [inputs, setInputs] = useState({});
@@ -162,10 +165,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     || (requiresQuote && blank(inputs.custom_quote)));
 
   return (
-    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4">
-      <label className="block max-w-md text-sm font-medium text-slate-700">
+    <div className={inline ? 'min-w-0' : 'mb-4 rounded-lg border border-blue-200 bg-blue-50/30 p-4'}>
+      <label className={inline ? 'block min-w-0 text-sm font-medium text-slate-600' : 'block max-w-md text-sm font-medium text-slate-700'}>
         {label}
-        <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving} className={`${selectClass} mt-2`}>
+        <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
+          className={`${inline ? inlineSelectClass : selectClass} ${inline ? 'mt-1.5' : 'mt-2'}`}>
           <option value="">{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : '+ Select service to add'}</option>
           {services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id)).map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}
         </select>

@@ -694,7 +694,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     ? prev.map(item => item.addonId === addon.addonId ? addon : item)
     : [...prev, addon]);
 
-  const renderCatalogPicker = () => (
+  const renderCatalogPicker = ({ inline = false } = {}) => (
     <ServiceCatalogPicker
       key={`${estimateType}-${createPropertyType}`}
       apiPath={FP_CATALOG_API}
@@ -703,6 +703,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       onAdd={upsertCatalogAddon}
       editing={editingCatalogAddon}
       onEditClose={() => setEditingCatalogAddon(null)}
+      inline={inline}
     />
   );
   // Shared by both service tables so the row actions cannot drift apart
@@ -722,10 +723,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (value === 'custom') setEstimateForm(prev => ({ ...prev, selectedPackage: '' }));
     else setCustomServices([]);
   };
-  // The package dropdown each form already had, shown on the structure row when a package applies
+  // The package dropdown each form already had, shown on the structure row when a package applies.
+  // In package mode the configured-service dropdown joins it there, so both ways of putting a service
+  // on the estimate are chosen in one place. Custom mode leaves the picker where it was, below.
   const renderStructure = (packageSelect) => (
     <EstimateStructure value={estimateStructure} onChange={changeEstimateStructure}>
-      {estimateStructure === 'package' ? packageSelect : null}
+      {estimateStructure === 'package' ? (
+        <div className="flex min-w-0 w-full flex-col gap-3 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">{packageSelect}</div>
+          <div className="min-w-0 flex-1">{renderCatalogPicker({ inline: true })}</div>
+        </div>
+      ) : null}
     </EstimateStructure>
   );
   // The hosting card already reads "Custom Services", so the table carries no heading of its own
@@ -1591,13 +1599,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
             {/* Estimate Structure: package or hand-entered services */}
             {renderStructure(
-              <div className="flex min-w-0 w-full flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                <label htmlFor="estimate-amc-package" className="text-sm font-medium text-gray-700 whitespace-nowrap">Select AMC Package <span className="text-red-500">*</span></label>
+              // Stacked, so it lines up with the configured-service dropdown beside it
+              <div className="min-w-0 w-full">
+                <label htmlFor="estimate-amc-package" className="block text-sm font-medium text-slate-600 mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
                 <select
                   id="estimate-amc-package"
                   value={estimateForm.selectedPackage}
                   onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                  className="w-full min-w-0 sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  className="w-full min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"
                 >
                   <option value="">Select a Package (e.g., Gold, Silver, Platinum)</option>
                   {(() => {
@@ -1618,7 +1627,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
                 <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + catalogAddons.length})</h3>
               </div>
-              <div className="px-5 pt-4">{renderCatalogPicker()}</div>
+              {/* Package mode shows this on the Estimate Structure row instead */}
+              {estimateStructure === 'custom' && <div className="px-5 pt-4">{renderCatalogPicker()}</div>}
               {pkgServices.length === 0 && selectedAddonRows.length === 0 && catalogAddons.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
               ) : (
@@ -2003,7 +2013,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              <div className="pt-2">{renderCatalogPicker()}</div>
+              {/* Package mode shows this on the Estimate Structure row instead */}
+              {estimateStructure === 'custom' && <div className="pt-2">{renderCatalogPicker()}</div>}
 
               {/* Additional Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (
