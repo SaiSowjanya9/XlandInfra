@@ -743,10 +743,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // one control for both, instead of the picker repeated in a panel underneath.
   const renderCustomServices = () => estimateStructure === 'custom'
     ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null}
+        extraRows={catalogAddons} renderExtraActions={catalogRowActions}
         addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
           { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
         ] })} />
     : null;
+  // In custom mode every service is listed in the Custom Services table above, so the package-side
+  // tables must not repeat the catalog rows underneath it.
+  const tableCatalogAddons = estimateStructure === 'custom' ? [] : catalogAddons;
+  const tableCatalogAddonsTotal = tableCatalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
 
   // Helper to match property type for filtering
   const matchPropertyType = (value, filterId) => {
@@ -1633,11 +1638,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             {/* Services - package services + added services in one table */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + catalogAddons.length})</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Services ({pkgServices.length + selectedAddonRows.length + tableCatalogAddons.length})</h3>
               </div>
               {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
                   from the Custom Services table's own Add Service menu */}
-              {pkgServices.length === 0 && selectedAddonRows.length === 0 && catalogAddons.length === 0 ? (
+              {pkgServices.length === 0 && selectedAddonRows.length === 0 && tableCatalogAddons.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">Select an AMC package to see its services, or add services individually</div>
               ) : (
                 <table className="w-full text-sm">
@@ -1690,7 +1695,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </tr>
                       );
                     })}
-                    {catalogAddons.map((addon, i) => (
+                    {tableCatalogAddons.map((addon, i) => (
                       <tr key={`catalog-${addon.addonId}`} className="align-top">
                         <td className="px-3 py-2.5 text-center text-gray-500">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
                         <td className="px-3 py-2.5">
@@ -1704,11 +1709,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </tr>
                     ))}
                   </tbody>
-                  {(selectedAddonRows.length > 0 || catalogAddons.length > 0) && (
+                  {(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) && (
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={5} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal + catalogAddonsTotal)}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   )}
@@ -2026,7 +2031,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   from the Custom Services table's own Add Service menu */}
 
               {/* Additional Services Table - Only show when services selected */}
-              {(estimateForm.selectedAddons.length > 0 || catalogAddons.length > 0) && (
+              {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
                 <div className="border border-blue-200 rounded-xl overflow-hidden">
                   <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
                     <span className="text-sm font-semibold text-blue-700">Additional Services</span>
@@ -2058,7 +2063,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </tr>
                         );
                       })}
-                      {catalogAddons.map(addon => (
+                      {tableCatalogAddons.map(addon => (
                         <tr key={`catalog-${addon.addonId}`} className="align-top">
                           <td className="px-3 py-2.5 text-gray-800 font-medium">{addon.name}</td>
                           <td className="px-3 py-2.5 text-gray-500 text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
@@ -2071,7 +2076,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <tfoot className="bg-blue-50 border-t border-blue-200">
                       <tr>
                         <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-700">Total Add-ons Price</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + catalogAddonsTotal)}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-blue-700">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
                       </tr>
                     </tfoot>
                   </table>
