@@ -18,7 +18,12 @@ const INPUTS = {
   manpower: ['personnel', 'Personnel count', 1]
 };
 
-const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog', label = 'Configured Service' }) => {
+// `editing` is a row already on the estimate. Passing one reopens this dialog on the service it was
+// added from, with the figures it was priced from, so changing an area or a frequency is a re-price
+// rather than a delete and a re-add. `onAdd` receives the rebuilt row under the same addonId, so the
+// caller upserts rather than appends.
+const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPath = '/api/admin/service-catalog',
+  label = 'Configured Service', editing = null, onEditClose = () => {} }) => {
   const [services, setServices] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [inputs, setInputs] = useState({});
@@ -63,14 +68,29 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       operating_cost: item.default_operating_cost ?? 0,
       ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) } : {});
   };
+  // Closing has to clear the row being edited too, or this effect would reopen the dialog on it
+  const closeDialog = () => { selectService(''); onEditClose(); };
+  // An edited row opens the dialog on its own service, prefilled with what it was priced from
+  useEffect(() => {
+    if (!editing || !services.length) return;
+    const item = services.find(value => value.id === editing.catalogServiceId);
+    if (!item) return;
+    setSelectedId(String(item.id));
+    setError('');
+    setPreview(null);
+    setRequiresQuote(Boolean(editing.pricingInputs?.custom_quote));
+    // The checkbox reflects what was actually saved: ticked only where the row left the service's schedule
+    setOverrideFrequency(Boolean(item.allow_frequency_override) && editing.frequency_type !== item.default_frequency);
+    setInputs({ ...editing.pricingInputs, frequency: editing.frequency_type, visits: editing.frequency_count });
+  }, [editing, services]);
   // Escape dismisses the dialog, the way the other estimate dialogs behave. Never mid-save: the
   // service is being priced on the server at that point.
   useEffect(() => {
     if (!service) return;
-    const onKeyDown = event => { if (event.key === 'Escape' && !saving) selectService(''); };
+    const onKeyDown = event => { if (event.key === 'Escape' && !saving) closeDialog(); };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [service, saving]);
+  }, [service, saving, editing]);
   // Quote on the server as soon as the service has what it needs, so vendor cost, XLAND cost,
   // customer price and margin fill in by themselves rather than only after adding the service.
   useEffect(() => {
@@ -126,7 +146,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
         services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }]
       });
-      selectService('');
+      closeDialog();
     } catch (error) {
       if (error.name !== 'AbortError') setError(error.message);
     } finally {
@@ -167,7 +187,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 <span>Priced per {service.unit}</span>
               </div>
             </div>
-            <button type="button" onClick={() => selectService('')} disabled={saving} aria-label="Cancel service selection"
+            <button type="button" onClick={closeDialog} disabled={saving} aria-label="Cancel service selection"
               className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"><X className="h-4 w-4" /></button>
           </div>
           {/* The scroll lives on the wrapper: a fieldset is an unreliable flex/scroll container */}
@@ -205,11 +225,11 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
             </fieldset>
           </div>
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-            <button type="button" onClick={() => selectService('')} disabled={saving}
+            <button type="button" onClick={closeDialog} disabled={saving}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
             <button type="button" onClick={addService} disabled={saving || incomplete}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}OK
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editing ? 'Save Changes' : 'OK'}
             </button>
           </div>
         </div>
