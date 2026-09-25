@@ -1022,7 +1022,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                         </tr>
                         ${lineItems.filter(i => i.type === 'addon').map((item, idx) => {
                           const details = item.details || '';
-                          const fullDesc = item.description || item.name || 'Add-on';
+                          const fullDesc = item.description || item.name || 'Service';
                           const parts = fullDesc.split(' - ');
                           const addonName = parts[0] || 'Add-on';
                           const addonDesc = details || parts.slice(1).join(' - ') || '-';

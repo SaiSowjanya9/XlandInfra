@@ -364,7 +364,7 @@ const generateEstimatePDF = async (estimate) => {
           y = 50;
         }
         
-        doc.fontSize(10).fillColor(navy).text(estimateType === 'custom' ? 'SERVICES' : 'ADD-ONS', 50, y, { continued: false });
+        doc.fontSize(10).fillColor(navy).text('SERVICES', 50, y, { continued: false });
         y += 15;
         
         // Add-ons header - separate Service and Description columns
@@ -812,7 +812,7 @@ const generateInvoicePDF = async (invoice) => {
       // ===== ADD-ONS TABLE =====
       if (!isWorkOrderInvoice && addonItems.length > 0) {
         // Section header
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('ADD-ONS', margin, y + 3, { lineBreak: false });
+        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES', margin, y + 3, { lineBreak: false });
         doc.font('Helvetica');
         y += 18;
         
