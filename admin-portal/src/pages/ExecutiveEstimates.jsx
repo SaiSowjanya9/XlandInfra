@@ -20,7 +20,9 @@ const ITEMS_PER_PAGE = 10;
 
 // Decode HTML entities (e.g., &amp;amp; -> &)
 const decodeHtml = (html) => {
-  if (!html || typeof html !== 'string') return html;
+  if (html == null) return '';
+  // Never hand a non-string to JSX: React throws #31 and the whole page goes blank
+  if (typeof html !== 'string') return typeof html === 'number' || typeof html === 'boolean' ? String(html) : '';
   // Decode multiple times to handle double/triple encoding
   let decoded = html;
   const txt = document.createElement('textarea');
