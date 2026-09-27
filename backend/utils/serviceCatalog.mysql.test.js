@@ -75,7 +75,8 @@ test('local MySQL migration is idempotent and service configuration survives a d
       assert.equal(Number(saved[0].total), result.data.summary.total);
       assert.equal(saved[0].estimate_type, 'custom');
       assert.equal(saved[0].status, 'Draft');
-      // The single details line every view modal, PDF export and email reads
+      // The internal details line every view modal and staff PDF export reads. The customer copy
+      // is the same line without the pricing method, Primary Input and Property Types.
       for (const text of ['Generator', 'Capacity Slab', 'Primary Input:', 'Capacity: 25 KVA',
         'Property Types: Apartment, Gated Community, Independent House']) {
         assert.ok(addons[0].details.includes(text), text);

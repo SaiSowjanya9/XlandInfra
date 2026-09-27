@@ -30,14 +30,32 @@ export const buildCustomService = (values, addonId) => {
   const description = String(values.description || '').trim();
   const visits = Number(values.frequency_count) || 0;
   const price = Number(values.price) || 0;
+  // Quantity, category and whether the job needs a vendor are settled per row, the same three a
+  // Quantity Based catalog service settles per estimate. Vendor is carried the way the catalog
+  // carries it -- skip_vendor_assignment -- so one flag means the same thing on every row.
+  const quantity = Number(values.quantity);
+  const category = String(values.category || '').trim();
   return {
     addonId: addonId || `CUSTOM-${Date.now()}${Math.floor(Math.random() * 1000)}`, customService: true,
     name, service_name: name, description,
     frequency_type: values.frequency_type, frequency_count: visits,
+    ...(Number.isFinite(quantity) && quantity > 0 ? { quantity } : {}),
+    ...(category ? { category } : {}),
+    skip_vendor_assignment: values.vendorRequired === false,
     totalPrice: price, price,
     services: [{ name, description, frequencyType: values.frequency_type, frequency: visits, price: visits ? price / visits : price }]
   };
 };
+
+// The values a dialog opens on: a new row starts on the defaults, an existing one on what it holds
+export const customServiceValues = row => ({
+  name: row?.name || '', description: row?.description || '',
+  category: row?.category || '', quantity: row?.quantity ?? 1,
+  frequency_type: row?.frequency_type || 'Monthly',
+  frequency_count: row?.frequency_count ?? 12,
+  price: row ? String(row.totalPrice ?? row.price ?? '') : '',
+  vendorRequired: row ? row.skip_vendor_assignment !== true : true
+});
 
 // The empty row the Custom option drops in. It has no name, which is how the table knows to open it
 // for typing, so a caller only has to append one.
@@ -63,8 +81,12 @@ const complaint = values => {
 // the estimate payload prices them differently, but they belong in this table: whichever way a
 // service was added, the estimate has one list of them, numbered straight through. They are not
 // edited inline -- their figures come from the server -- so the caller supplies their actions.
+// `onEditRow` hands editing to the caller's own dialog: where a row carries a category, a quantity
+// and a vendor answer there is more of it than a table row can hold, so it is entered in a dialog
+// and this table only lists it. Without the prop the row is still edited in place, which is what
+// the portals that add a blank row straight from the button rely on.
 export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null,
-  extraRows = [], renderExtraActions = null, theme }) {
+  extraRows = [], renderExtraActions = null, onEditRow = null, theme }) {
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);
@@ -81,12 +103,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
     setEdit({ index, values: { name: row.name, description: row.description, frequency_type: row.frequency_type,
       frequency_count: row.frequency_count, price: isBlank(row) ? '' : (row.totalPrice ?? row.price) } });
   };
-  // A row arrives blank from the Custom option, so it opens for typing without another click
+  // A row arrives blank from the Custom option, so it opens for typing without another click.
+  // Where the caller edits in its own dialog no blank row is ever appended, so this stands down.
   useEffect(() => {
-    if (edit) return;
+    if (edit || onEditRow) return;
     const index = rows.findIndex(isBlank);
     if (index >= 0) startEdit(index);
-  }, [rows, edit]);
+  }, [rows, edit, onEditRow]);
 
   // Picking a frequency fills the annual visits from the same table the catalog uses; it stays editable
   const setEditField = (field, value) => {
@@ -131,22 +154,22 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           <h3 className={`text-sm font-semibold ${skin.heading}`}>{title} ({rows.length + extraRows.length})</h3>
         </div>
       )}
-      <table className="w-full table-fixed">
+      {/* Every heading stays on one line. Two were too long to fit the column they head, so they
+          are shortened rather than wrapped -- "Visits" alone is unambiguous beside Frequency, and
+          this table shows one price, the customer's -- and the full wording is on each `title`. The
+          table keeps a minimum width and scrolls inside this wrapper, so a narrow form column
+          makes the row scroll rather than pushing two headings into each other. */}
+      <div className="overflow-x-auto">
+      <table className="w-full table-fixed min-w-[820px]">
         <thead>
-          {/* The table is fixed-width and often sits in a narrow form column, so a heading that
-              does not fit wraps onto a second line instead of running into its neighbour -- nowrap
-              on all seven had "Visits / Year" and "Customer Price (₹)" touching. Each long label
-              breaks after its first word and no further: the non-breaking spaces hold "/ Details",
-              "/ Year" and "Price (₹)" together, and align-bottom keeps one- and two-line headings
-              on the same baseline. */}
           <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
-            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center align-bottom">#</th>
-            <th className="w-[19%] whitespace-nowrap px-3 py-2.5 text-left align-bottom">Service</th>
-            <th className="w-[21%] px-3 py-2.5 text-left align-bottom">Input /&nbsp;Details</th>
-            <th className="w-[14%] whitespace-nowrap px-3 py-2.5 text-left align-bottom">Frequency</th>
-            <th className="w-[12%] px-3 py-2.5 text-center align-bottom">Visits /&nbsp;Year</th>
-            <th className="w-[18%] px-3 py-2.5 text-right align-bottom">Customer Price&nbsp;(₹)</th>
-            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center align-bottom">Action</th>
+            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center">#</th>
+            <th className="w-[20%] whitespace-nowrap px-3 py-2.5 text-left">Service</th>
+            <th className="w-[24%] whitespace-nowrap px-3 py-2.5 text-left">Description</th>
+            <th className="w-[14%] whitespace-nowrap px-3 py-2.5 text-left">Frequency</th>
+            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center" title="Visits per year">Visits</th>
+            <th className="w-[15%] whitespace-nowrap px-3 py-2.5 text-right" title="Customer price in rupees">Price (₹)</th>
+            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center">Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
@@ -201,7 +224,17 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           ) : (
             <tr key={row.addonId} className="align-top">
               <td className={`${cell} text-center ${skin.muted}`}>{index + 1}</td>
-              <td className={`${cell} break-words font-medium ${skin.strong}`}>{row.name}</td>
+              <td className={`${cell} break-words font-medium ${skin.strong}`}>
+                {row.name}
+                {/* Category, quantity and a job arranged without a vendor sit under the name: they
+                    belong to the row but do not each earn a column of their own */}
+                {(row.category || row.quantity || row.skip_vendor_assignment) && (
+                  <span className={`mt-0.5 block text-[11px] font-normal ${skin.muted}`}>
+                    {[row.category, row.quantity ? `Qty ${row.quantity}` : '', row.skip_vendor_assignment ? 'No vendor' : '']
+                      .filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </td>
               <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
@@ -209,7 +242,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5">
                 <div className="flex items-center justify-center gap-1">
-                  <button type="button" onClick={() => startEdit(index)} title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`}
+                  <button type="button" onClick={() => (onEditRow ? onEditRow(row, index) : startEdit(index))} title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`}
                     className={`${iconButton} ${skin.faint} ${skin.iconEdit}`}><Pencil className="h-4 w-4" /></button>
                   <button type="button" onClick={() => removeRow(index)} title={`Remove ${row.name}`} aria-label={`Remove ${row.name}`}
                     className={`${iconButton} ${skin.faint} hover:bg-red-50 hover:text-red-600 focus:ring-red-100`}><Trash2 className="h-4 w-4" /></button>
@@ -238,6 +271,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           </tr>
         </tfoot>}
       </table>
+      </div>
       <div className={`flex items-center justify-between gap-3 border-t px-5 py-3 ${skin.panelFoot}`}>
         <p role={problem ? 'alert' : undefined} className={`text-xs ${problem ? 'text-red-600' : 'text-transparent'}`}>{problem || '\u00a0'}</p>
         {addControl || (

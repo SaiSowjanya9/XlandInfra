@@ -9,7 +9,7 @@ const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
 const { orNull, isRecentlyAdded, formatPaymentStatus } = require('../utils/pendingProperties');
-const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('../utils/vendorlessServices');
+const { fetchVendorlessServiceNames, serviceRowNeedsVendor } = require('../utils/vendorlessServices');
 const { 
   adminOnly,
   managerOrAdmin,
@@ -417,7 +417,7 @@ router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res)
           frequency: s.frequencyType || 'Monthly',
           frequencyCount: s.frequencyCount || 1,
           visits: s.frequencyCount || 1,
-          vendorRequired: serviceNeedsVendor(serviceName, vendorlessNames),
+          vendorRequired: serviceRowNeedsVendor(s, vendorlessNames),
           vendorAssigned: !!schedule?.vendor_id,
           vendorName: schedule?.vendor_name || schedule?.vendor_owner || null,
           scheduleDate: schedule?.start_date || null,
@@ -1168,9 +1168,10 @@ router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async
             frequencyType: (s.frequencyType || s.frequency || 'monthly').toLowerCase().replace(/[\s-]/g, '_'),
             frequencyCount: s.frequencyCount || 1,
             totalVisits: s.frequencyCount || s.visits || 12,
-            // A service configured with "Do Not Assign Vendor" is arranged without one, so the
-            // scheduling screen must not hold the property open waiting for a vendor
-            vendorRequired: serviceNeedsVendor(serviceName, vendorlessNames),
+            // The row's own Vendor Required answer decides, falling back to the service's
+            // "Do Not Assign Vendor" configuration, so the scheduling screen never holds a
+            // property open waiting for a vendor it was never meant to have
+            vendorRequired: serviceRowNeedsVendor(s, vendorlessNames),
             vendorId: scheduleInfo.vendorId || vendorInfo.vendorId || null,
             vendorCode: scheduleInfo.vendorCode || vendorInfo.vendorCode || null,
             vendorName: hasVendor ? (scheduleInfo.vendorName || vendorInfo.vendorName) : 'Unassigned',

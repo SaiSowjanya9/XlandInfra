@@ -128,31 +128,48 @@ const drawPDFHeader = (doc, margin) => {
   doc.setFillColor(201, 162, 39);
   doc.rect(0, headerHeight, pageWidth, 2, 'F');
   
-  // Logo - small size
+  // The whole lockup -- logo, company name and the PVT LTD rule under it -- is measured first and
+  // then centred on the page, rather than being pinned to the left margin. PVT LTD is centred on
+  // the name above it instead of starting at the same X, which left it hanging to one side.
   const logoSize = 14;
+  const logoGap = 5;
+  const pvtLtdText = 'PVT LTD';
+  const lineLen = 4;
+  const gap = 0.3;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  const nameWidth = doc.getTextWidth('XLAND INFRA');
+  doc.setFontSize(4);
+  doc.setFont('helvetica', 'normal');
+  const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
+  const pvtWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
+
+  const textWidth = Math.max(nameWidth, pvtWidth);
+  const lockupWidth = logoSize + logoGap + textWidth;
+  // Centred, but never tighter than the page margin on a narrower page size
+  const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
+  const textCenterX = lockupX + logoSize + logoGap + textWidth / 2;
+
   try {
-    doc.addImage(XLAND_LOGO_ICON, 'PNG', margin + 2, 2, logoSize, logoSize);
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', lockupX, 2, logoSize, logoSize);
   } catch (e) {
     doc.setFillColor(...gold);
-    doc.roundedRect(margin + 2, 2, logoSize, logoSize, 1, 1, 'F');
+    doc.roundedRect(lockupX, 2, logoSize, logoSize, 1, 1, 'F');
   }
-  
-  // Company name - XLAND INFRA
-  const textX = margin + logoSize + 5;
+
+  // Company name - XLAND INFRA. The two lines sit either side of the strip's middle, so the text
+  // block reads level with the logo beside it rather than riding above it.
   doc.setTextColor(...gold);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textX, 6);
-  
-  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
+  doc.text('XLAND INFRA', textCenterX, 7.4, { align: 'center' });
+
+  // PVT LTD with a rule on each side, centred under the name
   doc.setFontSize(4);
   doc.setFont('helvetica', 'normal');
-  const pvtLtdText = 'PVT LTD';
-  const pvtLtdWidth = doc.getTextWidth(pvtLtdText);
-  const lineLen = 4;
-  const gap = 0.3;
-  const pvtStartX = textX; // Start at same X as XLAND INFRA
-  const lineY = 11; // Closer to XLAND INFRA
+  const pvtStartX = textCenterX - pvtWidth / 2;
+  const lineY = 12;
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.25);
   // Left line
@@ -160,8 +177,8 @@ const drawPDFHeader = (doc, margin) => {
   // PVT LTD text
   doc.text(pvtLtdText, pvtStartX + lineLen + gap, lineY + 0.6);
   // Right line
-  doc.line(pvtStartX + lineLen + gap + pvtLtdWidth + gap, lineY, pvtStartX + lineLen + gap + pvtLtdWidth + gap + lineLen, lineY);
-  
+  doc.line(pvtStartX + lineLen + gap + pvtLtdWidth + gap, lineY, pvtStartX + pvtWidth, lineY);
+
   return headerHeight + 8; // Return starting Y position for content
 };
 

@@ -1128,7 +1128,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
             ${servicesList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">Services</h3><table style="width: 100%; border-collapse: collapse;">${servicesHtml}</table></div>` : ''}
-            ${addonsList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">${estimateType === 'custom' ? 'Services' : 'Additional Services'}</h3><table style="width: 100%; border-collapse: collapse;">${addonsHtml}</table><p style="text-align: right; font-weight: 600;">Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}</p></div>` : ''}
+            <!-- They are simply services, however they were added, so the heading does not vary -->
+            ${addonsList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">Services</h3><table style="width: 100%; border-collapse: collapse;">${addonsHtml}</table><p style="text-align: right; font-weight: 600;">Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}</p></div>` : ''}
             
             <!-- Price Summary -->
             <div style="margin-bottom: 20px;">

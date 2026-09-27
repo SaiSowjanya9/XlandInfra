@@ -27,7 +27,7 @@ const pool = { execute: async (sql, params = []) => {
   return [rows.filter(row => !scoped || row.scope_id === 0 || row.scope_id === Number(params[0]))];
 } };
 require.cache[require.resolve('../config/database')] = { exports: { pool } };
-const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('./vendorlessServices');
+const { fetchVendorlessServiceNames, serviceNeedsVendor, serviceRowNeedsVendor } = require('./vendorlessServices');
 const { mapPendingServices } = require('./pendingProperties');
 
 test('services arranged without a vendor are resolved by name, per scope, and fail open', async () => {
@@ -67,4 +67,34 @@ test('pending property rows report which services need a vendor and which do not
   assert.equal(rows.filter(row => row.vendorRequired && !row.vendorAssigned).length, 0);
   // Without the set every service still needs a vendor, so older callers are unaffected
   assert.deepEqual(mapPendingServices(services, 7, vendorMap).map(row => row.vendorRequired), [true, true]);
+});
+
+test('the estimate row answers for itself, and falls back to the service configuration', async () => {
+  const vendorless = await fetchVendorlessServiceNames(8);
+
+  // Answered on the estimate: that answer decides, either way. The same service can need a vendor
+  // at one property and be arranged without one at another, which is why it is asked per estimate.
+  assert.equal(serviceRowNeedsVendor({ name: 'Lift Maintenance', skip_vendor_assignment: true }, vendorless), false);
+  assert.equal(serviceRowNeedsVendor({ name: 'Garden Upkeep', skip_vendor_assignment: false }, vendorless), true);
+  // A hand-entered service has no catalog behind it, so its own answer is all there is
+  assert.equal(serviceRowNeedsVendor({ name: 'Facade Cleaning', customService: true, skip_vendor_assignment: true }, vendorless), false);
+  assert.equal(serviceRowNeedsVendor({ name: 'Facade Cleaning', customService: true, skip_vendor_assignment: false }, vendorless), true);
+  // Unanswered -- every estimate saved before the question existed -- follows the service
+  assert.equal(serviceRowNeedsVendor({ name: 'Garden Upkeep' }, vendorless), false);
+  assert.equal(serviceRowNeedsVendor({ name: 'Lift Maintenance' }, vendorless), true);
+  // The scheduling module's own row shapes both carry the name
+  assert.equal(serviceRowNeedsVendor({ service: 'Garden Upkeep' }, vendorless), false);
+  assert.equal(serviceRowNeedsVendor({ serviceType: 'Garden Upkeep' }, vendorless), false);
+  // Stored as 1/0 by anything that does not keep booleans
+  assert.equal(serviceRowNeedsVendor({ name: 'Lift Maintenance', skip_vendor_assignment: 1 }, vendorless), false);
+  assert.equal(serviceRowNeedsVendor({ name: 'Garden Upkeep', skip_vendor_assignment: 0 }, vendorless), true);
+
+  // And the pending rows the scheduling pages read follow the same rule
+  const rows = mapPendingServices([
+    { service: 'Lift Maintenance', frequencyCount: 4, skip_vendor_assignment: true },
+    { service: 'Garden Upkeep', frequencyCount: 12, skip_vendor_assignment: false }
+  ], 7, new Map(), vendorless);
+  assert.deepEqual(rows.map(row => row.vendorRequired), [false, true]);
+  // The one that needs a vendor and has none is the only one still awaiting one
+  assert.equal(rows.filter(row => row.vendorRequired && !row.vendorAssigned).length, 1);
 });

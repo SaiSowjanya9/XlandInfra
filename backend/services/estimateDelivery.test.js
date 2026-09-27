@@ -21,7 +21,6 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.equal(result.success, true);
   assert.match(mail.html, /Tank &lt;Cleaning&gt;/);
   assert.match(mail.html, /Half-Yearly - 2 visits/);
-  assert.match(mail.html, /Capacity Based/);
   assert.match(mail.html, /10 KL/);
   assert.match(mail.html, /11,700.25/);
   assert.match(mail.html, /GST \(0%\)/);
@@ -34,10 +33,15 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.match(pdfText, /PROP-TEST/);
   assert.match(pdfText, /Saved address/);
   assert.doesNotMatch(pdfText, /9123.45|876.54|vendorCost|pricingSnapshot|operating_cost/);
-  // The service's own configuration reaches both the email body and its PDF attachment
-  for (const text of ['Water Management', 'Primary Input', 'Property Types: Apartment, Villa']) {
+  // What the customer reads of a service: its category and what was measured at their property
+  for (const text of ['Water Management', 'Capacity: 10 KL']) {
     assert.ok(mail.html.includes(text), `email: ${text}`);
     assert.ok(pdfText.includes(text), `pdf: ${text}`);
+  }
+  // How it is priced, the derived input and the types the service is configured for are ours
+  for (const text of ['Capacity Based', 'Primary Input', 'Property Types']) {
+    assert.ok(!mail.html.includes(text), `email leaked: ${text}`);
+    assert.ok(!pdfText.includes(text), `pdf leaked: ${text}`);
   }
   // Markup is internal, so it is in neither
   assert.doesNotMatch(mail.html + pdfText, /[Mm]arkup/);
