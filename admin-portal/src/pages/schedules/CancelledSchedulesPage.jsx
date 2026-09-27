@@ -236,7 +236,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-warm-page p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

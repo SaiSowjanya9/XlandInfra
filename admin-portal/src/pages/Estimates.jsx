@@ -212,7 +212,7 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Content Container - Single consistent wrapper */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header Card - Aligned with content below */}

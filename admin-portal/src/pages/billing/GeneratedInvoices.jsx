@@ -1103,7 +1103,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const workOrderCount = invoices.filter(i => i.invoiceType === 'work_order' && (!i.status || i.status === 'draft')).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${

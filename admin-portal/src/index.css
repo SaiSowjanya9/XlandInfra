@@ -10,7 +10,9 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f1f5f9;
+  /* The warm page colour, so anything the layouts do not cover matches them rather than showing a
+     cold strip behind. Dark screens paint over it themselves. */
+  background-color: #FAF7F2;
 }
 
 .font-gotham {

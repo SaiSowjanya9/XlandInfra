@@ -1501,7 +1501,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
       </div>
     );
@@ -1511,7 +1511,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   const timeSlots = getTimeSlots();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 ${

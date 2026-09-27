@@ -177,7 +177,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-warm-page">
 
       {/* Mobile Header */}
       <header className="lg:hidden bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/50 sticky top-0 z-40">

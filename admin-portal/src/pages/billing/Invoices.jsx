@@ -703,7 +703,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header Card */}
