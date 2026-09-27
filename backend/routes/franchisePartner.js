@@ -7,7 +7,7 @@ const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
-const { normalizeAssignVendor, applyEstimateVendorAssignments } = require('../utils/estimateScheduling');
+const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -4597,6 +4597,21 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
     try {
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN work_order_services TEXT`);
     } catch (e) { /* Column exists */ }
+    // The three columns this insert needs that only exist as migrations. The CREATE TABLE above
+    // does not list them, so a database created by that statement -- any fresh one, since
+    // ensureDatabase() makes the schema on boot -- could never take an estimate: the insert failed
+    // on "Unknown column 'assign_vendor' in 'field list'", with include_terms and terms_conditions
+    // waiting behind it. Definitions match schema_v34_estimate_assign_vendor.sql and
+    // schema_v35_estimate_terms.sql, so applying those afterwards is still a no-op.
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN assign_vendor TINYINT(1) NULL`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN include_terms TINYINT(1) NULL DEFAULT NULL`);
+    } catch (e) { /* Column exists */ }
+    try {
+      await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN terms_conditions TEXT NULL`);
+    } catch (e) { /* Column exists */ }
 
     // Whether this estimate carries Terms & Conditions, and the text the creator saw
     const estimateTerms = estimateTermsColumns(req.body);
@@ -4612,36 +4627,51 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
     // Stringify work_order_services for storage
     const workOrderServicesJson = work_order_services ? JSON.stringify(work_order_services) : null;
 
-    // Insert into fp_estimates table (no FK constraints)
+    // Insert into fp_estimates table (no FK constraints).
+    //
+    // assign_vendor only goes in where the database has it: a deployment that has not applied
+    // schema_v34_estimate_assign_vendor.sql would otherwise fail the whole create with "Unknown
+    // column 'assign_vendor' in 'field list'". The form no longer asks the question, so the value
+    // is NULL anyway, and leaving the column out stores exactly that. Same tolerance the scheduling
+    // feeds already have through assignVendorFilter().
+    const storeAssignVendor = await hasAssignVendorColumn();
+    const insertColumns = [
+      'estimate_id', 'franchise_partner_id', 'property_id', 'estimate_type',
+      'client_name', 'client_phone', 'client_email',
+      'property_name', 'property_code', 'property_type', 'zone', 'division', 'city', 'address',
+      'number_of_blocks', 'units_per_block', 'block_names', 'block_unit_types', 'total_units',
+      'tower_name', 'block_number', 'villa_plot_number',
+      'package_id', 'package_name', 'package_price', 'amc_package_description', 'package_services', 'billing_duration',
+      'subtotal', 'discount_percent', 'discount_amount', 'gst_percent', 'gst_amount', 'total_amount',
+      'addons_data', 'description', 'status',
+      'created_by_id', 'created_by_name', 'created_by_role',
+      'work_order_id', 'work_order_category', 'work_order_subcategory', 'work_order_description',
+      'work_order_priority', 'work_order_status', 'work_order_services',
+      ...(storeAssignVendor ? ['assign_vendor'] : []),
+      'include_terms', 'terms_conditions'
+    ];
+    const insertValues = [
+      estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
+      client_name || '', client_phone || '', client_email || '',
+      property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
+      safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, blockUnitTypesJson, safeNum(total_units, 0),
+      tower_name || '', block_number || '', villa_plot_number || '',
+      package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson, billing_duration || 'yearly',
+      finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
+      addonsJson, description || '', 'draft',
+      creatorId, creatorName, creatorRole,
+      work_order_id || null, work_order_category || null, work_order_subcategory || null, work_order_description || null,
+      work_order_priority || null, work_order_status || null, workOrderServicesJson,
+      ...(storeAssignVendor ? [assignVendor] : []),
+      estimateTerms.include_terms, estimateTerms.terms_conditions
+    ];
+    // Fifty columns lined up by hand is exactly where a silent shift happens, so they are counted
+    if (insertColumns.length !== insertValues.length) {
+      throw new Error(`Estimate insert built ${insertColumns.length} columns for ${insertValues.length} values`);
+    }
     const [result] = await pool.execute(
-      `INSERT INTO fp_estimates (
-        estimate_id, franchise_partner_id, property_id, estimate_type,
-        client_name, client_phone, client_email,
-        property_name, property_code, property_type, zone, division, city, address,
-        number_of_blocks, units_per_block, block_names, block_unit_types, total_units,
-        tower_name, block_number, villa_plot_number,
-        package_id, package_name, package_price, amc_package_description, package_services, billing_duration,
-        subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount,
-        addons_data, description, status,
-        created_by_id, created_by_name, created_by_role,
-        work_order_id, work_order_category, work_order_subcategory, work_order_description,
-        work_order_priority, work_order_status, work_order_services, assign_vendor,
-        include_terms, terms_conditions
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        estimateId, req.fpId, property_id || null, estimate_type || 'property_based',
-        client_name || '', client_phone || '', client_email || '',
-        property_name || '', property_code || '', property_type || '', zone || '', division || '', city || '', address || '',
-        safeNum(number_of_blocks, 1), unitsPerBlockJson, blockNamesJson, blockUnitTypesJson, safeNum(total_units, 0),
-        tower_name || '', block_number || '', villa_plot_number || '',
-        package_id || null, package_name || '', safeNum(package_price, 0), amc_package_description || '', packageServicesJson, billing_duration || 'yearly',
-        finalSubtotal, finalDiscountPercent, finalDiscountAmount, finalGstPercent, finalGstAmount, finalTotal,
-        addonsJson, description || '', 
-        creatorId, creatorName, creatorRole,
-        work_order_id || null, work_order_category || null, work_order_subcategory || null, work_order_description || null,
-        work_order_priority || null, work_order_status || null, workOrderServicesJson, assignVendor,
-        estimateTerms.include_terms, estimateTerms.terms_conditions
-      ]
+      `INSERT INTO fp_estimates (${insertColumns.join(', ')}) VALUES (${insertColumns.map(() => '?').join(', ')})`,
+      insertValues
     );
 
     // Answering Yes may also attach a vendor to each service straight away

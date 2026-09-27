@@ -24,8 +24,15 @@ export default function EstimateStructure({ value, onChange, name = 'estimateStr
             <label key={option.value}
               className={`flex min-w-[240px] flex-1 max-w-sm cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${active
                 ? skin.tileActive : skin.tileIdle}`}>
+              {/* The radio is drawn rather than left native: the browser's own ring is a dark
+                  circle that reads as a stray outline on a tinted tile. The input stays in the
+                  markup for the keyboard and for screen readers, and shows its focus on the dot. */}
               <input type="radio" name={name} value={option.value} checked={active}
-                onChange={() => onChange(option.value)} className={`mt-0.5 h-4 w-4 ${skin.control}`} />
+                onChange={() => onChange(option.value)} className="peer sr-only" />
+              <span aria-hidden="true"
+                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1 ${skin.radioRing} ${active ? skin.radioActive : skin.radioIdle}`}>
+                {active && <span className={`h-1.5 w-1.5 rounded-full ${skin.radioDot}`} />}
+              </span>
               <span className="min-w-0">
                 <span className={`block text-sm font-medium ${active ? skin.tileActiveText : skin.text}`}>{option.title}</span>
                 <span className={`mt-0.5 block text-xs ${skin.muted}`}>{option.hint}</span>

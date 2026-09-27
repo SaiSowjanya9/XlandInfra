@@ -1393,9 +1393,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
         const billingDuration = pkgSvcData?.billing_duration || selectedPkg?.billing_duration || (selectedPkg ? getPackageBillingDuration(selectedPkg) : '') || 'yearly';
         const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-warm-border rounded-[10px] text-sm leading-6 text-warm-text whitespace-pre-wrap [overflow-wrap:anywhere]';
+        // A field with nothing in it yet stays blank: it is filled from the Property ID, and the
+        // label above already says what it will hold, so an "Auto-filled" tag only added noise.
         const readOnlyValue = (value, white = false) => (
           <div className={`${readOnlyCls} ${white ? 'bg-white' : 'bg-warm-section'}`}>
-            {value === '' || value == null ? <span className="text-warm-muted">Auto-filled</span> : String(value)}
+            {value === '' || value == null ? '\u00a0' : String(value)}
           </div>
         );
         return (

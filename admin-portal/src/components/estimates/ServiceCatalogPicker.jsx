@@ -85,19 +85,47 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
     return () => { controller.abort(); quoteRequest.current?.abort(); };
   }, [apiPath, fpId, propertyType, token, attempt]);
 
-  const selectService = id => {
-    const item = services.find(value => String(value.id) === id);
-    setSelectedId(id);
+  // The row this service is already on the estimate as, if it is
+  const rowFor = item => (item ? selectedAddons.find(addon => addon.catalogServiceId === item.id) : undefined);
+
+  // Opens the dialog on a service. `row` is what it is already on the estimate as: passing one
+  // reopens the figures it was priced from, so picking a service a second time is a re-price and
+  // never a reset. Without one the service's own defaults are used.
+  const openService = (item, row) => {
+    setSelectedId(item ? String(item.id) : '');
     setError('');
-    setOverrideFrequency(false);
-    setRequiresQuote(item?.pricing_method === 'custom_quote');
     setPreview(null);
-    setOverrides({ category: categoryName(item?.category), vendorRequired: !item?.skip_vendor_assignment });
-    setInputs(item ? { frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
+    if (!item) {
+      setOverrideFrequency(false);
+      setRequiresQuote(false);
+      setOverrides({ category: '', vendorRequired: true });
+      setInputs({});
+      return;
+    }
+    if (row) {
+      setRequiresQuote(Boolean(row.pricingInputs?.custom_quote));
+      // The checkbox reflects what was actually saved: ticked only where the row left the service's schedule
+      setOverrideFrequency(Boolean(item.allow_frequency_override) && row.frequency_type !== item.default_frequency);
+      setOverrides({
+        category: categoryName(row.category) || categoryName(item.category),
+        vendorRequired: row.skip_vendor_assignment === undefined ? !item.skip_vendor_assignment : !row.skip_vendor_assignment
+      });
+      setInputs({ ...row.pricingInputs, frequency: row.frequency_type, visits: row.frequency_count });
+      return;
+    }
+    setOverrideFrequency(false);
+    setRequiresQuote(item.pricing_method === 'custom_quote');
+    setOverrides({ category: categoryName(item.category), vendorRequired: !item.skip_vendor_assignment });
+    setInputs({ frequency: item.default_frequency, visits: item.default_visits_per_year, custom_work_cost: item.custom_work_rate ?? 0,
       // Carried from the service so the quote is unchanged, but not shown or editable here: what
       // XLAND spends running the service is internal, and this dialog states only the customer price.
       operating_cost: item.default_operating_cost ?? 0,
-      ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) } : {});
+      ...(isVisitManpower(item) ? { personnel: suggestedManpower(item), overtime_hours_per_visit: 0 } : {}) });
+  };
+
+  const selectService = id => {
+    const item = services.find(value => String(value.id) === id);
+    openService(item, rowFor(item));
   };
   // Closing has to clear the row being edited too, or this effect would reopen the dialog on it
   const closeDialog = () => { selectService(''); onEditClose(); };
@@ -105,19 +133,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   useEffect(() => {
     if (!editing || !services.length) return;
     const item = services.find(value => value.id === editing.catalogServiceId);
-    if (!item) return;
-    setSelectedId(String(item.id));
-    setError('');
-    setPreview(null);
-    setRequiresQuote(Boolean(editing.pricingInputs?.custom_quote));
-    // The checkbox reflects what was actually saved: ticked only where the row left the service's schedule
-    setOverrideFrequency(Boolean(item.allow_frequency_override) && editing.frequency_type !== item.default_frequency);
-    // Reopen on what the row was saved with, not on the service's defaults
-    setOverrides({
-      category: categoryName(editing.category) || categoryName(item.category),
-      vendorRequired: editing.skip_vendor_assignment === undefined ? !item.skip_vendor_assignment : !editing.skip_vendor_assignment
-    });
-    setInputs({ ...editing.pricingInputs, frequency: editing.frequency_type, visits: editing.frequency_count });
+    if (item) openService(item, editing);
   }, [editing, services]);
   // Escape dismisses the dialog, the way the other estimate dialogs behave. Never mid-save: the
   // service is being priced on the server at that point.
@@ -248,8 +264,10 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       if (!controller.signal.aborted) setSaving(false);
     }
   };
-  // A service already on the estimate is not offered again; it is changed through its own Edit action
-  const available = services.filter(item => !selectedAddons.some(addon => addon.catalogServiceId === item.id));
+  // Every configured service stays listed, whether or not it is already on the estimate: a picker
+  // that drops what was chosen leaves the user hunting for a service that looks deleted. The ones
+  // already there are marked, and picking one reopens it for re-pricing under the same row.
+  const available = services;
   const input = service && INPUTS[service.pricing_method];
   // OK stays out of reach until the service has the figures it is priced from, so a row is never
   // added at a price the server could not work out.
@@ -282,8 +300,12 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               {!propertyType ? <p className={`px-3 py-2 text-sm ${skin.muted}`}>Select a property type first</p>
                 : available.length ? available.map(item => (
                   <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
-                    className={`block w-full truncate px-3 py-2.5 text-left text-sm transition-colors ${skin.menuItem}`}
-                    title={serviceOptionLabel(item, services)}>{serviceOptionLabel(item, services)}</button>
+                    className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors ${skin.menuItem}`}
+                    title={serviceOptionLabel(item, services)}>
+                    <span className="min-w-0 flex-1 truncate">{serviceOptionLabel(item, services)}</span>
+                    {/* Already on the estimate: still offered, and picking it reopens its figures */}
+                    {rowFor(item) && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${skin.addedBadge}`}>Added</span>}
+                  </button>
                 )) : <p className={`px-3 py-2 text-sm ${skin.muted}`}>No services for this property type.</p>}
               {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
             </div>
@@ -295,7 +317,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
             className={`${inline ? inlineSelectClass(skin) : selectClass(skin)} ${inline ? 'mt-1.5' : 'mt-2'} ${selectedId ? skin.strong : skin.faint}`}>
             <option value="" className={skin.faint}>{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service'}</option>
-            {available.map(item => <option key={item.id} value={item.id} className={skin.strong}>{serviceOptionLabel(item, services)}</option>)}
+            {/* A native option cannot carry a badge, so an added service says so in its text */}
+            {available.map(item => <option key={item.id} value={item.id} className={skin.strong}>{serviceOptionLabel(item, services)}{rowFor(item) ? ' · Added' : ''}</option>)}
           </select>
         </label>
         {!loading && !services.length && !error && <p className={`mt-2 text-xs ${skin.muted}`}>No services available for this property type.</p>}
@@ -374,7 +397,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               className={`rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50 ${skin.secondary}`}>Cancel</button>
             <button type="button" onClick={addService} disabled={saving || incomplete}
               className={`inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold text-white disabled:opacity-50 ${skin.primary}`}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editing ? 'Save Changes' : 'OK'}
+              {/* Re-pricing a service the estimate already carries is a change, not an addition */}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editing || rowFor(service) ? 'Save Changes' : 'OK'}
             </button>
           </div>
         </div>
