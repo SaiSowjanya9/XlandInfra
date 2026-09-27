@@ -481,7 +481,7 @@ const VendorDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+    <div className="min-h-screen bg-warm-page p-6 space-y-6">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${

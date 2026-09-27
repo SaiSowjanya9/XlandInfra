@@ -203,7 +203,7 @@ const QRManagement = () => {
 
   if (loading && !qrCodes.length) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500 text-sm">Loading QR Management...</p>
@@ -213,7 +213,7 @@ const QRManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 text-gray-800">
+    <div className="min-h-screen bg-warm-page text-gray-800">
       {/* Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-in text-white ${

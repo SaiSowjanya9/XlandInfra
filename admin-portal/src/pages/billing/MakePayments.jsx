@@ -687,7 +687,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading invoices...</p>
@@ -708,7 +708,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     };
 
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-warm-page">
         {/* Header */}
         <div className="bg-white px-6 py-5">
           <div className="max-w-5xl mx-auto flex items-center gap-4">
@@ -1073,7 +1073,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   // ==================== STEP 2: PAYMENT DETAILS ====================
   if (currentStep === 2 && selectedInvoice) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-warm-page">
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="max-w-5xl mx-auto flex items-center gap-4">
             <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -1622,7 +1622,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
   // ==================== STEP 1: PAYMENT METHOD SELECTION ====================
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">

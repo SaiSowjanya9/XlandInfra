@@ -7,7 +7,7 @@ const Phase2Documentation = () => {
   const [activeTab, setActiveTab] = useState('billing');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-8 px-6">
         <div className="max-w-7xl mx-auto">

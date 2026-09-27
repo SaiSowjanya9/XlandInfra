@@ -580,7 +580,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       <div className="p-4 lg:p-6 space-y-5">
         {/* FP Info Banner - Light Theme */}
         <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-xl p-4 border border-gray-200">

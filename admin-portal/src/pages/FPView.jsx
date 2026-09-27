@@ -235,7 +235,7 @@ const FPView = ({ admin }) => {
   // Render FP Selector
   if (!selectedFp) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-warm-page p-6">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-xl shadow-lg p-8">
             <div className="text-center mb-8">
@@ -499,7 +499,7 @@ const FPView = ({ admin }) => {
 
   // Main View with FP Selected
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
