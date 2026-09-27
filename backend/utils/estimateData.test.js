@@ -122,6 +122,9 @@ test('frontend display and PDF helpers use saved totals and customer-safe descri
 
 test('every pricing method describes itself with category, primary input, unit and property types', async () => {
   const { getServiceDescription, getServiceMarkup } = await import('../../admin-portal/src/utils/estimatePackageUtils.js');
+  // The label each method carries in the internal line, and which the customer copy drops
+  const METHOD_LABEL = { capacity_slab: 'Capacity Slab', area_based: 'Area Based', quantity_based: 'Quantity Based',
+    capacity_based: 'Capacity Based', manpower: 'Manpower', fixed_price: 'Fixed Price' };
   // The snapshot a saved estimate holds is the whole validated configuration plus its quote
   const snapshot = { category: 'Generator', default_markup_percentage: 30, applicable_property_types: ['APT', 'GC'] };
   const services = {
@@ -154,6 +157,13 @@ test('every pricing method describes itself with category, primary input, unit a
     assert.doesNotMatch(row.details, /markup|Markup/, method);
     const customer = customerEstimateData({ estimateType: 'custom', addons: [saved], total: 1000 });
     assert.doesNotMatch(JSON.stringify(customer), /markup|default_markup_percentage|2300/i, method);
+    // How the service is priced, its derived input and the types it is configured for stay ours,
+    // including when a saved row already carries them in its own details
+    for (const internal of [METHOD_LABEL[method], 'Primary Input', 'Property Types']) {
+      if (internal) assert.ok(!customer.addons[0].description.includes(internal), `${method}: ${internal}`);
+    }
+    // What is measured at the customer's property is theirs to read
+    assert.ok(customer.addons[0].description.includes(row.category), method);
     // Re-normalizing a saved row must not change or duplicate the line
     assert.equal(normalizeEstimateService(row).details, row.details, method);
   }

@@ -27,7 +27,8 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
-import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
 
@@ -252,6 +253,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // How the estimate is put together: a pre-built AMC package, or services entered by hand
   const [estimateStructure, setEstimateStructure] = useState('package');
   const [customServices, setCustomServices] = useState([]);
+  // { index, row }: the hand-entered service open in its dialog, index null while it is new
+  const [customServiceDraft, setCustomServiceDraft] = useState(null);
   const [viewAmcPackage, setViewAmcPackage] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [archivedTypeFilter, setArchivedTypeFilter] = useState('all');
@@ -754,13 +757,34 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // The hosting card already reads "Custom Services", so the table carries no heading of its own.
   // Its Add Service button is the catalog menu, with Custom listed above the configured services:
   // one control for both, instead of the picker repeated in a panel underneath.
+  //
+  // Custom opens its own dialog rather than dropping a blank row in the table: a hand-entered
+  // service carries a category, a quantity and a vendor answer as well as its name, schedule and
+  // price, and OK adds all of it as one row. Editing a row reopens the same dialog.
   const renderCustomServices = () => estimateStructure === 'custom'
     ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm"
         extraRows={catalogAddons} renderExtraActions={catalogRowActions}
+        onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
         addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
-          { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
+          { key: 'custom', label: 'Custom', onSelect: () => setCustomServiceDraft({ index: null, row: null }) }
         ] })} />
     : null;
+  // Open while a hand-entered service is being filled in: `index` is null for a new row
+  const renderCustomServiceDialog = () => (
+    <CustomServiceDialog
+      open={!!customServiceDraft}
+      editing={customServiceDraft?.row || null}
+      apiPath={FP_CATALOG_API}
+      theme="warm"
+      onClose={() => setCustomServiceDraft(null)}
+      onSubmit={values => {
+        const draft = customServiceDraft;
+        setCustomServices(prev => draft?.index == null
+          ? [...prev, buildCustomService(values)]
+          : prev.map((row, index) => index === draft.index ? buildCustomService(values, row.addonId) : row));
+        setCustomServiceDraft(null);
+      }} />
+  );
   // In custom mode every service is listed in the Custom Services table above, so the package-side
   // tables must not repeat the catalog rows underneath it.
   const tableCatalogAddons = estimateStructure === 'custom' ? [] : catalogAddons;
@@ -3826,6 +3850,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto mt-6">{renderContent()}</div>
+      {/* The hand-entered service dialog belongs to the page, not to one form: both the property
+          and direct forms open the same one */}
+      {renderCustomServiceDialog()}
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-[10px] shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
       
       {/* View Estimate Modal */}

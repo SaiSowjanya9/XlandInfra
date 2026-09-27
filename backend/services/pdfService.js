@@ -56,37 +56,56 @@ const drawPDFHeader = (doc, margin) => {
   // Gold bar at bottom
   doc.rect(0, headerHeight, 595, 2).fill(gold);
   
-  // Logo - small size
-  try {
-    doc.image(LOGO_PATH, margin + 3, 3, { width: 16, height: 16 });
-  } catch (logoErr) {
-    doc.roundedRect(margin + 3, 3, 16, 16, 1).fill(gold);
-  }
-  
-  // Company name - XLAND INFRA
-  const textX = margin + 24;
-  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold').text('XLAND INFRA', textX, 3);
-  
-  // PVT LTD with decorative lines - positioned below XLAND INFRA, slightly left
-  doc.fontSize(4).fillColor(gold).font('Helvetica');
-  doc.strokeColor(gold).lineWidth(0.25);
-  
-  const pvtLtdWidth = doc.widthOfString('PVT LTD');
+  // The lockup -- logo, company name and the PVT LTD rule -- is measured and then centred on the
+  // page rather than pinned to the left margin, and PVT LTD is centred on the name above it.
+  // Mirrors drawPDFHeader in admin-portal/src/utils/pdfExport.js: a downloaded estimate and an
+  // emailed one carry the same header.
+  const pageWidth = 595;
+  const logoSize = 16;
+  const logoGap = 8;
   const lineLen = 4;
   const gap = 0.5;
-  const pvtStartX = textX; // Start at same X as XLAND INFRA
-  const lineY = 14; // Closer to XLAND INFRA
-  
+
+  doc.fontSize(10).font('Helvetica-Bold');
+  const nameWidth = doc.widthOfString('XLAND INFRA');
+  doc.fontSize(4).font('Helvetica');
+  const pvtLtdWidth = doc.widthOfString('PVT LTD');
+  const pvtWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
+
+  const textWidth = Math.max(nameWidth, pvtWidth);
+  const lockupWidth = logoSize + logoGap + textWidth;
+  // Centred, but never tighter than the page margin
+  const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
+  const textX = lockupX + logoSize + logoGap;
+
+  // Logo - small size
+  try {
+    doc.image(LOGO_PATH, lockupX, 3, { width: logoSize, height: logoSize });
+  } catch (logoErr) {
+    doc.roundedRect(lockupX, 3, logoSize, logoSize, 1).fill(gold);
+  }
+
+  // Company name - XLAND INFRA, centred over the text column
+  doc.fontSize(10).fillColor(gold).font('Helvetica-Bold')
+     .text('XLAND INFRA', textX, 4, { width: textWidth, align: 'center', lineBreak: false });
+
+  // PVT LTD with a rule on each side, centred under the name
+  doc.fontSize(4).fillColor(gold).font('Helvetica');
+  doc.strokeColor(gold).lineWidth(0.25);
+
+  const pvtStartX = textX + (textWidth - pvtWidth) / 2;
+  const lineY = 15;
+
   // Left line
   doc.moveTo(pvtStartX, lineY).lineTo(pvtStartX + lineLen, lineY).stroke();
-  
+
   // PVT LTD text
-  doc.text('PVT LTD', pvtStartX + lineLen + gap, 11.5, { lineBreak: false });
-  
+  doc.text('PVT LTD', pvtStartX + lineLen + gap, lineY - 2.5, { lineBreak: false });
+
   // Right line
   const rightLineStart = pvtStartX + lineLen + gap + pvtLtdWidth + gap;
   doc.moveTo(rightLineStart, lineY).lineTo(rightLineStart + lineLen, lineY).stroke();
-  
+
   return headerHeight + 8; // Return starting Y position for content
 };
 
@@ -143,129 +162,88 @@ const generateEstimatePDF = async (estimate) => {
       // ===== HEADER - Use shared function =====
       let y = drawPDFHeader(doc, 50);
 
-      // Estimate Info - Plain layout
-      // Estimate ID
-      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('ESTIMATE NO.', 50, y);
-      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(estimateId || 'N/A', 50, y + 10);
-      
-      // Date
-      doc.fontSize(7).fillColor('#666666').font('Helvetica').text('DATE', 180, y);
-      const dateStr = createdAt ? new Date(createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-      doc.fontSize(10).fillColor(black).font('Helvetica-Bold').text(dateStr, 180, y + 10);
-      doc.font('Helvetica');
-      y += 25;
+      // ===== LAYOUT GRID =====
+      // One grid and one set of gaps for the whole document. Every label sits on one of two column
+      // edges and every value under its own label, so nothing depends on a hand-picked X again.
+      const MARGIN = 50;
+      const CONTENT_WIDTH = 495;          // 595pt page less both margins
+      const COL_GUTTER = 15;
+      const COL_WIDTH = (CONTENT_WIDTH - COL_GUTTER) / 2;
+      const COL_X = [MARGIN, MARGIN + COL_WIDTH + COL_GUTTER];
+      const LABEL_COLOR = '#6b7280';
+      const GAP = { heading: 15, row: 11, section: 20, label: 10 };
+      const pageHeight = 780;             // A4 usable height
+      const money = value => Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
-      
+      const sectionHeading = text => {
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text(text, MARGIN, y, { lineBreak: false });
+        y += GAP.heading;
+      };
 
-      // Property Details (Plain, stacked vertically)
-      const col1 = 50, col2 = 150, col3 = 300, col4 = 400;
-      
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Property Details', col1, y);
-      y += 14;
-      
-      doc.fontSize(8).font('Helvetica');
-      const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
-      
-      // Row 1: Name & Type
-      doc.fillColor('#666666').text('Name:', col1, y);
-      doc.fillColor('#666666').text('Type:', col3, y);
-      y += 10;
-      doc.fillColor('#333333').font('Helvetica-Bold');
-      if (propertyName) doc.text(decodeHtml(propertyName), col1, y);
-      if (propTypeLabel) doc.text(propTypeLabel, col3, y);
-      y += 12;
-      
-      // Row 2: Zone & Division
-      doc.font('Helvetica').fillColor('#666666').text('Zone:', col1, y);
-      if (division) doc.text('Division:', col3, y);
-      y += 10;
-      doc.fillColor('#333333').font('Helvetica-Bold');
-      if (zone) doc.text(zone, col1, y);
-      if (division) doc.text(division, col3, y);
-      y += 14;
-
-      for (const [label, value] of [['Property ID', propertyCode], ['Address', address], ['Blocks', numberOfBlocks], ['Total Units', totalUnits], ['Tower / Building', towerName], ['Block Number', blockNumber], ['Villa / Plot Number', villaPlotNumber]]) {
-        if (value === undefined || value === null || value === '') continue;
+      // A field is its label with its value underneath, both confined to one column, so a value
+      // that wraps can never run into the column beside it. Returns the height it used.
+      const drawField = (label, value, x, width) => {
         const text = decodeHtml(String(value));
-        doc.fontSize(8).font('Helvetica').fillColor('#666666').text(`${label}:`, col1, y, { width: 95 });
-        doc.fillColor('#333333').text(text, col2, y, { width: 395 });
-        y += Math.max(12, doc.heightOfString(text, { width: 395 }) + 4);
-      }
+        doc.fontSize(7.5).font('Helvetica').fillColor(LABEL_COLOR).text(label.toUpperCase(), x, y, { width, lineBreak: false });
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#333333').text(text, x, y + GAP.label, { width });
+        return GAP.label + doc.heightOfString(text, { width });
+      };
 
-      // Customer Details
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('Customer Details', col1, y);
-      y += 14;
-      
-      doc.fontSize(8).font('Helvetica');
-      
-      // Row 1: Name & Phone
-      doc.fillColor('#666666').text('Name:', col1, y);
-      doc.fillColor('#666666').text('Phone:', col3, y);
-      y += 10;
-      doc.fillColor('#333333').font('Helvetica-Bold');
-      if (customerName) doc.text(decodeHtml(customerName), col1, y);
-      if (customerPhone) doc.text(customerPhone, col3, y);
-      y += 12;
-      
-      // Row 2: Email
-      doc.font('Helvetica').fillColor('#666666').text('Email:', col1, y);
-      y += 10;
-      doc.fillColor('#333333').font('Helvetica-Bold');
-      if (customerEmail) doc.text(customerEmail, col1, y);
-      y += 12;
-      
-      // Row 3: City
-      if (city) {
-        doc.font('Helvetica').fillColor('#666666').text('City:', col1, y);
-        y += 10;
-        doc.fillColor('#333333').font('Helvetica-Bold').text(city, col1, y);
-        y += 12;
-      }
-      
-      y += 10;
+      // Two fields to a line, always on the same two column edges. A field with nothing in it is
+      // skipped without leaving a gap, and the line is as tall as its taller side.
+      const fieldRow = (left, right) => {
+        const filled = value => value !== undefined && value !== null && value !== '';
+        let used = 0;
+        if (filled(left?.[1])) used = Math.max(used, drawField(left[0], left[1], COL_X[0], COL_WIDTH));
+        if (filled(right?.[1])) used = Math.max(used, drawField(right[0], right[1], COL_X[1], COL_WIDTH));
+        if (used) y += used + GAP.row;
+      };
 
-      // Work Order Details (only for work order estimates) - 2x2 Grid layout
+      // A value too long for half the page -- an address, a note -- spans both columns
+      const wideField = (label, value) => {
+        if (value === undefined || value === null || value === '') return;
+        y += drawField(label, value, MARGIN, CONTENT_WIDTH) + GAP.row;
+      };
+
+      const dateStr = new Date(createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+      fieldRow(['Estimate No.', estimateId || 'N/A'], ['Date', dateStr]);
+      y += GAP.section - GAP.row;
+
+      const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
+
+      sectionHeading('Property Details');
+      fieldRow(['Name', propertyName], ['Type', propTypeLabel]);
+      fieldRow(['Zone', zone], ['Division', division]);
+      fieldRow(['Property ID', propertyCode], ['City', city]);
+      fieldRow(['Blocks', numberOfBlocks], ['Total Units', totalUnits]);
+      fieldRow(['Tower / Building', towerName], ['Block Number', blockNumber]);
+      fieldRow(['Villa / Plot Number', villaPlotNumber], null);
+      wideField('Address', address);
+      y += GAP.section - GAP.row;
+
+      sectionHeading('Customer Details');
+      fieldRow(['Name', customerName], ['Phone', customerPhone]);
+      fieldRow(['Email', customerEmail], null);
+      y += GAP.section - GAP.row;
+
+      // Work Order Details (only for work order estimates) - same two columns as the sections above
       if (isWorkOrderEstimate && workOrderId) {
-        doc.rect(50, y, 500, 55).fill('#e8f4fc').stroke('#cce7f7');
-        doc.fontSize(10).fillColor(navy).text('Work Order Details', 60, y + 8);
-        
-        // 2x2 grid layout - labels and values inline
-        const leftCol = 60, rightCol = 300;
-        const row1Y = y + 25;
-        const row2Y = y + 40;
-        
-        // Row 1: Work Order ID | Category - all values in black
-        doc.fontSize(8).fillColor('#666666');
-        doc.text('Work Order ID:', leftCol, row1Y);
-        doc.fillColor('#333333').text(String(workOrderId || '-'), leftCol + 75, row1Y);
-        
-        doc.fillColor('#666666');
-        doc.text('Category:', rightCol, row1Y);
-        doc.fillColor('#333333').text(String(workOrderCategory || '-'), rightCol + 55, row1Y);
-        
-        // Row 2: Subcategory | Priority
-        doc.fillColor('#666666');
-        doc.text('Subcategory:', leftCol, row2Y);
-        doc.fillColor('#333333').text(String(workOrderSubcategory || '-'), leftCol + 75, row2Y);
-        
-        doc.fillColor('#666666');
-        doc.text('Priority:', rightCol, row2Y);
-        doc.fillColor('#333333').text(String(workOrderPriority || '-').toUpperCase(), rightCol + 55, row2Y);
-        
-        y += 63;
+        sectionHeading('Work Order Details');
+        fieldRow(['Work Order ID', workOrderId], ['Category', workOrderCategory]);
+        fieldRow(['Subcategory', workOrderSubcategory], ['Priority', String(workOrderPriority || '').toUpperCase()]);
+        y += GAP.section - GAP.row;
       }
 
-      // Package Description - dynamic height based on content
+      // Package Description - the panel is as tall as the text measures, not a guess from its length
       if (amcPackageDescription) {
         const decodedPkgDesc = decodeHtml(amcPackageDescription);
-        doc.fontSize(10).fillColor(navy).text('PACKAGE DESCRIPTION', 50, y);
-        y += 15;
-        // Calculate height needed for description (approx 12 chars per line at font size 8)
-        const descLines = Math.ceil(decodedPkgDesc.length / 70);
-        const descBoxHeight = Math.min(Math.max(descLines * 12 + 16, 50), 150); // Min 50, max 150
-        doc.rect(50, y, 500, descBoxHeight).fill(lightGray).stroke('#e0e0e0');
-        doc.fontSize(8).fillColor('#444444').text(decodedPkgDesc, 60, y + 8, { width: 480, height: descBoxHeight - 12 });
-        y += descBoxHeight + 10;
+        sectionHeading('Package Description');
+        doc.fontSize(8).font('Helvetica');
+        const boxHeight = doc.heightOfString(decodedPkgDesc, { width: CONTENT_WIDTH - 20, lineGap: 2 }) + 16;
+        if (y + boxHeight > pageHeight) { doc.addPage(); y = MARGIN; }
+        doc.rect(MARGIN, y, CONTENT_WIDTH, boxHeight).fill(lightGray).stroke('#e0e0e0');
+        doc.fontSize(8).fillColor('#444444').text(decodedPkgDesc, MARGIN + 10, y + 8, { width: CONTENT_WIDTH - 20, lineGap: 2 });
+        y += boxHeight + GAP.section;
       }
 
       // Services rows - ensure it's an array
@@ -278,65 +256,67 @@ const generateEstimatePDF = async (estimate) => {
         }
       }
       if (!Array.isArray(svcList)) svcList = [];
-      const pageHeight = 780; // A4 usable height
-      
+
+      // ===== SERVICES TABLE =====
+      // Both service lists share one renderer: the columns add up to the content width, every cell
+      // carries the same padding, a row is as tall as its tallest cell actually measures rather
+      // than a guess from character count, and the header repeats when a table crosses a page.
+      const TABLE_COLS = [
+        { label: '#', width: 26, align: 'left' },
+        { label: 'Service', width: 125, align: 'left' },
+        { label: 'Description', width: 214, align: 'left' },
+        { label: 'Frequency', width: 85, align: 'left' },
+        { label: 'Visits', width: 45, align: 'right' }
+      ];
+      const CELL_PAD = 8;
+      const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
+      const cellWidth = index => TABLE_COLS[index].width - CELL_PAD * 2;
+
+      const drawTableHeader = () => {
+        doc.rect(MARGIN, y, CONTENT_WIDTH, 20).fill(navy);
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff');
+        TABLE_COLS.forEach((col, index) => doc.text(col.label, COL_EDGES[index] + CELL_PAD, y + 6.5,
+          { width: cellWidth(index), align: col.align, lineBreak: false }));
+        y += 20;
+      };
+
+      const drawServicesTable = rows => {
+        drawTableHeader();
+        rows.forEach((row, index) => {
+          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits)];
+          doc.fontSize(8).font('Helvetica');
+          const height = Math.max(24, ...cells.map((text, column) =>
+            doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
+          if (y + height > pageHeight) { doc.addPage(); y = MARGIN; drawTableHeader(); }
+          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fill(index % 2 === 0 ? lightGray : '#ffffff');
+          doc.fontSize(8).font('Helvetica').fillColor('#333333');
+          cells.forEach((text, column) => doc.text(String(text), COL_EDGES[column] + CELL_PAD, y + CELL_PAD,
+            { width: cellWidth(column), align: TABLE_COLS[column].align }));
+          y += height;
+        });
+        y += GAP.row;
+      };
+
+      const tableRow = item => ({
+        name: decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
+        details: decodeHtml(item.details || item.description || item.service_description || '-') || '-',
+        frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
+        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1
+      });
+
       // Only show Services Table for NON-work order estimates
       const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
       const isWOEstimate = isWorkOrderEstimate || hasWorkOrderId || estimateType === 'work_order';
       
-      // Billing Duration - left side, before services
+      // Billing Duration - on the grid, like every other field
       const billingValue = billingDuration || billing_duration || 'Yearly';
       const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-      doc.fontSize(9).fillColor('#666666').text('Billing:', 50, y, { lineBreak: false });
-      doc.fillColor('#333333').font('Helvetica-Bold').text(formattedBilling, 85, y, { lineBreak: false });
-      doc.font('Helvetica');
-      y += 12;
-      
+      fieldRow(['Billing', formattedBilling], null);
+      y += GAP.section - GAP.row;
+
       if (!isWOEstimate && svcList.length > 0) {
-        doc.fontSize(10).fillColor(navy).text('SERVICES INCLUDED', 50, y, { continued: false });
-        y += 15;
-        
-        // Table header - separate Service and Description columns
-        doc.rect(50, y, 500, 20).fill('#1e3a5f');
-        doc.fontSize(8).fillColor('#ffffff');
-        doc.text('#', 55, y + 6, { continued: false });
-        doc.text('Service', 72, y + 6, { continued: false });
-        doc.text('Description', 155, y + 6, { continued: false });
-        doc.text('Frequency', 420, y + 6, { continued: false });
-        doc.text('Visits', 500, y + 6, { continued: false });
-        y += 20;
-
-        const descColWidthEst = 255; // Increased width for description
-        svcList.forEach((s, idx) => {
-          // Use s.details as fallback for full description (backend stores it separately)
-          const svcDesc = decodeHtml(s.details || s.description || s.service_description) || '-';
-          // Calculate row height based on description length (approx 50 chars per line with new width)
-          const descLines = Math.ceil(svcDesc.length / 50);
-          const rowHeight = Math.max(22, descLines * 11);
-          
-          // Check if we need a new page
-          if (y + rowHeight > pageHeight) {
-            doc.addPage();
-            y = 50;
-          }
-          
-          const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-          doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
-          doc.fontSize(8).fillColor('#333333');
-          doc.text(String(idx + 1), 55, y + 6, { continued: false });
-          const svcName = decodeHtml(s.name || s.service || 'Service');
-          doc.text(svcName, 72, y + 6, { width: 78, continued: false });
-          // Full description with proper width for wrapping
-          doc.text(svcDesc, 155, y + 6, { width: descColWidthEst, height: rowHeight - 8, continued: false });
-          const freqCount = s.frequencyCount ?? s.frequency_count ?? 1;
-          let freqType = s.frequencyType || s.frequency_type || 'Monthly';
-          freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 420, y + 6, { continued: false });
-          doc.text(String(freqCount), 500, y + 6, { continued: false });
-          y += rowHeight;
-        });
-
-        y += 10;
+        sectionHeading('Services Included');
+        drawServicesTable(svcList.map(tableRow));
       }
 
       // Add-ons Table (if any) - ensure it's an array
@@ -352,70 +332,20 @@ const generateEstimatePDF = async (estimate) => {
       if (!Array.isArray(addonList)) addonList = [];
       // Skip for Work Order Estimates
       if (!isWOEstimate && addonList.length > 0) {
-        // Calculate first row height to ensure header + at least one row fit together
-        const firstAddonDesc = addonList[0]?.description || '-';
-        const firstRowLines = Math.ceil(firstAddonDesc.length / 40);
-        const firstRowHeight = Math.max(22, firstRowLines * 11);
-        const headerHeight = 35; // Title (15) + Table header (20)
-        
-        // Check if header + first row need new page (keep them together)
-        if (y + headerHeight + firstRowHeight > pageHeight) {
-          doc.addPage();
-          y = 50;
-        }
-        
-        doc.fontSize(10).fillColor(navy).text('SERVICES', 50, y, { continued: false });
-        y += 15;
-        
-        // Add-ons header - separate Service and Description columns
-        doc.rect(50, y, 500, 20).fill('#1e3a5f');
-        doc.fontSize(8).fillColor('#ffffff');
-        doc.text('#', 55, y + 6, { continued: false });
-        doc.text('Service', 75, y + 6, { continued: false });
-        doc.text('Description', 190, y + 6, { width: 200, align: 'center', continued: false });
-        doc.text('Frequency', 400, y + 6, { continued: false });
-        doc.text('Visits', 490, y + 6, { continued: false });
-        y += 20;
+        // The heading and its first row stay together rather than splitting across a page
+        doc.fontSize(8).font('Helvetica');
+        const firstRow = tableRow(addonList[0]);
+        const firstHeight = Math.max(24, doc.heightOfString(firstRow.details, { width: cellWidth(2) }) + CELL_PAD * 2);
+        if (y + GAP.heading + 20 + firstHeight > pageHeight) { doc.addPage(); y = MARGIN; }
 
-        addonList.forEach((a, idx) => {
-          // Use a.details as fallback for full description (backend stores it separately)
-          const addonDesc = decodeHtml(a.details || a.description || a.service_description) || '-';
-          // Calculate row height based on description length (approx 40 chars per line)
-          const descLines = Math.ceil(addonDesc.length / 40);
-          const rowHeight = Math.max(22, descLines * 11);
-          
-          // Check if we need a new page (skip check for first row - already handled above)
-          if (idx > 0 && y + rowHeight > pageHeight) {
-            doc.addPage();
-            y = 50;
-          }
-          
-          const rowColor = idx % 2 === 0 ? '#f8f9fa' : '#ffffff';
-          doc.rect(50, y, 500, rowHeight).fill(rowColor).stroke('#e0e0e0');
-          doc.fontSize(8).fillColor('#333333');
-          doc.text(String(idx + 1), 55, y + 6, { continued: false });
-          // Handle all possible addon name fields
-          const addonName = decodeHtml(a.name || a.service_name || a.serviceName || a.service || 'Service');
-          doc.text(addonName, 75, y + 6, { width: 110, continued: false });
-          // Full description with height constraint to prevent page overflow
-          doc.text(addonDesc, 190, y + 6, { width: 200, height: rowHeight - 8, align: 'center', continued: false });
-          // Handle all possible frequency field names (frequency, frequency_type, frequencyType)
-          const freqCount = a.frequency_count ?? a.frequencyCount ?? a.visits ?? a.quantity ?? 1;
-          let freqType = a.frequency_type || a.frequencyType || a.frequency || 'Monthly';
-          freqType = freqType.replace(/^\d+x\s*/i, '');
-          doc.text(freqType, 400, y + 6, { continued: false });
-          doc.text(String(freqCount), 490, y + 6, { continued: false });
-          y += rowHeight;
-        });
+        sectionHeading('Services');
+        drawServicesTable(addonList.map(tableRow));
 
-        y += 10;
-      }
-
-      if (!isWOEstimate && addonList.length) {
-        if (y + 20 > pageHeight) { doc.addPage(); y = 50; }
+        if (y + 20 > pageHeight) { doc.addPage(); y = MARGIN; }
         const addonsTotal = addonList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0);
-        doc.fontSize(9).font('Helvetica-Bold').fillColor(navy).text(`Total Services Price: Rs. ${addonsTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, 50, y);
-        y += 18;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor(navy)
+           .text(`Total Services Price: Rs. ${money(addonsTotal)}`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
+        y += GAP.section;
       }
 
       // Check if Price Summary needs new page
@@ -424,66 +354,51 @@ const generateEstimatePDF = async (estimate) => {
         y = 50;
       }
       
-      // Price Summary - Plain layout
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('PRICE SUMMARY', 50, y, { continued: false });
-      y += 12;
-      
-      const priceCol1 = 50;
-      const priceCol2 = 130;
-      
-      // Subtotal
-      doc.fontSize(9).fillColor('#666666').font('Helvetica').text('Subtotal:', priceCol1, y);
-      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeSubtotal.toLocaleString()}`, priceCol2, y);
-      y += 10;
-      
-      // Discount
-      if (safeDiscount > 0 || safeDiscountAmount > 0) {
-        doc.fillColor('#666666').font('Helvetica').text(`Discount (${safeDiscount}%):`, priceCol1, y);
-        doc.fillColor('#333333').font('Helvetica-Bold').text(`-Rs. ${safeDiscountAmount.toLocaleString()}`, priceCol2, y);
-        y += 10;
-      }
-      
-      // GST
-      doc.fillColor('#666666').font('Helvetica').text(`GST (${safeGstPercent}%):`, priceCol1, y);
-      doc.fillColor('#333333').font('Helvetica-Bold').text(`Rs. ${safeTax.toLocaleString()}`, priceCol2, y);
-      y += 12;
-      
-      // Total
-      doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TOTAL:', priceCol1, y);
-      doc.text(`Rs. ${safeTotal.toLocaleString()}`, priceCol2, y);
-      doc.font('Helvetica');
-      y += 15;
+      // ===== PRICE SUMMARY =====
+      // A money block reads down its own right edge: the figures line up on one edge, the labels on
+      // another, and the total is ruled off above so it is the last thing the eye lands on.
+      sectionHeading('Price Summary');
 
-      // Notes/Description - Plain
+      const SUMMARY_WIDTH = 230;
+      const SUMMARY_X = MARGIN + CONTENT_WIDTH - SUMMARY_WIDTH;
+      const SUMMARY_LABEL_WIDTH = 120;
+      const summaryLine = (label, value, strong = false) => {
+        doc.fontSize(strong ? 10 : 9).font(strong ? 'Helvetica-Bold' : 'Helvetica').fillColor(strong ? navy : LABEL_COLOR)
+           .text(label, SUMMARY_X, y, { width: SUMMARY_LABEL_WIDTH, lineBreak: false });
+        doc.font('Helvetica-Bold').fillColor(strong ? navy : '#333333')
+           .text(value, SUMMARY_X + SUMMARY_LABEL_WIDTH, y, { width: SUMMARY_WIDTH - SUMMARY_LABEL_WIDTH, align: 'right', lineBreak: false });
+        y += strong ? 17 : 14;
+      };
+
+      summaryLine('Subtotal', `Rs. ${money(safeSubtotal)}`);
+      if (safeDiscount > 0 || safeDiscountAmount > 0) summaryLine(`Discount (${safeDiscount}%)`, `- Rs. ${money(safeDiscountAmount)}`);
+      summaryLine(`GST (${safeGstPercent}%)`, `Rs. ${money(safeTax)}`);
+      doc.strokeColor('#e0e0e0').lineWidth(0.5).moveTo(SUMMARY_X, y + 1).lineTo(MARGIN + CONTENT_WIDTH, y + 1).stroke();
+      y += 7;
+      summaryLine('TOTAL', `Rs. ${money(safeTotal)}`, true);
+      doc.font('Helvetica');
+      y += GAP.section - 17;
+
+      // Notes/Description
       if (description) {
-        if (y + 30 > pageHeight) {
-          doc.addPage();
-          y = 50;
-        }
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('NOTES', 50, y, { continued: false });
-        y += 12;
-        doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), 50, y, { width: 500, lineGap: 3, continued: false });
-        y += 30;
+        if (y + 40 > pageHeight) { doc.addPage(); y = MARGIN; }
+        sectionHeading('Notes');
+        doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), MARGIN, y, { width: CONTENT_WIDTH, lineGap: 3 });
+        y += doc.heightOfString(decodeHtml(description), { width: CONTENT_WIDTH, lineGap: 3 }) + GAP.section;
       }
 
       // Terms & Conditions - last section, and only when the estimate carries them
       const termsLines = estimateTermsLines({ includeTerms, termsConditions: estimate.termsConditions });
       if (termsLines.length) {
-        if (y + 40 > pageHeight) {
-          doc.addPage();
-          y = 50;
-        }
-        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TERMS & CONDITIONS', 50, y, { continued: false });
-        y += 14;
+        if (y + 40 > pageHeight) { doc.addPage(); y = MARGIN; }
+        doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TERMS & CONDITIONS', MARGIN, y, { lineBreak: false });
+        y += GAP.heading;
         doc.fontSize(8).fillColor('#333333').font('Helvetica');
         termsLines.forEach((line, index) => {
           const text = `${index + 1}. ${decodeHtml(line)}`;
-          const height = doc.heightOfString(text, { width: 490, lineGap: 2 });
-          if (y + height > pageHeight) {
-            doc.addPage();
-            y = 50;
-          }
-          doc.text(text, 60, y, { width: 490, lineGap: 2, continued: false });
+          const height = doc.heightOfString(text, { width: CONTENT_WIDTH, lineGap: 2 });
+          if (y + height > pageHeight) { doc.addPage(); y = MARGIN; }
+          doc.text(text, MARGIN, y, { width: CONTENT_WIDTH, lineGap: 2, continued: false });
           y += height + 4;
         });
       }

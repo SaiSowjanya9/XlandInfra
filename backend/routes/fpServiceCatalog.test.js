@@ -27,6 +27,9 @@ const pool = { execute: async (sql, params = []) => {
   }
   if (sql.includes('FROM admin_categories')) return [[]];
   if (sql.includes('JSON_EXTRACT(configuration')) return [[{ name: 'Rope Access' }]];
+  // A category typed on a hand-entered estimate service is stored on the estimate, so the
+  // estimates are a category source too
+  if (sql.includes('JSON_TABLE(fp_estimates.addons_data')) return [[{ name: 'Building Exterior' }]];
   if (sql.includes('FROM franchise_partners')) return [[{ id: params[0], is_active: 1 }]];
   if (sql.includes('FROM fp_employees')) return [[{ id: params[0], is_active: 1, franchise_partner_id: 8 }]];
   if (sql.includes('FROM users')) return [[{ id: params[0], is_active: 1 }]];
@@ -73,6 +76,7 @@ test('FPs configure services in their own scope only, and estimates are re-price
   assert.equal((await request('/catalog?fpId=9')).status, 403);
   const suggestions = (await request('/catalog/categories')).data.map(category => category.name);
   assert.ok(suggestions.includes('Generator'), 'the shared categories are offered');
+  assert.ok(suggestions.includes('Building Exterior'), 'a category typed on a hand-entered service comes back');
   assert.ok(suggestions.includes('Rope Access'), 'a category typed on a saved service comes back as a suggestion');
   assert.equal(new Set(suggestions.map(name => name.toLowerCase())).size, suggestions.length, 'suggestions are de-duplicated');
   // FPs author their own services; staff and other scopes cannot
@@ -166,4 +170,23 @@ test('FPs configure services in their own scope only, and estimates are re-price
     addons: [{ ...manual, totalPrice: -5, price: -5 }], subtotal: -5, total_amount: -5 })).status, 400, 'a negative price is refused');
   assert.equal((await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
     addons: [manual], subtotal: 1, total_amount: 1 })).status, 400, 'a total that does not add up is refused');
+
+  // A hand-entered service also settles its quantity, its category and whether the job needs a
+  // vendor. All three are kept on the saved row, so the estimate reads back what was entered.
+  const detailed = await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+    addons: [{ ...manual, quantity: 4, category: 'Building Exterior', skip_vendor_assignment: true }],
+    subtotal: 8000, discount_percent: 0, gst_percent: 0, total_amount: 8000 });
+  assert.equal(detailed.status, 200);
+  assert.equal(detailed.data.addons[0].quantity, 4);
+  assert.equal(detailed.data.addons[0].category, 'Building Exterior');
+  assert.equal(detailed.data.addons[0].skip_vendor_assignment, true);
+  // Left unanswered, a vendor is still expected and no quantity or category is invented
+  assert.equal(customOnly.data.addons[0].skip_vendor_assignment, false);
+  assert.equal(customOnly.data.addons[0].quantity, undefined);
+  assert.equal(customOnly.data.addons[0].category, undefined);
+  // Both are bounded like every other field
+  for (const bad of [{ quantity: 0 }, { quantity: 2.5 }, { category: 'x'.repeat(101) }]) {
+    assert.equal((await request('/fp-estimate', 'POST', { estimate_type: 'direct', property_type: 'APT',
+      addons: [{ ...manual, ...bad }], subtotal: 8000, total_amount: 8000 })).status, 400, JSON.stringify(bad));
+  }
 });

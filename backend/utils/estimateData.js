@@ -13,6 +13,22 @@ const list = value => {
 const firstList = (...values) => values.map(list).find(items => Array.isArray(items) && items.length) || [];
 const METHODS = { fixed_price: 'Fixed Price', quantity_based: 'Quantity Based', area_based: 'Area Based', capacity_based: 'Capacity Based', capacity_slab: 'Capacity Slab', manpower: 'Manpower', fixed_visit_custom: 'Fixed Visit + Custom Work', custom_quote: 'Custom Quote' };
 
+/**
+ * Three parts of a service's description are ours, not the customer's: the pricing method it is
+ * billed by, the derived Primary Input, and the property types the service is configured for. A
+ * customer reads the service, its schedule, and what was measured at their own property.
+ *
+ * It filters the finished string rather than composing a second one, so an estimate saved with the
+ * segments already in its `details` is cleaned on the way out too. Mirrors customerServiceDetails
+ * in admin-portal/src/utils/estimatePackageUtils.js.
+ */
+const METHOD_LABELS = new Set(Object.values(METHODS));
+const INTERNAL_SEGMENT = /^(Primary Input|Property Types)\s*:/;
+const customerLine = line => line.split(' | ')
+  .filter(part => !METHOD_LABELS.has(part.trim()) && !INTERNAL_SEGMENT.test(part.trim()))
+  .join(' | ');
+const customerServiceDetails = text => String(text ?? '').split('\n').map(customerLine).filter(line => line.trim()).join('\n');
+
 const normalizeEstimateService = value => {
   const row = value && typeof value === 'object' ? value : { price: typeof value === 'number' ? value : 0, name: typeof value === 'string' ? value : 'Service' };
   const snapshot = parse(row.pricingSnapshot) || {};
@@ -79,7 +95,8 @@ const normalizeEstimateService = value => {
   // holding the codes the validator and the pricing quote expect
   return { ...row, name, category, propertyTypeLabels: propertyTypes,
     primaryInput, markupPercentage: markupPercentage == null ? undefined : amount(markupPercentage),
-    description, details, serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
+    // The staff portals read `details`; anything the customer sees reads `customerDetails`
+    description, details, customerDetails: customerServiceDetails(details), serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
     frequencyCount, frequency_count: frequencyCount, price, totalPrice: price };
 };
 
@@ -115,7 +132,7 @@ const normalizeEstimateData = row => {
 
 const customerEstimateData = source => {
   const row = normalizeEstimateData(source);
-  const service = item => ({ name: item.name, description: item.details, frequencyType: item.frequencyType,
+  const service = item => ({ name: item.name, description: item.customerDetails, frequencyType: item.frequencyType,
     frequencyCount: item.frequencyCount, frequency_type: item.frequencyType, frequency_count: item.frequencyCount, price: item.price, totalPrice: item.totalPrice });
   const result = Object.fromEntries(['estimateId', 'estimateType', 'customerName', 'customerEmail', 'customerPhone', 'propertyName', 'propertyType', 'propertyCode',
     'zone', 'division', 'city', 'address', 'subtotal', 'total', 'validUntil', 'createdAt', 'description', 'packagePrice', 'gstPercent', 'discountAmount',
@@ -162,9 +179,23 @@ const normalizeManualService = addon => {
   if (!Number.isSafeInteger(visits) || visits < 0 || visits > 366) fail(`Enter a whole number of visits for ${name}, up to 366.`);
   const frequencyType = String(first(addon.frequency_type, addon.frequencyType, 'One-time'));
   if (frequencyType.length > 50) fail(`Enter a valid frequency for ${name}.`);
+  // A hand-entered service settles the same three things a Quantity Based catalog service settles
+  // per estimate: how many of it, which category it is booked under, and whether the job needs a
+  // vendor at all. They are bounded here like every other field, and dropped when not given.
+  const rawQuantity = first(addon.quantity, addon.qty);
+  const quantity = rawQuantity === undefined ? undefined : Number(rawQuantity);
+  if (quantity !== undefined && (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 999999)) {
+    fail(`Enter the quantity for ${name} as a whole number between 1 and 999,999.`);
+  }
+  const category = String(first(addon.category, '') ?? '').trim();
+  if (category.length > 100) fail(`The category for ${name} must be 100 characters or fewer.`);
   return { addonId: String(addon.addonId || '').startsWith('CUSTOM-') ? addon.addonId : `CUSTOM-${name}`,
     customService: true, name, service_name: name, description,
     frequency_type: frequencyType, frequency_count: visits, totalPrice: price, price,
+    ...(quantity === undefined ? {} : { quantity }),
+    ...(category ? { category } : {}),
+    // Absent means a vendor is expected, which is what every estimate saved before this did
+    skip_vendor_assignment: addon.skip_vendor_assignment === true,
     services: [{ name, description, frequencyType, frequency: visits, price: visits ? price / visits : price }] };
 };
 
@@ -193,4 +224,4 @@ const catalogEstimateOverrides = (addon, config) => {
 
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService, catalogEstimateOverrides };
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService, catalogEstimateOverrides };

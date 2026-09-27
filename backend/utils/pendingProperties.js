@@ -10,7 +10,7 @@
 
 const { pool } = require('../config/database');
 const { assignVendorFilter } = require('./estimateScheduling');
-const { fetchVendorlessServiceNames, serviceNeedsVendor } = require('./vendorlessServices');
+const { fetchVendorlessServiceNames, serviceNeedsVendor, serviceRowNeedsVendor } = require('./vendorlessServices');
 
 // A property is badged "New" only while it is genuinely new
 const NEW_PROPERTY_WINDOW_DAYS = 3;
@@ -141,9 +141,10 @@ const mapPendingServices = (services, propertyId, vendorMap, vendorlessNames = n
       frequency: s.frequencyType || s.frequency || null,
       frequencyCount: s.frequencyCount || 1,
       visits: s.frequencyCount || 1,
-      // A service configured with "Do Not Assign Vendor" is arranged without one, so it is
-      // never counted as awaiting a vendor and never scheduled
-      vendorRequired: serviceNeedsVendor(name, vendorlessNames),
+      // The row's own Vendor Required answer decides, falling back to the service's
+      // "Do Not Assign Vendor" configuration: either way a service arranged without a vendor is
+      // never counted as awaiting one and never scheduled
+      vendorRequired: serviceRowNeedsVendor(s, vendorlessNames),
       vendorAssigned: !!vendorInfo.vendorId,
       vendorName: vendorInfo.vendorName || null,
       scheduleDate: vendorInfo.scheduleDate || null,

@@ -50,4 +50,21 @@ const fetchVendorlessServiceNames = async (fpId = null) => {
 const serviceNeedsVendor = (serviceName, vendorlessNames) =>
   !(vendorlessNames instanceof Set) || !vendorlessNames.has(key(serviceName));
 
-module.exports = { fetchVendorlessServiceNames, serviceNeedsVendor };
+/**
+ * Whether one service **on an estimate** needs a vendor, which is what the scheduling feeds ask.
+ *
+ * Vendor Required is settled per estimate on a Quantity Based service and on a hand-entered one,
+ * and such a row carries the answer as `skip_vendor_assignment`. That answer wins, in both
+ * directions: it is the whole point of asking per estimate, since the same service can need a
+ * vendor at one property and be arranged without one at another. Only a row that never answered
+ * falls back to the service's own "Do Not Assign Vendor" configuration, which is how every
+ * estimate saved before the question existed keeps behaving.
+ */
+const serviceRowNeedsVendor = (row, vendorlessNames) => {
+  const answered = row?.skip_vendor_assignment;
+  if (answered === true || answered === 1 || answered === 'true' || answered === '1') return false;
+  if (answered === false || answered === 0 || answered === 'false' || answered === '0') return true;
+  return serviceNeedsVendor(row?.service ?? row?.name ?? row?.serviceType, vendorlessNames);
+};
+
+module.exports = { fetchVendorlessServiceNames, serviceNeedsVendor, serviceRowNeedsVendor };
