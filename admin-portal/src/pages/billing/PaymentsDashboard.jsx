@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import ChartLegend from '../../components/common/ChartLegend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 
@@ -799,7 +800,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChart 
                   data={dashboardData.paymentsByMode}
@@ -808,17 +809,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
-                {dashboardData.paymentsByMode.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700 truncate">{item.label}</span>
-                    </div>
-                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
-                  </div>
-                ))}
-              </div>
+              <ChartLegend className="xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
 
@@ -838,7 +829,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChart 
                   data={dashboardData.paymentsByStatus}
@@ -847,17 +838,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
-                {dashboardData.paymentsByStatus.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700 truncate">{item.label}</span>
-                    </div>
-                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{formatCurrencyShort(item.value)} ({item.percentage}%)</span>
-                  </div>
-                ))}
-              </div>
+              <ChartLegend className="xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>
@@ -944,7 +925,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChartCount 
                   data={dashboardData.invoicesByStatus}
@@ -952,17 +933,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <div className="flex-1 space-y-2 min-w-0 w-full sm:w-auto">
-                {dashboardData.invoicesByStatus.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-gray-700 truncate">{item.label}</span>
-                    </div>
-                    <span className="text-gray-500 text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0">{item.value} ({item.percentage}%)</span>
-                  </div>
-                ))}
-              </div>
+              <ChartLegend className="xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>

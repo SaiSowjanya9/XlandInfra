@@ -729,13 +729,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
                 { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
               ].map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5 text-xs">
+                <div key={index} className="flex items-start gap-1.5 text-xs">
                   <span 
-                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}
                   />
-                  <span className="text-gray-600 w-20 flex-shrink-0">{item.name}</span>
-                  <span className="font-medium text-gray-800 whitespace-nowrap">
+                  {/* The label takes what it needs and wraps; a fixed 80px column clipped
+                      "Property-Based" into its own figure */}
+                  <span className="min-w-0 flex-1 break-words leading-snug text-gray-600">{item.name}</span>
+                  <span className="ml-auto shrink-0 font-medium text-gray-800 whitespace-nowrap">
                     {item.value} ({block3Data.length ? ((item.value / block3Data.length) * 100).toFixed(1) : 0}%)
                   </span>
                 </div>
@@ -855,7 +857,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     
                     return (
                       <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
-                        <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                        <div className="w-24 sm:w-32 shrink-0 break-words text-sm leading-snug text-gray-600" title={item.name}>{item.name}</div>
                         <div className="flex-1 bg-gray-100 rounded-full h-6 relative">
                           <div 
                             className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
@@ -970,7 +972,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                     
                     return (
                       <div key={index} className="flex items-center gap-3 group relative cursor-pointer">
-                        <div className="w-28 text-sm text-gray-600 truncate">{item.name}</div>
+                        <div className="w-24 sm:w-32 shrink-0 break-words text-sm leading-snug text-gray-600" title={item.name}>{item.name}</div>
                         <div className="flex-1 bg-gray-100 rounded-full h-6 relative">
                           <div 
                             className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"

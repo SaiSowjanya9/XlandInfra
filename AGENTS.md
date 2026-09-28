@@ -133,6 +133,19 @@ nothing here may be applied globally.
 - Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
   are how a state is read at a glance, and the warm palette has a single accent.
 
+## Chart Legends
+
+- **A legend label wraps; it is never truncated.** Every dashboard had written its own legend and
+  every one of them cut the labels off — "Ba…" for Bank Transfer, "Verifi…" for Verification
+  Pending, "Partially P…" for Partially Paid — which leaves the reader unable to tell which slice
+  is which. Use `components/common/ChartLegend.jsx`: items are `{ label, value, color }`, the label
+  wraps and carries a `title`, the figure sits right-aligned and `whitespace-nowrap`, and the colour
+  dot is nudged `mt-[0.3em]` so it sits on the label's first line rather than halfway down a
+  two-line one. A `value` is formatted by the caller, since one chart counts and another totals money.
+- A donut and its legend **stack until `xl`**. A card in a three-column grid is narrow at every
+  breakpoint below that, and a 130px chart beside a legend is what squeezed the labels in the first
+  place. Where a label must keep a fixed column so bars line up, it wraps inside that column.
+
 ## Customer Category UI
 
 - Property Management and Add Customer category panels must use the shared `components/common/CategorySelection.jsx` design across portals. Keep equal white cards, matching icons and spacing, teal Residential styling, and the disabled Commercial "Coming Soon" badge. Preserve each page's existing category-selection handler.
