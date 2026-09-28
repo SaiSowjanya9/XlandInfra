@@ -17,14 +17,18 @@ export default function ChartLegend({ items = [], className = '', size = 'sm' })
   return (
     <ul className={`w-full space-y-2 ${className}`}>
       {rows.map((item, index) => (
-        <li key={item.key ?? item.label ?? index} className={`flex items-start justify-between gap-3 ${text}`}>
-          <span className="flex min-w-0 flex-1 items-start gap-2">
+        // The row wraps as a whole: where the label and its figure will not share a line, the figure
+        // drops to the next one and the label keeps the full width. Holding them on one line squeezed
+        // the label into a column too narrow for its own words -- "Bank Transfer" came out as
+        // "Ba / nk / Tra / nsf / er" -- so the label wraps between words and never inside one.
+        <li key={item.key ?? item.label ?? index} className={`flex flex-wrap items-baseline gap-x-3 gap-y-0.5 ${text}`}>
+          <span className="flex min-w-0 items-start gap-2">
             {/* Nudged down to sit on the first line of a label that wraps to two */}
             <span className="mt-[0.3em] h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="min-w-0 break-words leading-snug text-gray-700" title={item.label}>{item.label}</span>
+            <span className="leading-snug text-gray-700" title={item.label}>{item.label}</span>
           </span>
           {item.value !== undefined && item.value !== null && item.value !== '' && (
-            <span className="shrink-0 whitespace-nowrap tabular-nums text-gray-500">{item.value}</span>
+            <span className="ml-auto whitespace-nowrap tabular-nums text-gray-500">{item.value}</span>
           )}
         </li>
       ))}
