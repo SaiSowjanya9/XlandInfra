@@ -885,9 +885,9 @@ const Dashboard = () => {
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
                     {woStatusData.map((item, index) => (
-                      <div key={index} className="flex items-start gap-2 text-xs">
+                      <div key={index} className="flex flex-wrap items-start gap-x-2 gap-y-0.5 text-xs">
                         <span className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
-                        <span className="min-w-0 break-words leading-snug text-gray-600">{item.name}</span>
+                        <span className="min-w-0 leading-snug text-gray-600">{item.name}</span>
                         <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
@@ -912,9 +912,9 @@ const Dashboard = () => {
                   </div>
                   <div className="flex-1 min-w-0 space-y-2">
                     {priorityData.map((item, index) => (
-                      <div key={index} className="flex items-start gap-2 text-xs">
+                      <div key={index} className="flex flex-wrap items-start gap-x-2 gap-y-0.5 text-xs">
                         <span className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
-                        <span className="min-w-0 break-words leading-snug text-gray-600">{item.name}</span>
+                        <span className="min-w-0 leading-snug text-gray-600">{item.name}</span>
                         <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
@@ -958,7 +958,7 @@ const Dashboard = () => {
                     return mergedData.slice(0, 5).map((item, index) => (
                       <div key={index} className="space-y-1 group relative cursor-pointer">
                         <div className="flex justify-between items-center gap-2 text-xs">
-                          <span className="min-w-0 flex-1 break-words leading-snug text-gray-600">{item.name}</span>
+                          <span className="min-w-0 flex-1 leading-snug text-gray-600">{item.name}</span>
                           <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
                         </div>
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
