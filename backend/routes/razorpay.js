@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 
 // Payment Security Middleware
 const {
@@ -831,10 +832,11 @@ async function handlePaymentFailed(payload, webhookId) {
   // Log the failure for audit
   if (internalInvoiceId) {
     try {
+      // 'failed' was never a member of the original action ENUM either, so it is resolved too
       await pool.execute(`
         INSERT INTO payment_history (invoice_id, action, new_status, description, performed_by_name, performed_by_role)
-        VALUES (?, 'failed', 'failed', ?, 'Razorpay', 'system')
-      `, [internalInvoiceId, `Payment failed: ${errorCode} - ${errorDescription}`]);
+        VALUES (?, ?, 'failed', ?, 'Razorpay', 'system')
+      `, [internalInvoiceId, await paymentHistoryAction('failed'), `Payment failed: ${errorCode} - ${errorDescription}`]);
 
       // Update webhook record
       await pool.execute(
@@ -898,11 +900,13 @@ async function handleRefund(payload, webhookId) {
       const payment = payments[0];
 
       // Log the refund
+      // The ENUM's member is 'refunded', not 'refund', so this value truncated as well
       await pool.execute(`
         INSERT INTO payment_history (invoice_id, action, new_status, amount, description, performed_by_name, performed_by_role)
-        VALUES (?, 'refund', ?, ?, ?, 'Razorpay', 'system')
+        VALUES (?, ?, ?, ?, ?, 'Razorpay', 'system')
       `, [
         payment.invoice_db_id,
+        await paymentHistoryAction('refund'),
         refundStatus,
         refundAmount,
         `Refund ${refundStatus}: ₹${refundAmount} (Refund ID: ${refundEntity.id})`

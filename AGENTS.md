@@ -66,6 +66,18 @@ Mistakes that fail silently and have each already broken live endpoints:
   Regression test: `node --test backend/routes/schedulesRouting.test.js`.
 - The `users` table has `first_name` and `last_name`, not `name`. Use
   `CONCAT(u.first_name, ' ', u.last_name)`.
+- **A truncated column can cost a payment.** `payment_history.action` began as
+  `ENUM('created','updated','status_changed','refunded','deleted')`; three of the values we
+  write — `razorpay_payment`, `failed`, `refund` — are outside it, so on a deployment without
+  `schema_v27_payment_history_action_fix.sql` MySQL raises `WARN_DATA_TRUNCATED` (errno 1265).
+  The Razorpay history row is written inside the payment's own transaction, so that error rolled
+  the payment back: the customer paid and nothing was recorded. Always resolve the value through
+  `utils/paymentHistoryAction.js`, which widens the column as the migration would, or writes the
+  nearest legal member when it cannot. Regression test:
+  `node --test backend/utils/paymentHistoryAction.test.js`.
+- A "Unknown column X in 'field list'" in the live log usually means the VPS is behind this repo,
+  not that the code is wrong — the `assign_vendor` and `fp_amc_packages.price` errors were both
+  fixed here well before they stopped appearing there. Check `git log` for the fix before chasing it.
 
 ## Frontend API Conventions
 
