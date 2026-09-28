@@ -825,7 +825,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div className="py-2">
                           {row.catalogServiceId
                             ? <span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{methodLabel(row.pricingMethod)}</span>
-                            : <span className="text-xs text-gray-400">Typed by hand</span>}
+                            : <span className="text-xs text-gray-400" title="Added by hand, not from the service catalog: it has no pricing method, so it adds nothing to the package price">—</span>}
                         </div>
 
                         {/* The amount that method is priced on. Fixed Price measures nothing. */}
@@ -901,6 +901,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
                 </div>
                 {pricingError && <p role="alert" className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{pricingError}</p>}
+                {/* A row with no configured service behind it cannot be priced, and the package's
+                    price is the sum of the priced ones -- so it is said plainly rather than left to
+                    be inferred from two dashes. */}
+                {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    A row added with <span className="font-medium">Add Row</span> has no configured service behind it, so it carries no method, no amount and no price. It is part of the package; it does not add to the price.
+                  </p>
+                )}
                 {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
                     listed here with the band its typed capacity lands in marked. Internal: this screen
                     configures the package, so it states the vendor rate beside the customer price. */}
