@@ -33,7 +33,12 @@ const pool = { execute: async (sql, params = []) => {
   if (sql.includes('FROM franchise_partners')) return [[{ id: params[0], is_active: 1 }]];
   if (sql.includes('FROM fp_employees')) return [[{ id: params[0], is_active: 1, franchise_partner_id: 8 }]];
   if (sql.includes('FROM users')) return [[{ id: params[0], is_active: 1 }]];
-  if (sql.includes('FROM fp_amc_packages')) return [[...(Number(params[0]) === 20 && Number(params[1]) === 8 ? [{ id: 20, price: 1000 }] : [])]];
+  // The package price is stored as base_price; selecting a bare `price` is what MySQL rejects, and
+  // it answered a package estimate carrying a configured service with a 500 for exactly that reason
+  if (sql.includes('FROM fp_amc_packages')) {
+    if (/\bprice\b/.test(sql) && !sql.includes('base_price')) throw Object.assign(new Error("Unknown column 'price' in 'field list'"), { code: 'ER_BAD_FIELD_ERROR' });
+    return [[...(Number(params[0]) === 20 && Number(params[1]) === 8 ? [{ id: 20, price: 1000 }] : [])]];
+  }
   if (sql.includes('FROM fp_addons')) return [[...(Number(params[0]) === 21 && Number(params[1]) === 8 ? [{ id: 21, price: 500, service_name: 'Legacy Service', description: 'Legacy description', frequency_type: 'Monthly', frequency_count: 12 }] : [])]];
   if (sql.includes('FROM service_catalog')) {
     const byId = sql.includes('WHERE id = ?');

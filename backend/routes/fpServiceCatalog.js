@@ -103,7 +103,9 @@ router.validatePackageEstimate = async (req, res, next) => {
     if (addons.length > 100 || addons.some(addon => !addon || typeof addon !== 'object')) fail('Add at most 100 valid services.');
     let subtotal = 0;
     if (req.body.package_id != null && req.body.package_id !== '') {
-      const [[pkg]] = await pool.execute('SELECT id, price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, fpId]);
+      // The column is base_price; every other reader aliases it, and selecting a bare `price` here
+      // failed the whole save with an unexplained 500 whenever a package carried a configured service
+      const [[pkg]] = await pool.execute('SELECT id, base_price AS price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, fpId]);
       if (!pkg) fail('Package is outside your FP scope.', 403);
       req.body.package_price = Number(pkg.price);
       subtotal += Number(pkg.price);
