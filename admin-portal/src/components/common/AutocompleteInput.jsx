@@ -146,6 +146,16 @@ const AutocompleteInput = ({
       return;
     }
 
+    // Enter commits whatever has been typed even with the list shut, and stops there. Returning
+    // early let the key reach the form around the field, so pressing Enter after typing a new
+    // category submitted the whole service form instead of accepting the word.
+    if (!isOpen && e.key === 'Enter') {
+      if (!allowCustom || !inputValue) return;
+      e.preventDefault();
+      onChange?.(inputValue);
+      return;
+    }
+
     if (!isOpen) return;
 
     switch (e.key) {
@@ -159,15 +169,20 @@ const AutocompleteInput = ({
         e.preventDefault();
         setHighlightedIndex(prev => prev > 0 ? prev - 1 : 0);
         break;
-      case 'Enter':
+      case 'Enter': {
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
           handleSelect(filteredOptions[highlightedIndex]);
-        } else if (allowCustom && inputValue) {
-          onChange?.(inputValue);
-          setIsOpen(false);
+          break;
         }
+        // Nothing is highlighted until the arrows are used, so Enter takes the word as typed --
+        // unless the list holds that exact word, in which case it is the same choice either way
+        const exact = filteredOptions.find(option =>
+          String(option.label).trim().toLowerCase() === inputValue.trim().toLowerCase());
+        if (exact) handleSelect(exact);
+        else if (allowCustom && inputValue) { onChange?.(inputValue); setIsOpen(false); }
         break;
+      }
       case 'Escape':
         setIsOpen(false);
         setHighlightedIndex(-1);
