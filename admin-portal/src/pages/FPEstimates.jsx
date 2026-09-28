@@ -28,7 +28,7 @@ import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CapacitySlabList from '../components/estimates/CapacitySlabList';
-import { packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
+import { applyPackageMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
@@ -243,7 +243,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [amcActiveTab, setAmcActiveTab] = useState('all-packages');
   // A package can apply to several property types, so the same one is configured once
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
-  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [], price: '', billingDuration: 'monthly' });
+  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [], price: '', markupPercentage: '', billingDuration: 'monthly' });
   // Open while the configured services are being browsed; Add Row still adds a blank row to type into
   const [showPackageServicePicker, setShowPackageServicePicker] = useState(false);
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
@@ -3131,7 +3131,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, markup_percentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -3183,7 +3183,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleRemoveServiceRow = (i) => { setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   // The package's price is what its configured services add up to, so it is derived rather than typed
-  const totals = packageTotals(amcForm.serviceRows);
+  // Every row's price follows the package's markup, exactly as a service's own markup prices it
+  // on the service form. Blank leaves each row on the price it already has.
+  const totals = packageTotals(amcForm.serviceRows, amcForm.markupPercentage);
+  const pricedRows = applyPackageMarkup(amcForm.serviceRows, amcForm.markupPercentage);
   const getPrice = () => totals.price;
   const [pricingError, setPricingError] = useState('');
   // A quote is validated against the types a service allows, and no method prices differently by
@@ -3214,7 +3217,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [pricingKey, selectedPropertyTypes, token]);
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [], price: '', markupPercentage: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       // Four tints a billing column can still be scanned by, drawn from the warm palette
@@ -3666,7 +3669,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div>
                             <input
                               type="number" min="0" step="0.01"
-                              value={row.price ?? ''}
+                              value={pricedRows[index]?.price ?? ''}
                               onChange={(e) => handleUpdateServiceRow(index, 'price', e.target.value)}
                               placeholder={row.catalogServiceId ? 'Quoted' : '0'}
                               aria-label={`${row.service || 'Service'} price`}
@@ -3734,6 +3737,20 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                       </div>
                       
+                      {/* The package's markup, as the service form asks for a service's: the
+                          customer price is what the work costs plus the markup on it. Blank leaves
+                          each row on the price it already has. */}
+                      <div>
+                        <label className="block text-xs font-medium text-warm-muted mb-1.5" htmlFor="fp-package-markup">Markup (%)</label>
+                        <input
+                          id="fp-package-markup" type="number" min="0" max="1000" step="0.01"
+                          value={amcForm.markupPercentage ?? ''}
+                          onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
+                          placeholder="Each service's own"
+                          className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                        />
+                      </div>
+
                       {/* Service Period */}
                       <div>
                         <label className="block text-xs font-medium text-warm-muted mb-1.5">Service Period</label>

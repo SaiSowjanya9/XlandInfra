@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { METHOD_INPUTS, packageTotals, rowInput } from './packageServicePricing.js';
+import { METHOD_INPUTS, applyPackageMarkup, packageTotals, rowInput, rowPriceWithMarkup } from './packageServicePricing.js';
 
 /**
  * An AMC package is priced by its services rather than by a figure typed into it, so these are the
@@ -17,6 +17,33 @@ test('a row asks for the amount its pricing method measures', () => {
   // Fixed Price measures nothing, and a hand-typed row has no method at all
   assert.equal(rowInput({ pricingMethod: 'fixed_price', unit: 'Visit' }), null);
   assert.equal(rowInput({ service: 'Typed by hand' }), null);
+});
+
+test('a package markup prices every row from what it costs, the way the service form does', () => {
+  const configured = { catalogServiceId: 1, price: 108000, vendorCost: 80000, operatingCost: 20000 };
+  const typed = { service: 'By hand', vendorCost: 50000 };
+
+  // price = (vendor + operating) × (1 + markup/100)
+  assert.equal(rowPriceWithMarkup(configured, 25), 125000);
+  assert.equal(rowPriceWithMarkup(typed, 25), 62500);
+  // A blank markup leaves each row on the price it already had -- the quote, or what was typed
+  assert.equal(rowPriceWithMarkup(configured, ''), 108000);
+  assert.equal(rowPriceWithMarkup(configured, null), 108000);
+  // A price typed over the quote is never recalculated: that is what typing over it means
+  assert.equal(rowPriceWithMarkup({ ...configured, priceOverridden: true }, 25), 108000);
+  // A row with no cost behind it has nothing to mark up, so it keeps its own figure
+  assert.equal(rowPriceWithMarkup({ service: 'Typed price only', price: 4000 }, 25), 4000);
+  // Zero is a markup, not a blank: the price falls back to cost
+  assert.equal(rowPriceWithMarkup(configured, 0), 100000);
+
+  assert.deepEqual(applyPackageMarkup([configured, typed], 25).map(row => row.price), [125000, 62500]);
+
+  const totals = packageTotals([configured, typed], 25);
+  assert.equal(totals.customerPrice ?? totals.price, 187500);
+  assert.equal(totals.vendorCost, 130000);
+  assert.equal(totals.actualCost, 150000);
+  assert.equal(totals.profit, 37500);
+  assert.equal(totals.marginPercent, 20, 'a 25% markup is a 20% margin');
 });
 
 test('the package price is what its priced services add up to', () => {

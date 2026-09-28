@@ -71,11 +71,33 @@ export const quotePackageRow = async (row, { apiPath, propertyType, fpId, token,
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 /**
+ * The package's own markup, applied the way the service form applies a service's: the customer
+ * price is what the work costs plus the markup on it.
+ *
+ *   price = (vendor cost + XLAND operating cost) × (1 + markup / 100)
+ *
+ * Left blank, each row keeps the price it already has -- a configured row keeps the quote made with
+ * its own service's markup, and a hand-typed one keeps whatever was entered. A price typed over the
+ * quote is never recalculated: that is what typing over it means.
+ */
+export const hasMarkup = (markup) => markup !== '' && markup !== null && markup !== undefined && Number.isFinite(Number(markup));
+
+export const rowPriceWithMarkup = (row, markup) => {
+  if (!hasMarkup(markup) || row?.priceOverridden) return row?.price;
+  const cost = (Number(row?.vendorCost) || 0) + (Number(row?.operatingCost) || 0);
+  return cost ? round2(cost * (1 + Number(markup) / 100)) : row?.price;
+};
+
+export const applyPackageMarkup = (rows = [], markup) =>
+  rows.map(row => ({ ...row, price: rowPriceWithMarkup(row, markup) }));
+
+/**
  * What the package costs and sells for: the sum of its priced rows. A row typed by hand carries no
  * price, so it adds nothing here -- it is part of the package, but it is not what sets its price.
  */
-export const packageTotals = (rows = []) => {
-  const priced = rows.filter(row => Number.isFinite(Number(row?.price)));
+export const packageTotals = (rows = [], markup) => {
+  const withMarkup = hasMarkup(markup) ? applyPackageMarkup(rows, markup) : rows;
+  const priced = withMarkup.filter(row => Number.isFinite(Number(row?.price)));
   const sum = (field) => round2(priced.reduce((total, row) => total + (Number(row[field]) || 0), 0));
   const price = sum('price');
   const vendorCost = sum('vendorCost');
