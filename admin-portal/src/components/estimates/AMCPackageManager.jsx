@@ -43,7 +43,7 @@ import {
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
 import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } from '../../utils/estimatePackageUtils';
-import { packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
+import { applyPackageMarkup, packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
 import { PRICING_METHODS, methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
 import CustomServiceDialog from './CustomServiceDialog';
@@ -107,6 +107,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
     packageName: '',
+    markupPercentage: '',
     serviceRows: [],
     price: '',
     billingDuration: 'monthly',
@@ -151,7 +152,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
 
   // The package's price is what its configured services add up to, so it is derived rather than typed
-  const totals = packageTotals(amcForm.serviceRows);
+  // Every row's price follows the package's markup, exactly as a service's own markup prices it
+  // on the service form. Blank leaves each row on the price it already has.
+  const totals = packageTotals(amcForm.serviceRows, amcForm.markupPercentage);
+  const pricedRows = applyPackageMarkup(amcForm.serviceRows, amcForm.markupPercentage);
   const getPrice = () => totals.price;
   // The quote is validated against the types a service allows; no method prices differently by type,
   // so the first selected type is enough to price with.
@@ -306,6 +310,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           };
         }),
         rate: totals.price,
+        markupPercentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage),
         billingDuration: amcForm.billingDuration,
         description: amcForm.description?.trim() || ''
       };
@@ -385,6 +390,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       packageName: decodeHtml(pkg.packageName) || '',
       serviceRows: loadedServiceRows,
       price: pkg.rate?.toString() || '',
+      // Reopening a package brings back the markup it was priced with, so its rows do not silently
+      // revert to whatever each service's own markup says
+      markupPercentage: pkg.markupPercentage ?? pkg.markup_percentage ?? '',
       billingDuration: pkg.billingDuration || 'monthly',
       description: decodeHtml(pkg.description) || ''
     });
@@ -432,6 +440,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const resetForm = () => {
     setAmcForm({
       packageName: '',
+      markupPercentage: '',
       serviceRows: [],
       price: '',
       billingDuration: 'monthly',
@@ -917,7 +926,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div>
                           <input
                             type="number" min="0" step="0.01"
-                            value={row.price ?? ''}
+                            value={pricedRows[index]?.price ?? ''}
                             onChange={(e) => handleUpdateServiceRow(index, 'price', e.target.value)}
                             placeholder={row.catalogServiceId ? 'Quoted' : '0'}
                             aria-label={`${row.service || 'Service'} price`}
@@ -986,6 +995,20 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       </div>
                     </div>
                     
+                    {/* The package's markup, as the service form asks for a service's: the customer
+                        price is what the work costs plus the markup on it. Blank leaves each row on
+                        the price it already has. */}
+                    <div>
+                      <label className="text-gray-600 text-xs mb-2 block font-medium" htmlFor="package-markup">Markup (%)</label>
+                      <input
+                        id="package-markup" type="number" min="0" max="1000" step="0.01"
+                        value={amcForm.markupPercentage ?? ''}
+                        onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
+                        placeholder="Each service's own"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
+                      />
+                    </div>
+
                     {/* Service Period */}
                     <div>
                       <label className="text-gray-600 text-xs mb-2 block font-medium">Service Period</label>
