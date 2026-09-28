@@ -538,9 +538,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         units_per_block: directForm.unitsPerBlock ? JSON.stringify(directForm.unitsPerBlock) : null,
         block_unit_types: directForm.blockUnitTypes ? JSON.stringify(directForm.blockUnitTypes) : null,
         total_units: directForm.totalUnits,
-        tower_name: directForm.towerName,
+        // The form writes the tower into blockName; towerName was never set, so it always saved null
+        tower_name: directForm.towerName || directForm.blockName || null,
         block_number: directForm.blockNumber,
-        villa_plot_number: directForm.plotNumber,
+        // Villa, Flat and Plot share this column, so whichever the property type asked for travels
+        villa_plot_number: directForm.villaNumber || directForm.flatNumber || directForm.plotNumber || null,
         package_id: selectedAmcPackage || null,
         package_name: pkgName,
         package_price: pkgPrice,

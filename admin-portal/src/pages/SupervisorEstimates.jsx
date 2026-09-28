@@ -464,7 +464,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         block_unit_types: directForm.blockUnitTypes ? JSON.stringify(directForm.blockUnitTypes) : null,
         total_units: directForm.totalUnits || directForm.numberOfUnits || null,
         // Apartment fields
-        tower_name: directForm.towerName || null,
+        // The form writes the tower into blockName; towerName was never set, so it always saved null
+        tower_name: directForm.towerName || directForm.blockName || null,
         block_number: directForm.blockNumber || null,
         // Villa/Flat/Plot fields - combine into villa_plot_number
         villa_plot_number: directForm.villaNumber || directForm.flatNumber || directForm.plotNumber || null,

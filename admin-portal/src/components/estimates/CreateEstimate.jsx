@@ -1040,7 +1040,13 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       estimateData.city = estimateForm.city;
       estimateData.blockTower = estimateForm.blockTower;
       estimateData.blockNumber = estimateForm.blockNumber;
+      // Villa, Flat and Plot are all typed into flatUnit and stored in one column
       estimateData.flatUnit = estimateForm.flatUnit;
+      // A gated community's blocks; without these the view modal has no Block Details to print
+      estimateData.numberOfBlocks = estimateForm.numberOfBlocks;
+      estimateData.blockNames = estimateForm.blockNames;
+      estimateData.unitsPerBlock = estimateForm.unitsPerBlock;
+      estimateData.totalUnits = estimateForm.totalUnits || estimateForm.numberOfUnits;
       
       // Package info for direct estimate with descriptions
       if (directSelectedPackage) {
