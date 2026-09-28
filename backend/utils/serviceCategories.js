@@ -15,8 +15,21 @@ const categoryOptions = async (pool, scopeId) => {
           FROM fp_estimates,
                JSON_TABLE(fp_estimates.addons_data, '$[*]' COLUMNS (category VARCHAR(100) PATH '$.category')) AS service
          WHERE service.category IS NOT NULL AND service.category <> ''`, []];
+  // A category typed on an AMC package's service row is stored on the package, which was not a
+  // source -- so such a category was accepted, saved, and then never offered again. The packages
+  // are read the same way the estimates are.
+  const packageCategories = scopeId
+    ? [`SELECT DISTINCT service.category AS name
+          FROM fp_amc_packages,
+               JSON_TABLE(fp_amc_packages.services, '$[*]' COLUMNS (category VARCHAR(100) PATH '$.category')) AS service
+         WHERE service.category IS NOT NULL AND service.category <> '' AND fp_amc_packages.franchise_partner_id = ?`, [Number(scopeId)]]
+    : [`SELECT DISTINCT service.category AS name
+          FROM fp_amc_packages,
+               JSON_TABLE(fp_amc_packages.services, '$[*]' COLUMNS (category VARCHAR(100) PATH '$.category')) AS service
+         WHERE service.category IS NOT NULL AND service.category <> ''`, []];
   const queries = [
     ['SELECT name FROM admin_categories WHERE is_active = 1 ORDER BY name', []],
+    packageCategories,
     scopeId
       ? [`SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(configuration, '$.category')) AS name FROM service_catalog WHERE scope_id IN (0, ?)`, [Number(scopeId)]]
       : [`SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(configuration, '$.category')) AS name FROM service_catalog`, []],
