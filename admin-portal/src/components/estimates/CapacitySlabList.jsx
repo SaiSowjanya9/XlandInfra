@@ -46,7 +46,11 @@ export default function CapacitySlabList({ service, capacity, internal = false, 
               return (
                 <tr key={index} className={applies ? 'bg-white font-semibold text-slate-900' : 'text-slate-700'}>
                   <td className="py-1 pr-3 whitespace-nowrap">
-                    {slabRangeLabel(slab, '')}
+                    {/* A slab named by hand is called that, with its range beside it; an unnamed one
+                        is its range, as before */}
+                    {String(slab.name || '').trim()
+                      ? <>{slab.name} <span className="font-normal text-slate-400">{slabRangeLabel(slab, '')}</span></>
+                      : slabRangeLabel(slab, '')}
                     {/* The band the typed capacity lands in, so the price above is traceable */}
                     {applies && <span className="ml-1.5 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">applies</span>}
                   </td>
