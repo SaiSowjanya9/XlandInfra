@@ -86,6 +86,21 @@ const PAYMENT_VIEW_ROLES = [
   ROLES.EXECUTIVE
 ];
 
+/**
+ * Who may read what the work costs: Admin, the Operations Manager, and a Franchise Partner for their
+ * own estimates. Vendor cost and margin are narrower than payments generally -- a Manager, Supervisor
+ * or Executive can view payments and still has no business with them -- so this is its own guard
+ * rather than canViewPayments.
+ */
+const ESTIMATE_MARGIN_ROLES = [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.FRANCHISE_PARTNER];
+const canViewEstimateMargins = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ success: false, message: 'Authentication required' });
+  if (!ESTIMATE_MARGIN_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Access denied. You cannot view estimate costs.' });
+  }
+  next();
+};
+
 // Middleware to check if user can edit payments
 const canEditPayments = (req, res, next) => {
   if (!req.user) {
@@ -411,10 +426,11 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
  * against, and an archived or rejected one is not work we expect to bill. The figures come from the
  * pricing snapshot saved with each service, so this reports what the estimates were costed at.
  *
- * Internal by nature -- vendor cost and margin -- so it sits behind the same payments guard as the
- * rest of this router, and an FP-scoped user sees only their own.
+ * Internal by nature -- vendor cost and margin -- so it is limited to Admin, the Operations Manager
+ * and a Franchise Partner, who sees only their own. A Manager, Supervisor or Executive can view
+ * payments and is still refused here.
  */
-router.get('/property-estimate-margins', authenticate, canViewPayments, async (req, res) => {
+router.get('/property-estimate-margins', authenticate, canViewEstimateMargins, async (req, res) => {
   try {
     const scopedFp = getFPScope(req);
     const requestedFp = req.query.fpId && req.query.fpId !== 'all' ? req.query.fpId : null;
