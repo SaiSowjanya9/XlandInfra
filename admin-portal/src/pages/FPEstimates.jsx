@@ -1237,8 +1237,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         // Apartment-specific fields
         tower_name: estimateForm.blockName || selectedProperty?.tower_name || selectedProperty?.block_info || '',
         block_number: estimateForm.blockNumber || selectedProperty?.block_number || '',
-        // Villa/Plot-specific fields
-        villa_plot_number: estimateForm.villaNumber || selectedProperty?.villa_plot_number || '',
+        // Villa, Flat and Plot all identify the unit through this one column, so whichever the
+        // property type asked for is what travels -- a flat or plot number was dropped before
+        villa_plot_number: estimateForm.villaNumber || estimateForm.flatNumber || estimateForm.plotNumber || selectedProperty?.villa_plot_number || '',
         // Package and pricing
         package_id: estimateForm.selectedPackage || null,
         package_name: pkg?.name || '',
@@ -3924,6 +3925,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   {/* Apartment-specific: Block Details with Unit Type Breakdown - Same UI as GC */}
                   {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
                     <>
+                      {/* The tower the estimate was written for. It was only ever shown inside the
+                          unit-type breakdown, so an apartment without one never stated its building. */}
+                      {(viewEstimate.tower_name || viewEstimate.block_name) && <div><p className="text-xs text-warm-muted">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name || viewEstimate.block_name}</p></div>}
                       {viewEstimate.block_number && <div><p className="text-xs text-warm-muted">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
                       <div><p className="text-xs text-warm-muted">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.number_of_units || '-'}</p></div>
                       {(() => {

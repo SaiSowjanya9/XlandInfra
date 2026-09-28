@@ -8,6 +8,32 @@ const { authenticate } = require('../middleware/auth');
 const { adminOnly, requireRole } = require('../middleware/rbac');
 const { sendEstimateEmail, sendEstimateActionNotification } = require('../services/emailService');
 
+const wholeNumber = value => {
+  const number = parseInt(value, 10);
+  return Number.isSafeInteger(number) ? number : null;
+};
+
+// Which of schema_v37's property columns this database actually has. Looked up once: a
+// deployment that lags the migration still stores everything else rather than failing.
+const PROPERTY_COLUMNS = ['city', 'tower_name', 'block_number', 'villa_plot_number',
+  'number_of_blocks', 'block_names', 'units_per_block', 'total_units'];
+let propertyColumnsPresent = null;
+const estimatePropertyColumns = async () => {
+  if (propertyColumnsPresent) return propertyColumnsPresent;
+  try {
+    const [rows] = await db.pool.query(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND table_name = 'estimates' AND column_name IN (?)`,
+      [PROPERTY_COLUMNS]
+    );
+    propertyColumnsPresent = new Set(rows.map(row => row.column_name || row.COLUMN_NAME));
+  } catch (error) {
+    console.error('Estimate property columns lookup failed:', error.message);
+    propertyColumnsPresent = new Set();
+  }
+  return propertyColumnsPresent;
+};
+
 // GET all estimates (supports ?archived=true for archived estimates)
 router.get('/', authenticate, adminOnly, async (req, res) => {
   try {
@@ -79,6 +105,22 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         division: est.division,
         city: est.city,
         address: est.property_address || est.address,
+        // The property detail the view modal prints, in both spellings the modals read.
+        // Villa, Flat and Plot all identify their unit through villa_plot_number.
+        towerName: est.tower_name,
+        tower_name: est.tower_name,
+        blockNumber: est.block_number,
+        block_number: est.block_number,
+        villaPlotNumber: est.villa_plot_number,
+        villa_plot_number: est.villa_plot_number,
+        numberOfBlocks: est.number_of_blocks,
+        number_of_blocks: est.number_of_blocks,
+        blockNames: est.block_names,
+        block_names: est.block_names,
+        unitsPerBlock: est.units_per_block,
+        units_per_block: est.units_per_block,
+        totalUnits: est.total_units,
+        total_units: est.total_units,
         // Package info
         packageName: est.package_name,
         package_name: est.package_name,
@@ -137,8 +179,12 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
       notes, status, validUntil,
       subTotal, gst, totalPrice,
       // Additional fields
-      propertyId, communityName, zone, division, address,
-      noOfVisits, description, packageName, packageId
+      propertyId, communityName, zone, division, address, city,
+      noOfVisits, description, packageName, packageId,
+      // Property detail the form asks for and the view modal prints. The create form
+      // names the tower blockTower and the villa/flat/plot number flatUnit.
+      blockTower, towerName, blockNumber, flatUnit, villaPlotNumber,
+      numberOfBlocks, blockNames, unitsPerBlock, numberOfUnits, totalUnits
     } = req.body;
     
     const estimateId = `EST-${Date.now()}`;
@@ -158,49 +204,71 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
     // created_by is NOT NULL; record the authenticated admin instead of guessing a user
     const createdById = req.user.id;
     
+    // The property detail this estimate was written for. A database that has not had
+    // schema_v37 applied is missing these columns, so only the ones that exist are written
+    // rather than failing the whole save -- the same tolerance franchisePartner.js has.
+    const stored = await estimatePropertyColumns();
+    const propertyDetail = {
+      city: city || null,
+      tower_name: towerName || blockTower || null,
+      block_number: blockNumber || null,
+      // Villa, Flat and Plot all identify their unit through this one column
+      villa_plot_number: villaPlotNumber || flatUnit || null,
+      number_of_blocks: wholeNumber(numberOfBlocks),
+      block_names: blockNames ? JSON.stringify(blockNames) : null,
+      units_per_block: unitsPerBlock ? JSON.stringify(unitsPerBlock) : null,
+      total_units: wholeNumber(totalUnits ?? numberOfUnits)
+    };
+    const detailColumns = Object.keys(propertyDetail).filter(column => stored.has(column));
+
+    const columns = [
+      'estimate_id', 'title', 'customer_name', 'customer_email', 'customer_phone',
+      'property_type', 'property_name', 'property_address',
+      'services', 'addons', 'subtotal', 'discount', 'tax', 'total',
+      'notes', 'status', 'valid_until',
+      'property_id', 'community_name', 'zone', 'division', 'no_of_visits', 'description', 'package_name', 'package_id',
+      'include_terms', 'terms_conditions',
+      'is_active', 'is_archived', 'estimate_type', 'created_by',
+      ...detailColumns
+    ];
+    const values = [
+      estimateId,
+      titleValue,  // title is NOT NULL
+      customerName || null,
+      customerEmail || null,
+      customerPhone || null,
+      propertyType || null,
+      propertyName || communityName || null,
+      finalAddress,
+      services ? JSON.stringify(services) : null,
+      addons ? JSON.stringify(addons) : null,
+      finalSubtotal,
+      discount || 0,
+      finalTax,
+      finalTotal,
+      notes || null,
+      status || 'Draft',
+      validUntil || null,
+      propertyId || null,
+      communityName || null,
+      zone || null,
+      division || null,
+      noOfVisits || null,
+      finalDescription,
+      packageName || null,
+      packageId || null,
+      estimateTerms.include_terms,
+      estimateTerms.terms_conditions,
+      1,  // is_active = 1
+      0,  // is_archived = false
+      'direct',  // estimate_type
+      createdById,  // created_by is NOT NULL
+      ...detailColumns.map(column => propertyDetail[column])
+    ];
+    if (columns.length !== values.length) throw new Error(`Estimate insert built ${columns.length} columns for ${values.length} values`);
     await pool.execute(
-      `INSERT INTO estimates (
-        estimate_id, title, customer_name, customer_email, customer_phone,
-        property_type, property_name, property_address,
-        services, addons, subtotal, discount, tax, total,
-        notes, status, valid_until,
-        property_id, community_name, zone, division, no_of_visits, description, package_name, package_id,
-        include_terms, terms_conditions,
-        is_active, is_archived, estimate_type, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        estimateId,
-        titleValue,  // title is NOT NULL
-        customerName || null,
-        customerEmail || null,
-        customerPhone || null,
-        propertyType || null,
-        propertyName || communityName || null,
-        finalAddress,
-        services ? JSON.stringify(services) : null,
-        addons ? JSON.stringify(addons) : null,
-        finalSubtotal,
-        discount || 0,
-        finalTax,
-        finalTotal,
-        notes || null,
-        status || 'Draft',
-        validUntil || null,
-        propertyId || null,
-        communityName || null,
-        zone || null,
-        division || null,
-        noOfVisits || null,
-        finalDescription,
-        packageName || null,
-        packageId || null,
-        estimateTerms.include_terms,
-        estimateTerms.terms_conditions,
-        1,  // is_active = 1
-        0,  // is_archived = false
-        'direct',  // estimate_type
-        createdById  // created_by is NOT NULL
-      ]
+      `INSERT INTO estimates (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+      values
     );
     
     res.json({ 

@@ -1150,9 +1150,12 @@ const EstimatesList = ({
                       <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.totalUnits || viewEstimate.total_units || '-'}</p></div>
                     </>
                   )}
-                  {/* Villa/Plot-specific fields */}
-                  {['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number) && (
-                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number}</p></div>
+                  {/* Villa, Flat and Plot all identify their unit through villa_plot_number */}
+                  {['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number || '-'}</p></div>
+                  )}
+                  {['FLAT', 'Flat', 'flat'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number || '-'}</p></div>
                   )}
                 </div>
               </div>

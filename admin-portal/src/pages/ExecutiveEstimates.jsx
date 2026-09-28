@@ -412,14 +412,17 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           city: selectedProperty?.city || directForm.city,
           address: selectedProperty?.address || directForm.address,
           division: selectedProperty?.division || '',
-          number_of_blocks: selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || 1,
-          block_names: selectedProperty?.block_names || selectedProperty?.blockNames || null,
-          units_per_block: selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock || null,
-          block_unit_types: selectedProperty?.block_unit_types || selectedProperty?.blockUnitTypes || null,
+          // A direct estimate has no property behind it, so every one of these has to fall back to
+          // what was typed -- they were read from the property alone and saved empty every time
+          number_of_blocks: selectedProperty?.number_of_blocks || selectedProperty?.numberOfBlocks || directForm.numberOfBlocks || 1,
+          block_names: selectedProperty?.block_names || selectedProperty?.blockNames || directForm.blockNames || null,
+          units_per_block: selectedProperty?.units_per_block || selectedProperty?.unitsPerBlock || directForm.unitsPerBlock || null,
+          block_unit_types: selectedProperty?.block_unit_types || selectedProperty?.blockUnitTypes || directForm.blockUnitTypes || null,
           total_units: selectedProperty?.total_units || selectedProperty?.units || selectedProperty?.number_of_units || directForm.numberOfUnits || null,
-          tower_name: selectedProperty?.tower_name || '',
-          block_number: selectedProperty?.block_number || '',
-          villa_plot_number: selectedProperty?.villa_plot_number || '',
+          tower_name: selectedProperty?.tower_name || directForm.blockName || '',
+          block_number: selectedProperty?.block_number || directForm.blockNumber || '',
+          // Villa, Flat and Plot share this column
+          villa_plot_number: selectedProperty?.villa_plot_number || directForm.villaNumber || directForm.flatNumber || directForm.plotNumber || '',
           package_id: selectedAmcPackage || null,
           package_name: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.name || '',
           package_price: getPackagePrice(amcPackages.find(p => p.id?.toString() === selectedAmcPackage)),
@@ -1666,15 +1669,16 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                       })()}
                     </>
                   )}
-                  {/* Villa/Flat/Plot-specific fields */}
-                  {['VILLA', 'Villa', 'villa'].includes(viewEstimate.property_type) && (viewEstimate.villa_number || viewEstimate.villaNumber) && (
-                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_number || viewEstimate.villaNumber}</p></div>
+                  {/* Villa/Flat/Plot-specific fields. All three are stored in villa_plot_number:
+                      reading flat_number or plot_number found a column that does not exist. */}
+                  {['VILLA', 'Villa', 'villa'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || viewEstimate.villaNumber || '-'}</p></div>
                   )}
-                  {['FLAT', 'Flat', 'flat'].includes(viewEstimate.property_type) && (viewEstimate.flat_number || viewEstimate.flatNumber) && (
-                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.flat_number || viewEstimate.flatNumber}</p></div>
+                  {['FLAT', 'Flat', 'flat'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || viewEstimate.flatNumber || '-'}</p></div>
                   )}
-                  {['PLOT', 'Plot', 'plot'].includes(viewEstimate.property_type) && (viewEstimate.plot_number || viewEstimate.plotNumber) && (
-                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.plot_number || viewEstimate.plotNumber}</p></div>
+                  {['PLOT', 'Plot', 'plot'].includes(viewEstimate.property_type) && (
+                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || viewEstimate.plotNumber || '-'}</p></div>
                   )}
                 </div>
               </div>
