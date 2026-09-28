@@ -12,6 +12,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { estimateMarginTotals } = require('../utils/estimateMargins');
 const { ROLES } = require('../config/roles');
 
 // Payment Security Middleware
@@ -402,6 +403,40 @@ router.get('/estimates/by-id/:estimateId', authenticate, canViewPayments, async 
 // ============================================
 // PAYMENT DASHBOARD
 // ============================================
+
+/**
+ * What the live property-based estimates cost XLAND and what they make, for the payments dashboard.
+ *
+ * Property-based only, and active only: a direct estimate has no property behind it to measure
+ * against, and an archived or rejected one is not work we expect to bill. The figures come from the
+ * pricing snapshot saved with each service, so this reports what the estimates were costed at.
+ *
+ * Internal by nature -- vendor cost and margin -- so it sits behind the same payments guard as the
+ * rest of this router, and an FP-scoped user sees only their own.
+ */
+router.get('/property-estimate-margins', authenticate, canViewPayments, async (req, res) => {
+  try {
+    const scopedFp = getFPScope(req);
+    const requestedFp = req.query.fpId && req.query.fpId !== 'all' ? req.query.fpId : null;
+    const fpId = scopedFp || requestedFp;
+    const [estimates] = await pool.execute(`
+      SELECT fe.estimate_id, fe.client_name, fe.property_name, fe.property_code, fe.property_type,
+             fe.status, fe.subtotal, fe.package_price, fe.addons_data, fp.company_name AS fp_name
+      FROM fp_estimates fe
+      LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+      WHERE fe.estimate_type = 'property_based'
+        AND (fe.is_archived = 0 OR fe.is_archived IS NULL)
+        AND fe.status NOT IN ('rejected', 'archived')
+        ${fpId ? 'AND fe.franchise_partner_id = ?' : ''}
+      ORDER BY fe.created_at DESC
+    `, fpId ? [fpId] : []);
+
+    res.json({ success: true, data: estimateMarginTotals(estimates) });
+  } catch (error) {
+    console.error('Property estimate margins error:', error);
+    res.status(500).json({ success: false, message: 'Unable to load estimate margins' });
+  }
+});
 
 router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
   try {
