@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
+import { collectionTrendBuckets } from '../../utils/collectionTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 
@@ -202,13 +203,16 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     paymentsByMode: [],
     paymentsByStatus: [],
     invoicesByStatus: [],
-    collectionTrend: [],
     outstandingByAging: [],
     topCustomers: []
   });
   // What the live property-based estimates cost and make. Null until it loads, so the panel appears
   // with its figures rather than as a row of zeroes.
   const [estimateMargins, setEstimateMargins] = useState(null);
+  // The invoices and payments the Collection Trend is drawn from, and the range it is drawn over.
+  // "All Time" is the dropdown's own default, and now means it.
+  const [trendSource, setTrendSource] = useState({ invoices: [], payments: [] });
+  const [trendRange, setTrendRange] = useState('all');
   // Vendor cost and margin belong to Admin, the Operations Manager and a Franchise Partner alone --
   // a Manager, Supervisor or Executive sees this dashboard without them. The server refuses them
   // too, so this hides a panel they could not fill rather than being the only thing stopping them.
@@ -220,6 +224,13 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
 
   const token = getAuthToken();
+
+  // Buckets by day over a short range and by month over a long one, so a year of activity is 12
+  // bars rather than 365. Every bucket in the range is emitted, including empty ones, so a gap in
+  // collections reads as a gap rather than as missing data.
+  // Bucketed by the range the dropdown asks for -- by day over a month or less, by month beyond
+  // that. Tested in utils/collectionTrend.test.js, date-only parsing included.
+  const collectionTrend = useMemo(() => collectionTrendBuckets(trendSource, trendRange), [trendSource, trendRange]);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -434,36 +445,18 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         }
       });
 
-      // Collection Trend (last 30 days)
-      const last30Days = [];
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        last30Days.push({
-          date: dateStr,
-          label: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-          invoiceAmount: 0,
-          collectedAmount: 0
-        });
-      }
-      
-      // Use activeInvoices for the trend chart (excludes cancelled/void/draft)
-      activeInvoices.forEach(inv => {
-        const invDate = new Date(inv.invoiceDate || inv.invoice_date || inv.created_at).toISOString().split('T')[0];
-        const dayData = last30Days.find(d => d.date === invDate);
-        if (dayData) {
-          dayData.invoiceAmount += parseFloat(inv.totalAmount || inv.total_amount) || 0;
-        }
-      });
-      
-      // Use allPaidPayments for the trend chart (already filtered from activePayments)
-      allPaidPayments.forEach(p => {
-        const payDate = new Date(p.paymentDate || p.payment_date || p.created_at).toISOString().split('T')[0];
-        const dayData = last30Days.find(d => d.date === payDate);
-        if (dayData) {
-          dayData.collectedAmount += parseFloat(p.amount) || 0;
-        }
+      // The trend is built from these two lists by the range the chart's own dropdown asks for, so
+      // it is kept rather than reduced here: a fixed 30-day window showed nothing at all whenever
+      // the invoices were older than that.
+      setTrendSource({
+        invoices: activeInvoices.map(inv => ({
+          date: inv.invoiceDate || inv.invoice_date || inv.created_at,
+          amount: parseFloat(inv.totalAmount || inv.total_amount) || 0
+        })),
+        payments: allPaidPayments.map(p => ({
+          date: p.paymentDate || p.payment_date || p.created_at,
+          amount: parseFloat(p.amount) || 0
+        }))
       });
 
       // Top 5 Customers by Collection - from paid payments only
@@ -498,7 +491,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         paymentsByMode,
         paymentsByStatus,
         invoicesByStatus,
-        collectionTrend: last30Days,
         outstandingByAging: agingBuckets,
         topCustomers,
         totalInvoices
@@ -527,7 +519,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   };
 
   const maxTrendValue = Math.max(
-    ...dashboardData.collectionTrend.map(d => Math.max(d.invoiceAmount, d.collectedAmount)),
+    ...collectionTrend.map(d => Math.max(d.invoiceAmount, d.collectedAmount)),
     1
   );
 
@@ -744,7 +736,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <Info className="w-4 h-4 text-gray-400 hidden sm:block" />
               </div>
               <div className="relative">
-                <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                <select aria-label="Collection trend range" value={trendRange} onChange={event => setTrendRange(event.target.value)}
+                  className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -766,7 +759,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="h-36 sm:h-40 flex items-end gap-0.5 sm:gap-1 overflow-x-auto">
-              {dashboardData.collectionTrend.slice(-15).map((day, idx) => (
+              {collectionTrend.map((day, idx) => (
                 <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1">
                   <div className="w-full flex gap-0.5 items-end h-28 sm:h-32">
                     <div 
@@ -778,9 +771,16 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       style={{ height: `${(day.collectedAmount / maxTrendValue) * 100}%`, minHeight: day.collectedAmount > 0 ? '4px' : '0' }}
                     ></div>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center">{day.label.split(' ')[0]}</span>
+                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center" title={day.label}>{day.label.split(' ')[0]}</span>
                 </div>
               ))}
+              {/* A range with nothing in it says so, rather than drawing an empty frame that reads
+                  as a broken chart */}
+              {!collectionTrend.some(day => day.invoiceAmount > 0 || day.collectedAmount > 0) && (
+                <p className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                  No invoices or collections in this range
+                </p>
+              )}
             </div>
           </div>
 
