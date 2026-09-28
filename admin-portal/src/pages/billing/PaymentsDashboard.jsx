@@ -208,6 +208,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   // What the live property-based estimates cost and make. Null until it loads, so the panel appears
   // with its figures rather than as a row of zeroes.
   const [estimateMargins, setEstimateMargins] = useState(null);
+  // Vendor cost and margin belong to Admin, the Operations Manager and a Franchise Partner alone --
+  // a Manager, Supervisor or Executive sees this dashboard without them. The server refuses them
+  // too, so this hides a panel they could not fill rather than being the only thing stopping them.
+  const canSeeEstimateMargins = ['admin', 'operations_manager', 'franchise_partner']
+    .includes(user?.role);
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -238,13 +243,16 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       const allPayments = paymentsResult.success ? (paymentsResult.data || []) : (Array.isArray(paymentsResult) ? paymentsResult : []);
 
       // What the active property-based estimates cost XLAND. Aggregated server-side from the pricing
-      // snapshot saved with each service, so the browser is not sent every estimate to add up.
-      fetch(`${API_BASE}/api/payments/property-estimate-margins${queryString ? '?' + queryString : ''}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(response => response.json())
-        .then(result => setEstimateMargins(result.success ? result.data : null))
-        .catch(error => console.error('[Payments Dashboard] Estimate margins request failed:', error));
+      // snapshot saved with each service, so the browser is not sent every estimate to add up. Not
+      // requested at all by a role that may not see it.
+      if (canSeeEstimateMargins) {
+        fetch(`${API_BASE}/api/payments/property-estimate-margins${queryString ? '?' + queryString : ''}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then(response => response.json())
+          .then(result => setEstimateMargins(result.success ? result.data : null))
+          .catch(error => console.error('[Payments Dashboard] Estimate margins request failed:', error));
+      }
 
       // Fetch ALL invoices data
       const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${queryString ? '?' + queryString : ''}`, {
@@ -499,7 +507,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, selectedFp]);
+  }, [token, selectedFp, canSeeEstimateMargins]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -961,7 +969,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
         {/* What the live property-based estimates cost XLAND and what they make. Internal: vendor
             cost and margin belong to this screen and never to a customer document. */}
-        {estimateMargins && (
+        {canSeeEstimateMargins && estimateMargins && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mt-4 sm:mt-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">
