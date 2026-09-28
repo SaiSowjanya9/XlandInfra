@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { estimateServiceRows } from '../utils/estimatePackageUtils';
 import CategorySelection from '../components/common/CategorySelection';
 import {
   Building2,
@@ -432,57 +433,15 @@ const ManagerProperties = ({ user }) => {
     fetchAssignedEmployeesForZone(property.zone_name || property.zone);
   };
 
-  // Extract services from estimate (handles different data structures)
+  // The package's services and the ones added beside them, from the one shared reader: a custom or
+  // direct estimate keeps all of its services in addons, which this screen used to ignore. A
+  // package with no service list of its own still reads as one service, the package itself.
   const extractServicesFromEstimate = (estimate) => {
-    const services = [];
-    
-    // Try services_data JSON field first (from database)
-    if (estimate.services_data) {
-      try {
-        const servicesData = typeof estimate.services_data === 'string' 
-          ? JSON.parse(estimate.services_data) 
-          : estimate.services_data;
-        if (Array.isArray(servicesData)) {
-          servicesData.forEach(s => {
-            services.push({
-              serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-              frequencyCount: s.frequencyCount || s.frequency_count || s.visits || 1
-            });
-          });
-        }
-      } catch (e) { console.error('Error parsing services_data:', e); }
-    }
-    
-    // Try package_services field
-    if (services.length === 0 && estimate.package_services) {
-      try {
-        const pkgServices = typeof estimate.package_services === 'string'
-          ? JSON.parse(estimate.package_services)
-          : estimate.package_services;
-        if (Array.isArray(pkgServices)) {
-          pkgServices.forEach(s => {
-            services.push({
-              serviceType: s.service || s.name || s.serviceType,
-              frequencyType: s.frequencyType || 'Monthly',
-              frequencyCount: s.frequencyCount || s.visits || 1
-            });
-          });
-        }
-      } catch (e) { console.error('Error parsing package_services:', e); }
-    }
-
-    // If still no services, use package_name as a single service
-    if (services.length === 0 && estimate.package_name) {
-      services.push({
-        serviceType: estimate.package_name,
-        frequencyType: 'Monthly',
-        frequencyCount: 12
-      });
-    }
-    
-    return services;
+    const services = estimateServiceRows(estimate);
+    if (services.length || !estimate?.package_name) return services;
+    return [{ serviceType: estimate.package_name, frequencyType: 'Monthly', frequencyCount: 12 }];
   };
+
 
   // Get vendors filtered by service type only (global - no zone filtering)
   const getFilteredVendors = (serviceType = '') => {

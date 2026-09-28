@@ -198,6 +198,54 @@ export const getEstimateAddons = (estimate) => {
   return [];
 };
 
+const serviceRowsFrom = (value) => {
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.serviceRows)) return parsed.serviceRows;
+    if (Array.isArray(parsed?.services)) return parsed.services;
+  } catch {}
+  return [];
+};
+
+/**
+ * Every service an estimate covers, for the screens that assign vendors to them: the package's own
+ * services **and** the ones added beside it, in one list, deduplicated by name.
+ *
+ * Both sides matter. An estimate built without a package -- custom or direct -- keeps every service
+ * in `addons`/`addons_data`, hand-entered and configured alike, so reading only the package fields
+ * found nothing at all and the screen reported an estimate with no services. Reading only the
+ * addons would lose a package estimate's own services just as badly.
+ *
+ * A service the estimate says needs no vendor is left out: it is arranged without one, which is the
+ * same rule `serviceRowNeedsVendor` applies to the scheduling feeds on the server.
+ */
+export const estimateServiceRows = (estimate) => {
+  const rows = [
+    ...serviceRowsFrom(estimate?.services_data),
+    ...serviceRowsFrom(estimate?.package_services),
+    ...serviceRowsFrom(estimate?.packageServices),
+    ...getEstimateAddons(estimate)
+  ];
+  const seen = new Set();
+  const services = [];
+  for (const row of rows) {
+    if (row?.skip_vendor_assignment === true) continue;
+    const name = String(row?.service || row?.name || row?.serviceName || row?.service_name || row?.serviceType || '').trim();
+    const key = name.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    // On Request carries zero visits, so a stated 0 is kept rather than replaced with 1
+    const visits = [row.frequencyCount, row.frequency_count, row.visits].find(value => value != null && value !== '');
+    services.push({
+      serviceType: name,
+      frequencyType: row.frequencyType || row.frequency_type || 'Monthly',
+      frequencyCount: Number.isFinite(Number(visits)) ? Number(visits) : 1
+    });
+  }
+  return services;
+};
+
 // Normalize property type to standard label - handles GC, Apt, gated_community, etc.
 export const getPropertyTypeLabel = (type) => {
   if (!type) return '-';

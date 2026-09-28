@@ -162,8 +162,10 @@ test('every pricing method describes itself with category, primary input, unit a
     for (const internal of [METHOD_LABEL[method], 'Primary Input', 'Property Types']) {
       if (internal) assert.ok(!customer.addons[0].description.includes(internal), `${method}: ${internal}`);
     }
-    // What is measured at the customer's property is theirs to read
-    assert.ok(customer.addons[0].description.includes(row.category), method);
+    // The category belongs with the service name, so it travels as its own field and is not part
+    // of the description a customer document prints in its Description column
+    assert.equal(customer.addons[0].category, row.category, method);
+    assert.ok(!customer.addons[0].description.includes(row.category), `${method}: category in description`);
     // Re-normalizing a saved row must not change or duplicate the line
     assert.equal(normalizeEstimateService(row).details, row.details, method);
   }

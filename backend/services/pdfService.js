@@ -261,12 +261,16 @@ const generateEstimatePDF = async (estimate) => {
       // Both service lists share one renderer: the columns add up to the content width, every cell
       // carries the same padding, a row is as tall as its tallest cell actually measures rather
       // than a guess from character count, and the header repeats when a table crosses a page.
+      // Every field of a service the customer is entitled to read has a column: what it is, what it
+      // covers, how often, how many visits, how many of it, and what it costs.
       const TABLE_COLS = [
-        { label: '#', width: 26, align: 'left' },
-        { label: 'Service', width: 125, align: 'left' },
-        { label: 'Description', width: 214, align: 'left' },
-        { label: 'Frequency', width: 85, align: 'left' },
-        { label: 'Visits', width: 45, align: 'right' }
+        { label: '#', width: 22, align: 'left' },
+        { label: 'Service', width: 104, align: 'left' },
+        { label: 'Description', width: 144, align: 'left' },
+        { label: 'Frequency', width: 74, align: 'left' },
+        { label: 'Visits', width: 40, align: 'right' },
+        { label: 'Qty', width: 34, align: 'right' },
+        { label: 'Price (₹)', width: 77, align: 'right' }
       ];
       const CELL_PAD = 8;
       const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
@@ -283,7 +287,7 @@ const generateEstimatePDF = async (estimate) => {
       const drawServicesTable = rows => {
         drawTableHeader();
         rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits)];
+          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits), row.quantity, row.price];
           doc.fontSize(8).font('Helvetica');
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
@@ -297,11 +301,20 @@ const generateEstimatePDF = async (estimate) => {
         y += GAP.row;
       };
 
-      const tableRow = item => ({
-        name: decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
+      const tableRow = (item, { priced = true } = {}) => ({
+        // The category says what kind of service this is, so it reads under the name rather than
+        // among the details in the Description column
+        name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
+          decodeHtml(item.category || '')].filter(Boolean).join('\n'),
         details: decodeHtml(item.details || item.description || item.service_description || '-') || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
-        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1
+        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
+        // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so
+        // with a dash rather than inventing a 1
+        quantity: item.quantity == null || item.quantity === '' ? '-' : String(item.quantity),
+        // A package's own services carry no price of their own -- the package has one price for all
+        // of them -- so their column reads as a dash rather than as zero
+        price: priced ? `Rs. ${money(item.totalPrice ?? item.price ?? 0)}` : '-'
       });
 
       // Only show Services Table for NON-work order estimates
@@ -316,7 +329,8 @@ const generateEstimatePDF = async (estimate) => {
 
       if (!isWOEstimate && svcList.length > 0) {
         sectionHeading('Services Included');
-        drawServicesTable(svcList.map(tableRow));
+        // A package's services are covered by the package price, so no per-row price is stated
+        drawServicesTable(svcList.map(item => tableRow(item, { priced: false })));
       }
 
       // Add-ons Table (if any) - ensure it's an array

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { estimateServiceRows } from '../utils/estimatePackageUtils';
 import CategorySelection from '../components/common/CategorySelection';
 import {
   Building2,
@@ -312,64 +313,10 @@ const FPProperties = ({ user }) => {
   };
 
   // Extract services from estimate
-  const extractServicesFromEstimate = (estimate) => {
-    const services = [];
-    
-    // Helper to extract service array from various formats
-    const extractServiceArray = (data) => {
-      if (!data) return [];
-      try {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        // Handle {serviceRows: [...]} format
-        if (parsed?.serviceRows && Array.isArray(parsed.serviceRows)) {
-          return parsed.serviceRows;
-        }
-        // Handle {services: [...]} format
-        if (parsed?.services && Array.isArray(parsed.services)) {
-          return parsed.services;
-        }
-        // Handle direct array
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch (e) { console.log('Parse error:', e); }
-      return [];
-    };
+  // The package's services and the ones added beside them, from the one shared reader: a custom or
+  // direct estimate keeps all of its services in addons, which this screen used to ignore
+  const extractServicesFromEstimate = estimate => estimateServiceRows(estimate);
 
-    // Helper to push service to array
-    const pushService = (s) => {
-      const serviceType = s.service || s.name || s.serviceType || s.serviceName;
-      if (serviceType) {
-        services.push({
-          serviceType,
-          frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-          frequencyCount: s.frequencyCount || s.frequency_count || s.visits || s.frequency || 1
-        });
-      }
-    };
-    
-    // Try multiple sources in order of priority
-    const sources = [
-      estimate.services_data,
-      estimate.package_services,
-      estimate.packageServices
-    ];
-
-    for (const source of sources) {
-      if (services.length === 0 && source) {
-        extractServiceArray(source).forEach(pushService);
-      }
-    }
-
-    // Debug log
-    console.log('Extract services - Estimate:', estimate.estimate_id, 'Services found:', services.length, 'Sources:', {
-      services_data: !!estimate.services_data,
-      package_services: !!estimate.package_services,
-      packageServices: !!estimate.packageServices
-    });
-    
-    return services;
-  };
 
   // Get vendors filtered by service type only (no zone filtering)
   const getVendorsByServiceType = (serviceType = '') => {
