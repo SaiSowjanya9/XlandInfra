@@ -58,7 +58,6 @@ const SKINS = {
     iconEdit: 'hover:bg-blue-50 hover:text-blue-600 focus:ring-blue-100',
     // dialog bits
     badge: 'bg-blue-100 text-blue-700',
-    addedBadge: 'bg-emerald-50 text-emerald-700',
     previewBox: 'border-slate-200 bg-slate-50',
     menuItem: 'text-slate-700 hover:bg-blue-50 hover:text-blue-700',
     toggleOn: 'border-blue-200 bg-blue-50 text-blue-700',
@@ -111,7 +110,6 @@ const SKINS = {
     secondary: 'border-warm-border text-warm-muted hover:bg-warm-section',
     iconEdit: 'hover:bg-warm-accent-soft hover:text-warm-accent-hover focus:ring-warm-accent/20',
     badge: 'bg-warm-accent-soft text-warm-text',
-    addedBadge: 'bg-warm-success text-emerald-700',
     previewBox: 'border-warm-border bg-warm-section',
     menuItem: 'text-warm-text hover:bg-warm-section hover:text-warm-accent-hover',
     toggleOn: 'border-warm-accent/50 bg-warm-accent-soft text-warm-text',

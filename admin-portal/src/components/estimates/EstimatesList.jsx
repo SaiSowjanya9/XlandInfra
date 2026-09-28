@@ -14,7 +14,8 @@ import {
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
 import { EstimateTermsSection } from './EstimateTerms';
-import { getServiceDescription, getServiceMarkup, getAddonPrice, hasCatalogServices } from '../../utils/estimatePackageUtils';
+import { getServiceDescription, hasCatalogServices } from '../../utils/estimatePackageUtils';
+import EstimateServicesTable from './EstimateServicesTable';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -1252,53 +1253,11 @@ const EstimatesList = ({
                 </div>
               )}
 
-              {/* Additional Services - Horizontal Table */}
+              {/* Services on the estimate */}
               {viewEstimate.addons?.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
-                  <div>
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
-                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
-                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
-                    </div>
-                    <div className="border border-green-100 divide-y divide-green-50">
-                      {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = typeof addon === 'number' ? `Service ${idx + 1}` : decodeHtml(addon.name || addon.serviceName || addon.service_name) || `Service ${idx + 1}`;
-                        const frequencyCount = typeof addon === 'object' ? (addon.frequency_count ?? addon.frequencyCount ?? 1) : 1;
-                        const frequencyType = typeof addon === 'object' ? (addon.frequencyType || addon.frequency_type || 'Monthly') : 'Monthly';
-                        const addonDesc = typeof addon === 'object' ? decodeHtml(getServiceDescription(addon)) || '' : '';
-                        // Internal figure: shown on this staff screen only, never in a customer document
-                        const addonMarkup = typeof addon === 'object' ? getServiceMarkup(addon) : null;
-                        return (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                            <div className="col-span-1">
-                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                            </div>
-                            <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
-                            </div>
-                            <div className="col-span-4">
-                              <p className={`text-xs text-gray-500 break-all whitespace-normal ${!addonDesc ? 'text-center' : ''}`}>{addonDesc || '-'}</p>
-                              {addonMarkup != null && <p className="mt-1 text-[10px] text-gray-400">Markup: {addonMarkup}% (internal)</p>}
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-green-600">{frequencyType}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">â‚¹{viewEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0).toLocaleString()}</p>
-                    </div>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Services</p>
+                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
                 </div>
               )}
 
@@ -1377,7 +1336,7 @@ const EstimatesList = ({
             <div className="p-6 space-y-6">
               <div><p className="text-sm font-semibold mb-3">Customer Details</p><div className="grid grid-cols-3 gap-4"><div><label className="block text-xs mb-1">Name *</label><input type="text" value={editEstimateForm.client_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Phone</label><input type="text" value={editEstimateForm.client_phone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_phone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Email</label><input type="email" value={editEstimateForm.client_email} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, client_email: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
               <div><p className="text-sm font-semibold mb-3">Property</p><div className="grid grid-cols-2 gap-4">{(editEstimate.property_code || editEstimate.propertyId) && <div><label className="block text-xs mb-1">Property ID</label><input type="text" value={editEstimate.property_code || editEstimate.propertyId || ""} readOnly disabled className="w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" /></div>}<div><label className="block text-xs mb-1">Name</label><input type="text" value={editEstimateForm.property_name} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, property_name: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Zone</label><input type="text" value={editEstimateForm.zone} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, zone: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">City</label><input type="text" value={editEstimateForm.city} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, city: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">Address</label><input type="text" value={editEstimateForm.address} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, address: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div></div>
-              <div><p className="text-sm font-semibold mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg"><option value="">Select</option>{amcPackages.filter(p => normalizePropertyType(p.property_type) === normalizePropertyType(editEstimate.propertyType || editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+              <div><p className="text-sm font-semibold mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg"><option value="">Select</option>{amcPackages.filter(p => normalizePropertyType(p.property_type) === normalizePropertyType(editEstimate.propertyType || editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
               <div><p className="text-sm font-semibold mb-3">Add Service</p><div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.propertyType || editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded"><span className="text-sm text-gray-700 flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-amber-600 hover:bg-amber-50">+</button></div></div>); })}</div></div>
               <div><p className="text-sm font-semibold mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs mb-1">Discount %</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div><div><label className="block text-xs mb-1">GST %</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border rounded-lg" /></div></div><div className="mt-4 bg-gray-50 p-4 rounded-lg space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-amber-600">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
               <div><label className="block text-xs mb-1">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm border rounded-lg" /></div>

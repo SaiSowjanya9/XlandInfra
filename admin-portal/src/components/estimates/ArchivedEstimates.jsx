@@ -5,7 +5,7 @@ import {
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
-import { getAddonPrice, getServiceDescription } from '../../utils/estimatePackageUtils';
+import EstimateServicesTable from './EstimateServicesTable';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -482,49 +482,11 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 )}
               </div>
 
-              {/* Additional Services - Horizontal Table */}
+              {/* Services on the estimate */}
               {viewEstimate.addons?.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm text-gray-500 mb-2">Additional Services</p>
-                  <div>
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
-                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
-                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
-                    </div>
-                    <div className="border border-green-100 divide-y divide-green-50">
-                      {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = decodeHtml(addon.name || addon.serviceName || addon.service_name) || 'Service';
-                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? 1;
-                        const frequencyType = addon.frequency_type || addon.frequencyType || 'Monthly';
-                        return (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                            <div className="col-span-1">
-                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                            </div>
-                            <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
-                            </div>
-                            <div className="col-span-4 overflow-hidden">
-                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{decodeHtml(getServiceDescription(addon)) || '-'}</p>
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-green-600">{frequencyType}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0).toLocaleString()}</p>
-                    </div>
-                  </div>
+                  <p className="text-sm text-gray-500 mb-2">Services</p>
+                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
                 </div>
               )}
 

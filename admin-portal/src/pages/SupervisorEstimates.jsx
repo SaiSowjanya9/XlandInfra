@@ -19,6 +19,7 @@ import {
 } from '../utils/estimateStore';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
+import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import * as XLSX from 'xlsx';
 
 const ITEMS_PER_PAGE = 10;
@@ -618,7 +619,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 const propertyType = selectedProperty?.property_type || selectedProperty?.entryType || selectedProperty?.propertyType || directForm?.propertyType;
                 const filteredPkgs = propertyType ? amcPackages.filter(pkg => packageMatchesPropertyType(pkg, propertyType)) : [];
                 return (<>
-                  {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(getPackagePrice(pkg))}</option>)}
+                  {filteredPkgs.length > 0 && filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>)}
                   {propertyType && filteredPkgs.length === 0 && <option disabled>No packages available for {propertyType}</option>}
                   {!propertyType && <option disabled>Select property type first</option>}
                 </>);
@@ -707,7 +708,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
           {selectedAddons.length > 0 && (
             <div className="border border-blue-200 rounded-xl overflow-hidden">
               <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                <span className="text-sm font-semibold text-blue-700">Additional Services</span>
+                <span className="text-sm font-semibold text-blue-700">Services</span>
               </div>
               <table className="w-full text-sm">
                 <thead>
@@ -2137,58 +2138,11 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Additional Services - Horizontal Table */}
+              {/* Services on the estimate */}
               {viewEstimate.addons && viewEstimate.addons.length > 0 && (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Additional Services</p>
-                  <div>
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-lg">
-                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
-                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
-                    </div>
-                    <div className="border border-green-100 divide-y divide-green-50">
-                      {viewEstimate.addons.map((addon, idx) => {
-                        const addonName = decodeHtml(addon.name || addon.service_name) || '';
-                        const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
-                        let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
-                        if (!addonFromList || !addonFromList.description) {
-                          addonFromList = addons.find(a => 
-                            (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
-                            (a.property_type || '').toUpperCase() === estPropertyType
-                          ) || addonFromList;
-                        }
-                        const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
-                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
-                        const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
-                        return (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                            <div className="col-span-1">
-                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                            </div>
-                            <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{addonName}</p>
-                            </div>
-                            <div className="col-span-4">
-                              <p className="text-xs text-gray-500 break-words whitespace-normal">{addonDescription || '-'}</p>
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-green-600">{frequencyType}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-lg">
-                      <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">₹{viewEstimate.addons.reduce((sum, a) => sum + Number(a.price || 0), 0).toLocaleString()}</p>
-                    </div>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Services</p>
+                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
                 </div>
               )}
 

@@ -1501,7 +1501,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   <div className="mt-4">
                     {/* Section Header */}
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Additional Services</span>
+                      <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Services</span>
                     </div>
                     
                     {/* Addons Table - Compact */}

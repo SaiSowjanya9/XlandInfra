@@ -386,7 +386,7 @@ const AMCPackage = ({ showToast }) => {
                 <option value="">Select a package</option>
                 {amcPackages.map(pkg => (
                   <option key={pkg.packageId} value={pkg.packageId}>
-                    {pkg.packageName || pkg.packageId} - ₹{(pkg.rate || 0).toLocaleString()}
+                    {pkg.packageName || pkg.packageId}
                   </option>
                 ))}
               </select>
