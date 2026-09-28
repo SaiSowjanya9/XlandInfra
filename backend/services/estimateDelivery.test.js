@@ -38,6 +38,17 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
     assert.ok(mail.html.includes(text), `email: ${text}`);
     assert.ok(pdfText.includes(text), `pdf: ${text}`);
   }
+  // The category belongs with the service name, not in the Description column. In the email it
+  // follows the name immediately; in the PDF the Service cell is drawn with both.
+  assert.match(mail.html, /<strong>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
+  assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
+  // Every field of the service has its own column in the attachment, quantity included
+  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Qty', 'Price (₹)']) {
+    assert.ok(texts.includes(heading), `pdf column: ${heading}`);
+  }
+  assert.ok(texts.includes('Rs. 11,700.25'), 'the service price is on its own row');
+  // A capacity-priced service has no quantity of its own, and says so rather than showing 1
+  assert.ok(texts.includes('-'), 'no quantity reads as a dash');
   // How it is priced, the derived input and the types the service is configured for are ours
   for (const text of ['Capacity Based', 'Primary Input', 'Property Types']) {
     assert.ok(!mail.html.includes(text), `email leaked: ${text}`);

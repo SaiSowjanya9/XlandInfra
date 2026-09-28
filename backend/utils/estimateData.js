@@ -18,16 +18,25 @@ const METHODS = { fixed_price: 'Fixed Price', quantity_based: 'Quantity Based', 
  * billed by, the derived Primary Input, and the property types the service is configured for. A
  * customer reads the service, its schedule, and what was measured at their own property.
  *
+ * The category comes out too, but because it belongs **with the service name**, not in its
+ * description -- it says what kind of service this is, so a customer document prints it under the
+ * name and `customerEstimateData` carries it as its own field.
+ *
  * It filters the finished string rather than composing a second one, so an estimate saved with the
  * segments already in its `details` is cleaned on the way out too. Mirrors customerServiceDetails
  * in admin-portal/src/utils/estimatePackageUtils.js.
  */
 const METHOD_LABELS = new Set(Object.values(METHODS));
 const INTERNAL_SEGMENT = /^(Primary Input|Property Types)\s*:/;
-const customerLine = line => line.split(' | ')
-  .filter(part => !METHOD_LABELS.has(part.trim()) && !INTERNAL_SEGMENT.test(part.trim()))
+const customerLine = (line, category) => line.split(' | ')
+  .filter(part => {
+    const segment = part.trim();
+    return segment !== category && !METHOD_LABELS.has(segment) && !INTERNAL_SEGMENT.test(segment);
+  })
   .join(' | ');
-const customerServiceDetails = text => String(text ?? '').split('\n').map(customerLine).filter(line => line.trim()).join('\n');
+const customerServiceDetails = (text, category = '') => String(text ?? '').split('\n')
+  .map(line => customerLine(line, String(category ?? '').trim()))
+  .filter(line => line.trim()).join('\n');
 
 const normalizeEstimateService = value => {
   const row = value && typeof value === 'object' ? value : { price: typeof value === 'number' ? value : 0, name: typeof value === 'string' ? value : 'Service' };
@@ -93,10 +102,15 @@ const normalizeEstimateService = value => {
   const markupPercentage = first(inputs.markup_percentage, snapshot.default_markup_percentage);
   // propertyTypeLabels is added rather than rewriting applicable_property_types, which keeps
   // holding the codes the validator and the pricing quote expect
+  // How many of it: typed on a hand-entered service, one of the pricing inputs on a Quantity Based
+  // catalog service. Either way a customer document states it in its own column.
+  const quantity = first(row.quantity, inputs.quantity);
   return { ...row, name, category, propertyTypeLabels: propertyTypes,
+    quantity: quantity === undefined || !Number.isFinite(Number(quantity)) ? undefined : Number(quantity),
     primaryInput, markupPercentage: markupPercentage == null ? undefined : amount(markupPercentage),
-    // The staff portals read `details`; anything the customer sees reads `customerDetails`
-    description, details, customerDetails: customerServiceDetails(details), serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
+    // The staff portals read `details`; anything the customer sees reads `customerDetails`, which
+    // leaves out the category because that is printed with the service name instead
+    description, details, customerDetails: customerServiceDetails(details, category), serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
     frequencyCount, frequency_count: frequencyCount, price, totalPrice: price };
 };
 
@@ -132,7 +146,9 @@ const normalizeEstimateData = row => {
 
 const customerEstimateData = source => {
   const row = normalizeEstimateData(source);
-  const service = item => ({ name: item.name, description: item.customerDetails, frequencyType: item.frequencyType,
+  // The category travels beside the name, not inside the description: it says what kind of service
+  // this is, so a customer document prints it under the service rather than among its details
+  const service = item => ({ name: item.name, category: item.category, quantity: item.quantity, description: item.customerDetails, frequencyType: item.frequencyType,
     frequencyCount: item.frequencyCount, frequency_type: item.frequencyType, frequency_count: item.frequencyCount, price: item.price, totalPrice: item.totalPrice });
   const result = Object.fromEntries(['estimateId', 'estimateType', 'customerName', 'customerEmail', 'customerPhone', 'propertyName', 'propertyType', 'propertyCode',
     'zone', 'division', 'city', 'address', 'subtotal', 'total', 'validUntil', 'createdAt', 'description', 'packagePrice', 'gstPercent', 'discountAmount',

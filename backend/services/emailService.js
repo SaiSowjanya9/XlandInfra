@@ -939,6 +939,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
         <strong>${addonName}</strong>
+        ${a.category ? `<br><span style="font-size: 11px; color: #6b7280;">${emailText(a.category)}</span>` : ''}
         ${freqType ? `<br><span style="font-size: 12px; color: #6b7280;">${freqType} - ${freqCount} visits</span>` : ''}
         ${desc ? `<br><span style="font-size: 12px; color: #6b7280;">${desc}</span>` : ''}
       </td>
