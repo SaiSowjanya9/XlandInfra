@@ -495,22 +495,36 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             {isCapacitySlab && <div className={sk("border-t border-slate-100 p-5 sm:p-6")}>
               <h2 className={sk("mb-5 text-sm font-semibold text-blue-600")}>Capacity Slab Configuration</h2>
               <div className={sk("overflow-x-auto rounded-lg border border-slate-200")}>
-                <table className={sk("w-full min-w-[900px] text-left text-xs")}>
+                <table className={sk("w-full min-w-[1100px] text-left text-xs")}>
                   <thead className={sk("border-b border-slate-200 bg-slate-50 text-slate-500")}><tr>
-                    <th className={sk("px-3 py-3")}>Slab Name</th><th className={sk("px-3 py-3")}>Capacity From</th><th className={sk("px-3 py-3")}>Capacity To</th><th className={sk("px-3 py-3")}>Unit</th><th className={sk("px-3 py-3")}>Rate Per Visit (₹)</th><th className={sk("px-3 py-3")}>Default Frequency</th><th className={sk("px-3 py-3")}>Default Visits Per Year</th><th className={sk("px-3 py-3 text-center")}>Action</th>
+                    <th className={sk("px-3 py-3")}>Slab Name</th><th className={sk("px-3 py-3")}>Capacity From</th><th className={sk("px-3 py-3")}>Capacity To</th><th className={sk("px-3 py-3")}>Above</th><th className={sk("px-3 py-3")}>Unit</th><th className={sk("px-3 py-3")}>Rate Per Visit (₹)</th><th className={sk("px-3 py-3")}>Custom Quote</th><th className={sk("px-3 py-3")}>Default Frequency</th><th className={sk("px-3 py-3")}>Default Visits Per Year</th><th className={sk("px-3 py-3 text-center")}>Action</th>
                   </tr></thead>
                   <tbody className={sk("divide-y divide-slate-100")}>{capacitySlabs.map((slab, index) => <tr key={slab.id}>
                     <td className={sk("whitespace-nowrap px-3 py-3 font-medium text-slate-700")}>{slabLabel(slab)}</td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Slab ${index + 1} capacity from`} type="number" min="0" max={1e9} step="1" required value={slab.capacityFrom} onChange={event => updateCapacitySlab(slab.id, 'capacityFrom', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} /></td>
-                    <td className={sk("px-3 py-3")}><div className={sk("space-y-2")}>
-                      {slab.capacityTo !== null && <input aria-label={`Slab ${index + 1} capacity to`} type="number" min={slab.capacityFrom} max={1e9} step="1" required value={slab.capacityTo} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
-                      {index === capacitySlabs.length - 1 && <label className={sk("flex items-center gap-2 text-xs text-slate-500")}><input type="checkbox" checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className={sk("accent-blue-600")} />Above (no limit)</label>}
-                    </div></td>
+                    <td className={sk("px-3 py-3")}>
+                      {/* An open-ended last slab has no upper bound to type, so the cell says so
+                          rather than leaving an empty box beside the checkbox that emptied it */}
+                      {slab.capacityTo === null
+                        ? <span className={sk("whitespace-nowrap text-slate-400")}>No limit</span>
+                        : <input aria-label={`Slab ${index + 1} capacity to`} type="number" min={slab.capacityFrom} max={1e9} step="1" required value={slab.capacityTo} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
+                    </td>
+                    <td className={sk("px-3 py-3")}>
+                      {/* Only the last slab may run to infinity; the others are bounded by the next one */}
+                      {index === capacitySlabs.length - 1
+                        ? <label className={sk("flex items-center gap-2 whitespace-nowrap text-xs text-slate-500")} title="No upper limit: this slab covers every capacity above its start"><input type="checkbox" aria-label={`Slab ${index + 1} has no upper limit`} checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className={sk("accent-blue-600")} />No limit</label>
+                        : <span className={sk("text-slate-300")}>—</span>}
+                    </td>
                     <td className={sk("px-3 py-3 text-slate-500")}>{formData.unit}</td>
-                    <td className={sk("px-3 py-3")}><div className={sk("space-y-2")}>
-                      {!slab.isCustomQuote && <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" max={1e9} step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={sk(`${inputClass} min-w-[110px]`)} />}
-                      <label className={sk("flex items-center gap-2 text-xs text-slate-500")}><input type="checkbox" checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className={sk("accent-blue-600")} />Custom Quote</label>
-                    </div></td>
+                    <td className={sk("px-3 py-3")}>
+                      {/* A slab quoted case by case has no rate of its own to type */}
+                      {slab.isCustomQuote
+                        ? <span className={sk("whitespace-nowrap text-slate-400")}>On quote</span>
+                        : <input aria-label={`Slab ${index + 1} vendor rate`} type="number" min="0" max={1e9} step="0.01" required value={slab.vendorRate ?? ''} onChange={event => updateCapacitySlab(slab.id, 'vendorRate', event.target.value)} className={sk(`${inputClass} min-w-[110px]`)} />}
+                    </td>
+                    <td className={sk("px-3 py-3")}>
+                      <label className={sk("flex items-center gap-2 whitespace-nowrap text-xs text-slate-500")} title="This slab is quoted case by case rather than from a rate"><input type="checkbox" aria-label={`Slab ${index + 1} needs a custom quote`} checked={slab.isCustomQuote} onChange={event => updateCapacitySlab(slab.id, 'isCustomQuote', event.target.checked)} className={sk("accent-blue-600")} />Required</label>
+                    </td>
                     <td className={sk("px-3 py-3")}><select aria-label={`Slab ${index + 1} default frequency`} value={slab.defaultFrequency} onChange={event => updateCapacitySlab(slab.id, 'defaultFrequency', event.target.value)} className={sk(`${inputClass} min-w-[130px]`)}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Slab ${index + 1} default visits per year`} type="number" min="0" max="366" step="1" required readOnly value={slab.defaultVisitsPerYear} onChange={event => updateCapacitySlab(slab.id, 'defaultVisitsPerYear', event.target.value)} className={sk(`${inputClass} min-w-[90px] bg-slate-50`)} /></td>
                     <td className={sk("px-3 py-3 text-center")}><button type="button" aria-label={`Delete slab ${index + 1}`} disabled={capacitySlabs.length === 1} onClick={() => deleteCapacitySlab(slab.id)} className={sk("rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30")}><Trash2 className={sk("h-4 w-4")} /></button></td>
@@ -553,14 +567,22 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <p className={sk("mb-4 mt-1 text-xs text-slate-500")}>Area ranges apply their rate automatically and suggest a headcount. Leave empty to use the default rate.</p>
               {manpowerRanges.length > 0 && <div className={sk("overflow-x-auto rounded-lg border border-slate-200")}>
                 <table className={sk("w-full min-w-[900px] text-left text-xs")}>
-                  <thead className={sk("border-b border-slate-200 bg-slate-50 text-slate-500")}><tr>{['#', 'Area From (Sq Ft)', 'Area To (Sq Ft)', 'Recommended Min', 'Recommended Max', 'Rate per Person / Visit (₹)', 'Action'].map(label => <th key={label} className={sk("px-3 py-3")}>{label}</th>)}</tr></thead>
+                  <thead className={sk("border-b border-slate-200 bg-slate-50 text-slate-500")}><tr>{['#', 'Area From (Sq Ft)', 'Area To (Sq Ft)', 'Above', 'Recommended Min', 'Recommended Max', 'Rate per Person / Visit (₹)', 'Action'].map(label => <th key={label} className={sk("px-3 py-3")}>{label}</th>)}</tr></thead>
                   <tbody className={sk("divide-y divide-slate-100")}>{manpowerRanges.map((range, index) => <tr key={range.id}>
                     <td className={sk("px-3 py-3")}>{index + 1}</td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} area from`} type="number" min="0" max={1e9} step="1" required value={range.areaFrom} onChange={event => updateManpowerRange(range.id, 'areaFrom', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} /></td>
-                    <td className={sk("px-3 py-3")}><div className={sk("space-y-2")}>
-                      {range.areaTo !== null && <input aria-label={`Manpower range ${index + 1} area to`} type="number" min={Math.max(1, Number(range.areaFrom))} max={1e9} step="1" required value={range.areaTo} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
-                      {index === manpowerRanges.length - 1 && <label className={sk("flex items-center gap-2 text-slate-500")}><input type="checkbox" checked={range.areaTo === null} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.checked ? null : Number(range.areaFrom) + 999)} className={sk("accent-blue-600")} />No upper limit</label>}
-                    </div></td>
+                    <td className={sk("px-3 py-3")}>
+                      {/* An open-ended last range has no upper bound to type */}
+                      {range.areaTo === null
+                        ? <span className={sk("whitespace-nowrap text-slate-400")}>No limit</span>
+                        : <input aria-label={`Manpower range ${index + 1} area to`} type="number" min={Math.max(1, Number(range.areaFrom))} max={1e9} step="1" required value={range.areaTo} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
+                    </td>
+                    <td className={sk("px-3 py-3")}>
+                      {/* Only the last range may run to infinity; the others are bounded by the next */}
+                      {index === manpowerRanges.length - 1
+                        ? <label className={sk("flex items-center gap-2 whitespace-nowrap text-slate-500")} title="No upper limit: this range covers every area above its start"><input type="checkbox" aria-label={`Manpower range ${index + 1} has no upper limit`} checked={range.areaTo === null} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.checked ? null : Number(range.areaFrom) + 999)} className={sk("accent-blue-600")} />No limit</label>
+                        : <span className={sk("text-slate-300")}>—</span>}
+                    </td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} recommended minimum`} type="number" min="1" max={1e6} step="1" required value={range.recommendedMin} onChange={event => updateManpowerRange(range.id, 'recommendedMin', event.target.value)} className={sk(`${inputClass} min-w-[90px]`)} /></td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} recommended maximum`} type="number" min={Math.max(Number(range.recommendedMin), Number(formData.minimumManpower))} max={1e6} step="1" required value={range.recommendedMax} onChange={event => updateManpowerRange(range.id, 'recommendedMax', event.target.value)} className={sk(`${inputClass} min-w-[90px]`)} /></td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} rate per person`} type="number" min="0" max={1e9} step="0.01" required value={range.ratePerPerson} onChange={event => updateManpowerRange(range.id, 'ratePerPerson', event.target.value)} className={sk(`${inputClass} min-w-[120px]`)} /></td>
