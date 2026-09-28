@@ -27,6 +27,8 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
+import { packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
+import { methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
@@ -3116,14 +3118,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
     if (!selectedPropertyTypes.length) { showToast('Select at least one property type', 'error'); return; }
-    if (!amcForm.price || parseFloat(amcForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
+    // The price is the sum of the configured services, so it is they that must be priced
+    if (totals.price <= 0) { showToast('Add a configured service and its amount so the package has a price', 'error'); return; }
     const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType }; }), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, pricingMethod: r.pricingMethod, unit: r.unit, category: r.category || '', inputValue: r.inputValue, price: r.price, vendorCost: r.vendorCost, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -3153,7 +3156,37 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
   const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
-  const getPrice = () => parseFloat(amcForm.price) || 0;
+  // The package's price is what its configured services add up to, so it is derived rather than typed
+  const totals = packageTotals(amcForm.serviceRows);
+  const getPrice = () => totals.price;
+  const [pricingError, setPricingError] = useState('');
+  // A quote is validated against the types a service allows, and no method prices differently by
+  // type, so the package's first applicable type is enough to price with.
+  const pricingKey = JSON.stringify(amcForm.serviceRows.map(row =>
+    [row.catalogServiceId, row.inputValue, row.frequencyType, row.frequencyCount]));
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      let failure = '';
+      const priced = await Promise.all(amcForm.serviceRows.map(async row => {
+        const result = await quotePackageRow(row, { apiPath: FP_CATALOG_API, propertyType: selectedPropertyTypes[0] || '', fpId: 'all', token, signal: controller.signal })
+          .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
+        if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
+        if (result.priced) return { ...row, ...result.priced };
+        if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
+        return row;
+      }));
+      if (controller.signal.aborted) return;
+      setPricingError(failure);
+      // Only write back when a figure actually changed, or this would loop
+      setAmcForm(prev => {
+        const changed = priced.some((row, index) => row.price !== prev.serviceRows[index]?.price
+          || row.vendorCost !== prev.serviceRows[index]?.vendorCost);
+        return changed ? { ...prev, serviceRows: priced } : prev;
+      });
+    }, 400);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [pricingKey, selectedPropertyTypes, token]);
   const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
@@ -3404,33 +3437,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* Create Package Tab */}
+      {/* Create Package Tab. The form sits on the left and the panel on the right carries what the
+          package applies to and what it comes to, the same shape as the Add Service screen. */}
       {amcActiveTab === 'create' && (
         <div className="space-y-6">
-          {/* Property Type Selection */}
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
-            <h2 className="text-base font-semibold text-warm-text mb-2">Select Property Type</h2>
-            <p className="text-sm text-warm-muted mb-4">Choose every property type this package applies to</p>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {PROPERTY_TYPE_OPTIONS.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
-                  className={`px-4 py-3 rounded-[10px] border transition-all duration-200 text-sm font-medium text-center ${
-                    selectedPropertyTypes.includes(type.id)
-                      ? 'border-warm-accent bg-warm-accent-soft text-warm-text shadow-sm'
-                      : 'border-warm-border bg-white text-warm-muted hover:border-warm-accent hover:bg-warm-section'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Package Configuration Card - Only show after property type selected */}
-          {selectedPropertyTypes.length > 0 && (
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          <div className="flex-1 min-w-0 space-y-6">
             <div className="bg-white rounded-xl border border-warm-border shadow-warm">
               {/* Header with Add Buttons */}
               <div className="px-6 py-4 border-b border-warm-border/70 flex items-center justify-between gap-3">
@@ -3476,10 +3488,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   />
                 </div>
 
-                {/* Service Configuration with Price on Right */}
-                <div className="flex gap-6">
-                  {/* Service Rows Section */}
-                  <div className="flex-1">
+                {/* Service Configuration. Every column a configured service needs to be priced: what
+                    it is, how it is priced, the amount it is priced on, its schedule and its price. */}
+                <div className="overflow-x-auto">
+                  <div className="min-w-[46rem]">
                     <h3 className="text-sm font-semibold text-warm-text mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
@@ -3487,16 +3499,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="col-span-3">
                         <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Service</span>
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Description</span>
                       </div>
-                      <div className="col-span-3">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Frequency</span>
+                      <div className="col-span-2">
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Method / Input</span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Visits</span>
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Frequency</span>
                       </div>
                       <div className="col-span-1">
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Visits</span>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Price</span>
+                      </div>
+                      <div className="col-span-1 text-center">
                         <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Action</span>
                       </div>
                     </div>
@@ -3517,7 +3535,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Description */}
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <input
                               type="text"
                               value={row.description || ''}
@@ -3526,9 +3544,30 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                             />
                           </div>
+
+                          {/* Method and the amount it is priced on. A row typed by hand has neither:
+                              it belongs to the package but sets no price. */}
+                          <div className="col-span-2">
+                            {row.catalogServiceId ? (() => {
+                              const input = rowInput(row);
+                              return <>
+                                <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{methodLabel(row.pricingMethod)}</span>
+                                {input && (
+                                  <input
+                                    type="number" min={input.min} step={input.step}
+                                    value={row.inputValue ?? ''}
+                                    onChange={(e) => handleUpdateServiceRow(index, 'inputValue', e.target.value)}
+                                    placeholder={`${input.label}${input.unit ? ` (${input.unit})` : ''}`}
+                                    aria-label={`${row.service} ${input.label}`}
+                                    className="mt-1 w-full px-2 py-1.5 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                                  />
+                                )}
+                              </>;
+                            })() : <span className="text-xs text-warm-muted">Typed by hand</span>}
+                          </div>
                           
                           {/* Frequency Type */}
-                          <div className="col-span-3 relative">
+                          <div className="col-span-2 relative">
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -3542,7 +3581,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Frequency Count */}
-                          <div className="col-span-2">
+                          <div className="col-span-1">
                             <input
                               type="number"
                               min="0"
@@ -3552,6 +3591,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               placeholder={isCustomFrequency(row.frequencyType) ? 'Enter' : ''}
                               className={`w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent' : 'bg-warm-page cursor-not-allowed'}`}
                             />
+                          </div>
+
+                          {/* What this service comes to. Quoted by the server, so it is read here only. */}
+                          <div className="col-span-1 text-right">
+                            <p className="px-1 py-2 text-sm font-semibold text-warm-text">
+                              {Number.isFinite(Number(row.price)) ? formatCurrency(row.price) : <span className="text-warm-muted">—</span>}
+                            </p>
                           </div>
                           
                           {/* Delete Button */}
@@ -3572,25 +3618,43 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       ))}
                     </div>
                   </div>
+                  {pricingError && <p role="alert" className="mt-3 rounded-[10px] border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{pricingError}</p>}
+                </div>
 
-                  {/* Price Section - Right Side */}
-                  <div className="w-72 flex-shrink-0">
+              </div>
+            </div>
+          </div>
+
+          {/* Right panel: what the package applies to, and what it comes to */}
+          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+            <div className="bg-white rounded-xl border border-warm-border shadow-warm p-5">
+              <h2 className="text-sm font-semibold text-warm-text">Applicable Property Types <span className="text-red-500">*</span></h2>
+              <p className="mt-1 text-xs text-warm-muted">Every property type this package applies to</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {PROPERTY_TYPE_OPTIONS.map((type) => (
+                  <label key={type.id} className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2 text-xs transition-colors ${selectedPropertyTypes.includes(type.id) ? 'border-warm-accent bg-warm-accent-soft text-warm-text' : 'border-warm-border text-warm-muted hover:bg-warm-section'}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPropertyTypes.includes(type.id)}
+                      onChange={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
+                      className="h-4 w-4 rounded border-warm-border text-warm-accent focus:ring-warm-accent/30"
+                    />
+                    {type.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full">
                     <div className="bg-warm-section rounded-xl p-6 border border-warm-border h-full">
                       <h3 className="text-warm-muted text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
                       
-                      {/* Price Input */}
+                      {/* The price is what the services add up to, so it is shown rather than typed */}
                       <div className="mb-6">
-                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-muted text-lg">₹</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={amcForm.price}
-                            onChange={(e) => setAmcForm({ ...amcForm, price: e.target.value.replace(/[^0-9]/g, '') })}
-                            placeholder="0"
-                            className="w-full pl-10 pr-4 py-3 bg-white border border-warm-border rounded-[10px] text-2xl font-bold text-warm-text placeholder-warm-muted focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
-                          />
+                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Price (₹)</label>
+                        <div className="rounded-[10px] border border-warm-border bg-white px-4 py-3">
+                          <p className="text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</p>
+                          <p className="mt-1 text-[11px] text-warm-muted">{totals.pricedCount ? `From ${totals.pricedCount} configured service${totals.pricedCount === 1 ? '' : 's'}` : 'Add a configured service and its amount'}</p>
                         </div>
                       </div>
                       
@@ -3623,19 +3687,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                         <div className="flex justify-between items-center pt-3 border-t border-warm-border">
                           <span className="text-sm font-semibold text-warm-text">Total Rate</span>
-                          <span className="text-2xl font-bold text-warm-text">{formatCurrency(amcForm.price)}</span>
+                          <span className="text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</span>
                         </div>
                       </div>
+
+                      {/* What the package costs XLAND. Internal to this screen, like the service
+                          form's pricing preview, and never part of what a customer is shown. */}
+                      <div className="mt-5 border-t border-warm-border pt-4">
+                        <p className="text-warm-muted text-[11px] uppercase tracking-wider font-semibold">Internal <span className="font-normal normal-case tracking-normal text-warm-muted/70">(not shown to customers)</span></p>
+                        <dl className="mt-3 space-y-2 text-sm">
+                          <div className="flex justify-between"><dt className="text-warm-muted">Annual Vendor Cost</dt><dd className="text-warm-text">{formatCurrency(totals.vendorCost)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">XLAND Operating Cost</dt><dd className="text-warm-text">{formatCurrency(totals.operatingCost)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">Customer Price</dt><dd className="text-warm-text">{formatCurrency(totals.price)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">Margin</dt><dd className={`font-semibold ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
+                        </dl>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-              </div>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Action Buttons - Only show after property type selected */}
-          {selectedPropertyTypes.length > 0 && (
+        {/* Action Buttons */}
+        <div>
             <div className="flex justify-between items-center">
               <p className="text-sm text-warm-muted">
                 <span className="text-red-500">*</span> Required fields
@@ -3657,7 +3730,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </button>
               </div>
             </div>
-          )}
+        </div>
         </div>
       )}
     </div>

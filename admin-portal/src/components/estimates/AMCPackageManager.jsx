@@ -42,7 +42,9 @@ import {
   seedTestData,
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
-import { getPackagePropertyTypes, packageMatchesPropertyType } from '../../utils/estimatePackageUtils';
+import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } from '../../utils/estimatePackageUtils';
+import { packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
+import { methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
@@ -142,8 +144,42 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   }, [selectedFp?.id]);
 
 
-  // Calculate price
-  const getPrice = () => parseFloat(amcForm.price) || 0;
+  // The package's price is what its configured services add up to, so it is derived rather than typed
+  const totals = packageTotals(amcForm.serviceRows);
+  const getPrice = () => totals.price;
+  // The quote is validated against the types a service allows; no method prices differently by type,
+  // so the first selected type is enough to price with.
+  const pricingPropertyType = selectedPropertyTypes[0] || '';
+  const catalogPath = selectedFp?.id && selectedFp.id !== 'all' ? '/api/admin/service-catalog' : '/api/admin/service-catalog';
+  const [pricingError, setPricingError] = useState('');
+
+  // Prices every row that came from the catalog and has its amount filled in. Runs on the rows'
+  // pricing inputs only, so typing a description does not re-quote the package.
+  const pricingKey = JSON.stringify(amcForm.serviceRows.map(row =>
+    [row.catalogServiceId, row.inputValue, row.frequencyType, row.frequencyCount]));
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      let failure = '';
+      const priced = await Promise.all(amcForm.serviceRows.map(async row => {
+        const result = await quotePackageRow(row, { apiPath: catalogPath, propertyType: pricingPropertyType, fpId: selectedFp?.id, token, signal: controller.signal })
+          .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
+        if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
+        if (result.priced) return { ...row, ...result.priced };
+        if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
+        return row;
+      }));
+      if (controller.signal.aborted) return;
+      setPricingError(failure);
+      // Only write back when a figure actually changed, or this would loop
+      setAmcForm(prev => {
+        const changed = priced.some((row, index) => row.price !== prev.serviceRows[index]?.price
+          || row.vendorCost !== prev.serviceRows[index]?.vendorCost);
+        return changed ? { ...prev, serviceRows: priced } : prev;
+      });
+    }, 400);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [pricingKey, pricingPropertyType, catalogPath, selectedFp?.id, token]);
 
   // Service row handlers
   const handleAddServiceRow = () => {
@@ -208,8 +244,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       return;
     }
 
-    if (!amcForm.price || parseFloat(amcForm.price) <= 0) {
-      showToast?.('Please enter a valid price', 'error');
+    // The price is the sum of the configured services, so it is they that must be priced
+    if (totals.price <= 0) {
+      showToast?.('Add a configured service and its amount so the package has a price', 'error');
       return;
     }
 
@@ -233,10 +270,17 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             service: row.service.trim(),
             description: row.description || '',
             frequencyCount: count,
-            frequencyType: row.frequencyType
+            frequencyType: row.frequencyType,
+            // What the row was priced from and what it came to, so the package can be read back and
+            // re-priced exactly as it was configured
+            ...(row.catalogServiceId ? {
+              catalogServiceId: row.catalogServiceId, pricingMethod: row.pricingMethod, unit: row.unit,
+              category: row.category || '', inputValue: row.inputValue, price: row.price,
+              vendorCost: row.vendorCost, operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
+            } : {})
           };
         }),
-        rate: parseFloat(amcForm.price),
+        rate: totals.price,
         billingDuration: amcForm.billingDuration,
         description: amcForm.description?.trim() || ''
       };
@@ -289,7 +333,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         service: decodeHtml(row.service || row.name) || '',
         description: decodeHtml(row.description) || '',
         frequencyCount: row.frequency_count ?? row.frequencyCount ?? 1,
-        frequencyType: row.frequency_type || row.frequencyType || 'Monthly'
+        frequencyType: row.frequency_type || row.frequencyType || 'Monthly',
+        // A row saved from the catalog reopens on the service and amount it was priced from
+        catalogServiceId: row.catalogServiceId ?? row.catalog_service_id,
+        pricingMethod: row.pricingMethod || row.pricing_method,
+        unit: row.unit || '', category: decodeHtml(row.category) || '',
+        inputValue: row.inputValue ?? row.input_value ?? '',
+        price: row.price, vendorCost: row.vendorCost, operatingCost: row.operatingCost,
+        marginPercentage: row.marginPercentage
       }));
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
@@ -655,36 +706,12 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         </div>
       )}
 
-      {/* Create Package Tab */}
+      {/* Create Package Tab. The form sits on the left and the panel on the right carries what the
+          package applies to and what it comes to, the same shape as the Add Service screen. */}
       {activeTab === 'create' && (
-        <div className="space-y-6">
-          {/* Property Type Selection - Evenly distributed */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
-            <p className="text-sm text-gray-500 mb-4">Choose every property type this package applies to</p>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-              {PROPERTY_TYPE_OPTIONS.map((type) => {
-                const isSelected = selectedPropertyTypes.includes(type.id);
-                return (
-                  <button
-                    key={type.id}
-                    onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
-                    className={`px-3 md:px-4 py-2.5 md:py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
-                      isSelected
-                        ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Package Configuration Card - Only show after property type selected */}
-          {selectedPropertyTypes.length > 0 && (
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          <div className="flex-1 min-w-0 space-y-6">
+          {/* Package Configuration Card */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             {/* Header with Add Button */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
@@ -721,10 +748,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 />
               </div>
 
-              {/* Service Configuration with Price on Right */}
-              <div className="flex flex-col lg:flex-row gap-6 overflow-x-auto">
-                {/* Service Rows Section */}
-                <div className="flex-1 min-w-[550px]">
+              {/* Service Configuration. Every column a configured service needs to be priced: what it
+                  is, how it is priced, the amount it is priced on, its schedule and what it comes to. */}
+              <div className="overflow-x-auto">
+                <div className="min-w-[46rem]">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header */}
@@ -732,16 +759,22 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     <div className="col-span-3">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</span>
                     </div>
-                    <div className="col-span-3">
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
+                    <div className="col-span-2">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Method / Input</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
                     </div>
                     <div className="col-span-1">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
+                    </div>
+                    <div className="col-span-1 text-right">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</span>
+                    </div>
+                    <div className="col-span-1 text-center">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</span>
                     </div>
                   </div>
@@ -762,7 +795,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Description */}
-                        <div className="md:col-span-3">
+                        <div className="md:col-span-2">
                           <input
                             type="text"
                             value={row.description || ''}
@@ -771,9 +804,30 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                           />
                         </div>
+
+                        {/* Method and the amount it is priced on. A row typed by hand has neither: it
+                            belongs to the package but sets no price. */}
+                        <div className="md:col-span-2">
+                          {row.catalogServiceId ? (() => {
+                            const input = rowInput(row);
+                            return <>
+                              <span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{methodLabel(row.pricingMethod)}</span>
+                              {input && (
+                                <input
+                                  type="number" min={input.min} step={input.step}
+                                  value={row.inputValue ?? ''}
+                                  onChange={(e) => handleUpdateServiceRow(index, 'inputValue', e.target.value)}
+                                  placeholder={`${input.label}${input.unit ? ` (${input.unit})` : ''}`}
+                                  aria-label={`${row.service} ${input.label}`}
+                                  className="mt-1 w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                                />
+                              )}
+                            </>;
+                          })() : <span className="text-xs text-gray-400">Typed by hand</span>}
+                        </div>
                         
                         {/* Frequency Type - First to trigger auto-calculation */}
-                        <div className="md:col-span-3 relative">
+                        <div className="md:col-span-2 relative">
                           <select
                             value={row.frequencyType}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -787,7 +841,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         </div>
                         
                         {/* Visits - Auto-set based on frequency */}
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-1">
                           <input
                             type="number"
                             min="0"
@@ -798,6 +852,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             placeholder={isCustomFrequency(row.frequencyType) ? 'Enter visits' : ''}
                             className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
                             />
+                        </div>
+
+                        {/* What this service comes to. Quoted by the server, so it is read here only. */}
+                        <div className="md:col-span-1 text-right">
+                          <p className="px-1 py-2 text-sm font-semibold text-gray-800">
+                            {Number.isFinite(Number(row.price)) ? formatCurrency(row.price) : <span className="text-gray-400">—</span>}
+                          </p>
                         </div>
                         
                         {/* Delete Button */}
@@ -819,28 +880,42 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   </div>
 
                 </div>
+                {pricingError && <p role="alert" className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{pricingError}</p>}
+              </div>
+            </div>
+          </div>
+          </div>
 
-                {/* Price Section - Right Side - LIGHT/ELEGANT Design */}
-                <div className="w-full lg:w-72 flex-shrink-0">
+          {/* Right panel: what the package applies to, and what it comes to */}
+          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h2 className="text-sm font-semibold text-gray-900">Applicable Property Types <span className="text-red-500">*</span></h2>
+              <p className="mt-1 text-xs text-gray-500">Every property type this package applies to</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {PROPERTY_TYPE_OPTIONS.map((type) => (
+                  <label key={type.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${selectedPropertyTypes.includes(type.id) ? 'border-slate-400 bg-slate-50 text-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedPropertyTypes.includes(type.id)}
+                      onChange={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
+                      className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-200"
+                    />
+                    {type.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-full">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 h-full">
                     <h3 className="text-gray-600 text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
                     
-                    {/* Price Input */}
+                    {/* The price is what the services add up to, so it is shown rather than typed */}
                     <div className="mb-6">
-                      <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹) <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={amcForm.price}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9]/g, '');
-                            setAmcForm({ ...amcForm, price: value });
-                          }}
-                          placeholder="0"
-                          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-2xl font-bold text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
-                        />
+                      <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹)</label>
+                      <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+                        <p className="text-2xl font-bold text-gray-900">{formatCurrency(totals.price)}</p>
+                        <p className="mt-1 text-[11px] text-gray-500">{totals.pricedCount ? `From ${totals.pricedCount} configured service${totals.pricedCount === 1 ? '' : 's'}` : 'Add a configured service and its amount'}</p>
                       </div>
                     </div>
                     
@@ -875,19 +950,27 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       </div>
                       <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                         <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                        <span className="text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</span>
+                        <span className="text-2xl font-bold text-gray-800">{formatCurrency(totals.price)}</span>
                       </div>
                     </div>
+
+                    {/* What the package costs XLAND. Internal to this screen, like the service form's
+                        pricing preview, and never part of what a customer is shown. */}
+                    <div className="mt-5 border-t border-gray-200 pt-4">
+                      <p className="text-gray-600 text-[11px] uppercase tracking-wider font-semibold">Internal <span className="font-normal normal-case tracking-normal text-gray-400">(not shown to customers)</span></p>
+                      <dl className="mt-3 space-y-2 text-sm">
+                        <div className="flex justify-between"><dt className="text-gray-500">Annual Vendor Cost</dt><dd className="text-gray-800">{formatCurrency(totals.vendorCost)}</dd></div>
+                        <div className="flex justify-between"><dt className="text-gray-500">XLAND Operating Cost</dt><dd className="text-gray-800">{formatCurrency(totals.operatingCost)}</dd></div>
+                        <div className="flex justify-between"><dt className="text-gray-500">Customer Price</dt><dd className="text-gray-800">{formatCurrency(totals.price)}</dd></div>
+                        <div className="flex justify-between"><dt className="text-gray-500">Margin</dt><dd className={`font-semibold ${totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
+                      </dl>
+                    </div>
                   </div>
-                </div>
-              </div>
             </div>
           </div>
-          )}
 
-          {/* Action Buttons - Only show after property type selected */}
-          {selectedPropertyTypes.length > 0 && (
-          <div className="flex justify-between items-center">
+          {/* Action Buttons */}
+          <div className="w-full flex justify-between items-center">
             <p className="text-sm text-gray-500">
               <span className="text-red-500">*</span> Required fields
             </p>
@@ -908,7 +991,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               </button>
             </div>
           </div>
-          )}
         </div>
       )}
 
