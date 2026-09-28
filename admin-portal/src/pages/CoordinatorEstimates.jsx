@@ -533,11 +533,12 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         zone: directForm.zone,
         city: directForm.city,
         address: directForm.address,
-        number_of_blocks: directForm.numberOfBlocks,
+        // An empty count is sent as null: '' would not go into an INT column
+        number_of_blocks: directForm.numberOfBlocks || null,
         block_names: directForm.blockNames ? JSON.stringify(directForm.blockNames) : null,
         units_per_block: directForm.unitsPerBlock ? JSON.stringify(directForm.unitsPerBlock) : null,
         block_unit_types: directForm.blockUnitTypes ? JSON.stringify(directForm.blockUnitTypes) : null,
-        total_units: directForm.totalUnits,
+        total_units: directForm.totalUnits || null,
         // The form writes the tower into blockName; towerName was never set, so it always saved null
         tower_name: directForm.towerName || directForm.blockName || null,
         block_number: directForm.blockNumber,
@@ -628,7 +629,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     setDirectForm({
       customerName: '', phone: '', email: '',
       propertyType: '', propertyName: '', zone: '', city: '', address: '',
-      numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0
+      numberOfBlocks: '', unitsPerBlock: {}, totalUnits: 0
     });
   };
 
@@ -1152,10 +1153,10 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                   <div className="mb-4 max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
-                    <input type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setDirectForm({...directForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
+                    <input type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { setDirectForm({...directForm, numberOfBlocks: e.target.value, unitsPerBlock: {}}); }} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Array.from({ length: parseInt(directForm.numberOfBlocks) || 1 }, (_, i) => i + 1).map(blockNum => (
+                    {Array.from({ length: parseInt(directForm.numberOfBlocks, 10) || 0 }, (_, i) => i + 1).map(blockNum => (
                       <React.Fragment key={blockNum}>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>

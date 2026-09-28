@@ -14,6 +14,7 @@ import ServiceCatalogPicker from './ServiceCatalogPicker';
 import { TermsConditionsField } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
 import { EstimateInput, PropertyIdInput } from './EstimateFields';
+import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle,
@@ -211,6 +212,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   const [properties, setProperties] = useState([]);
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
   const [availableServices, setAvailableServices] = useState([]);
   const [amcPackage, setAmcPackage] = useState(null);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
@@ -307,7 +310,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
     noOfVisits: '',
     description: '',
     // Blocks & Units for GC/Apartment
-    numberOfBlocks: 1,
+    numberOfBlocks: '',
     unitsPerBlock: {},
     totalUnits: 0
   });
@@ -436,6 +439,20 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       console.error('Error loading packages/addons:', error);
       setAvailablePackages([]);
       setAvailableAddons([]);
+    }
+
+    // Fetch zones and cities for autocomplete
+    try {
+      const [zonesRes, citiesRes] = await Promise.all([
+        fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const zonesData = await zonesRes.json();
+      const citiesData = await citiesRes.json();
+      setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
+      setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
+    } catch (error) {
+      console.error('Error loading zones/cities:', error);
     }
   };
 
@@ -3038,23 +3055,25 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
-                <EstimateInput
-                  type="text"
+                <AutocompleteInput
+                  label="Zone"
                   value={estimateForm.zone}
-                  onChange={(e) => setEstimateForm({ ...estimateForm, zone: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  placeholder="Enter zone"
+                  onChange={(val) => setEstimateForm({ ...estimateForm, zone: val })}
+                  options={zoneOptions}
+                  placeholder="Type or select zone..."
+                  allowCustom={true}
+                  inputClassName="text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
-                <EstimateInput
-                  type="text"
+                <AutocompleteInput
+                  label="City"
                   value={estimateForm.city}
-                  onChange={(e) => setEstimateForm({ ...estimateForm, city: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  placeholder="Enter city"
+                  onChange={(val) => setEstimateForm({ ...estimateForm, city: val })}
+                  options={cityOptions}
+                  placeholder="Type or select city..."
+                  allowCustom={true}
+                  inputClassName="text-sm"
                 />
               </div>
             </div>
@@ -3069,12 +3088,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     type="number"
                     min="1"
                     value={estimateForm.numberOfBlocks}
-                    onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({ ...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {} }); }}
+                    onChange={(e) => { setEstimateForm({ ...estimateForm, numberOfBlocks: e.target.value, unitsPerBlock: {} }); }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Array.from({ length: estimateForm.numberOfBlocks }, (_, i) => i + 1).map(blockNum => (
+                  {Array.from({ length: parseInt(estimateForm.numberOfBlocks, 10) || 0 }, (_, i) => i + 1).map(blockNum => (
                     <React.Fragment key={blockNum}>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Block Name</label>

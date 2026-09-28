@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import {
-  Archive, RotateCcw, Trash2, Eye, X, Calendar, Building2, User,
+  Archive, RotateCcw, Trash2, X, Calendar, Building2, User, ChevronDown,
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
-import EstimateServicesTable from './EstimateServicesTable';
+import EstimateDetailPanel from './EstimateDetailPanel';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -43,7 +43,9 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   const token = getAuthToken();
   
   const [archivedEstimates, setArchivedEstimates] = useState([]);
-  const [viewEstimate, setViewEstimate] = useState(null);
+  // Which estimate is expanded in place; the ID opens it, which is what replaced the view modal
+  const [expandedId, setExpandedId] = useState(null);
+  const toggleExpanded = (estimateId) => setExpandedId(current => (current === estimateId ? null : estimateId));
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -189,10 +191,18 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
               })
               .map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
+                const isExpanded = expandedId === estimate.estimateId;
                 return (
-                  <tr key={estimate.estimateId} className="hover:bg-gray-50">
+                  <Fragment key={estimate.estimateId}>
+                  <tr className={`hover:bg-gray-50 ${isExpanded ? 'bg-indigo-50/40' : ''}`}>
                     <td className="px-6 py-4">
-                      <span className="font-medium text-gray-800">{estimate.estimateId}</span>
+                      {/* The ID opens the estimate in place; there is no view modal to open */}
+                      <button type="button" onClick={() => toggleExpanded(estimate.estimateId)} aria-expanded={isExpanded}
+                        className="flex items-center gap-1.5 font-medium text-gray-800 hover:text-indigo-600"
+                        title={isExpanded ? 'Hide details' : 'Show details'}>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        {estimate.estimateId}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -211,11 +221,16 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-800">
-                        {estimate.clientName || estimate.customerName}
-                      </p>
+                      {/* The customer, in the row itself: who they are and how to reach them */}
+                      <p className="text-sm text-gray-800">{estimate.clientName || estimate.customerName || '-'}</p>
+                      {(estimate.customerPhone || estimate.client_phone) && (
+                        <p className="text-xs text-gray-500 whitespace-nowrap">{estimate.customerPhone || estimate.client_phone}</p>
+                      )}
+                      {(estimate.customerEmail || estimate.client_email) && (
+                        <p className="text-xs text-gray-500 truncate max-w-[180px]">{estimate.customerEmail || estimate.client_email}</p>
+                      )}
                       {estimate.propertyId && (
-                        <p className="text-xs text-gray-500">{estimate.propertyId}</p>
+                        <p className="text-xs text-gray-400">{estimate.propertyId}</p>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -233,13 +248,6 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setViewEstimate(estimate)}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                         {/* Restore/Delete buttons - Hidden for Operations Manager */}
                         {!isOpsManager && (
                           <>
@@ -262,278 +270,20 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       </div>
                     </td>
                   </tr>
+                  {isExpanded && (
+                    <tr className="bg-slate-50/60">
+                      <td colSpan={7} className="p-0">
+                        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
         )}
       </div>
-
-      {/* View Estimate Modal */}
-      {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Archived Estimate Details</h3>
-              <button
-                onClick={() => setViewEstimate(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Estimate ID</p>
-                  <p className="font-medium">{viewEstimate.estimateId}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status]}`}>
-                    {viewEstimate.status}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Type</p>
-                  <p className="font-medium capitalize">{viewEstimate.estimateType}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Archived On</p>
-                  <p className="font-medium">
-                    {viewEstimate.archivedAt 
-                      ? new Date(viewEstimate.archivedAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
-                      : new Date(viewEstimate.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm text-gray-500 mb-2">Client Information</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <p className="font-medium text-lg">{viewEstimate.customerName || viewEstimate.clientName || 'N/A'}</p>
-                  {(viewEstimate.customerPhone || viewEstimate.phone) && (
-                    <p className="text-sm text-gray-600">📞 {viewEstimate.customerPhone || viewEstimate.phone}</p>
-                  )}
-                  {(viewEstimate.customerEmail || viewEstimate.email) && (
-                    <p className="text-sm text-gray-600">✉️ {viewEstimate.customerEmail || viewEstimate.email}</p>
-                  )}
-                  {viewEstimate.propertyType && (
-                    <p className="text-sm text-gray-600">🏠 Property Type: {viewEstimate.propertyType}</p>
-                  )}
-                  {viewEstimate.propertyName && (
-                    <p className="text-sm text-gray-600">🏢 Property: {viewEstimate.propertyName}</p>
-                  )}
-                  {viewEstimate.propertyAddress && (
-                    <p className="text-sm text-gray-600">📍 {viewEstimate.propertyAddress}</p>
-                  )}
-                  {viewEstimate.propertyId && (
-                    <p className="text-sm text-gray-500">ID: {viewEstimate.propertyId}</p>
-                  )}
-                  {/* Division for property-based estimates */}
-                  {(viewEstimate.estimateType === 'property-based' || viewEstimate.estimateType === 'property_based' || viewEstimate.propertyId || viewEstimate.property_id) && (viewEstimate.division || viewEstimate.Division) && (
-                    <p className="text-sm text-gray-600">📍 Division: {viewEstimate.division || viewEstimate.Division}</p>
-                  )}
-                  {/* GC-specific fields */}
-                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <>
-                      {(viewEstimate.numberOfBlocks || viewEstimate.number_of_blocks) && <p className="text-sm text-gray-600">🏗️ Blocks: {viewEstimate.numberOfBlocks || viewEstimate.number_of_blocks}</p>}
-                      {(viewEstimate.totalUnits || viewEstimate.total_units) && <p className="text-sm text-gray-600">🔢 Total Units: {viewEstimate.totalUnits || viewEstimate.total_units}</p>}
-                      {/* Block Details with Unit Type Breakdown */}
-                      {(() => {
-                        const bn = viewEstimate.blockNames || viewEstimate.block_names;
-                        const upb = viewEstimate.unitsPerBlock || viewEstimate.units_per_block;
-                        const but = viewEstimate.blockUnitTypes || viewEstimate.block_unit_types;
-                        const blockNames = bn ? (typeof bn === 'string' ? JSON.parse(bn) : bn) : {};
-                        const unitsPerBlock = upb ? (typeof upb === 'string' ? JSON.parse(upb) : upb) : {};
-                        const blockUnitTypes = but ? (typeof but === 'string' ? JSON.parse(but) : but) : {};
-                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0;
-                        if (!hasBlockData) return null;
-                        const blockKeys = Object.keys(blockNames).length > 0 ? Object.keys(blockNames) : Object.keys(unitsPerBlock);
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK', fiveBed: '5 BHK' };
-                        return (
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <p className="text-xs text-gray-500 mb-2 font-medium">Block Details</p>
-                            <div className="space-y-2">
-                              {blockKeys.map((key) => {
-                                const blockName = blockNames[key] || `Block ${key}`;
-                                const units = unitsPerBlock[key] || 0;
-                                const unitTypes = blockUnitTypes[key] || {};
-                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                                return (
-                                  <div key={key} className="bg-white p-3 rounded-lg border border-gray-200">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
-                                      <p className="text-sm text-gray-700 font-medium">{units} units</p>
-                                    </div>
-                                    {hasUnitTypes && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                            {unitTypeLabels[type] || type}: {count}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Apartment-specific fields */}
-                  {['APT', 'Apt', 'apartment', 'Apartment'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <>
-                      {(viewEstimate.towerName || viewEstimate.tower_name) && <p className="text-sm text-gray-600">🏢 Tower: {viewEstimate.towerName || viewEstimate.tower_name}</p>}
-                      {(viewEstimate.blockNumber || viewEstimate.block_number) && <p className="text-sm text-gray-600">🔤 Block: {viewEstimate.blockNumber || viewEstimate.block_number}</p>}
-                      {(viewEstimate.totalUnits || viewEstimate.total_units) && <p className="text-sm text-gray-600">🔢 Units: {viewEstimate.totalUnits || viewEstimate.total_units}</p>}
-                      {/* Unit Type Breakdown for APT */}
-                      {(() => {
-                        const but = viewEstimate.blockUnitTypes || viewEstimate.block_unit_types;
-                        const blockUnitTypes = but ? (typeof but === 'string' ? JSON.parse(but) : but) : {};
-                        const unitTypes = blockUnitTypes['apt'] || blockUnitTypes[1] || blockUnitTypes['1'] || {};
-                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                        if (!hasUnitTypes) return null;
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK', fiveBed: '5 BHK' };
-                        return (
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
-                            <div className="flex flex-wrap gap-2">
-                              {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => (
-                                <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                  {unitTypeLabels[type] || type}: {count}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Villa/Plot-specific */}
-                  {['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number) && (
-                    <p className="text-sm text-gray-600">🏡 Villa/Plot #: {viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* AMC Package */}
-              {(viewEstimate.packageName || viewEstimate.package_name) && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm text-gray-500 mb-2">AMC Package</p>
-                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-indigo-900">{viewEstimate.billing_duration ? viewEstimate.billing_duration.charAt(0).toUpperCase() + viewEstimate.billing_duration.slice(1).replace('-', ' ') : 'Yearly'} Billing</p>
-                      </div>
-                      <p className="text-lg font-bold text-indigo-700">₹{Number(viewEstimate.packagePrice || viewEstimate.package_price || 0).toLocaleString()}</p>
-                    </div>
-                    {(viewEstimate.amc_package_description || viewEstimate.amcPackageDescription) && (
-                      <p className="text-sm text-indigo-700 mt-2 pt-2 border-t border-indigo-100">{viewEstimate.amc_package_description || viewEstimate.amcPackageDescription}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Package Services - Horizontal Table */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm text-gray-500 mb-2">Services / Package</p>
-                {viewEstimate.package_services && (() => {
-                  const services = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                  if (!services || services.length === 0) return <p className="text-gray-400 text-sm">No services listed</p>;
-                  return (
-                    <div>
-                      <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
-                        <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
-                        <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                        <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
-                        <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                        <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
-                      </div>
-                      <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
-                        {services.map((service, idx) => (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                            <div className="col-span-1">
-                              <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                            </div>
-                            <div className="col-span-3">
-                              <p className="font-medium text-gray-800 text-sm">{decodeHtml(service.name || service.service)}</p>
-                            </div>
-                            <div className="col-span-4 overflow-hidden">
-                              <p className={`text-xs text-gray-500 break-words whitespace-normal ${!service.description ? 'text-center' : ''}`}>{decodeHtml(service.description) || '-'}</p>
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-indigo-600">{service.frequencyType || 'Monthly'}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm text-indigo-700 font-semibold">{service.frequencyCount ?? 1}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-                {!viewEstimate.package_services && (
-                  <p className="text-gray-400 text-sm">No services listed</p>
-                )}
-              </div>
-
-              {/* Services on the estimate */}
-              {viewEstimate.addons?.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm text-gray-500 mb-2">Services</p>
-                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
-                </div>
-              )}
-
-              {/* Price Breakdown */}
-              <div className="border-t border-gray-100 pt-4 space-y-2">
-                {viewEstimate.subtotal > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Subtotal</span>
-                    <span>₹{Number(viewEstimate.subtotal).toLocaleString()}</span>
-                  </div>
-                )}
-                {viewEstimate.discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Discount</span>
-                    <span>-₹{Number(viewEstimate.discount).toLocaleString()}</span>
-                  </div>
-                )}
-                {viewEstimate.tax > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Tax (GST)</span>
-                    <span>₹{Number(viewEstimate.tax).toLocaleString()}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-2 border-t">
-                  <p className="text-lg font-semibold">Total</p>
-                  <p className="text-2xl font-bold text-indigo-600">
-                    ₹{Number(viewEstimate.total || viewEstimate.totalPrice || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-4 flex gap-3 justify-end">
-                <button
-                  onClick={() => {
-                    handleRestoreEstimate(viewEstimate.estimateId);
-                    setViewEstimate(null);
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Restore Estimate
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (

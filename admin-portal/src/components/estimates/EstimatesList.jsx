@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import {
-  Search, Filter, Eye, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
+  Search, Filter, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
   TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -13,9 +13,8 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
 import { exportEstimateToPDF } from '../../utils/pdfExport';
-import { EstimateTermsSection } from './EstimateTerms';
 import { getServiceDescription, hasCatalogServices } from '../../utils/estimatePackageUtils';
-import EstimateServicesTable from './EstimateServicesTable';
+import EstimateDetailPanel from './EstimateDetailPanel';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
 
@@ -125,7 +124,10 @@ const EstimatesList = ({
     dateTo: ''
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [viewEstimate, setViewEstimate] = useState(null);
+  // Which estimate is expanded in place. Clicking its ID opens the detail panel inside the row,
+  // which is what replaced the view modal.
+  const [expandedId, setExpandedId] = useState(null);
+  const toggleExpanded = (estimateId) => setExpandedId(current => (current === estimateId ? null : estimateId));
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
@@ -855,8 +857,10 @@ const EstimatesList = ({
               {paginatedEstimates.map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 const isSelected = selectedEstimates.includes(estimate.id);
+                const isExpanded = expandedId === estimate.estimateId;
                 return (
-                  <tr key={estimate.estimateId} className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
+                  <Fragment key={estimate.estimateId}>
+                  <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''} ${isExpanded ? 'bg-indigo-50/40' : ''}`}>
                     {/* Checkbox cell - hidden for ops manager */}
                     {!isOpsManager && (
                       <td className="px-3 py-3 sm:py-4 text-center">
@@ -873,7 +877,14 @@ const EstimatesList = ({
                       </td>
                     )}
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      <span className="font-medium text-gray-800 text-xs sm:text-sm">{estimate.estimateId}</span>
+                      {/* The ID opens the estimate in place; there is no view modal to open */}
+                      <button type="button" onClick={() => toggleExpanded(estimate.estimateId)}
+                        aria-expanded={isExpanded}
+                        className="flex items-center gap-1.5 font-medium text-gray-800 text-xs sm:text-sm hover:text-indigo-600"
+                        title={isExpanded ? 'Hide details' : 'Show details'}>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        {estimate.estimateId}
+                      </button>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                       <div className="flex items-center gap-2">
@@ -901,11 +912,18 @@ const EstimatesList = ({
                       </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      {/* The customer, in the row itself: who they are and how to reach them */}
                       <p className="text-xs sm:text-sm text-gray-800 truncate max-w-[100px] sm:max-w-none">
-                        {estimate.clientName || estimate.customerName}
+                        {estimate.clientName || estimate.customerName || '-'}
                       </p>
+                      {(estimate.customerPhone || estimate.client_phone) && (
+                        <p className="text-xs text-gray-500 whitespace-nowrap">{estimate.customerPhone || estimate.client_phone}</p>
+                      )}
+                      {(estimate.customerEmail || estimate.client_email) && (
+                        <p className="text-xs text-gray-500 truncate max-w-[160px]">{estimate.customerEmail || estimate.client_email}</p>
+                      )}
                       {estimate.propertyId && (
-                        <p className="text-xs text-gray-500 truncate">{estimate.propertyId}</p>
+                        <p className="text-xs text-gray-400 truncate">{estimate.propertyId}</p>
                       )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
@@ -951,13 +969,6 @@ const EstimatesList = ({
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setViewEstimate(estimate)}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                         {!isOpsManager && (
                           <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit"><Edit2 className="w-4 h-4" /></button>
                         )}
@@ -995,6 +1006,14 @@ const EstimatesList = ({
                       </div>
                     </td>
                   </tr>
+                  {isExpanded && (
+                    <tr className="bg-slate-50/60">
+                      <td colSpan={isOpsManager ? 9 : 10} className="p-0">
+                        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -1054,252 +1073,6 @@ const EstimatesList = ({
           </div>
         )}
       </div>
-
-      {/* View Estimate Modal */}
-      {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setViewEstimate(null)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimateId || viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[viewEstimate.status] || 'bg-gray-100 text-gray-700'}`}>{viewEstimate.status?.charAt(0).toUpperCase() + viewEstimate.status?.slice(1) || 'Draft'}</span>
-                </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{(viewEstimate.estimateType || viewEstimate.estimate_type)?.replace('_', ' ') || '-'}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.createdAt || viewEstimate.created_at)}</p></div>
-              </div>
-
-              {/* Property Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
-                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.propertyId || viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.propertyName || viewEstimate.property_name || viewEstimate.communityName || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.propertyType || viewEstimate.property_type || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
-                  {((viewEstimate.estimateType || viewEstimate.estimate_type) === 'property_based' || viewEstimate.propertyId || viewEstimate.property_id) && viewEstimate.division && (
-                    <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
-                  )}
-                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.propertyAddress || viewEstimate.address || '-'}</p></div>
-                  {/* GC-specific: Number of Blocks, Block Names, Units per Block */}
-                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <>
-                      <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.numberOfBlocks || viewEstimate.number_of_blocks || '-'}</p></div>
-                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.totalUnits || viewEstimate.total_units || '-'}</p></div>
-                      {(() => {
-                        const bn = viewEstimate.blockNames || viewEstimate.block_names;
-                        const upb = viewEstimate.unitsPerBlock || viewEstimate.units_per_block;
-                        const but = viewEstimate.blockUnitTypes || viewEstimate.block_unit_types;
-                        const blockNames = bn ? (typeof bn === 'string' ? JSON.parse(bn) : bn) : {};
-                        const unitsPerBlock = upb ? (typeof upb === 'string' ? JSON.parse(upb) : upb) : {};
-                        const blockUnitTypes = but ? (typeof but === 'string' ? JSON.parse(but) : but) : {};
-                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0;
-                        if (!hasBlockData) return null;
-                        
-                        // Get all block keys (from blockNames or unitsPerBlock)
-                        const blockKeys = Object.keys(blockNames).length > 0 ? Object.keys(blockNames) : Object.keys(unitsPerBlock);
-                        
-                        return (
-                          <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="space-y-3">
-                              {blockKeys.map((key) => {
-                                const blockName = blockNames[key] || `Block ${key}`;
-                                const units = unitsPerBlock[key] || 0;
-                                const unitTypes = blockUnitTypes[key] || {};
-                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                                
-                                return (
-                                  <div key={key} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
-                                      <p className="text-sm text-gray-700 font-medium">{units} units</p>
-                                    </div>
-                                    {hasUnitTypes && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {Object.entries(unitTypes).filter(([_, count]) => count > 0).map(([type, count]) => {
-                                          const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK', fiveBed: '5 BHK' };
-                                          return (
-                                            <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                              {unitTypeLabels[type] || type}: {count}
-                                            </span>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Apartment-specific fields */}
-                  {['APT', 'Apt', 'apartment', 'Apartment'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <>
-                      {(viewEstimate.towerName || viewEstimate.tower_name) && <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.towerName || viewEstimate.tower_name}</p></div>}
-                      {(viewEstimate.blockNumber || viewEstimate.block_number) && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.blockNumber || viewEstimate.block_number}</p></div>}
-                      <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.totalUnits || viewEstimate.total_units || '-'}</p></div>
-                    </>
-                  )}
-                  {/* Villa, Flat and Plot all identify their unit through villa_plot_number */}
-                  {['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Villa/Plot Number</p><p className="font-medium text-sm">{viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number || '-'}</p></div>
-                  )}
-                  {['FLAT', 'Flat', 'flat'].includes(viewEstimate.propertyType || viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villaPlotNumber || viewEstimate.villa_plot_number || '-'}</p></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg flex flex-row gap-6">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500">Contact Name</p>
-                    <p className="font-medium text-sm truncate">{viewEstimate.customerName || viewEstimate.clientName || viewEstimate.client_name || '-'}</p>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500">Phone</p>
-                    <p className="font-medium text-sm">{viewEstimate.customerPhone || viewEstimate.phone || viewEstimate.client_phone || '-'}</p>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-sm truncate">{viewEstimate.customerEmail || viewEstimate.email || viewEstimate.client_email || '-'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* AMC Package */}
-              {(viewEstimate.amcPackage || viewEstimate.packageName || viewEstimate.package_name) && (() => {
-                // Get package description from various sources
-                const pkgDescription = viewEstimate.amc_package_description || viewEstimate.amcPackageDescription || viewEstimate.amcPackage?.description || '';
-                // Get services from various sources
-                let pkgServices = [];
-                if (viewEstimate.package_services) {
-                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                } else if (viewEstimate.packageServices) {
-                  const svc = typeof viewEstimate.packageServices === 'string' ? JSON.parse(viewEstimate.packageServices) : viewEstimate.packageServices;
-                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
-                } else if (viewEstimate.amcPackage?.serviceRows) {
-                  pkgServices = viewEstimate.amcPackage.serviceRows;
-                }
-                return (
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                    {pkgDescription && (
-                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
-                    )}
-                    {/* Package Services - Horizontal Table */}
-                    {pkgServices.length > 0 && (
-                      <div className="mt-3">
-                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
-                          <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
-                        </div>
-                        <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
-                          {pkgServices.map((svc, idx) => (
-                            <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                              <div className="col-span-1">
-                                <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                              </div>
-                              <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
-                              </div>
-                              <div className="col-span-4 overflow-hidden">
-                                <p className={`text-xs text-gray-500 break-all whitespace-normal ${!svc.description ? 'text-center' : ''}`}>{decodeHtml(svc.description) || '-'}</p>
-                              </div>
-                              <div className="col-span-2 text-center">
-                                <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
-                              </div>
-                              <div className="col-span-2 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequencyCount ?? svc.frequency_count ?? 1}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Services */}
-              {viewEstimate.services?.length > 0 && !viewEstimate.amcPackage && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Services</p>
-                  <div className="space-y-2">
-                    {viewEstimate.services.map((service, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-                        <div>
-                          <p className="font-medium">{decodeHtml(service.name || service.service || service.serviceName) || 'Service'}</p>
-                          {(service.frequency || service.frequencyCount) && service.frequencyType && (
-                            <p className="text-xs text-gray-500">{service.frequencyType} - {service.frequency || service.frequencyCount} visits</p>
-                          )}
-                        </div>
-                        <p className="font-semibold">â‚¹{Number(service.price || service.rate || 0).toLocaleString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Services on the estimate */}
-              {viewEstimate.addons?.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Services</p>
-                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
-                </div>
-              )}
-
-              {/* Billing Duration */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Billing</span>
-                  <span className="font-medium capitalize">{(viewEstimate.amcPackage?.billingDuration || viewEstimate.billingDuration || viewEstimate.billing_duration || 'Yearly').replace('-', ' ')}</span>
-                </div>
-              </div>
-
-              {/* Price Summary */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || viewEstimate.package_price || 0).toLocaleString()}</span></div>
-                  {(viewEstimate.discount > 0 || viewEstimate.discount_amount > 0) && <div className="flex justify-between text-sm text-green-600"><span>Discount</span><span>-₹{Number(viewEstimate.discount || viewEstimate.discount_amount || 0).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>₹{Number(viewEstimate.tax || viewEstimate.gst || viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total || viewEstimate.totalPrice || viewEstimate.total_amount || calculateEstimateTotal(viewEstimate) || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description / Notes - After Price Summary */}
-              {(viewEstimate.notes || viewEstimate.description) && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.notes || viewEstimate.description}</p>
-                </div>
-              )}
-
-              {/* Terms & Conditions - shown only when this estimate carries them */}
-              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (

@@ -1311,10 +1311,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                           <div className="mb-4 max-w-xs">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Number of Blocks <span className="text-red-500">*</span></label>
-                            <input type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setDirectForm({...directForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" />
+                            <input type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { setDirectForm({...directForm, numberOfBlocks: e.target.value, unitsPerBlock: {}}); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" />
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {Array.from({ length: parseInt(directForm.numberOfBlocks) || 1 }, (_, i) => i + 1).map(blockNum => (
+                            {Array.from({ length: parseInt(directForm.numberOfBlocks, 10) || 0 }, (_, i) => i + 1).map(blockNum => (
                               <React.Fragment key={blockNum}>
                                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Block Name</label><input type="text" value={directForm.blockNames?.[blockNum] || ''} onChange={(e) => { const newBlockNames = {...(directForm.blockNames || {}), [blockNum]: e.target.value}; setDirectForm({...directForm, blockNames: newBlockNames}); }} placeholder={`Block ${blockNum}`} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>
                                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Units <span className="text-red-500">*</span></label><input type="number" min="1" value={directForm.unitsPerBlock?.[blockNum] || ''} onChange={(e) => { const units = parseInt(e.target.value) || 0; const newUnitsPerBlock = {...(directForm.unitsPerBlock || {}), [blockNum]: units}; const totalUnits = Object.values(newUnitsPerBlock).reduce((sum, u) => sum + (u || 0), 0); setDirectForm({...directForm, unitsPerBlock: newUnitsPerBlock, totalUnits, numberOfUnits: totalUnits}); }} placeholder="No. of units" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg" /></div>

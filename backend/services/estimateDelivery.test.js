@@ -42,8 +42,10 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   // follows the name immediately; in the PDF the Service cell is drawn with both.
   assert.match(mail.html, /<strong>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
   assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
-  // Every field of the service has its own column in the attachment, quantity included
-  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Qty', 'Price (₹)']) {
+  // Every field of the service has its own column in the attachment, quantity included. The price
+  // column says "Rs." like every figure under it: PDFKit's built-in Helvetica has no rupee glyph,
+  // so a ₹ in the heading printed as a stray mark.
+  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Qty', 'Price (Rs.)']) {
     assert.ok(texts.includes(heading), `pdf column: ${heading}`);
   }
   assert.ok(texts.includes('Rs. 11,700.25'), 'the service price is on its own row');

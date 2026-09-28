@@ -21,13 +21,14 @@ import { getServiceDescription, hasCatalogServices } from '../utils/estimatePack
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
 import { newEstimateTerms } from '../utils/estimateTerms';
 import * as XLSX from 'xlsx';
+import AutocompleteInput from '../components/common/AutocompleteInput';
 import AddServicePage from '../components/estimates/AddServicePage';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
-import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
+import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
@@ -171,7 +172,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       return newParams;
     }, { replace: true });
   }, [setSearchParams]);
-  
+
+  // Which row is expanded. The URL still carries it, so a link to an estimate opens it as before --
+  // it now expands the row in place instead of opening a modal.
+  const expandedEstimateId = viewEstimateId ? Number(viewEstimateId) : null;
+  const toggleExpandedEstimate = (id) => (expandedEstimateId === id ? closeViewEstimate() : openViewEstimate({ id }));
+
   const openViewPackage = useCallback((pkg) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
@@ -241,7 +247,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [catalogEntry, setCatalogEntry] = useState(0);
 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [viewEstimate, setViewEstimate] = useState(null);
   // Terms & Conditions: on by default for a new estimate, editable before saving
   const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
   const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
@@ -364,17 +369,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
   }, [urlEstimateStep, defaultTab]);
   
-  // Sync viewEstimate and viewAmcPackage from URL params
-  useEffect(() => {
-    if (viewEstimateId && estimates.length > 0) {
-      const estimate = estimates.find(e => String(e.id) === viewEstimateId) || 
-                       archivedEstimates.find(e => String(e.id) === viewEstimateId);
-      if (estimate) setViewEstimate(estimate);
-    } else if (!viewEstimateId) {
-      setViewEstimate(null);
-    }
-  }, [viewEstimateId, estimates, archivedEstimates]);
-  
+  // The estimate in the URL no longer opens a modal; expandedEstimateId reads it directly and the
+  // row expands, so there is nothing to synchronise here.
   useEffect(() => {
     if (viewPackageId && amcPackages.length > 0) {
       const pkg = amcPackages.find(p => String(p.id) === viewPackageId);
@@ -648,6 +644,29 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     villaNumber: '', flatNumber: '', plotNumber: ''
   });
   
+  // Zone and City options for autocomplete
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [cityOptions, setCityOptions] = useState([]);
+
+  // Fetch zones and cities for autocomplete
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [zonesRes, citiesRes] = await Promise.all([
+          fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        const zonesData = await zonesRes.json();
+        const citiesData = await citiesRes.json();
+        setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
+        setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
+      } catch (error) {
+        console.error('Error loading zones/cities:', error);
+      }
+    };
+    if (token) fetchOptions();
+  }, [token]);
+
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
     if (!type) return '';
@@ -1304,7 +1323,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         setCatalogAddons([]);
         setCustomServices([]);
         setEstimateStructure('package');
-        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0 });
+        setEstimateForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '', selectedPackage: '', selectedAddons: [], discount: '', gst: '', description: '', numberOfBlocks: '', unitsPerBlock: {}, totalUnits: 0 });
         loadData();
       } else {
         console.error('Create estimate failed:', result);
@@ -1863,12 +1882,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Zone</label>
-                  <input type="text" placeholder="Enter zone" value={estimateForm.zone} onChange={(e) => setEstimateForm({...estimateForm, zone: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
+                  <AutocompleteInput
+                    label="Zone"
+                    value={estimateForm.zone}
+                    onChange={(val) => setEstimateForm({...estimateForm, zone: val})}
+                    options={zoneOptions}
+                    placeholder="Type or select zone..."
+                    allowCustom={true}
+                    inputClassName="text-sm"
+                    theme="warm"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-warm-muted mb-1.5">City</label>
-                  <input type="text" placeholder="Enter city" value={estimateForm.city} onChange={(e) => setEstimateForm({...estimateForm, city: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
+                  <AutocompleteInput
+                    label="City"
+                    value={estimateForm.city}
+                    onChange={(val) => setEstimateForm({...estimateForm, city: val})}
+                    options={cityOptions}
+                    placeholder="Type or select city..."
+                    allowCustom={true}
+                    inputClassName="text-sm"
+                    theme="warm"
+                  />
                 </div>
               </div>
               <div>
@@ -1882,10 +1917,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <h4 className="text-sm font-semibold text-warm-text mb-3">Block Details</h4>
                   <div className="mb-4 max-w-xs">
                     <label className="block text-xs font-medium text-warm-muted mb-1.5">Number of Blocks <span className="text-red-500">*</span></label>
-                    <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setEstimateForm({...estimateForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
+                    <input type="number" min="1" value={estimateForm.numberOfBlocks} onChange={(e) => { setEstimateForm({...estimateForm, numberOfBlocks: e.target.value, unitsPerBlock: {}}); }} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Array.from({ length: parseInt(estimateForm.numberOfBlocks) || 1 }, (_, i) => i + 1).map(blockNum => (
+                    {Array.from({ length: parseInt(estimateForm.numberOfBlocks, 10) || 0 }, (_, i) => i + 1).map(blockNum => (
                       <React.Fragment key={blockNum}>
                         <div>
                           <label className="block text-xs font-medium text-warm-muted mb-1.5">Block Name</label>
@@ -2909,8 +2944,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <tbody className="divide-y divide-warm-border/70">
                 {paginatedEstimates.map((est) => {
                   const isSelected = selectedEstimates.includes(est.id);
+                  const isExpanded = expandedEstimateId === est.id;
                   return (
-                  <tr key={est.id} className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : 'hover:bg-warm-section'}`}>
+                  <React.Fragment key={est.id}>
+                  <tr className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : isExpanded ? 'bg-warm-section' : 'hover:bg-warm-section'}`}>
                     {/* Checkbox cell - hidden for FP Manager */}
                     {!isFPManager && (
                       <td className="px-3 py-4 text-center">
@@ -2926,7 +2963,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </button>
                       </td>
                     )}
-                    <td className="px-4 py-4 font-mono text-sm text-warm-text">{est.estimate_id}</td>
+                    <td className="px-4 py-4">
+                      {/* The ID opens the estimate in place; there is no view modal to open */}
+                      <button type="button" onClick={() => toggleExpandedEstimate(est.id)} aria-expanded={isExpanded}
+                        className="flex items-center gap-1.5 font-mono text-sm text-warm-text hover:text-warm-accent-hover"
+                        title={isExpanded ? 'Hide details' : 'Show details'}>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-warm-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        {est.estimate_id}
+                      </button>
+                    </td>
                     <td className="px-4 py-4">
                       {/* Three tints from the warm palette: still one glance per type, no stray pastels */}
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium ${
@@ -2944,8 +2989,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         : '-'}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="font-medium text-warm-text">{est.client_name}</div>
-                      {est.property_code && <div className="text-xs text-warm-muted">{est.property_code}</div>}
+                      {/* The customer, in the row itself: who they are and how to reach them */}
+                      <div className="font-medium text-warm-text">{est.client_name || '-'}</div>
+                      {est.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{est.client_phone}</div>}
+                      {est.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{est.client_email}</div>}
+                      {est.property_code && <div className="text-xs text-warm-muted/80">{est.property_code}</div>}
                     </td>
                     <td className="px-4 py-4 text-warm-muted">
                       <div className="flex items-center gap-1.5">
@@ -2983,7 +3031,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openViewEstimate(est)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                         {!isFPManager && (
                           <button onClick={() => openEditEstimate(est)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
                         )}
@@ -2993,6 +3040,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     </td>
                   </tr>
+                  {isExpanded && (
+                    <tr className="bg-warm-page/60">
+                      <td colSpan={isFPManager ? 8 : 9} className="p-0">
+                        <EstimateDetailPanel estimate={est} decode={decodeHtml} />
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                   );
                 })}
               </tbody>
@@ -3760,7 +3815,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4 flex flex-wrap items-center gap-3"><label className="text-sm font-medium text-warm-muted">Type:</label><select value={archivedTypeFilter} onChange={(e) => setArchivedTypeFilter(e.target.value)} className={`${CONTROL_H} px-3 text-sm text-warm-text bg-white border border-warm-border rounded-[10px] focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`}><option value="all">All Types</option><option value="property">Property Based</option><option value="direct">Direct</option></select><button onClick={() => setShowDeleteAllConfirm(true)} className={`${CONTROL_H} ml-auto inline-flex items-center gap-2 px-4 bg-red-600 text-white rounded-[10px] hover:bg-red-700 transition-colors text-sm font-medium`}><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <tr key={e.id} className="hover:bg-warm-section"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name}</div>{e.property_code && <div className="text-xs text-warm-muted">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => openViewEstimate(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="View"><Eye className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <React.Fragment key={e.id}><tr className="hover:bg-warm-section"><td className="px-4 py-3"><button type="button" onClick={() => toggleExpandedEstimate(e.id)} aria-expanded={expandedEstimateId === e.id} className="flex items-center gap-1.5 font-mono text-xs text-warm-text hover:text-warm-accent-hover"><ChevronDown className={`w-3.5 h-3.5 shrink-0 text-warm-muted transition-transform ${expandedEstimateId === e.id ? 'rotate-180' : ''}`} />{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-warm-muted/80">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>{expandedEstimateId === e.id && <tr className="bg-warm-page/60"><td colSpan={7} className="p-0"><EstimateDetailPanel estimate={e} decode={decodeHtml} /></td></tr>}</React.Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-warm-text mb-2">Delete Permanently?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Delete All Archived?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
@@ -3813,334 +3868,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           and direct forms open the same one */}
       {renderCustomServiceDialog()}
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-[10px] shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
-      
-      {/* View Estimate Modal */}
-      {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-warm-border/70 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-warm-text">Estimate Details</h3>
-              <button onClick={closeViewEstimate} className="p-2 hover:bg-warm-section rounded-[10px]"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div><p className="text-xs text-warm-muted">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-warm-muted">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    
-                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                  }`}>{getStatusLabel(viewEstimate.status)}</span>
-                </div>
-                <div><p className="text-xs text-warm-muted">Type</p><p className={`font-medium text-sm capitalize ${viewEstimate.estimate_type === 'work_order' ? 'text-warm-accent-hover' : ''}`}>{viewEstimate.estimate_type === 'work_order' ? 'Work Order' : viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-warm-muted">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
-              </div>
-
-              {/* Work Order Details - Only for Work Order Estimates */}
-              {viewEstimate.estimate_type === 'work_order' && viewEstimate.work_order_id && (
-                <div className="border-t border-warm-border/70 pt-4">
-                  <p className="text-sm font-semibold text-warm-text mb-3">Work Order Details</p>
-                  <div className="bg-warm-section p-4 rounded-[10px] grid grid-cols-2 gap-3">
-                    <div><p className="text-xs text-warm-muted">Work Order ID</p><p className="font-medium text-sm font-mono text-warm-text">{viewEstimate.work_order_id}</p></div>
-                    <div><p className="text-xs text-warm-muted">Category</p><p className="font-medium text-sm">{viewEstimate.work_order_category || '-'}</p></div>
-                    <div><p className="text-xs text-warm-muted">Subcategory</p><p className="font-medium text-sm">{viewEstimate.work_order_subcategory || '-'}</p></div>
-                    <div><p className="text-xs text-warm-muted">Priority</p>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        viewEstimate.work_order_priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                        viewEstimate.work_order_priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                        viewEstimate.work_order_priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>{viewEstimate.work_order_priority?.toUpperCase() || 'N/A'}</span>
-                    </div>
-                    {viewEstimate.work_order_description && (
-                      <div className="col-span-2"><p className="text-xs text-warm-muted">Work Order Description</p><p className="font-medium text-sm">{viewEstimate.work_order_description}</p></div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Property Details */}
-              <div className="border-t border-warm-border/70 pt-4">
-                <p className="text-sm font-semibold text-warm-text mb-3">Property Details</p>
-                <div className="bg-warm-section p-4 rounded-[10px] grid grid-cols-2 gap-3">
-                  {viewEstimate.property_code && (
-                    <div><p className="text-xs text-warm-muted">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code}</p></div>
-                  )}
-                  <div><p className="text-xs text-warm-muted">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
-                  <div><p className="text-xs text-warm-muted">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
-                  <div><p className="text-xs text-warm-muted">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
-                  {(viewEstimate.estimate_type === 'property_based' || viewEstimate.property_id) && viewEstimate.division && (
-                    <div><p className="text-xs text-warm-muted">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
-                  )}
-                  <div><p className="text-xs text-warm-muted">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-warm-muted">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
-                  {/* GC-specific: Number of Blocks, Block Names, Units per Block with Bedroom Counts */}
-                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
-                    <>
-                      <div><p className="text-xs text-warm-muted">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
-                      <div><p className="text-xs text-warm-muted">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
-                      {(() => {
-                        const blockNames = viewEstimate.block_names ? (typeof viewEstimate.block_names === 'string' ? JSON.parse(viewEstimate.block_names) : viewEstimate.block_names) : {};
-                        const unitsPerBlock = viewEstimate.units_per_block ? (typeof viewEstimate.units_per_block === 'string' ? JSON.parse(viewEstimate.units_per_block) : viewEstimate.units_per_block) : {};
-                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
-                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0 || Object.keys(blockUnitTypes).length > 0;
-                        if (!hasBlockData) return null;
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
-                        const numBlocks = viewEstimate.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || Object.keys(blockUnitTypes).length || 1;
-                        return (
-                          <div className="col-span-2 mt-2">
-                            <p className="text-xs text-warm-muted mb-2">Block Details</p>
-                            <div className="bg-warm-accent-soft p-3 rounded-[10px] space-y-3">
-                              {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                                const blockName = blockNames[blockNum] || `Block ${blockNum}`;
-                                const blockUnits = unitsPerBlock[blockNum] || 0;
-                                const unitTypes = blockUnitTypes[blockNum] || {};
-                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                                return (
-                                  <div key={blockNum} className="bg-white p-3 rounded border border-warm-border/70">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <p className="text-sm text-warm-accent-hover font-semibold">{blockName}</p>
-                                      <p className="text-sm text-warm-text font-medium">{blockUnits} units</p>
-                                    </div>
-                                    {hasUnitTypes && (
-                                      <div className="flex flex-wrap gap-2 pt-2 border-t border-warm-border/70">
-                                        {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
-                                            {unitTypeLabels[type] || type}: {count}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Apartment-specific: Block Details with Unit Type Breakdown - Same UI as GC */}
-                  {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
-                    <>
-                      {/* The tower the estimate was written for. It was only ever shown inside the
-                          unit-type breakdown, so an apartment without one never stated its building. */}
-                      {(viewEstimate.tower_name || viewEstimate.block_name) && <div><p className="text-xs text-warm-muted">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name || viewEstimate.block_name}</p></div>}
-                      {viewEstimate.block_number && <div><p className="text-xs text-warm-muted">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
-                      <div><p className="text-xs text-warm-muted">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || viewEstimate.number_of_units || '-'}</p></div>
-                      {(() => {
-                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
-                        const unitTypes = blockUnitTypes['apt'] || {};
-                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                        if (!hasUnitTypes) return null;
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
-                        const buildingName = viewEstimate.tower_name || viewEstimate.block_name || 'Building';
-                        const totalUnits = viewEstimate.total_units || viewEstimate.number_of_units || 0;
-                        return (
-                          <div className="col-span-2 mt-2">
-                            <p className="text-xs text-warm-muted mb-2">Block Details</p>
-                            <div className="bg-warm-accent-soft p-3 rounded-[10px] space-y-3">
-                              <div className="bg-white p-3 rounded border border-warm-border/70">
-                                <div className="flex justify-between items-center mb-2">
-                                  <p className="text-sm text-warm-accent-hover font-semibold">{buildingName}</p>
-                                  <p className="text-sm text-warm-text font-medium">{totalUnits} units</p>
-                                </div>
-                                <div className="flex flex-wrap gap-2 pt-2 border-t border-warm-border/70">
-                                  {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                    <span key={type} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
-                                      {unitTypeLabels[type] || type}: {count}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Villa-specific fields */}
-                  {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-warm-muted">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
-                  )}
-                  {/* Flat-specific fields */}
-                  {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-warm-muted">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
-                  )}
-                  {/* Plot-specific fields */}
-                  {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-warm-muted">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="border-t border-warm-border/70 pt-4">
-                <p className="text-sm font-semibold text-warm-text mb-3">Customer Details</p>
-                <div className="bg-warm-accent-soft p-4 rounded-[10px] grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-warm-muted">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
-                  <div><p className="text-xs text-warm-muted">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-warm-muted">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
-                </div>
-              </div>
-
-              {/* Package - Skip for Work Order Estimates */}
-              {viewEstimate.estimate_type !== 'work_order' && viewEstimate.package_name && (() => {
-                // Try to get description from estimate, fallback to AMC package lookup
-                // Try multiple matching strategies for package lookup
-                let pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id);
-                if (!pkgFromList) {
-                  pkgFromList = amcPackages.find(p => p.name === viewEstimate.package_name);
-                }
-                if (!pkgFromList) {
-                  // Try case-insensitive name match
-                  pkgFromList = amcPackages.find(p => p.name?.toLowerCase() === viewEstimate.package_name?.toLowerCase());
-                }
-                console.log('[ViewEstimate] package_id:', viewEstimate.package_id, 'package_name:', viewEstimate.package_name, 
-                  'found pkg:', pkgFromList?.id, pkgFromList?.name);
-                
-                const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
-                // Get services from estimate or from package lookup
-                // Backend returns as 'packageServices' (camelCase) or 'package_services' (snake_case)
-                let pkgServices = [];
-                const rawServices = viewEstimate.packageServices || viewEstimate.package_services;
-                console.log('[ViewEstimate] rawServices from estimate:', rawServices ? 'exists' : 'null/empty');
-                
-                if (rawServices) {
-                  try {
-                    const parsed = typeof rawServices === 'string' ? JSON.parse(rawServices) : rawServices;
-                    // Handle different data structures
-                    if (Array.isArray(parsed)) {
-                      pkgServices = parsed;
-                    } else if (parsed?.serviceRows) {
-                      pkgServices = parsed.serviceRows;
-                    } else if (parsed?.services) {
-                      pkgServices = parsed.services;
-                    }
-                    console.log('[ViewEstimate] Parsed services from estimate:', pkgServices.length);
-                  } catch (e) { console.log('Error parsing package services:', e); }
-                }
-                // Fallback to AMC package lookup if no services found
-                if (pkgServices.length === 0 && pkgFromList?.services) {
-                  console.log('[ViewEstimate] Falling back to AMC package services lookup');
-                  try {
-                    const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
-                    pkgServices = svc?.serviceRows || svc?.services || (Array.isArray(svc) ? svc : []);
-                    console.log('[ViewEstimate] Found services from AMC package:', pkgServices.length);
-                  } catch (e) { console.log('Error parsing pkg services from list:', e); }
-                }
-                
-                console.log('[ViewEstimate] Final pkgServices count:', pkgServices.length);
-                return (
-                  <div className="border-t border-warm-border/70 pt-4">
-                    <p className="text-sm font-semibold text-warm-text mb-3">AMC Package</p>
-                    {pkgDescription && (
-                      <p className="text-sm text-warm-muted mb-3">{pkgDescription}</p>
-                    )}
-                    {/* Package Services - Horizontal Table */}
-                    {pkgServices.length > 0 && (
-                      <div className="mt-3">
-                        {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-warm-accent-soft rounded-t-[10px]">
-                          <div className="col-span-1 text-xs font-semibold text-warm-text">#</div>
-                          <div className="col-span-3 text-xs font-semibold text-warm-text">Service</div>
-                          <div className="col-span-4 text-xs font-semibold text-warm-text">Description</div>
-                          <div className="col-span-2 text-xs font-semibold text-warm-text text-center">Frequency</div>
-                          <div className="col-span-2 text-xs font-semibold text-warm-text text-right">Visits</div>
-                        </div>
-                        {/* Rows */}
-                        <div className="border border-warm-border rounded-b-[10px] divide-y divide-warm-border/70">
-                          {pkgServices.map((svc, idx) => (
-                            <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                              <div className="col-span-1">
-                                <span className="w-5 h-5 bg-warm-accent-soft0 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                              </div>
-                              <div className="col-span-3">
-                                <p className="font-medium text-warm-text text-sm">{decodeHtml(svc.name || svc.service)}</p>
-                              </div>
-                              <div className="col-span-4 overflow-hidden">
-                                <p className={`text-xs text-warm-muted break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
-                              </div>
-                              <div className="col-span-2 text-center">
-                                <p className="text-sm text-warm-accent-hover">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
-                              </div>
-                              <div className="col-span-2 text-right">
-                                <p className="text-sm text-warm-text font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Services - Horizontal Table - Skip for Work Order Estimates */}
-              {viewEstimate.estimate_type !== 'work_order' && (() => {
-                // Parse addons from addons array or addons_data JSON
-                let addonsList = viewEstimate.addons || [];
-                if ((!addonsList || addonsList.length === 0) && viewEstimate.addons_data) {
-                  try {
-                    addonsList = typeof viewEstimate.addons_data === 'string' 
-                      ? JSON.parse(viewEstimate.addons_data) 
-                      : viewEstimate.addons_data;
-                  } catch (e) { addonsList = []; }
-                }
-                if (!Array.isArray(addonsList) || addonsList.length === 0) return null;
-                
-                return (
-                <div className="border-t border-warm-border/70 pt-4">
-                  <p className="text-sm font-semibold text-warm-text mb-3">Services</p>
-                  <EstimateServicesTable rows={addonsList} decode={decodeHtml}
-                    topRadius="rounded-t-[10px]" bottomRadius="rounded-b-[10px]" />
-                </div>
-                );
-              })()}
-
-              {/* Billing Duration */}
-              <div className="border-t border-warm-border/70 pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-warm-muted">Billing</span>
-                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
-                </div>
-              </div>
-
-              {/* Price Summary */}
-              <div className="border-t border-warm-border/70 pt-4">
-                <p className="text-sm font-semibold text-warm-text mb-3">Price Summary</p>
-                <div className="bg-warm-section p-4 rounded-[10px] space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-warm-muted">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-warm-muted">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-warm-muted">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount || 0)}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-warm-border">
-                    <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-warm-accent-hover">{formatCurrency(viewEstimate.total_amount)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description / Notes - After Price Summary */}
-              {viewEstimate.description && (
-                <div className="border-t border-warm-border/70 pt-4">
-                  <p className="text-sm font-semibold text-warm-text mb-2">Description / Notes</p>
-                  <p className="text-sm text-warm-muted bg-warm-section p-3 rounded-[10px]">{viewEstimate.description}</p>
-                </div>
-              )}
-
-              {/* Terms & Conditions - shown only when this estimate carries them */}
-              <EstimateTermsSection estimate={viewEstimate} className="border-t border-warm-border/70 pt-4" />
-
-              {/* Created By */}
-              <div className="border-t border-warm-border/70 pt-4 text-xs text-warm-muted">
-                Created by: {viewEstimate.created_by_name || '-'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* View AMC Package Modal */}
       {viewAmcPackage && (

@@ -158,6 +158,47 @@ export const getServiceInput = (service) => {
   return Number.isFinite(quantity) && quantity > 0 ? `Qty ${quantity.toLocaleString('en-IN')}` : '';
 };
 
+/**
+ * The rate the service was priced at, as the second line of Input / Details: "₹1,800 / Lift / Visit"
+ * under "4 Lift". It is the configured per-unit rate from the pricing snapshot, not the per-visit
+ * total, so it reads as the rate card it came from.
+ *
+ * This is a vendor rate, so it belongs to the internal table only -- the customer-facing one states
+ * the measured amount alone. A Capacity Slab names the slab that applied instead of a rate, since
+ * that is what decided the price. Returns '' when the snapshot carries no rate, which is the case
+ * for a hand-entered service.
+ */
+const rateAmount = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '';
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
+    minimumFractionDigits: number % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(number);
+};
+export const getServiceRate = (service) => {
+  const snapshot = snapshotOf(service);
+  const inputs = service?.pricingInputs || service?.inputs || snapshot.inputs || {};
+  const method = serviceMethod(service);
+  const unit = service?.unit || snapshot.unit || '';
+  const rate = (value, ...parts) => (value == null || value === '' || !Number.isFinite(Number(value))
+    ? '' : [rateAmount(value), ...parts].filter(Boolean).join(' / '));
+  if (method === 'capacity_slab') {
+    const slabs = snapshot.capacity_slabs || service?.capacity_slabs || [];
+    const slab = Array.isArray(slabs) ? slabs.find(item => Number(inputs.capacity) >= item.capacityFrom
+      && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo)) : null;
+    if (slab) return `Slab: ${slab.capacityFrom} - ${slab.capacityTo === null ? 'above' : slab.capacityTo}${unit ? ` ${unit}` : ''}`;
+  }
+  if (method === 'manpower') {
+    const basis = service?.manpower_basis || snapshot.manpower_basis || 'monthly';
+    return basis === 'per_visit' ? rate(snapshot.rate_per_person ?? service?.rate_per_person, 'Person', 'Visit')
+      : rate(snapshot.monthly_rate ?? service?.monthly_rate, 'Month');
+  }
+  const perUnit = { quantity_based: 'rate_per_quantity', area_based: 'rate_per_unit', capacity_based: 'rate_per_capacity' }[method];
+  if (perUnit) return rate(snapshot[perUnit] ?? service?.[perUnit], unit, 'Visit');
+  if (method === 'fixed_price' || method === 'fixed_visit_custom') return rate(snapshot.fixed_price ?? service?.fixed_price, 'Visit');
+  // An older row, or a method without a rate card of its own: the per-visit vendor rate still says it
+  return rate(snapshot.vendorRatePerVisit, 'Visit');
+};
+
 export const getServiceDescription = (service) => {
   if (service?.details) return service.details;
   const snapshot = service?.pricingSnapshot || {};
@@ -201,6 +242,62 @@ export const getServiceDescription = (service) => {
   }
   if (propertyTypes.length) details.push(`Property Types: ${propertyTypes.join(', ')}`);
   return [service?.description || service?.services?.[0]?.description || snapshot.description, details.filter(Boolean).join(' | ')].filter(Boolean).join('\n');
+};
+
+/**
+ * What a saved service cost XLAND, as opposed to what the customer pays for it. Every figure comes
+ * from the pricing snapshot the server wrote when the service was priced, so an estimate reports
+ * what it was actually costed at rather than what today's catalog would say.
+ *
+ * These belong to the Admin, Ops Manager, FP and Manager screens only, under an Internal heading,
+ * and must never reach a customer document. A hand-entered service has no vendor behind it, so its
+ * vendor and XLAND costs are null rather than zero -- nothing was quoted, which is not the same as
+ * costing nothing.
+ */
+const snapshotOf = (service) => service?.pricingSnapshot || {};
+const figure = (...values) => {
+  const found = values.find(value => value != null && value !== '' && Number.isFinite(Number(value)));
+  return found == null ? null : Number(found);
+};
+export const getServiceVendorCost = (service) =>
+  service?.customService ? null : figure(service?.vendorCost, snapshotOf(service).vendorCost);
+export const getServiceOperatingCost = (service) =>
+  service?.customService ? null : figure(service?.operatingCost, snapshotOf(service).operatingCost, snapshotOf(service).default_operating_cost);
+export const getServiceActualCost = (service) => {
+  const actual = service?.customService ? null : figure(service?.actualCost, snapshotOf(service).actualCost);
+  if (actual != null) return actual;
+  const vendor = getServiceVendorCost(service);
+  const operating = getServiceOperatingCost(service);
+  return vendor == null && operating == null ? null : (vendor || 0) + (operating || 0);
+};
+export const getServiceMarginPercent = (service) => {
+  const margin = figure(service?.marginPercentage, snapshotOf(service).marginPercentage);
+  if (margin != null) return margin;
+  const price = getAddonPrice(service);
+  const actual = getServiceActualCost(service);
+  return actual == null || !price ? null : round2((price - actual) / price * 100);
+};
+const round2 = value => Math.round((value + Number.EPSILON) * 100) / 100;
+
+/**
+ * The internal cost and profit of a whole estimate: what its services cost to arrange, what it
+ * sells for, and the difference. The selling price is the estimate's own subtotal where it has one
+ * -- that is the figure the customer was quoted, package included -- and falls back to the sum of
+ * the service prices for an estimate that carries no package.
+ */
+export const estimateInternalCosts = (estimate, rows) => {
+  const services = Array.isArray(rows) ? rows : getEstimateAddons(estimate);
+  const sum = (getter) => services.reduce((total, service) => total + (getter(service) || 0), 0);
+  const vendorCost = round2(sum(getServiceVendorCost));
+  const operatingCost = round2(sum(getServiceOperatingCost));
+  const actualCost = round2(vendorCost + operatingCost);
+  const servicesPrice = round2(sum(getAddonPrice));
+  const packagePrice = figure(estimate?.package_price, estimate?.packagePrice, estimate?.packageRate) || 0;
+  const subtotal = figure(estimate?.subtotal, estimate?.subTotal);
+  const sellingPrice = round2(subtotal != null && subtotal > 0 ? subtotal : servicesPrice + packagePrice);
+  const profit = round2(sellingPrice - actualCost);
+  return { vendorCost, operatingCost, actualCost, servicesPrice, packagePrice, sellingPrice, profit,
+    marginPercent: sellingPrice ? round2(profit / sellingPrice * 100) : null };
 };
 
 /**
