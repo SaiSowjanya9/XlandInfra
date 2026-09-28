@@ -15,6 +15,7 @@
 const { pool } = require('../config/database');
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 const { markPaymentCompleted } = require('./schedulingWorkflow');
+const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 
 // The action every Razorpay payment writes to payment_history. The Razorpay tab filters on it.
 const RAZORPAY_HISTORY_ACTION = 'razorpay_payment';
@@ -185,7 +186,10 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
     `, [
       invoice.id,
       paymentDbId,
-      RAZORPAY_HISTORY_ACTION,
+      // Resolved against the column we actually have: on a database still carrying the old ENUM this
+      // value truncates, and because the row is written inside this transaction it took the payment
+      // down with it.
+      await paymentHistoryAction(RAZORPAY_HISTORY_ACTION),
       amount,
       description,
       razorpayPaymentId,
