@@ -106,7 +106,7 @@ const handleDateInput = (value, setter) => {
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'grid-cols-[minmax(8rem,2fr)_minmax(7rem,1.6fr)_6.5rem_6rem_7rem_3.5rem_6rem_2.5rem]';
+const PACKAGE_ROW_GRID = 'grid-cols-[minmax(8rem,1.8fr)_minmax(6.5rem,1.4fr)_6.5rem_6rem_9.5rem_3.5rem_6rem_2.5rem]';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -3515,7 +3515,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 {/* Service Configuration. Every column a configured service needs to be priced: what
                     it is, how it is priced, the amount it is priced on, its schedule and its price. */}
                 <div className="overflow-x-auto">
-                  <div className="min-w-[46rem]">
+                  <div className="min-w-[50rem]">
                     <h3 className="text-sm font-semibold text-warm-text mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
@@ -3586,7 +3586,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                              className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent bg-white appearance-none"
+                              className="w-full pl-2 pr-7 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent bg-white appearance-none"
                             >
                               {FREQUENCY_TYPES.map(type => (
                                 <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
