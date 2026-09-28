@@ -270,9 +270,9 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                   <button key={item.id} type="button" role="menuitem" onClick={() => { setMenuOpen(false); selectService(String(item.id)); }}
                     className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors ${skin.menuItem}`}
                     title={serviceOptionLabel(item, services)}>
+                    {/* A service already on the estimate is listed like any other, unmarked; picking
+                        it reopens its figures rather than adding a second row */}
                     <span className="min-w-0 flex-1 truncate">{serviceOptionLabel(item, services)}</span>
-                    {/* Already on the estimate: still offered, and picking it reopens its figures */}
-                    {rowFor(item) && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${skin.addedBadge}`}>Added</span>}
                   </button>
                 )) : <p className={`px-3 py-2 text-sm ${skin.muted}`}>No services for this property type.</p>}
               {error && <p role="alert" className="px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -285,8 +285,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
           <select value={selectedId} onChange={event => selectService(event.target.value)} disabled={loading || !propertyType || saving}
             className={`${inline ? inlineSelectClass(skin) : selectClass(skin)} ${inline ? 'mt-1.5' : 'mt-2'} ${selectedId ? skin.strong : skin.faint}`}>
             <option value="" className={skin.faint}>{loading ? 'Loading services...' : !propertyType ? 'Select a property type first' : 'Select service'}</option>
-            {/* A native option cannot carry a badge, so an added service says so in its text */}
-            {available.map(item => <option key={item.id} value={item.id} className={skin.strong}>{serviceOptionLabel(item, services)}{rowFor(item) ? ' · Added' : ''}</option>)}
+            {available.map(item => <option key={item.id} value={item.id} className={skin.strong}>{serviceOptionLabel(item, services)}</option>)}
           </select>
         </label>
         {!loading && !services.length && !error && <p className={`mt-2 text-xs ${skin.muted}`}>No services available for this property type.</p>}

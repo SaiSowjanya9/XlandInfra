@@ -129,13 +129,42 @@ export const primaryInputLabel = (serviceName, pricingMethod, unit) => {
   return new RegExp(`\\b${dimension}\\b`, 'i').test(name) ? name : `${name} ${dimension}`;
 };
 
+// Retired methods stay listed so an estimate saved under one still names itself. Mirrors METHODS in
+// backend/utils/estimateData.js.
+const METHOD_LABELS = { fixed_price: 'Fixed Price', quantity_based: 'Quantity Based', area_based: 'Area Based', capacity_based: 'Capacity Based', capacity_slab: 'Capacity Slab', manpower: 'Manpower', fixed_visit_custom: 'Fixed Visit + Custom Work', custom_quote: 'Custom Quote' };
+const INPUT_FIELDS = { quantity_based: ['quantity', 'Quantity'], area_based: ['area', 'Area'], capacity_based: ['capacity', 'Capacity'], capacity_slab: ['capacity', 'Capacity'], manpower: ['personnel', 'Personnel'] };
+const serviceMethod = (service) => service?.pricing_method || service?.pricingMethod || service?.pricingSnapshot?.pricing_method;
+
+// How a saved service was priced, for a column of its own. Empty for a hand-entered row, which has
+// no configured method behind it.
+export const getServiceMethodLabel = (service) => METHOD_LABELS[serviceMethod(service)] || '';
+
+/**
+ * What was measured at this property -- "4 Lift", "15,000 Sq Ft", "125 KVA", "4 Guards" -- taken
+ * from the inputs the estimate was priced from.
+ *
+ * The rate behind it is a vendor cost, so it is not part of this: a view modal states what was
+ * measured and what the customer pays, never what XLAND spends. A method that measures nothing
+ * (Fixed Price) returns '', and a hand-entered row falls back to the quantity it was given.
+ */
+export const getServiceInput = (service) => {
+  const snapshot = service?.pricingSnapshot || {};
+  const inputs = service?.pricingInputs || service?.inputs || snapshot.inputs || {};
+  const field = INPUT_FIELDS[serviceMethod(service)];
+  const unit = service?.unit || snapshot.unit || '';
+  const amount = field ? inputs[field[0]] : undefined;
+  if (amount != null && Number.isFinite(Number(amount))) return `${Number(amount).toLocaleString('en-IN')}${unit ? ` ${unit}` : ''}`;
+  const quantity = Number(service?.quantity);
+  return Number.isFinite(quantity) && quantity > 0 ? `Qty ${quantity.toLocaleString('en-IN')}` : '';
+};
+
 export const getServiceDescription = (service) => {
   if (service?.details) return service.details;
   const snapshot = service?.pricingSnapshot || {};
   const inputs = service?.pricingInputs || service?.inputs || snapshot.inputs || {};
   const method = service?.pricing_method || snapshot.pricing_method;
-  const labels = { fixed_price: 'Fixed Price', quantity_based: 'Quantity Based', area_based: 'Area Based', capacity_based: 'Capacity Based', capacity_slab: 'Capacity Slab', manpower: 'Manpower', fixed_visit_custom: 'Fixed Visit + Custom Work', custom_quote: 'Custom Quote' };
-  const field = { quantity_based: ['quantity', 'Quantity'], area_based: ['area', 'Area'], capacity_based: ['capacity', 'Capacity'], capacity_slab: ['capacity', 'Capacity'], manpower: ['personnel', 'Personnel'] }[method];
+  const labels = METHOD_LABELS;
+  const field = INPUT_FIELDS[method];
   const unit = service?.unit || snapshot.unit || '';
   // Every configured service describes itself the same way, whatever its pricing method:
   // category, method, derived primary input, measured amount with its unit, and the property

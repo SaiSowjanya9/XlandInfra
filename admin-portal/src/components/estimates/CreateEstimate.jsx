@@ -14,7 +14,6 @@ import ServiceCatalogPicker from './ServiceCatalogPicker';
 import { TermsConditionsField } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
 import { EstimateInput, PropertyIdInput } from './EstimateFields';
-import AutocompleteInput from '../common/AutocompleteInput';
 import { 
   createEstimate, calculateEstimateTotal, getServices, PROPERTY_TYPES,
   getAMCPackageByPropertyId, addService, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle,
@@ -212,8 +211,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
   const [propertyIdInput, setPropertyIdInput] = useState('');
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   const [properties, setProperties] = useState([]);
-  const [zoneOptions, setZoneOptions] = useState([]);
-  const [cityOptions, setCityOptions] = useState([]);
   const [availableServices, setAvailableServices] = useState([]);
   const [amcPackage, setAmcPackage] = useState(null);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
@@ -439,20 +436,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
       console.error('Error loading packages/addons:', error);
       setAvailablePackages([]);
       setAvailableAddons([]);
-    }
-    
-    // Fetch zones and cities for autocomplete
-    try {
-      const [zonesRes, citiesRes] = await Promise.all([
-        fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const zonesData = await zonesRes.json();
-      const citiesData = await citiesRes.json();
-      setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
-      setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
-    } catch (error) {
-      console.error('Error loading zones/cities:', error);
     }
   };
 
@@ -1828,7 +1811,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         
                         return filteredPkgs.map(pkg => (
                           <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                            {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                            {getPackageName(pkg)}
                           </option>
                         ));
                       })()}
@@ -2398,7 +2381,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                           <>
                             {filteredPkgs.length > 0 && filteredPkgs.map(pkg => (
                               <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                                {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                                {getPackageName(pkg)}
                               </option>
                             ))}
                             {propertyType && filteredPkgs.length === 0 && (
@@ -2498,7 +2481,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 )}
               </div>
 
-              {/* Additional Services Section - Blue themed, attached under AMC Package */}
+              {/* Services Section - Blue themed, attached under AMC Package */}
               <div className="px-6 py-4 border-t border-gray-100">
                 {/* The configured-service picker now sits beside the package dropdown above */}
                 {/* Add-on Dropdown - Reduced width. The legacy list, named apart from the
@@ -2645,7 +2628,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 {selectedAddons.length > 0 && (
                   <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                     <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                      <p className="text-sm font-semibold text-blue-800">Additional Services</p>
+                      <p className="text-sm font-semibold text-blue-800">Services</p>
                     </div>
                     <table className="w-full table-fixed">
                       {/* Table Header */}
@@ -3049,25 +3032,23 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 />
               </div>
               <div>
-                <AutocompleteInput
-                  label="Zone"
+                <label className="block text-xs font-medium text-gray-600 mb-1">Zone</label>
+                <EstimateInput
+                  type="text"
                   value={estimateForm.zone}
-                  onChange={(val) => setEstimateForm({ ...estimateForm, zone: val })}
-                  options={zoneOptions}
-                  placeholder="Type or select zone..."
-                  allowCustom={true}
-                  inputClassName="text-sm"
+                  onChange={(e) => setEstimateForm({ ...estimateForm, zone: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter zone"
                 />
               </div>
               <div>
-                <AutocompleteInput
-                  label="City"
+                <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                <EstimateInput
+                  type="text"
                   value={estimateForm.city}
-                  onChange={(val) => setEstimateForm({ ...estimateForm, city: val })}
-                  options={cityOptions}
-                  placeholder="Type or select city..."
-                  allowCustom={true}
-                  inputClassName="text-sm"
+                  onChange={(e) => setEstimateForm({ ...estimateForm, city: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="Enter city"
                 />
               </div>
             </div>
@@ -3207,7 +3188,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         <>
                           {filteredPkgs.length > 0 && filteredPkgs.map(pkg => (
                             <option key={getPackageId(pkg)} value={getPackageId(pkg)}>
-                              {getPackageName(pkg)} - ₹{getNormalizedPackagePrice(pkg).toLocaleString()}
+                              {getPackageName(pkg)}
                             </option>
                           ))}
                           {propertyType && filteredPkgs.length === 0 && (
@@ -3305,7 +3286,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               )}
             </div>
 
-            {/* Additional Services Section - Add-ons */}
+            {/* Services Section - Add-ons */}
             <div className="px-6 py-4 border-t border-gray-100">
               {/* The configured-service picker now sits beside the package dropdown above */}
               {/* Add-on Dropdown. The legacy list, named apart from the configured-service control
@@ -3447,7 +3428,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               {directSelectedAddons.length > 0 && (
                 <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                   <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                    <p className="text-sm font-semibold text-blue-800">Additional Services</p>
+                    <p className="text-sm font-semibold text-blue-800">Services</p>
                   </div>
                   <table className="w-full table-fixed">
                     {/* Table Header */}
@@ -4115,7 +4096,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               {/* Selected Add-ons */}
               {selectedAddons.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Additional Services</h3>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Services</h3>
                   <table className="w-full table-fixed border border-gray-200 rounded-lg overflow-hidden">
                     <thead className="bg-gray-50">
                       <tr>

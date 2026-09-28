@@ -17,17 +17,17 @@ import {
 } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
 import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
-import { getServiceDescription, getServiceMarkup, hasCatalogServices } from '../utils/estimatePackageUtils';
+import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
 import { newEstimateTerms } from '../utils/estimateTerms';
 import * as XLSX from 'xlsx';
-import AutocompleteInput from '../components/common/AutocompleteInput';
 import AddServicePage from '../components/estimates/AddServicePage';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
@@ -648,29 +648,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     villaNumber: '', flatNumber: '', plotNumber: ''
   });
   
-  // Zone and City options for autocomplete
-  const [zoneOptions, setZoneOptions] = useState([]);
-  const [cityOptions, setCityOptions] = useState([]);
-  
-  // Fetch zones and cities for autocomplete
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const [zonesRes, citiesRes] = await Promise.all([
-          fetch(`${API_BASE}/api/onboarding/suggestions/zones`, { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(`${API_BASE}/api/onboarding/suggestions/cities`, { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
-        const zonesData = await zonesRes.json();
-        const citiesData = await citiesRes.json();
-        setZoneOptions(zonesData.success ? (zonesData.data || []).map(z => z.name || z) : []);
-        setCityOptions(citiesData.success ? (citiesData.data || []).map(c => c.name || c) : []);
-      } catch (error) {
-        console.error('Error loading zones/cities:', error);
-      }
-    };
-    if (token) fetchOptions();
-  }, [token]);
-
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
     if (!type) return '';
@@ -1667,7 +1644,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
                     if (!searchType) return <option disabled>Select property first</option>;
                     if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
-                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
+                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>);
                   })()}
                 </select>
               </div>
@@ -1885,28 +1862,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input type="text" placeholder="Enter property name" value={estimateForm.propertyName} onChange={(e) => setEstimateForm({...estimateForm, propertyName: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
                 <div>
-                  <AutocompleteInput
-                    label="Zone"
-                    value={estimateForm.zone}
-                    onChange={(val) => setEstimateForm({...estimateForm, zone: val})}
-                    options={zoneOptions}
-                    placeholder="Type or select zone..."
-                    allowCustom={true}
-                    inputClassName="text-sm"
-                    theme="warm"
-                  />
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">Zone</label>
+                  <input type="text" placeholder="Enter zone" value={estimateForm.zone} onChange={(e) => setEstimateForm({...estimateForm, zone: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
                 <div>
-                  <AutocompleteInput
-                    label="City"
-                    value={estimateForm.city}
-                    onChange={(val) => setEstimateForm({...estimateForm, city: val})}
-                    options={cityOptions}
-                    placeholder="Type or select city..."
-                    allowCustom={true}
-                    inputClassName="text-sm"
-                    theme="warm"
-                  />
+                  <label className="block text-xs font-medium text-warm-muted mb-1.5">City</label>
+                  <input type="text" placeholder="Enter city" value={estimateForm.city} onChange={(e) => setEstimateForm({...estimateForm, city: e.target.value})} className="w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" />
                 </div>
               </div>
               <div>
@@ -2006,7 +1967,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
                   if (!searchType) return <option disabled>Select property type first</option>;
                   if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
-                  return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>);
+                  return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>);
                 })()}
               </select>
             </div>
@@ -2073,11 +2034,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
                   from the Custom Services table's own Add Service menu */}
 
-              {/* Additional Services Table - Only show when services selected */}
+              {/* Services Table - Only show when services selected */}
               {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
                 <div className="border border-warm-border rounded-xl overflow-hidden">
                   <div className="bg-warm-accent-soft px-5 py-2.5 border-b border-warm-border">
-                    <span className="text-sm font-semibold text-warm-text">Additional Services</span>
+                    <span className="text-sm font-semibold text-warm-text">Services</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
@@ -4113,7 +4074,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 );
               })()}
 
-              {/* Additional Services - Horizontal Table - Skip for Work Order Estimates */}
+              {/* Services - Horizontal Table - Skip for Work Order Estimates */}
               {viewEstimate.estimate_type !== 'work_order' && (() => {
                 // Parse addons from addons array or addons_data JSON
                 let addonsList = viewEstimate.addons || [];
@@ -4128,63 +4089,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 
                 return (
                 <div className="border-t border-warm-border/70 pt-4">
-                  <p className="text-sm font-semibold text-warm-text mb-3">Additional Services</p>
-                  <div>
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-green-100 rounded-t-[10px]">
-                      <div className="col-span-1 text-xs font-semibold text-green-700">#</div>
-                      <div className="col-span-3 text-xs font-semibold text-green-700">Service</div>
-                      <div className="col-span-4 text-xs font-semibold text-green-700">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-green-700 text-right">Visits</div>
-                    </div>
-                    {/* Rows */}
-                    <div className="border border-green-100 divide-y divide-green-50">
-                      {addonsList.map((addon, idx) => {
-                        const addonName = decodeHtml(addon.name || addon.service_name) || '';
-                        const estPropertyType = (viewEstimate.property_type || '').toUpperCase();
-                        // Priority 1: Match by ID
-                        let addonFromList = addons.find(a => a.id == addon.id || a.id == addon.addon_id);
-                        // Priority 2: Match by name AND property_type
-                        if (!addonFromList || !addonFromList.description) {
-                          addonFromList = addons.find(a => 
-                            (a.service_name === addonName || a.service_name?.toLowerCase() === addonName?.toLowerCase()) &&
-                            (a.property_type || '').toUpperCase() === estPropertyType
-                          ) || addonFromList;
-                        }
-                        const addonDescription = decodeHtml(getServiceDescription(addon) || addonFromList?.description) || '';
-                        // Internal figure: shown on this staff screen only, never in a customer document
-                        const addonMarkup = getServiceMarkup(addon);
-                        const frequencyCount = addon.frequency_count ?? addon.frequencyCount ?? addonFromList?.frequency_count ?? 1;
-                        const frequencyType = addon.frequency_type || addon.frequencyType || addonFromList?.frequency_type || 'Monthly';
-                        return (
-                          <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                            <div className="col-span-1">
-                              <span className="w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                            </div>
-                            <div className="col-span-3">
-                              <p className="font-medium text-warm-text text-sm">{addonName}</p>
-                            </div>
-                            <div className="col-span-4">
-                              <p className="text-xs text-warm-muted break-words whitespace-normal">{addonDescription || '-'}</p>
-                              {addonMarkup != null && <p className="mt-1 text-[10px] text-warm-muted">Markup: {addonMarkup}% (internal)</p>}
-                            </div>
-                            <div className="col-span-2 text-center">
-                              <p className="text-sm text-green-600">{frequencyType}</p>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <p className="text-sm text-green-700 font-semibold">{frequencyCount}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Total Services Price */}
-                    <div className="flex justify-between items-center bg-green-100 p-3 rounded-b-[10px]">
-                      <p className="font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">{formatCurrency(addonsList.reduce((sum, a) => sum + Number(a.price || a.totalPrice || a.calculatedPrice || 0), 0))}</p>
-                    </div>
-                  </div>
+                  <p className="text-sm font-semibold text-warm-text mb-3">Services</p>
+                  <EstimateServicesTable rows={addonsList} decode={decodeHtml}
+                    topRadius="rounded-t-[10px]" bottomRadius="rounded-b-[10px]" />
                 </div>
                 );
               })()}
@@ -4356,7 +4263,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               ) : (
                 <>
-                  <div><p className="text-sm font-semibold text-warm-text mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name} - {formatCurrency(pkg.price)}</option>))}</select></div>
+                  <div><p className="text-sm font-semibold text-warm-text mb-3">AMC Package</p><select value={editEstimateForm.package_id || ''} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, package_id: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px] bg-white"><option value="">Select Package</option>{amcPackages.filter(p => normalizePropertyType(getPkgPropertyType(p)) === normalizePropertyType(editEstimate.property_type)).map(pkg => (<option key={pkg.id} value={pkg.id}>{pkg.name}</option>))}</select></div>
                   <div><p className="text-sm font-semibold text-warm-text mb-3">Add Service</p><div className="space-y-2 max-h-48 overflow-y-auto border border-warm-border rounded-[10px] p-3">{addons.filter(a => normalizePropertyType(a.property_type) === normalizePropertyType(editEstimate.property_type)).map(addon => { const existing = (editEstimateForm.selectedAddons || []).find(item => item.id === addon.id); const qty = existing?.quantity || 0; return (<div key={addon.id} className="flex items-center justify-between hover:bg-warm-section p-2 rounded"><span className="text-sm text-warm-text flex-1">{decodeHtml(addon.service_name)}</span><div className="flex items-center gap-2"><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty <= 1) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.filter(item => item.id !== addon.id) }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity - 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-warm-border text-warm-muted hover:bg-warm-section disabled:opacity-50" disabled={qty === 0}>-</button><span className="w-6 text-center text-sm font-medium">{qty}</span><button type="button" onClick={() => { const current = editEstimateForm.selectedAddons || []; if (qty === 0) { setEditEstimateForm({ ...editEstimateForm, selectedAddons: [...current, { id: addon.id, quantity: 1 }] }); } else { setEditEstimateForm({ ...editEstimateForm, selectedAddons: current.map(item => item.id === addon.id ? { ...item, quantity: item.quantity + 1 } : item) }); } }} className="w-7 h-7 flex items-center justify-center rounded-full border border-amber-500 text-warm-accent-hover hover:bg-warm-accent-soft">+</button></div></div>); })}</div></div>
                 </>
               )}

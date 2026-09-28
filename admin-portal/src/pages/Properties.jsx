@@ -1620,12 +1620,12 @@ const Properties = () => {
               </div>
 
               
-              {/* Additional Services */}
+              {/* Services */}
               {selectedEstimate.addons && selectedEstimate.addons.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
                     <Plus className="w-4 h-4 text-green-600" />
-                    Additional Services ({selectedEstimate.addons.length})
+                    Services ({selectedEstimate.addons.length})
                   </h3>
                   <div className="space-y-2">
                     {selectedEstimate.addons.map((addon, idx) => (
