@@ -206,6 +206,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     topCustomers: [],
     recentPayments: []
   });
+  // What the live property-based estimates cost and make. Null until it loads, so the panel appears
+  // with its figures rather than as a row of zeroes.
+  const [estimateMargins, setEstimateMargins] = useState(null);
   
   // FP Context
   const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
@@ -234,6 +237,15 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       }
       const paymentsResult = await paymentsRes.json().catch(() => ({}));
       const allPayments = paymentsResult.success ? (paymentsResult.data || []) : (Array.isArray(paymentsResult) ? paymentsResult : []);
+
+      // What the active property-based estimates cost XLAND. Aggregated server-side from the pricing
+      // snapshot saved with each service, so the browser is not sent every estimate to add up.
+      fetch(`${API_BASE}/api/payments/property-estimate-margins${queryString ? '?' + queryString : ''}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(response => response.json())
+        .then(result => setEstimateMargins(result.success ? result.data : null))
+        .catch(error => console.error('[Payments Dashboard] Estimate margins request failed:', error));
 
       // Fetch ALL invoices data
       const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${queryString ? '?' + queryString : ''}`, {
@@ -961,6 +973,80 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             </div>
           </div>
         </div>
+
+        {/* What the live property-based estimates cost XLAND and what they make. Internal: vendor
+            cost and margin belong to this screen and never to a customer document. */}
+        {estimateMargins && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mt-4 sm:mt-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                Property-Based Estimates — Cost &amp; Margin
+                <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
+              </h3>
+              <p className="text-xs text-gray-500">
+                {estimateMargins.estimateCount} active estimate{estimateMargins.estimateCount === 1 ? '' : 's'}
+                {/* An estimate of hand-typed services has a price and no cost, so it would read as
+                    near-100% margin. It is listed below but kept out of these totals. */}
+                {estimateMargins.uncostedCount > 0 && (
+                  <span className="text-gray-400"> · {estimateMargins.uncostedCount} without recorded costs, excluded from the totals</span>
+                )}
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                ['Vendor Cost', formatCurrency(estimateMargins.vendorCost), 'text-gray-900'],
+                ['XLAND Cost', formatCurrency(estimateMargins.operatingCost), 'text-gray-900'],
+                ['Customer Price', formatCurrency(estimateMargins.customerPrice), 'text-gray-900'],
+                ['Margin %', estimateMargins.marginPercent == null ? '—' : `${estimateMargins.marginPercent}%`,
+                  estimateMargins.profit >= 0 ? 'text-emerald-600' : 'text-red-600']
+              ].map(([label, value, tone]) => (
+                <div key={label} className="rounded-xl border border-gray-200 bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] text-gray-500">{label}</p>
+                  <p className={`mt-1 text-lg sm:text-xl font-bold truncate ${tone}`} title={value}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Estimate by estimate, so a thin margin can be traced to the one causing it */}
+            {estimateMargins.estimates.length > 0 && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[40rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wider text-gray-500">
+                      <th className="py-2 pr-3 font-semibold">Estimate</th>
+                      <th className="py-2 pr-3 font-semibold">Property</th>
+                      <th className="py-2 pr-3 text-right font-semibold">Vendor Cost</th>
+                      <th className="py-2 pr-3 text-right font-semibold">XLAND Cost</th>
+                      <th className="py-2 pr-3 text-right font-semibold">Customer Price</th>
+                      <th className="py-2 text-right font-semibold">Margin %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {estimateMargins.estimates.map(row => (
+                      <tr key={row.estimateId}>
+                        <td className="py-2 pr-3 font-mono text-xs text-gray-700">{row.estimateId}</td>
+                        <td className="py-2 pr-3 text-gray-700">
+                          {row.propertyName || row.clientName || '-'}
+                          {row.propertyCode && <span className="block text-xs text-gray-400">{row.propertyCode}</span>}
+                        </td>
+                        <td className="py-2 pr-3 text-right text-gray-700">{formatCurrency(row.vendorCost)}</td>
+                        <td className="py-2 pr-3 text-right text-gray-700">{formatCurrency(row.operatingCost)}</td>
+                        <td className="py-2 pr-3 text-right font-medium text-gray-900">{formatCurrency(row.customerPrice)}</td>
+                        <td className={`py-2 text-right font-semibold ${row.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {row.marginPercent == null ? '—' : `${row.marginPercent}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {estimateMargins.estimateCount === 0 && (
+              <p className="mt-4 text-sm text-gray-500">No active property-based estimates yet.</p>
+            )}
+          </div>
+        )}
 
         {/* Quick Actions and Recent Payments Row - Responsive */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
