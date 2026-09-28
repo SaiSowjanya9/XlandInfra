@@ -44,7 +44,7 @@ import {
 } from '../../utils/estimateStore';
 import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } from '../../utils/estimatePackageUtils';
 import { packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
-import { methodLabel } from './AddServicePage';
+import { PRICING_METHODS, methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
 import CapacitySlabList from './CapacitySlabList';
 import { exportPackageToPDF } from '../../utils/pdfExport';
@@ -825,18 +825,31 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           />
                         </div>
 
-                        {/* How the service is priced. A row typed by hand has no method: it belongs
-                            to the package but sets no price. */}
-                        <div className="py-2">
+                        {/* How the service is priced. A configured service brings its own method, so
+                            that one is stated; a row typed by hand chooses one, which decides what
+                            its Input asks for. */}
+                        <div className={row.catalogServiceId ? 'py-2' : 'relative'}>
                           {row.catalogServiceId
                             ? <span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{methodLabel(row.pricingMethod)}</span>
-                            : <span className="text-xs text-gray-400" title="Added by hand, not from the service catalog: it has no pricing method, so it adds nothing to the package price">—</span>}
+                            : <>
+                              <select
+                                value={row.pricingMethod || ''}
+                                onChange={(e) => handleUpdateServiceRow(index, 'pricingMethod', e.target.value)}
+                                aria-label={`${row.service || 'Service'} pricing method`}
+                                className="w-full pl-2 pr-6 py-2 border border-gray-300 rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                              >
+                                <option value="">Method</option>
+                                {PRICING_METHODS.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                            </>}
                         </div>
 
-                        {/* The amount that method is priced on. Fixed Price measures nothing. */}
+                        {/* The amount that method is priced on: a quantity, an area, a capacity or a
+                            headcount. Fixed Price measures nothing, so it asks for nothing. */}
                         <div>
                           {(() => {
-                            const input = row.catalogServiceId ? rowInput(row) : null;
+                            const input = rowInput(row);
                             return input ? (
                               <input
                                 type="number" min={input.min} step={input.step}
@@ -844,7 +857,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                                 onChange={(e) => handleUpdateServiceRow(index, 'inputValue', e.target.value)}
                                 placeholder={input.unit || input.label}
                                 title={`${input.label}${input.unit ? ` (${input.unit})` : ''}`}
-                                aria-label={`${row.service} ${input.label}`}
+                                aria-label={`${row.service || 'Service'} ${input.label}`}
                                 className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                               />
                             ) : <p className="px-1 py-2 text-xs text-gray-400">—</p>;
@@ -906,7 +919,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     be inferred from two dashes. */}
                 {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
                   <p className="mt-3 text-xs text-gray-500">
-                    A row added with <span className="font-medium">Add Row</span> has no configured service behind it, so it carries no method, no amount and no price. It is part of the package; it does not add to the price.
+                    A row added with <span className="font-medium">Add Row</span> has no configured service behind it, so there is no rate to price it from: its method and amount are recorded, but it adds nothing to the package price.
                   </p>
                 )}
                 {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
