@@ -26,8 +26,9 @@ export default function EstimateInternalSummary({ costs, title = 'Internal Cost 
           {figures.map(([label, value], index) => (
             <div key={label} className="px-3 py-3 text-center">
               <p className="text-[11px] text-gray-500">{label}</p>
-              {/* The margin is what the reader is looking for, so it is the one stated in colour */}
-              <p className={`mt-1 text-sm font-bold ${index === figures.length - 1 ? (costs.profit >= 0 ? 'text-emerald-600' : 'text-red-600') : 'text-gray-800'}`}>{value}</p>
+              {/* The margin is what the reader is looking for, so it is the one picked out -- in the
+                  warm accent rather than green, and in red only when it has gone negative */}
+              <p className={`mt-1 text-sm font-bold ${index === figures.length - 1 ? (costs.profit >= 0 ? 'text-warm-accent-hover' : 'text-red-600') : 'text-gray-800'}`}>{value}</p>
             </div>
           ))}
         </div>
