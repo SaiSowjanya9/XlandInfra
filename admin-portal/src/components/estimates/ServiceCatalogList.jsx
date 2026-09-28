@@ -257,7 +257,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
                       const markup = Number(service.default_markup_percentage || 0) / 100;
                       const rate = Number(slab.vendorRate);
                       return <tr key={slabIndex} className={sk("text-slate-700")}>
-                        <td className={sk("py-1.5 pr-4")}>{slab.capacityFrom}{slab.capacityTo == null ? ' and above' : `–${slab.capacityTo}`}</td>
+                        <td className={sk("py-1.5 pr-4")}>{String(slab.name || '').trim() && <span className={sk("mr-1.5 font-medium text-slate-800")}>{slab.name}</span>}{slab.capacityFrom}{slab.capacityTo == null ? ' and above' : `–${slab.capacityTo}`}</td>
                         {slab.isCustomQuote
                           ? <td className={sk("py-1.5 pr-4 text-amber-700")} colSpan={3}>Custom quote required</td>
                           : <>

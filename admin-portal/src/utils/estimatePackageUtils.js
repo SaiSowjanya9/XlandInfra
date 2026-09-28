@@ -185,7 +185,7 @@ export const getServiceRate = (service) => {
     const slabs = snapshot.capacity_slabs || service?.capacity_slabs || [];
     const slab = Array.isArray(slabs) ? slabs.find(item => Number(inputs.capacity) >= item.capacityFrom
       && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo)) : null;
-    if (slab) return `Slab: ${slab.capacityFrom} - ${slab.capacityTo === null ? 'above' : slab.capacityTo}${unit ? ` ${unit}` : ''}`;
+    if (slab) return `${String(slab.name || '').trim() || 'Slab'}: ${slab.capacityFrom} - ${slab.capacityTo === null ? 'above' : slab.capacityTo}${unit ? ` ${unit}` : ''}`;
   }
   if (method === 'manpower') {
     const basis = service?.manpower_basis || snapshot.manpower_basis || 'monthly';

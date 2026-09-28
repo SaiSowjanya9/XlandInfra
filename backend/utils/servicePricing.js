@@ -165,6 +165,9 @@ const validateService = input => {
       const defaultVisitsPerYear = visitsFor(defaultFrequency, slab?.defaultVisitsPerYear ?? (defaultFrequency === config.default_frequency ? config.default_visits_per_year : ALL_FREQUENCIES[defaultFrequency]), `Slab ${index + 1} default visits per year`);
       if (!config.allow_manual_visits && defaultVisitsPerYear !== ALL_FREQUENCIES[defaultFrequency]) fail(`Slab ${index + 1} visits must match its frequency when manual visits are disabled.`);
       return {
+        // A slab may be named -- "Small lift", "Bulk tanker" -- and the name is kept because this
+        // rebuilds each slab from scratch: anything not listed here is dropped on save.
+        name: String(slab?.name ?? '').trim().slice(0, 80),
         capacityFrom: number(slab?.capacityFrom, `Slab ${index + 1} capacity from`, 0, 1e9, true),
         capacityTo: slab?.capacityTo === null ? null : number(slab?.capacityTo, `Slab ${index + 1} capacity to`, 0, 1e9, true),
         isCustomQuote: boolean(slab?.isCustomQuote ?? false, 'Custom quote'),

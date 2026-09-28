@@ -149,6 +149,25 @@ test('frontend manpower preview and headcount suggestions match backend pricing'
   assert.ok(previewManpower({ ...service, overtime_rate_per_hour: null }, { area: 1500, overtime_hours_per_visit: 1 }).error);
 });
 
+test('a capacity slab keeps the name it was given', () => {
+  // Each slab is rebuilt from a whitelist on save, so a field not listed there is dropped: a name
+  // typed into the slab table has to survive that to be worth typing.
+  const service = validateService(config({
+    pricing_method: 'capacity_slab', unit: 'KVA',
+    capacity_slabs: [
+      { name: '  Small generator  ', capacityFrom: 0, capacityTo: 100, vendorRate: 2000 },
+      { capacityFrom: 101, capacityTo: null, vendorRate: 4000 }
+    ]
+  }));
+  assert.equal(service.capacity_slabs[0].name, 'Small generator', 'trimmed and kept');
+  assert.equal(service.capacity_slabs[1].name, '', 'an unnamed slab is named by its range, not by null');
+  // A name cannot grow without bound, and is not required
+  assert.equal(validateService(config({
+    pricing_method: 'capacity_slab', unit: 'KVA',
+    capacity_slabs: [{ name: 'x'.repeat(200), capacityFrom: 0, capacityTo: null, vendorRate: 10 }]
+  })).capacity_slabs[0].name.length, 80);
+});
+
 test('all six methods calculate vendor cost and marked-up customer totals', () => {
   const cases = [
     [{}, {}, 1200],

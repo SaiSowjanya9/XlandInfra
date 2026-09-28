@@ -84,7 +84,7 @@ const Toggle = ({ label, checked, onChange }) => {
   );
 };
 
-const blankSlab = (id) => ({ id, capacityFrom: '', capacityTo: '', vendorRate: '', isCustomQuote: false, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 });
+const blankSlab = (id) => ({ id, name: '', capacityFrom: '', capacityTo: '', vendorRate: '', isCustomQuote: false, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 });
 
 export const findCapacitySlab = (slabs, capacity) => {
   if (capacity == null || String(capacity).trim() === '' || !Number.isInteger(Number(capacity))) return undefined;
@@ -388,14 +388,17 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
     <input type="number" min="0" step="0.01" required value={formData[field]}
       onChange={event => setField(field, event.target.value)} className={sk(inputClass)} {...props} />
   );
-  const slabLabel = slab => String(slab.capacityFrom).trim() === '' ? 'New slab'
+  // The range names a slab unless it has been given a name of its own. Used as the Slab Name
+  // field's placeholder and as the Matching Slab line in the preview.
+  const slabRange = slab => String(slab.capacityFrom).trim() === '' ? 'New slab'
     : `${slab.capacityFrom}${slab.capacityTo === null ? '+' : String(slab.capacityTo).trim() === '' ? '' : `–${slab.capacityTo}`} ${formData.unit}`;
+  const slabLabel = slab => (String(slab.name || '').trim() || slabRange(slab));
   const previewSlab = findCapacitySlab(capacitySlabs, exampleCapacity);
-  const validCapacity = exampleCapacity.trim() !== '' && Number.isInteger(Number(exampleCapacity)) && Number(exampleCapacity) >= 0 && Number(exampleCapacity) <= 1e9;
+  // The preview picks a slab rather than a capacity now, so it can only be unset, custom-quoted, or
+  // not yet priced -- a capacity outside every slab is no longer reachable from here.
   const slabPreviewMessage = !capacitySlabs.some(slab => String(slab.capacityFrom).trim() !== '') ? 'Configure a slab to see the pricing.'
-    : !validCapacity ? 'Enter a whole-number capacity between 0 and 1,000,000,000.'
-    : Number(exampleCapacity) < Number(capacitySlabs[0]?.capacityFrom) ? 'Capacity is below the first configured slab.'
-    : !previewSlab || previewSlab.isCustomQuote ? 'Custom quote required for this capacity.'
+    : !previewSlab ? 'Select a slab to see the pricing.'
+    : previewSlab.isCustomQuote ? 'Custom quote required for this slab.'
     : previewSlab.vendorRate === '' || previewSlab.vendorRate == null || Number(previewSlab.vendorRate) < 0 || Number(previewSlab.defaultVisitsPerYear) < 1 ? 'Enter a valid slab rate and visit count to see the pricing.' : '';
   const slabVendorCost = slabPreviewMessage ? null : Number(previewSlab.vendorRate) * Number(previewSlab.defaultVisitsPerYear);
   const slabXlandCost = slabVendorCost == null || markupValue == null ? null : slabVendorCost * markupValue / 100;
@@ -500,7 +503,13 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                     <th className={sk("px-3 py-3")}>Slab Name</th><th className={sk("px-3 py-3")}>Capacity From</th><th className={sk("px-3 py-3")}>Capacity To</th><th className={sk("px-3 py-3")}>Above</th><th className={sk("px-3 py-3")}>Unit</th><th className={sk("px-3 py-3")}>Rate Per Visit (₹)</th><th className={sk("px-3 py-3")}>Custom Quote</th><th className={sk("px-3 py-3")}>Default Frequency</th><th className={sk("px-3 py-3")}>Default Visits Per Year</th><th className={sk("px-3 py-3 text-center")}>Action</th>
                   </tr></thead>
                   <tbody className={sk("divide-y divide-slate-100")}>{capacitySlabs.map((slab, index) => <tr key={slab.id}>
-                    <td className={sk("whitespace-nowrap px-3 py-3 font-medium text-slate-700")}>{slabLabel(slab)}</td>
+                    <td className={sk('px-3 py-3')}>
+                      {/* Named by hand where a range is not description enough -- 'Small lift', 'Bulk
+                          tanker'. Left blank, the range names the slab as it always did. */}
+                      <input aria-label={`Slab ${index + 1} name`} type="text" maxLength={80} value={slab.name ?? ''}
+                        onChange={event => updateCapacitySlab(slab.id, 'name', event.target.value)}
+                        placeholder={slabRange(slab)} className={sk(`${inputClass} min-w-[120px]`)} />
+                    </td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Slab ${index + 1} capacity from`} type="number" min="0" max={1e9} step="1" required value={slab.capacityFrom} onChange={event => updateCapacitySlab(slab.id, 'capacityFrom', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} /></td>
                     <td className={sk("px-3 py-3")}>
                       {/* An open-ended last slab has no upper bound to type, so the cell says so
@@ -676,7 +685,28 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             </section>}
             {isCapacitySlab && <section className={sk("rounded-xl border border-slate-200 bg-white shadow-sm p-5")}>
               <h2 className={sk("mb-4 text-sm font-semibold")}>Pricing Preview</h2>
-              <Field label={`Entered Capacity (${formData.unit})`}><input inputMode="numeric" value={exampleCapacity} onChange={event => setExampleCapacity(event.target.value)} className={sk(inputClass)} /></Field>
+              {/* The slabs are the choices here, so the preview offers them rather than asking for a
+                  capacity and leaving the reader to work out which band it lands in. Picking one
+                  prices from its own lower bound, and every figure below follows. A slab with no
+                  capacity typed into it yet is not offered, because it cannot price anything. */}
+              <Field label="Slab">
+                <select
+                  aria-label="Slab to preview"
+                  value={previewSlab ? String(previewSlab.id ?? previewSlab.capacityFrom) : ''}
+                  onChange={event => {
+                    const chosen = capacitySlabs.find(slab => String(slab.id ?? slab.capacityFrom) === event.target.value);
+                    setExampleCapacity(chosen ? String(chosen.capacityFrom) : '');
+                  }}
+                  className={sk(inputClass)}
+                >
+                  <option value="">Select a slab</option>
+                  {capacitySlabs.filter(slab => String(slab.capacityFrom).trim() !== '').map(slab => (
+                    <option key={slab.id ?? slab.capacityFrom} value={String(slab.id ?? slab.capacityFrom)}>{slabLabel(slab)}</option>
+                  ))}
+                </select>
+              </Field>
+              {/* The arithmetic still needs a capacity, so the one being priced from is stated */}
+              {previewSlab && <p className={sk("mt-2 text-[11px] text-slate-500")}>Priced at {previewSlab.capacityFrom} {formData.unit}</p>}
               <dl className={sk("mt-4 space-y-3 text-xs text-slate-600")}>
                 <div className={sk("flex justify-between gap-3")}><dt>Matching Slab</dt><dd className={sk("font-medium text-slate-800")}>{previewSlab ? slabLabel(previewSlab) : '—'}</dd></div>
                 <div className={sk("flex justify-between gap-3")}><dt>Rate Per Visit</dt><dd className={sk("font-medium text-slate-800")}>{currency(slabVendorCost == null ? null : Number(previewSlab.vendorRate))}</dd></div>
