@@ -148,7 +148,8 @@ router.validatePackageEstimate = async (req, res, next) => {
     // A custom estimate has no package, so the package is only checked when one was chosen
     let subtotal = 0;
     if (req.body.package_id != null && req.body.package_id !== '') {
-      const [[pkg]] = await pool.execute('SELECT id, price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, scope.fpId]);
+      // The column is base_price, not price -- see the same query in fpServiceCatalog.js
+      const [[pkg]] = await pool.execute('SELECT id, base_price AS price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [req.body.package_id, scope.fpId]);
       if (!pkg) fail('Package is outside your FP scope.', 403);
       req.body.package_price = Number(pkg.price);
       subtotal += Number(pkg.price);
