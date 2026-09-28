@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
+import CapacitySlabList from './CapacitySlabList';
 import { TermsConditionsField, EstimateTermsSection } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
@@ -106,6 +107,10 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
         <Field label="XLAND Operating Cost (Annual) (₹)"><input type="number" min="0" step="0.01" value={inputs.operating_cost} onChange={event => updateInput('operating_cost', event.target.value)} className={inputClass} /></Field>
         <Field label="Markup (%)"><input type="number" min="0" max="1000" step="0.01" value={inputs.markup_percentage} onChange={event => updateInput('markup_percentage', event.target.value)} className={inputClass} /></Field>
       </div>
+      {/* Capacity Slab prices from a table rather than a rate, so the whole table is shown with the
+          band the typed capacity lands in marked. This screen is internal, so it states the vendor
+          rate beside the customer price. */}
+      <CapacitySlabList service={service} capacity={inputs.capacity} internal className="mt-4" />
       {loading && <p className="mt-4 flex items-center gap-2 text-xs text-slate-500"><Loader2 className="h-3 w-3 animate-spin" />Calculating pricing...</p>}
       {quote?.requiresCustomQuote && <p className="mt-4 text-xs text-amber-700">Custom Quote required. Enter the total vendor cost for this service period.</p>}
       {quote && !quote.requiresCustomQuote && <div className="mt-5 grid grid-cols-2 gap-4 rounded-lg border border-slate-100 bg-slate-50 p-4 lg:grid-cols-4">

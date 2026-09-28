@@ -46,6 +46,7 @@ import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } f
 import { packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
 import { methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
+import CapacitySlabList from './CapacitySlabList';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
 
@@ -279,6 +280,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             // re-priced exactly as it was configured
             ...(row.catalogServiceId ? {
               catalogServiceId: row.catalogServiceId, pricingMethod: row.pricingMethod, unit: row.unit,
+              capacitySlabs: row.capacitySlabs, defaultMarkupPercentage: row.defaultMarkupPercentage,
+              defaultVisitsPerYear: row.defaultVisitsPerYear,
               category: row.category || '', inputValue: row.inputValue, price: row.price,
               vendorCost: row.vendorCost, operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
             } : {})
@@ -342,6 +345,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         catalogServiceId: row.catalogServiceId ?? row.catalog_service_id,
         pricingMethod: row.pricingMethod || row.pricing_method,
         unit: row.unit || '', category: decodeHtml(row.category) || '',
+        // Reopening a Capacity Slab row brings its table back with it
+        capacitySlabs: row.capacitySlabs || row.capacity_slabs,
+        defaultMarkupPercentage: row.defaultMarkupPercentage, defaultVisitsPerYear: row.defaultVisitsPerYear,
         inputValue: row.inputValue ?? row.input_value ?? '',
         price: row.price, vendorCost: row.vendorCost, operatingCost: row.operatingCost,
         marginPercentage: row.marginPercentage
@@ -895,6 +901,21 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
                 </div>
                 {pricingError && <p role="alert" className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{pricingError}</p>}
+                {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
+                    listed here with the band its typed capacity lands in marked. Internal: this screen
+                    configures the package, so it states the vendor rate beside the customer price. */}
+                {amcForm.serviceRows.filter(row => row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length).map((row, index) => (
+                  <CapacitySlabList
+                    key={`${row.catalogServiceId}-${index}`}
+                    className="mt-4"
+                    title={`${row.service} — capacity slabs`}
+                    capacity={row.inputValue}
+                    internal
+                    service={{ pricing_method: 'capacity_slab', unit: row.unit, capacity_slabs: row.capacitySlabs,
+                      default_markup_percentage: row.defaultMarkupPercentage, default_frequency: row.frequencyType,
+                      default_visits_per_year: row.defaultVisitsPerYear ?? row.frequencyCount }}
+                  />
+                ))}
               </div>
             </div>
           </div>
