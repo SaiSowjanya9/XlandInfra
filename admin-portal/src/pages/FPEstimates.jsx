@@ -103,6 +103,10 @@ const handleDateInput = (value, setter) => {
   setter(cleaned);
 };
 
+// The package's service table sizes its own columns: twelve equal ones could not hold Method and
+// Input separately without squeezing the service name.
+const PACKAGE_ROW_GRID = 'grid-cols-[minmax(8rem,2fr)_minmax(7rem,1.6fr)_6.5rem_6rem_7rem_3.5rem_6rem_2.5rem]';
+
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
   { id: 'APT', label: 'Apartment' },
@@ -3437,12 +3441,31 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* Create Package Tab. The form sits on the left and the panel on the right carries what the
-          package applies to and what it comes to, the same shape as the Add Service screen. */}
+      {/* Create Package Tab, read top to bottom: what the package applies to, what is in it, then
+          what it comes to. */}
       {amcActiveTab === 'create' && (
         <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
-          <div className="flex-1 min-w-0 space-y-6">
+        <div className="space-y-6">
+          <div className="space-y-6">
+          {/* What the package applies to, before what is in it */}
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm p-5">
+            <h2 className="text-sm font-semibold text-warm-text">Applicable Property Types <span className="text-red-500">*</span></h2>
+            <p className="mt-1 text-xs text-warm-muted">Every property type this package applies to</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {PROPERTY_TYPE_OPTIONS.map((type) => (
+                <label key={type.id} className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2 text-xs transition-colors ${selectedPropertyTypes.includes(type.id) ? 'border-warm-accent bg-warm-accent-soft text-warm-text' : 'border-warm-border text-warm-muted hover:bg-warm-section'}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPropertyTypes.includes(type.id)}
+                    onChange={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
+                    className="h-4 w-4 rounded border-warm-border text-warm-accent focus:ring-warm-accent/30"
+                  />
+                  {type.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
             <div className="bg-white rounded-xl border border-warm-border shadow-warm">
               {/* Header with Add Buttons */}
               <div className="px-6 py-4 border-b border-warm-border/70 flex items-center justify-between gap-3">
@@ -3495,36 +3518,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     <h3 className="text-sm font-semibold text-warm-text mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-warm-section rounded-[10px] mb-3">
-                      <div className="col-span-3">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Service</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Description</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Method / Input</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Frequency</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Visits</span>
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Price</span>
-                      </div>
-                      <div className="col-span-1 text-center">
-                        <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">Action</span>
-                      </div>
+                    {/* Method and Input are separate columns -- one states how the service is
+                        priced, the other takes the amount -- so the row sizes its own columns. */}
+                    <div className={`grid ${PACKAGE_ROW_GRID} gap-2 px-3 py-2 bg-warm-section rounded-[10px] mb-3`}>
+                      {['Service', 'Description', 'Method', 'Input', 'Frequency', 'Visits', 'Price', 'Action'].map((label, index) => (
+                        <div key={label} className={index === 6 ? 'text-right' : index === 7 ? 'text-center' : undefined}>
+                          <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">{label}</span>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Service Rows */}
                     <div className="space-y-3">
                       {amcForm.serviceRows.map((row, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-warm-section rounded-[10px] border border-warm-border">
+                        <div key={index} className={`grid ${PACKAGE_ROW_GRID} gap-2 items-center p-3 bg-warm-section rounded-[10px] border border-warm-border`}>
                           {/* Service Name */}
-                          <div className="col-span-3">
+                          <div>
                             <input
                               type="text"
                               value={row.service}
@@ -3535,7 +3544,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Description */}
-                          <div className="col-span-2">
+                          <div>
                             <input
                               type="text"
                               value={row.description || ''}
@@ -3545,29 +3554,34 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             />
                           </div>
 
-                          {/* Method and the amount it is priced on. A row typed by hand has neither:
-                              it belongs to the package but sets no price. */}
-                          <div className="col-span-2">
-                            {row.catalogServiceId ? (() => {
-                              const input = rowInput(row);
-                              return <>
-                                <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{methodLabel(row.pricingMethod)}</span>
-                                {input && (
-                                  <input
-                                    type="number" min={input.min} step={input.step}
-                                    value={row.inputValue ?? ''}
-                                    onChange={(e) => handleUpdateServiceRow(index, 'inputValue', e.target.value)}
-                                    placeholder={`${input.label}${input.unit ? ` (${input.unit})` : ''}`}
-                                    aria-label={`${row.service} ${input.label}`}
-                                    className="mt-1 w-full px-2 py-1.5 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
-                                  />
-                                )}
-                              </>;
-                            })() : <span className="text-xs text-warm-muted">Typed by hand</span>}
+                          {/* How the service is priced. A row typed by hand has no method: it belongs
+                              to the package but sets no price. */}
+                          <div>
+                            {row.catalogServiceId
+                              ? <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{methodLabel(row.pricingMethod)}</span>
+                              : <span className="text-xs text-warm-muted">Typed by hand</span>}
+                          </div>
+
+                          {/* The amount that method is priced on. Fixed Price measures nothing. */}
+                          <div>
+                            {(() => {
+                              const input = row.catalogServiceId ? rowInput(row) : null;
+                              return input ? (
+                                <input
+                                  type="number" min={input.min} step={input.step}
+                                  value={row.inputValue ?? ''}
+                                  onChange={(e) => handleUpdateServiceRow(index, 'inputValue', e.target.value)}
+                                  placeholder={input.unit || input.label}
+                                  title={`${input.label}${input.unit ? ` (${input.unit})` : ''}`}
+                                  aria-label={`${row.service} ${input.label}`}
+                                  className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                                />
+                              ) : <p className="px-1 text-xs text-warm-muted">—</p>;
+                            })()}
                           </div>
                           
                           {/* Frequency Type */}
-                          <div className="col-span-2 relative">
+                          <div className="relative">
                             <select
                               value={row.frequencyType}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
@@ -3581,7 +3595,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
                           
                           {/* Frequency Count */}
-                          <div className="col-span-1">
+                          <div>
                             <input
                               type="number"
                               min="0"
@@ -3594,14 +3608,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           </div>
 
                           {/* What this service comes to. Quoted by the server, so it is read here only. */}
-                          <div className="col-span-1 text-right">
+                          <div className="text-right">
                             <p className="px-1 py-2 text-sm font-semibold text-warm-text">
                               {Number.isFinite(Number(row.price)) ? formatCurrency(row.price) : <span className="text-warm-muted">—</span>}
                             </p>
                           </div>
                           
                           {/* Delete Button */}
-                          <div className="col-span-1 flex justify-center">
+                          <div className="flex justify-center">
                             <button
                               onClick={() => handleRemoveServiceRow(index)}
                               disabled={amcForm.serviceRows.length === 1}
@@ -3625,32 +3639,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* Right panel: what the package applies to, and what it comes to */}
-          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
-            <div className="bg-white rounded-xl border border-warm-border shadow-warm p-5">
-              <h2 className="text-sm font-semibold text-warm-text">Applicable Property Types <span className="text-red-500">*</span></h2>
-              <p className="mt-1 text-xs text-warm-muted">Every property type this package applies to</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {PROPERTY_TYPE_OPTIONS.map((type) => (
-                  <label key={type.id} className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2 text-xs transition-colors ${selectedPropertyTypes.includes(type.id) ? 'border-warm-accent bg-warm-accent-soft text-warm-text' : 'border-warm-border text-warm-muted hover:bg-warm-section'}`}>
-                    <input
-                      type="checkbox"
-                      checked={selectedPropertyTypes.includes(type.id)}
-                      onChange={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
-                      className="h-4 w-4 rounded border-warm-border text-warm-accent focus:ring-warm-accent/30"
-                    />
-                    {type.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
+          {/* What the package comes to, under what is in it */}
+          <div className="w-full">
             <div className="w-full">
                     <div className="bg-warm-section rounded-xl p-6 border border-warm-border h-full">
                       <h3 className="text-warm-muted text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
+                      <div className="grid gap-6 lg:grid-cols-3">
                       
                       {/* The price is what the services add up to, so it is shown rather than typed */}
-                      <div className="mb-6">
+                      <div>
                         <label className="block text-xs font-medium text-warm-muted mb-1.5">Price (₹)</label>
                         <div className="rounded-[10px] border border-warm-border bg-white px-4 py-3">
                           <p className="text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</p>
@@ -3659,7 +3656,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                       
                       {/* Service Period */}
-                      <div className="mb-6">
+                      <div>
                         <label className="block text-xs font-medium text-warm-muted mb-1.5">Service Period</label>
                         <div className="relative">
                           <select
@@ -3676,7 +3673,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                       
                       {/* Summary */}
-                      <div className="border-t border-warm-border pt-4 space-y-3">
+                      <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-warm-muted">Package</span>
                           <span className="font-medium text-warm-text truncate ml-2">{amcForm.packageName || '-'}</span>
@@ -3693,14 +3690,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
                       {/* What the package costs XLAND. Internal to this screen, like the service
                           form's pricing preview, and never part of what a customer is shown. */}
-                      <div className="mt-5 border-t border-warm-border pt-4">
+                      <div className="lg:col-span-3 border-t border-warm-border pt-4">
                         <p className="text-warm-muted text-[11px] uppercase tracking-wider font-semibold">Internal <span className="font-normal normal-case tracking-normal text-warm-muted/70">(not shown to customers)</span></p>
-                        <dl className="mt-3 space-y-2 text-sm">
+                        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                           <div className="flex justify-between"><dt className="text-warm-muted">Annual Vendor Cost</dt><dd className="text-warm-text">{formatCurrency(totals.vendorCost)}</dd></div>
                           <div className="flex justify-between"><dt className="text-warm-muted">XLAND Operating Cost</dt><dd className="text-warm-text">{formatCurrency(totals.operatingCost)}</dd></div>
                           <div className="flex justify-between"><dt className="text-warm-muted">Customer Price</dt><dd className="text-warm-text">{formatCurrency(totals.price)}</dd></div>
                           <div className="flex justify-between"><dt className="text-warm-muted">Margin</dt><dd className={`font-semibold ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
                         </dl>
+                      </div>
                       </div>
                     </div>
             </div>
