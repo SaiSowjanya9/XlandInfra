@@ -947,14 +947,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 Property-Based Estimates — Cost &amp; Margin
                 <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
               </h3>
-              <p className="text-xs text-gray-500">
-                {estimateMargins.estimateCount} active estimate{estimateMargins.estimateCount === 1 ? '' : 's'}
-                {/* An estimate of hand-typed services has a price and no cost, so it would read as
-                    near-100% margin. It is listed below but kept out of these totals. */}
-                {estimateMargins.uncostedCount > 0 && (
-                  <span className="text-gray-400"> · {estimateMargins.uncostedCount} without recorded costs, excluded from the totals</span>
-                )}
-              </p>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
