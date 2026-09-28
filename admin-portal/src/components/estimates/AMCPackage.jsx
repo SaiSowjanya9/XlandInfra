@@ -460,9 +460,10 @@ const AMCPackage = ({ showToast }) => {
             <div className="space-y-2">
               <p className="text-xs font-medium text-gray-600 mb-2">Selected Services:</p>
               {selectedAddons.map((addon) => (
-                <div key={addon.addonId} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                {/* A selected service reads in the cream skin, like the services table it ends up in */}
+                <div key={addon.addonId} className="flex items-center justify-between p-3 bg-warm-section border border-warm-border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <PlusCircle className="w-4 h-4 text-green-600" />
+                    <PlusCircle className="w-4 h-4 text-warm-accent-hover" />
                     <div>
                       <p className="text-sm font-medium text-gray-800">{addon.addonId}</p>
                       <p className="text-xs text-gray-600">
@@ -471,7 +472,7 @@ const AMCPackage = ({ showToast }) => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-green-700">₹{(addon.totalPrice || 0).toLocaleString()}</span>
+                    <span className="font-medium text-warm-text">₹{(addon.totalPrice || 0).toLocaleString()}</span>
                     <button
                       onClick={() => handleRemoveAddon(addon.addonId)}
                       className="p-1.5 text-red-500 hover:bg-red-100 rounded-md transition-colors"
