@@ -243,7 +243,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const [amcActiveTab, setAmcActiveTab] = useState('all-packages');
   // A package can apply to several property types, so the same one is configured once
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
-  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' });
+  const [amcForm, setAmcForm] = useState({ packageName: '', description: '', serviceRows: [], price: '', billingDuration: 'monthly' });
   // Open while the configured services are being browsed; Add Row still adds a blank row to type into
   const [showPackageServicePicker, setShowPackageServicePicker] = useState(false);
   const [editingAmcPackage, setEditingAmcPackage] = useState(null);
@@ -3159,7 +3159,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }
     setAmcForm({ ...amcForm, serviceRows: rows }); 
   };
-  const handleRemoveServiceRow = (i) => { if (amcForm.serviceRows.length > 1) setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
+  // Any row may go, the last one included: the table is allowed to be empty, and saving already
+  // refuses a package with no services.
+  const handleRemoveServiceRow = (i) => { setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
 
   // The package's price is what its configured services add up to, so it is derived rather than typed
   const totals = packageTotals(amcForm.serviceRows);
@@ -3192,7 +3194,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [pricingKey, selectedPropertyTypes, token]);
-  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
+  const resetAmcForm = () => { setAmcForm({ packageName: '', description: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyTypes([]); setEditingAmcPackage(null); };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       // Four tints a billing column can still be scanned by, drawn from the warm palette
@@ -3493,7 +3495,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 onAdd={handleAddCatalogServices}
                 propertyTypes={selectedPropertyTypes}
                 apiPath={FP_CATALOG_API}
-                existing={amcForm.serviceRows.map(row => row.service)}
                 theme="warm"
               />
               
@@ -3529,8 +3530,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       ))}
                     </div>
 
-                    {/* Service Rows */}
+                    {/* Service Rows. The table starts empty: a row arrives only when Add Service
+                        picks a configured one or Add Row makes a blank one. */}
                     <div className="space-y-3">
+                      {!amcForm.serviceRows.length && (
+                        <p className="rounded-[10px] border border-dashed border-warm-border px-4 py-6 text-center text-sm text-warm-muted">
+                          No services yet. Use <span className="font-medium">Add Service</span> to price one from the catalog, or <span className="font-medium">Add Row</span> to type one in.
+                        </p>
+                      )}
                       {amcForm.serviceRows.map((row, index) => (
                         <div key={index} className={`grid ${PACKAGE_ROW_GRID} gap-2 items-center p-3 bg-warm-section rounded-[10px] border border-warm-border`}>
                           {/* Service Name */}
@@ -3619,12 +3626,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="flex justify-center">
                             <button
                               onClick={() => handleRemoveServiceRow(index)}
-                              disabled={amcForm.serviceRows.length === 1}
-                              className={`p-2 rounded-[10px] transition-colors ${
-                                amcForm.serviceRows.length === 1
-                                  ? 'text-warm-border cursor-not-allowed'
-                                  : 'text-red-500 hover:bg-red-50'
-                              }`}
+                              className="p-2 rounded-[10px] text-red-500 transition-colors hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

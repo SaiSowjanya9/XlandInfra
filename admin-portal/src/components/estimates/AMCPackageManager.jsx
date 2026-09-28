@@ -106,7 +106,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Package form with dynamic service rows
   const [amcForm, setAmcForm] = useState({
     packageName: '',
-    serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+    serviceRows: [],
     price: '',
     billingDuration: 'monthly',
     description: ''
@@ -228,11 +228,10 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     setAmcForm({ ...amcForm, serviceRows: newRows });
   };
 
+  // Any row may go, the last one included: the table is allowed to be empty, and saving already
+  // refuses a package with no services.
   const handleRemoveServiceRow = (index) => {
-    if (amcForm.serviceRows.length > 1) {
-      const newRows = amcForm.serviceRows.filter((_, i) => i !== index);
-      setAmcForm({ ...amcForm, serviceRows: newRows });
-    }
+    setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, i) => i !== index) });
   };
 
   // Form actions
@@ -360,7 +359,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         frequencyType: 'Monthly'
       }));
     } else {
-      loadedServiceRows = [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }];
+      loadedServiceRows = [];
     }
     
     setAmcForm({
@@ -414,7 +413,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const resetForm = () => {
     setAmcForm({
       packageName: '',
-      serviceRows: [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+      serviceRows: [],
       price: '',
       billingDuration: 'monthly',
       description: ''
@@ -794,8 +793,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     ))}
                   </div>
 
-                    {/* Service Rows */}
+                    {/* Service Rows. The table starts empty: a row arrives only when Add Service
+                        picks a configured one or Add Row makes a blank one. */}
                   <div className="space-y-3">
+                    {!amcForm.serviceRows.length && (
+                      <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
+                        No services yet. Use <span className="font-medium">Add Service</span> to price one from the catalog, or <span className="font-medium">Add Row</span> to type one in.
+                      </p>
+                    )}
                     {amcForm.serviceRows.map((row, index) => (
                       <div key={index} className={`flex flex-col md:grid ${PACKAGE_ROW_GRID} gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 items-start`}>
                         {/* Service Name */}
@@ -885,12 +890,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div className="flex justify-end md:justify-center">
                           <button
                             onClick={() => handleRemoveServiceRow(index)}
-                            disabled={amcForm.serviceRows.length === 1}
-                            className={`p-2 rounded-lg transition-colors ${
-                              amcForm.serviceRows.length === 1
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-red-500 hover:bg-red-50'
-                            }`}
+                            className="p-2 rounded-lg text-red-500 transition-colors hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1199,10 +1199,11 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         />
                       </div>
                       <div className="sm:col-span-1 flex justify-end sm:justify-center">
+                        {/* The last row can go too: the table is allowed to be empty, and saving
+                            already refuses a package with no services */}
                         <button
                           onClick={() => handleRemoveServiceRow(index)}
-                          disabled={amcForm.serviceRows.length === 1}
-                          className={`p-1.5 rounded ${amcForm.serviceRows.length === 1 ? 'text-gray-300' : 'text-red-500 hover:bg-red-50'}`}
+                          className="p-1.5 rounded text-red-500 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1367,7 +1368,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         onAdd={handleAddCatalogServices}
         propertyTypes={selectedPropertyTypes}
         fpId={selectedFp?.id}
-        existing={amcForm.serviceRows.map(row => row.service)}
       />
     </div>
   );

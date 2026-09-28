@@ -12,7 +12,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // price comes across, because the package carries a single price of its own. Add Row stays beside
 // this for a service the catalog does not have, which is typed in by hand.
 export default function PackageServicePicker({ open, onClose, onAdd, propertyTypes = [], fpId,
-  apiPath = '/api/admin/service-catalog', existing = [], theme }) {
+  apiPath = '/api/admin/service-catalog', theme }) {
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);
@@ -57,9 +57,6 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
     [services, propertyTypes]);
   const term = search.trim().toLowerCase();
   const shown = term ? available.filter(service => `${service.service_name} ${service.category || ''}`.toLowerCase().includes(term)) : available;
-  // A service already in the table cannot be added twice; it is still listed, so its absence is not a puzzle
-  const added = new Set(existing.map(name => String(name || '').trim().toLowerCase()).filter(Boolean));
-  const isAdded = service => added.has(String(service.service_name || '').trim().toLowerCase());
   const toggle = id => setPicked(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
   const addPicked = () => {
     onAdd(available.filter(service => picked.includes(service.id)).map(service => {
@@ -110,18 +107,19 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
               </p>
             : <ul className="space-y-2">
               {shown.map(service => {
-                const disabled = isAdded(service);
                 const checked = picked.includes(service.id);
                 return (
                   <li key={service.id}>
-                    <label className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${disabled ? `${skin.borderSoft} ${skin.readOnlyBg}` : `cursor-pointer ${checked ? skin.tileActive : skin.tileIdle}`}`}>
-                      <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggle(service.id)}
+                    {/* A service may be added as often as it is needed -- the same one twice over at
+                        different amounts is a legitimate package -- so nothing here is marked as
+                        already added or disabled on that account. */}
+                    <label className={`flex items-start gap-3 rounded-xl border p-3 transition-colors cursor-pointer ${checked ? skin.tileActive : skin.tileIdle}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggle(service.id)}
                         className={`mt-0.5 h-4 w-4 ${skin.control}`} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className={`text-sm font-medium ${skin.strong}`}>{service.service_name}</span>
                           <span className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${skin.badge}`}>{methodLabel(service.pricing_method)}</span>
-                          {disabled && <span className="rounded bg-warm-success px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Added</span>}
                         </span>
                         <span className={`mt-1 block text-xs ${skin.muted}`}>
                           {[service.category, `${service.default_frequency || 'Monthly'} - ${service.default_visits_per_year ?? 0} visits`,
