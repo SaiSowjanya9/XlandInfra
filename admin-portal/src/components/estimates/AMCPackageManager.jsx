@@ -77,7 +77,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(8rem,2fr)_minmax(7rem,1.6fr)_6.5rem_6rem_7rem_3.5rem_6rem_2.5rem]';
+const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(8rem,1.8fr)_minmax(6.5rem,1.4fr)_6.5rem_6rem_9.5rem_3.5rem_6rem_2.5rem]';
 
 const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
@@ -780,7 +780,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {/* Service Configuration. Every column a configured service needs to be priced: what it
                   is, how it is priced, the amount it is priced on, its schedule and what it comes to. */}
               <div className="overflow-x-auto">
-                <div className="min-w-[46rem]">
+                <div className="min-w-[50rem]">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header. Method and Input are separate columns -- one states how the
@@ -851,7 +851,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                           <select
                             value={row.frequencyType}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                            className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
+                            className="w-full pl-2 pr-7 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                           >
                             {FREQUENCY_TYPES.map(type => (
                               <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
