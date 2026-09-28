@@ -27,6 +27,7 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
+import CapacitySlabList from '../components/estimates/CapacitySlabList';
 import { packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
 import { methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
@@ -3130,7 +3131,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, pricingMethod: r.pricingMethod, unit: r.unit, category: r.category || '', inputValue: r.inputValue, price: r.price, vendorCost: r.vendorCost, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, pricingMethod: r.pricingMethod, unit: r.unit, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, category: r.category || '', inputValue: r.inputValue, price: r.price, vendorCost: r.vendorCost, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -3633,6 +3634,21 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </div>
                   {pricingError && <p role="alert" className="mt-3 rounded-[10px] border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{pricingError}</p>}
+                  {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
+                      listed here with the band its typed capacity lands in marked. Internal: this screen
+                      configures the package, so it states the vendor rate beside the customer price. */}
+                  {amcForm.serviceRows.filter(row => row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length).map((row, index) => (
+                    <CapacitySlabList
+                      key={`${row.catalogServiceId}-${index}`}
+                      className="mt-4"
+                      title={`${row.service} — capacity slabs`}
+                      capacity={row.inputValue}
+                      internal
+                      service={{ pricing_method: 'capacity_slab', unit: row.unit, capacity_slabs: row.capacitySlabs,
+                        default_markup_percentage: row.defaultMarkupPercentage, default_frequency: row.frequencyType,
+                        default_visits_per_year: row.defaultVisitsPerYear ?? row.frequencyCount }}
+                    />
+                  ))}
                 </div>
 
               </div>

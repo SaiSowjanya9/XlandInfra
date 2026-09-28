@@ -70,6 +70,13 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
         frequencyCount: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0,
         catalogServiceId: service.id, category: service.category || '',
         pricingMethod: service.pricing_method, unit: service.unit || '',
+        // Capacity Slab prices from a table, so the row carries the table: the form lists every slab
+        // and the capacity typed into the row decides which one applies.
+        ...(service.pricing_method === 'capacity_slab' ? {
+          capacitySlabs: service.capacity_slabs || [],
+          defaultMarkupPercentage: service.default_markup_percentage,
+          defaultVisitsPerYear: service.default_visits_per_year
+        } : {}),
         allowFrequencyOverride: Boolean(service.allow_frequency_override), inputValue: '' };
     }));
     onClose();

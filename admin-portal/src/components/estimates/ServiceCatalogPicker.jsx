@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
+import CapacitySlabList from './CapacitySlabList';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
@@ -331,6 +332,10 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
               </div>
+              {/* Capacity Slab prices from a table rather than a rate, so the whole table is shown
+                  with the band the typed capacity lands in marked. Customer prices only, like the
+                  rest of this dialog. */}
+              <CapacitySlabList service={service} capacity={inputs.capacity} className="mt-5" />
               {/* The customer price is the only figure this dialog states: vendor cost, operating
                   cost, markup and margin are internal and belong to the service configuration. */}
               {preview && !preview.requiresCustomQuote && (
