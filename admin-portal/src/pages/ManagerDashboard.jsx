@@ -806,7 +806,7 @@ const ManagerDashboard = ({ user }) => {
                 <div key={index} className="bg-gray-50 rounded-lg p-2 border border-gray-100">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                    <span className="text-xs font-medium text-gray-700 truncate">{item.name}</span>
+                    <span className="min-w-0 break-words text-xs font-medium leading-snug text-gray-700">{item.name}</span>
                   </div>
                   <p className="text-lg font-bold text-gray-900">{item.value}</p>
                   <p className="text-[10px] text-gray-500">
@@ -849,9 +849,9 @@ const ManagerDashboard = ({ user }) => {
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   {woStatusData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-xs">
-                      <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
-                      <span className="text-gray-600 truncate">{item.name}</span>
+                    <div key={index} className="flex items-start gap-2 text-xs">
+                      <span className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
+                      <span className="min-w-0 break-words leading-snug text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({totalWorkOrders ? ((item.value / totalWorkOrders) * 100).toFixed(0) : 0}%)</span>
                     </div>
                   ))}
@@ -876,9 +876,9 @@ const ManagerDashboard = ({ user }) => {
                 </div>
                 <div className="flex-1 min-w-0 space-y-2">
                   {priorityData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 text-xs">
-                      <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
-                      <span className="text-gray-600 truncate">{item.name}</span>
+                    <div key={index} className="flex items-start gap-2 text-xs">
+                      <span className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '8px', minHeight: '8px' }}></span>
+                      <span className="min-w-0 break-words leading-snug text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900 whitespace-nowrap ml-auto">{item.value} ({(priorityTotal || totalWorkOrders) ? ((item.value / (priorityTotal || totalWorkOrders)) * 100).toFixed(0) : 0}%)</span>
                     </div>
                   ))}
@@ -922,7 +922,7 @@ const ManagerDashboard = ({ user }) => {
                   return mergedData.slice(0, 5).map((item, index) => (
                     <div key={index} className="space-y-1 group relative cursor-pointer">
                       <div className="flex justify-between items-center gap-2 text-xs">
-                        <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
+                        <span className="min-w-0 flex-1 break-words leading-snug text-gray-600">{item.name}</span>
                         <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
                       </div>
                       <div className="h-2 bg-gray-200 rounded-full overflow-hidden">

@@ -348,7 +348,7 @@ const ExecutiveDashboard = ({ user }) => {
                 <div key={index} className="bg-gray-50 rounded-lg p-2 border border-gray-100">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                    <span className="text-xs font-medium text-gray-700 truncate">{item.name}</span>
+                    <span className="min-w-0 break-words text-xs font-medium leading-snug text-gray-700">{item.name}</span>
                   </div>
                   <p className="text-lg font-bold text-gray-900">{item.value}</p>
                   <p className="text-[10px] text-gray-500">{totalPropertiesCount ? ((item.value / totalPropertiesCount) * 100).toFixed(1) : 0}% of total</p>
