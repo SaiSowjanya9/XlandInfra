@@ -203,8 +203,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     invoicesByStatus: [],
     collectionTrend: [],
     outstandingByAging: [],
-    topCustomers: [],
-    recentPayments: []
+    topCustomers: []
   });
   // What the live property-based estimates cost and make. Null until it loads, so the panel appears
   // with its figures rather than as a row of zeroes.
@@ -475,19 +474,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5);
 
-      // Recent Payments (last 5) - from active payments only (paid/verified)
-      const recentPayments = [...allPaidPayments]
-        .sort((a, b) => new Date(b.paymentDate || b.payment_date || b.created_at) - new Date(a.paymentDate || a.payment_date || a.created_at))
-        .slice(0, 5)
-        .map(p => ({
-          id: p.id,
-          customerName: p.customerName || p.customer_name || p.propertyName || p.property_name || 'Unknown',
-          invoiceId: p.invoiceId || p.invoice_id || p.invoiceCode || p.invoice_code,
-          paymentMethod: p.paymentMethod || p.payment_method,
-          amount: parseFloat(p.amount) || 0,
-          paymentDate: p.paymentDate || p.payment_date || p.created_at
-        }));
-
       setDashboardData({
         totalInvoiceAmount,
         amountCollected,
@@ -506,8 +492,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         collectionTrend: last30Days,
         outstandingByAging: agingBuckets,
         topCustomers,
-        totalInvoices,
-        recentPayments
+        totalInvoices
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -1047,78 +1032,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             )}
           </div>
         )}
-
-        {/* Quick Actions and Recent Payments Row - Responsive */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
-              <button
-                onClick={() => navigate(`${basePath}/billing/invoices`)}
-                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-              >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-                </div>
-                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">View Invoices</span>
-              </button>
-              <button
-                onClick={() => navigate(`${basePath}/billing/payments`)}
-                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors"
-              >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                </div>
-                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">Payment History</span>
-              </button>
-              <button
-                onClick={() => navigate(`${basePath}/billing/create-invoice`)}
-                className="flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                </div>
-                <span className="text-[10px] sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Invoice</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Recent Payments */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-900">Recent Payments</h3>
-              <button 
-                onClick={() => navigate(`${basePath}/billing/payments`)}
-                className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
-              >
-                View All <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              </button>
-            </div>
-            <div className="space-y-3 sm:space-y-4">
-              {dashboardData.recentPayments && dashboardData.recentPayments.length > 0 ? (
-                dashboardData.recentPayments.map((payment, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{payment.customerName}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">
-                        {payment.invoiceId} | {payment.paymentMethod?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs sm:text-sm font-semibold text-green-600">{formatCurrencyShort(payment.amount)}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-400">
-                        {new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No recent payments</p>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
