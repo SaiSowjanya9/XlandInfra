@@ -3138,7 +3138,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
+  const handleAddServiceRow = () => setCustomRowOpen(true);
+  // Add Row opens the same dialog an estimate's hand-entered service uses, because a row has no
+  // room for what one needs: a category, a quantity, a schedule and what the vendor charges. The
+  // figure asked for is the vendor price -- a package is bought here, not sold -- so it lands on
+  // the row as its vendor cost and shows in the Internal figures.
+  const [customRowOpen, setCustomRowOpen] = useState(false);
+  const packageRowFromDialog = (values) => ({
+    service: String(values.name || '').trim(),
+    description: values.description || '',
+    category: values.category || '',
+    frequencyType: values.frequency_type,
+    frequencyCount: Number(values.frequency_count) || 0,
+    pricingMethod: '',
+    inputValue: values.quantity === '' || values.quantity == null ? '' : Number(values.quantity),
+    vendorRequired: values.vendorRequired,
+    vendorCost: Number(values.price) || 0
+  });
   // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
   // starter row is replaced rather than left above them.
   const handleAddCatalogServices = (rows) => {
@@ -3489,6 +3505,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   </button>
                 </div>
               </div>
+              {/* Add Row opens the same hand-entered service dialog, asking for the vendor price:
+                  a package row is bought from a vendor rather than sold to a customer. */}
+              <CustomServiceDialog
+                open={customRowOpen}
+                onClose={() => setCustomRowOpen(false)}
+                onSubmit={values => { handleAddCatalogServices([packageRowFromDialog(values)]); setCustomRowOpen(false); }}
+                title="Add Service Row"
+                priceLabel="Vendor Price"
+                subtitle="Typed in by hand, so what the vendor charges is set here rather than quoted from the catalog"
+                apiPath={FP_CATALOG_API}
+                theme="warm"
+              />
               <PackageServicePicker
                 open={showPackageServicePicker}
                 onClose={() => setShowPackageServicePicker(false)}
@@ -3654,7 +3682,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       to be inferred from two dashes. */}
                   {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
                     <p className="mt-3 text-xs text-warm-muted">
-                      A row added with <span className="font-medium">Add Row</span> has no configured service behind it, so there is no rate to price it from: its method and amount are recorded, but it adds nothing to the package price.
+                      A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. It has no catalog rate behind it, so it sets no customer price of its own and does not add to the package price.
                     </p>
                   )}
                   {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is

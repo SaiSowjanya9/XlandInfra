@@ -18,8 +18,13 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: 'Custom', label: 'Custom', defaultVisits: null }];
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
 
+//  names the figure being entered. An estimate's custom service is sold to a customer,
+// so it asks for the customer price; a package's hand-typed row is bought from a vendor, so it asks
+// for the vendor price. The field is the same field either way, which is why this is a label rather
+// than a second dialog.
 export default function CustomServiceDialog({ open, onClose, onSubmit, editing = null,
-  apiPath = '/api/admin/service-catalog', fpId, theme }) {
+  apiPath = '/api/admin/service-catalog', fpId, theme,
+  title, priceLabel = 'Customer Price', subtitle = 'Entered by hand, so the customer price is set here rather than calculated' }) {
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);
@@ -83,7 +88,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
   const submit = () => {
     if (!String(values.name).trim()) return setProblem('Enter a service name.');
     const price = String(values.price ?? '').trim();
-    if (price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) return setProblem('Enter a customer price for this service.');
+    if (price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) return setProblem(`Enter a ${priceLabel.toLowerCase()} for this service.`);
     const quantity = Number(values.quantity);
     if (values.quantity !== '' && (!Number.isInteger(quantity) || quantity < 1)) return setProblem('Enter the quantity as a whole number of 1 or more.');
     onSubmit(values);
@@ -98,8 +103,8 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div>
-            <h3 id="custom-service-title" className={`text-base font-semibold ${skin.strong}`}>{editing ? 'Edit Service' : 'Add Custom Service'}</h3>
-            <p className={`mt-1 text-xs ${skin.muted}`}>Entered by hand, so the customer price is set here rather than calculated</p>
+            <h3 id="custom-service-title" className={`text-base font-semibold ${skin.strong}`}>{title ?? (editing ? 'Edit Service' : 'Add Custom Service')}</h3>
+            <p className={`mt-1 text-xs ${skin.muted}`}>{subtitle}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
             className={`shrink-0 rounded-[10px] p-1.5 ${skin.faint} ${skin.iconMuted}`}><X className="h-4 w-4" /></button>
@@ -153,7 +158,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
             </label>
 
             <label className="block">
-              <span className={label}>Customer Price (₹) <span className="text-red-500">*</span></span>
+              <span className={label}>{priceLabel} (₹) <span className="text-red-500">*</span></span>
               <input type="number" min="0" step="0.01" value={values.price}
                 onChange={event => setField('price', event.target.value)} placeholder="0" className={field} />
             </label>

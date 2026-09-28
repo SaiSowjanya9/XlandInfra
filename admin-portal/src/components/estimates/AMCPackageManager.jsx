@@ -46,6 +46,7 @@ import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } f
 import { packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
 import { PRICING_METHODS, methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
+import CustomServiceDialog from './CustomServiceDialog';
 import CapacitySlabList from './CapacitySlabList';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
@@ -187,12 +188,23 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   }, [pricingKey, pricingPropertyType, catalogPath, selectedFp?.id, token]);
 
   // Service row handlers
-  const handleAddServiceRow = () => {
-    setAmcForm({
-      ...amcForm,
-      serviceRows: [...amcForm.serviceRows, { service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }]
-    });
-  };
+  const handleAddServiceRow = () => setCustomRowOpen(true);
+  // Add Row opens the same dialog an estimate's hand-entered service uses, because a row has no
+  // room for what one needs: a category, a quantity, a schedule and what the vendor charges. The
+  // figure asked for is the vendor price -- a package is bought here, not sold -- so it lands on
+  // the row as its vendor cost and shows in the Internal figures.
+  const [customRowOpen, setCustomRowOpen] = useState(false);
+  const packageRowFromDialog = (values) => ({
+    service: String(values.name || '').trim(),
+    description: values.description || '',
+    category: values.category || '',
+    frequencyType: values.frequency_type,
+    frequencyCount: Number(values.frequency_count) || 0,
+    pricingMethod: '',
+    inputValue: values.quantity === '' || values.quantity == null ? '' : Number(values.quantity),
+    vendorRequired: values.vendorRequired,
+    vendorCost: Number(values.price) || 0
+  });
 
   // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
   // starter row is replaced rather than left above them.
@@ -919,7 +931,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     be inferred from two dashes. */}
                 {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
                   <p className="mt-3 text-xs text-gray-500">
-                    A row added with <span className="font-medium">Add Row</span> has no configured service behind it, so there is no rate to price it from: its method and amount are recorded, but it adds nothing to the package price.
+                    A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. It has no catalog rate behind it, so it sets no customer price of its own and does not add to the package price.
                   </p>
                 )}
                 {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
@@ -1375,6 +1387,17 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       )}
 
       {/* Shared by the create form and the edit modal: both fill the same service rows */}
+      {/* Add Row opens the estimate's own hand-entered service dialog, asking for the vendor price:
+          a package row is bought from a vendor rather than sold to a customer. */}
+      <CustomServiceDialog
+        open={customRowOpen}
+        onClose={() => setCustomRowOpen(false)}
+        onSubmit={values => { handleAddCatalogServices([packageRowFromDialog(values)]); setCustomRowOpen(false); }}
+        title="Add Service Row"
+        priceLabel="Vendor Price"
+        subtitle="Typed in by hand, so what the vendor charges is set here rather than quoted from the catalog"
+        fpId={selectedFp?.id}
+      />
       <PackageServicePicker
         open={showServicePicker}
         onClose={() => setShowServicePicker(false)}
