@@ -119,7 +119,7 @@ const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg sm:text-xl font-bold text-gray-900">{formatCurrencyShort(total)}</span>
+        <span className="text-sm sm:text-base font-bold text-gray-900 tabular-nums">{formatCurrencyShort(total)}</span>
         <span className="text-[10px] sm:text-xs text-gray-500">{centerLabel}</span>
       </div>
     </div>
@@ -169,7 +169,7 @@ const DonutChartCount = ({ data, total, size = 130 }) => {
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl sm:text-2xl font-bold text-gray-900">{total}</span>
+        <span className="text-lg sm:text-xl font-bold text-gray-900 tabular-nums">{total}</span>
         <span className="text-[10px] sm:text-xs text-gray-500">Total</span>
       </div>
     </div>
@@ -637,7 +637,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.totalInvoiceAmount)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.totalInvoiceAmount)}>{formatCurrency(dashboardData.totalInvoiceAmount)}</p>
               <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-600 hover:text-blue-700 font-medium mt-1">
                 View All <ArrowRight className="w-3 h-3" />
               </button>
@@ -656,7 +656,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.amountCollected)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.amountCollected)}>{formatCurrency(dashboardData.amountCollected)}</p>
               <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-green-600 hover:text-green-700 font-medium mt-1">
                 View All <ArrowRight className="w-3 h-3" />
               </button>
@@ -675,7 +675,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.pendingAmount)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.pendingAmount)}>{formatCurrency(dashboardData.pendingAmount)}</p>
               <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-amber-600 hover:text-amber-700 font-medium mt-1">
                 View All <ArrowRight className="w-3 h-3" />
               </button>
@@ -694,7 +694,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.overdueAmount)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.overdueAmount)}>{formatCurrency(dashboardData.overdueAmount)}</p>
               <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-red-600 hover:text-red-700 font-medium mt-1">
                 View All <ArrowRight className="w-3 h-3" />
               </button>
@@ -713,7 +713,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.todaysCollections)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.todaysCollections)}>{formatCurrency(dashboardData.todaysCollections)}</p>
               <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-purple-600 hover:text-purple-700 font-medium mt-1">
                 View <ArrowRight className="w-3 h-3" />
               </button>
@@ -732,7 +732,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{formatCurrencyShort(dashboardData.failedPayments)}</p>
+              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.failedPayments)}>{formatCurrency(dashboardData.failedPayments)}</p>
               <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-rose-600 hover:text-rose-700 font-medium mt-1">
                 View All <ArrowRight className="w-3 h-3" />
               </button>
@@ -1003,7 +1003,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               ].map(([label, value, tone]) => (
                 <div key={label} className="rounded-xl border border-gray-200 bg-slate-50 px-4 py-3">
                   <p className="text-[11px] text-gray-500">{label}</p>
-                  <p className={`mt-1 text-lg sm:text-xl font-bold truncate ${tone}`} title={value}>{value}</p>
+                  <p className={`mt-1 text-sm sm:text-base font-bold tabular-nums truncate ${tone}`} title={value}>{value}</p>
                 </div>
               ))}
             </div>
