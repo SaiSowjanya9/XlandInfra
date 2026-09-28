@@ -3131,7 +3131,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, pricingMethod: r.pricingMethod, unit: r.unit, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, category: r.category || '', inputValue: r.inputValue, price: r.price, vendorCost: r.vendorCost, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
@@ -3170,6 +3170,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     } else if (f === 'frequencyCount') {
       const parsed = parseInt(v);
       rows[i][f] = v === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
+    } else if (f === 'price') {
+      // A price typed here stands until the field is cleared, at which point the quote takes over again
+      rows[i] = { ...rows[i], price: v === '' ? undefined : Number(v), priceOverridden: v !== '' };
     } else {
       rows[i][f] = v; 
     }
@@ -3195,7 +3198,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         const result = await quotePackageRow(row, { apiPath: FP_CATALOG_API, propertyType: selectedPropertyTypes[0] || '', fpId: 'all', token, signal: controller.signal })
           .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
         if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
-        if (result.priced) return { ...row, ...result.priced };
+        // A price typed over the quote stands: the quote still refreshes the costs behind it
+        if (result.priced) return { ...row, ...result.priced, ...(row.priceOverridden ? { price: row.price } : {}) };
         if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
         return row;
       }));
@@ -3656,11 +3660,19 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             />
                           </div>
 
-                          {/* What this service comes to. Quoted by the server, so it is read here only. */}
-                          <div className="text-right">
-                            <p className="px-1 py-2 text-sm font-semibold text-warm-text">
-                              {Number.isFinite(Number(row.price)) ? formatCurrency(row.price) : <span className="text-warm-muted">—</span>}
-                            </p>
+                          {/* What this service comes to. A configured row opens on the server's quote
+                              and a hand-typed one on nothing, and either may be typed over -- the
+                              quote then refreshes the costs behind it without touching the figure. */}
+                          <div>
+                            <input
+                              type="number" min="0" step="0.01"
+                              value={row.price ?? ''}
+                              onChange={(e) => handleUpdateServiceRow(index, 'price', e.target.value)}
+                              placeholder={row.catalogServiceId ? 'Quoted' : '0'}
+                              aria-label={`${row.service || 'Service'} price`}
+                              title={row.priceOverridden ? 'Typed over the quote' : undefined}
+                              className={`w-full px-2 py-2 text-right border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-warm-border'}`}
+                            />
                           </div>
                           
                           {/* Delete Button */}
@@ -3682,7 +3694,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       to be inferred from two dashes. */}
                   {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
                     <p className="mt-3 text-xs text-warm-muted">
-                      A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. It has no catalog rate behind it, so it sets no customer price of its own and does not add to the package price.
+                      A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. Every row's Price may be typed over: a configured one opens on its quote, and a figure entered by hand stands until the field is cleared.
                     </p>
                   )}
                   {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is

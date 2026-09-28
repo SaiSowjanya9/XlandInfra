@@ -171,7 +171,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         const result = await quotePackageRow(row, { apiPath: catalogPath, propertyType: pricingPropertyType, fpId: selectedFp?.id, token, signal: controller.signal })
           .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
         if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
-        if (result.priced) return { ...row, ...result.priced };
+        // A price typed over the quote stands: the quote still refreshes the costs behind it
+        if (result.priced) return { ...row, ...result.priced, ...(row.priceOverridden ? { price: row.price } : {}) };
         if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
         return row;
       }));
@@ -233,6 +234,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       const parsed = parseInt(value);
       const numValue = value === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
       newRows[index][field] = numValue;
+    } else if (field === 'price') {
+      // A price typed here stands until the field is cleared, at which point the quote takes over again
+      newRows[index] = { ...newRows[index], price: value === '' ? undefined : Number(value), priceOverridden: value !== '' };
     } else {
       newRows[index][field] = value;
     }
@@ -288,13 +292,16 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             frequencyCount: count,
             frequencyType: row.frequencyType,
             // What the row was priced from and what it came to, so the package can be read back and
-            // re-priced exactly as it was configured
+            // re-priced exactly as it was configured. Price and vendor cost belong to every row: a
+            // hand-typed one states them itself.
+            category: row.category || '', pricingMethod: row.pricingMethod || '', inputValue: row.inputValue,
+            price: row.price, priceOverridden: row.priceOverridden, vendorCost: row.vendorCost,
+            vendorRequired: row.vendorRequired,
             ...(row.catalogServiceId ? {
-              catalogServiceId: row.catalogServiceId, pricingMethod: row.pricingMethod, unit: row.unit,
+              catalogServiceId: row.catalogServiceId, unit: row.unit,
               capacitySlabs: row.capacitySlabs, defaultMarkupPercentage: row.defaultMarkupPercentage,
               defaultVisitsPerYear: row.defaultVisitsPerYear,
-              category: row.category || '', inputValue: row.inputValue, price: row.price,
-              vendorCost: row.vendorCost, operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
+              operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
             } : {})
           };
         }),
@@ -904,11 +911,19 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             />
                         </div>
 
-                        {/* What this service comes to. Quoted by the server, so it is read here only. */}
-                        <div className="text-right">
-                          <p className="px-1 py-2 text-sm font-semibold text-gray-800">
-                            {Number.isFinite(Number(row.price)) ? formatCurrency(row.price) : <span className="text-gray-400">—</span>}
-                          </p>
+                        {/* What this service comes to. A configured row opens on the server's quote
+                            and a hand-typed one on nothing, and either may be typed over -- the
+                            quote then refreshes the costs behind it without touching the figure. */}
+                        <div>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={row.price ?? ''}
+                            onChange={(e) => handleUpdateServiceRow(index, 'price', e.target.value)}
+                            placeholder={row.catalogServiceId ? 'Quoted' : '0'}
+                            aria-label={`${row.service || 'Service'} price`}
+                            title={row.priceOverridden ? 'Typed over the quote' : undefined}
+                            className={`w-full px-2 py-2 text-right border rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-gray-300'}`}
+                          />
                         </div>
                         
                         {/* Delete Button */}
@@ -931,7 +946,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                     be inferred from two dashes. */}
                 {amcForm.serviceRows.some(row => String(row.service || '').trim() && !row.catalogServiceId) && (
                   <p className="mt-3 text-xs text-gray-500">
-                    A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. It has no catalog rate behind it, so it sets no customer price of its own and does not add to the package price.
+                    A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. Every row's Price may be typed over: a configured one opens on its quote, and a figure entered by hand stands until the field is cleared.
                   </p>
                 )}
                 {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
