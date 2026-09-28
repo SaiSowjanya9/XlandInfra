@@ -64,8 +64,13 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
   const addPicked = () => {
     onAdd(available.filter(service => picked.includes(service.id)).map(service => {
       const frequencyType = service.default_frequency || 'Monthly';
+      // The row keeps what it was picked from, so the package can price it: which service, how it is
+      // priced, and the unit its amount is measured in. The amount itself is typed into the row.
       return { service: service.service_name, description: service.description || '', frequencyType,
-        frequencyCount: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0 };
+        frequencyCount: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0,
+        catalogServiceId: service.id, category: service.category || '',
+        pricingMethod: service.pricing_method, unit: service.unit || '',
+        allowFrequencyOverride: Boolean(service.allow_frequency_override), inputValue: '' };
     }));
     onClose();
   };
