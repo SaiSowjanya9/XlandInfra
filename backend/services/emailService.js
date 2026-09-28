@@ -863,6 +863,15 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
   }
 };
 
+/**
+ * Label-and-value rows that cannot push out of their card on a phone. `table-layout: fixed` with a
+ * percentage label column stops a long value widening the table, and the value cell breaks words
+ * rather than overflowing -- an email address ran past the edge of the box before this.
+ */
+const LABELLED_TABLE = 'width: 100%; max-width: 100%; table-layout: fixed; border-collapse: collapse;';
+const LABEL_CELL = 'padding: 6px 0; color: #6b7280; font-size: 13px; width: 38%; vertical-align: top; word-break: break-word;';
+const VALUE_CELL = 'padding: 6px 0; padding-left: 12px; color: #1f2937; font-size: 14px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere;';
+
 // Send estimate email to customer with Approve/Reject buttons
 const sendEstimateEmail = async (estimate, actionToken) => {
   estimate = customerEstimateData(estimate);
@@ -960,41 +969,41 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // Build property details HTML based on property type
   // Order: Property Type ? Address ? City ? Zone ? Division (logical flow)
   let propertyDetailsHtml = `
-    <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Property Type:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${getPropertyTypeLabel(propertyType)}</td></tr>
-    ${address ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Address:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${address}</td></tr>` : ''}
-    ${city ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">City:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${city}</td></tr>` : ''}
-    ${zone ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Zone:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${zone}</td></tr>` : ''}
-    ${division ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Division:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${division}</td></tr>` : ''}
+    <tr><td style="${LABEL_CELL}">Property Type:</td><td style="${VALUE_CELL}">${getPropertyTypeLabel(propertyType)}</td></tr>
+    ${address ? `<tr><td style="${LABEL_CELL}">Address:</td><td style="${VALUE_CELL}">${address}</td></tr>` : ''}
+    ${city ? `<tr><td style="${LABEL_CELL}">City:</td><td style="${VALUE_CELL}">${city}</td></tr>` : ''}
+    ${zone ? `<tr><td style="${LABEL_CELL}">Zone:</td><td style="${VALUE_CELL}">${zone}</td></tr>` : ''}
+    ${division ? `<tr><td style="${LABEL_CELL}">Division:</td><td style="${VALUE_CELL}">${division}</td></tr>` : ''}
   `;
 
   // GC-specific fields
   if (['GC', 'gated_community', 'Gated Community'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${numberOfBlocks ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Number of Blocks:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${numberOfBlocks}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Total Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+      ${numberOfBlocks ? `<tr><td style="${LABEL_CELL}">Number of Blocks:</td><td style="${VALUE_CELL}">${numberOfBlocks}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="${LABEL_CELL}">Total Units:</td><td style="${VALUE_CELL}">${totalUnits}</td></tr>` : ''}
     `;
     // Add block details if available
     if (blockNames && Object.keys(blockNames).length > 0) {
       const blockDetailsList = Object.entries(blockNames).map(([key, name]) => 
         `${name || 'Block ' + key}: ${unitsPerBlock?.[key] || 0} units`
       ).join(', ');
-      propertyDetailsHtml += `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Block Details:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockDetailsList}</td></tr>`;
+      propertyDetailsHtml += `<tr><td style="${LABEL_CELL}">Block Details:</td><td style="${VALUE_CELL}">${blockDetailsList}</td></tr>`;
     }
   }
 
   // Apartment-specific fields
   if (['APT', 'Apt', 'apartment', 'Apartment'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${towerName ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Tower/Building:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${towerName}</td></tr>` : ''}
-      ${blockNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Block Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${blockNumber}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Number of Units:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${totalUnits}</td></tr>` : ''}
+      ${towerName ? `<tr><td style="${LABEL_CELL}">Tower/Building:</td><td style="${VALUE_CELL}">${towerName}</td></tr>` : ''}
+      ${blockNumber ? `<tr><td style="${LABEL_CELL}">Block Number:</td><td style="${VALUE_CELL}">${blockNumber}</td></tr>` : ''}
+      ${totalUnits ? `<tr><td style="${LABEL_CELL}">Number of Units:</td><td style="${VALUE_CELL}">${totalUnits}</td></tr>` : ''}
     `;
   }
 
   // Villa/Plot-specific fields
   if (['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(propertyType)) {
     propertyDetailsHtml += `
-      ${villaPlotNumber ? `<tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Villa/Plot Number:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${villaPlotNumber}</td></tr>` : ''}
+      ${villaPlotNumber ? `<tr><td style="${LABEL_CELL}">Villa/Plot Number:</td><td style="${VALUE_CELL}">${villaPlotNumber}</td></tr>` : ''}
     `;
   }
 
@@ -1093,26 +1102,26 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             
             <!-- Estimate Info & Customer Details -->
             <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <table style="width: 100%;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${LABELLED_TABLE}">
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Estimate ID:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937; font-weight: 600;">${estimateId}</td>
+                  <td style="${LABEL_CELL}">Estimate ID:</td>
+                  <td style="${VALUE_CELL} font-weight: 600;">${estimateId}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Valid Until:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
+                  <td style="${LABEL_CELL}">Valid Until:</td>
+                  <td style="${VALUE_CELL} color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Customer Name:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937; font-weight: 600;">${customerName || '-'}</td>
+                  <td style="${LABEL_CELL}">Customer Name:</td>
+                  <td style="${VALUE_CELL} font-weight: 600;">${customerName || '-'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Email:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${customerEmail || '-'}</td>
+                  <td style="${LABEL_CELL}">Email:</td>
+                  <td style="${VALUE_CELL}">${customerEmail || '-'}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Phone:</td>
-                  <td style="padding: 8px 0; padding-left: 15px; color: #1f2937;">${customerPhone || '-'}</td>
+                  <td style="${LABEL_CELL}">Phone:</td>
+                  <td style="${VALUE_CELL}">${customerPhone || '-'}</td>
                 </tr>
               </table>
             </div>
@@ -1120,8 +1129,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <!-- Property Details -->
             <div style="margin-bottom: 20px;">
               <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</p>
-              <table style="width: 100%;">
-                <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 120px;">Name:</td><td style="padding: 6px 0; padding-left: 15px; color: #1f2937;">${propertyName || '-'}</td></tr>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${LABELLED_TABLE}">
+                <tr><td style="${LABEL_CELL}">Name:</td><td style="${VALUE_CELL}">${propertyName || '-'}</td></tr>
                 ${propertyDetailsHtml}
               </table>
             </div>
@@ -1166,15 +1175,23 @@ const sendEstimateEmail = async (estimate, actionToken) => {
               </p>
             </div>
             
-            <!-- Action Buttons -->
-            <div style="text-align: center; margin: 30px 0;">
-              <p style="color: #374151; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Please review and take action:</p>
-              <a href="${approveUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600; margin-right: 15px;">
-                ✓ Approve Estimate
-              </a>
-              <a href="${rejectUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                ✗ Reject Estimate
-              </a>
+            <!-- Action Buttons. Stacked in a fixed-width table so both read as one control set: as
+                 inline-block links they sized themselves to their own text, so on a phone they wrapped
+                 to different widths and "Approve Estimate" broke across two lines. -->
+            <div style="margin: 30px 0;">
+              <p style="color: #374151; font-weight: 600; margin: 0 0 16px 0; font-size: 16px; text-align: center;">Please review and take action:</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <a href="${approveUrl}" style="display: block; width: 240px; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 0; border-radius: 8px; font-size: 16px; font-weight: 600; text-align: center; white-space: nowrap;">✓ Approve Estimate</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <a href="${rejectUrl}" style="display: block; width: 240px; background: #dc2626; color: #ffffff; text-decoration: none; padding: 14px 0; border-radius: 8px; font-size: 16px; font-weight: 600; text-align: center; white-space: nowrap;">✗ Reject Estimate</a>
+                  </td>
+                </tr>
+              </table>
             </div>
             
             <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">

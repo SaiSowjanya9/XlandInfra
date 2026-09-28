@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
@@ -25,7 +25,7 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
-import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
+import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import * as XLSX from 'xlsx';
 
@@ -205,7 +205,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [viewEstimate, setViewEstimate] = useState(null);
+  // Which estimate is expanded in place. Clicking its ID opens the detail panel inside the row,
+  // which is what replaced the view modal.
+  const [expandedEstimateId, setExpandedEstimateId] = useState(null);
+  const toggleExpandedEstimate = (id) => setExpandedEstimateId(current => (current === id ? null : id));
   // Terms & Conditions: on by default for a new estimate, editable before saving
   const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
   const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
@@ -899,7 +902,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     setDirectForm({
       customerName: '', phone: '', email: '',
       propertyType: '', propertyName: '', zone: '', city: '', address: '',
-      numberOfBlocks: 1, unitsPerBlock: {}, totalUnits: 0
+      numberOfBlocks: '', unitsPerBlock: {}, totalUnits: 0
     });
   };
 
@@ -1526,10 +1529,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <h4 className="text-sm font-semibold text-blue-800 mb-3">Block Details</h4>
                   <div className="mb-4 max-w-xs">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Number of Blocks <span className="text-red-500">*</span></label>
-                    <EstimateInput type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { const blocks = parseInt(e.target.value) || 1; setDirectForm({...directForm, numberOfBlocks: blocks, unitsPerBlock: {}}); }} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
+                    <EstimateInput type="number" min="1" value={directForm.numberOfBlocks} onChange={(e) => { setDirectForm({...directForm, numberOfBlocks: e.target.value, unitsPerBlock: {}}); }} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Array.from({ length: parseInt(directForm.numberOfBlocks) || 1 }, (_, i) => i + 1).map(blockNum => (
+                    {Array.from({ length: parseInt(directForm.numberOfBlocks, 10) || 0 }, (_, i) => i + 1).map(blockNum => (
                       <React.Fragment key={blockNum}>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Block Name</label>
@@ -1755,15 +1758,27 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => (
-                <tr key={est.id} className={`hover:bg-gray-50 ${selectedEstimates.includes(est.id) ? 'bg-blue-50' : ''}`}>
+              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => {
+                const isExpanded = expandedEstimateId === est.id;
+                return (
+                <Fragment key={est.id}>
+                <tr className={`hover:bg-gray-50 ${selectedEstimates.includes(est.id) ? 'bg-blue-50' : isExpanded ? 'bg-blue-50/40' : ''}`}>
                   <td className="px-2 py-3 text-center">
                     <button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">
                       {selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                     </button>
                   </td>
-                  <td className="px-3 py-3 font-mono text-xs whitespace-nowrap">{est.estimate_id}</td>
-                  <td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[120px]">{est.client_name}</div>{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {/* The ID opens the estimate in place; there is no view modal to open */}
+                    <button type="button" onClick={() => toggleExpandedEstimate(est.id)} aria-expanded={isExpanded}
+                      className="flex items-center gap-1.5 font-mono text-xs text-gray-800 hover:text-blue-600"
+                      title={isExpanded ? 'Hide details' : 'Show details'}>
+                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      {est.estimate_id}
+                    </button>
+                  </td>
+                  {/* The customer, in the row itself: who they are and how to reach them */}
+                  <td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[160px]">{est.client_name || '-'}</div>{est.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{est.client_phone}</div>}{est.client_email && <div className="text-xs text-gray-500 truncate max-w-[160px]">{est.client_email}</div>}{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td>
                   <td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'custom' ? 'Custom' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td>
                   <td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (est.division || est.property_division || '-') : '-'}</td>
                   <td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td>
@@ -1786,7 +1801,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td>
                   <td className="px-3 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye className="w-4 h-4" /></button>
                       <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
                       <button 
                         onClick={() => handleSendEmail(est)} 
@@ -1802,7 +1816,16 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </td>
                 </tr>
-              ))}</tbody>
+                {isExpanded && (
+                  <tr className="bg-slate-50/60">
+                    <td colSpan={10} className="p-0">
+                      <EstimateDetailPanel estimate={est} decode={decodeHtml} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
+                );
+              })}</tbody>
             </table>
           </div>
         )}
@@ -2339,7 +2362,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderArchived = () => (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50"><td className="px-4 py-3 font-mono text-xs">{e.estimate_id}</td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name}</div>{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <Fragment key={e.id}><tr className="hover:bg-gray-50"><td className="px-4 py-3"><button type="button" onClick={() => toggleExpandedEstimate(e.id)} aria-expanded={expandedEstimateId === e.id} className="flex items-center gap-1.5 font-mono text-xs text-gray-800 hover:text-blue-600" title={expandedEstimateId === e.id ? 'Hide details' : 'Show details'}><ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${expandedEstimateId === e.id ? 'rotate-180' : ''}`} />{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-gray-500 truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3 text-center text-xs text-gray-400">Archived</td></tr>{expandedEstimateId === e.id && <tr className="bg-slate-50/60"><td colSpan={7} className="p-0"><EstimateDetailPanel estimate={e} decode={decodeHtml} /></td></tr>}</Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
     </div>
   );
@@ -2409,250 +2432,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
       <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
-      
-      {/* View Estimate Modal */}
-      {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    
-                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                  }`}>{getStatusLabel(viewEstimate.status)}</span>
-                </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
-              </div>
-
-              {/* Property Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Property Details</p>
-                <div className="bg-slate-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Property ID</p><p className="font-medium text-sm">{viewEstimate.property_code || viewEstimate.property_id || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Name</p><p className="font-medium text-sm">{viewEstimate.property_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{viewEstimate.property_type || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
-                  {(viewEstimate.estimate_type === 'property_based' || viewEstimate.property_id) && viewEstimate.division && (
-                    <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
-                  )}
-                  <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
-                  {/* GC-specific: Number of Blocks, Block Names, Units per Block with Bedroom Counts */}
-                  {['GC', 'gated_community', 'Gated Community'].includes(viewEstimate.property_type) && (
-                    <>
-                      <div><p className="text-xs text-gray-500">Number of Blocks</p><p className="font-medium text-sm">{viewEstimate.number_of_blocks || '-'}</p></div>
-                      <div><p className="text-xs text-gray-500">Total Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
-                      {(() => {
-                        const blockNames = viewEstimate.block_names ? (typeof viewEstimate.block_names === 'string' ? JSON.parse(viewEstimate.block_names) : viewEstimate.block_names) : {};
-                        const unitsPerBlock = viewEstimate.units_per_block ? (typeof viewEstimate.units_per_block === 'string' ? JSON.parse(viewEstimate.units_per_block) : viewEstimate.units_per_block) : {};
-                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
-                        const hasBlockData = Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0 || Object.keys(blockUnitTypes).length > 0;
-                        if (!hasBlockData) return null;
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
-                        const numBlocks = viewEstimate.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || Object.keys(blockUnitTypes).length || 1;
-                        return (
-                          <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Block Details</p>
-                            <div className="bg-blue-50 p-3 rounded-lg space-y-3">
-                              {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                                const blockName = blockNames[blockNum] || `Block ${blockNum}`;
-                                const blockUnits = unitsPerBlock[blockNum] || 0;
-                                const unitTypes = blockUnitTypes[blockNum] || {};
-                                const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                                return (
-                                  <div key={blockNum} className="bg-white p-3 rounded border border-blue-100">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <p className="text-sm text-blue-600 font-semibold">{blockName}</p>
-                                      <p className="text-sm text-gray-700 font-medium">{blockUnits} units</p>
-                                    </div>
-                                    {hasUnitTypes && (
-                                      <div className="flex flex-wrap gap-2 pt-2 border-t border-blue-50">
-                                        {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                          <span key={type} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                            {unitTypeLabels[type] || type}: {count}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Apartment-specific: Tower/Building Name, Block Number, Number of Units with Bedroom Counts */}
-                  {['APT', 'apartment', 'Apartment'].includes(viewEstimate.property_type) && (
-                    <>
-                      {viewEstimate.tower_name && <div><p className="text-xs text-gray-500">Tower/Building Name</p><p className="font-medium text-sm">{viewEstimate.tower_name}</p></div>}
-                      {viewEstimate.block_number && <div><p className="text-xs text-gray-500">Block Number</p><p className="font-medium text-sm">{viewEstimate.block_number}</p></div>}
-                      <div><p className="text-xs text-gray-500">Number of Units</p><p className="font-medium text-sm">{viewEstimate.total_units || '-'}</p></div>
-                      {(() => {
-                        const blockUnitTypes = viewEstimate.block_unit_types ? (typeof viewEstimate.block_unit_types === 'string' ? JSON.parse(viewEstimate.block_unit_types) : viewEstimate.block_unit_types) : {};
-                        const unitTypes = blockUnitTypes['apt'] || {};
-                        const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                        if (!hasUnitTypes) return null;
-                        const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
-                        return (
-                          <div className="col-span-2 mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Unit Type Breakdown</p>
-                            <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-lg">
-                              {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                <span key={type} className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 text-sm rounded-full font-medium">
-                                  {unitTypeLabels[type] || type}: {count}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {/* Villa-specific fields */}
-                  {['VILLA', 'villa', 'Villa', 'VL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Villa Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.villa_number || '-'}</p></div>
-                  )}
-                  {/* Flat-specific fields */}
-                  {['FLAT', 'flat', 'Flat', 'FL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Flat Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.flat_number || '-'}</p></div>
-                  )}
-                  {/* Plot-specific fields */}
-                  {['PLOT', 'plot', 'Plot', 'PL'].includes(viewEstimate.property_type) && (
-                    <div><p className="text-xs text-gray-500">Plot Number</p><p className="font-medium text-sm">{viewEstimate.villa_plot_number || viewEstimate.plot_number || '-'}</p></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg flex flex-row gap-6">
-                  <div className="flex-1 min-w-0"><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm truncate">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
-                  <div className="flex-1 min-w-0"><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
-                  <div className="flex-1 min-w-0"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm truncate">{viewEstimate.client_email || '-'}</p></div>
-                </div>
-              </div>
-
-              {/* Package */}
-              {viewEstimate.package_name && (() => {
-                // Try to get description from estimate, fallback to AMC package lookup
-                const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
-                const pkgDescription = viewEstimate.amc_package_description || pkgFromList?.description || '';
-                // Get services from estimate or from package lookup
-                let pkgServices = [];
-                if (viewEstimate.package_services) {
-                  pkgServices = typeof viewEstimate.package_services === 'string' ? JSON.parse(viewEstimate.package_services) : viewEstimate.package_services;
-                } else if (viewEstimate.packageServices) {
-                  const svc = typeof viewEstimate.packageServices === 'string' ? JSON.parse(viewEstimate.packageServices) : viewEstimate.packageServices;
-                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
-                } else if (pkgFromList?.services) {
-                  const svc = typeof pkgFromList.services === 'string' ? JSON.parse(pkgFromList.services) : pkgFromList.services;
-                  pkgServices = svc?.serviceRows || svc?.services || svc || [];
-                }
-                return (
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">AMC Package</p>
-                    {pkgDescription && (
-                      <p className="text-sm text-gray-600 mb-3">{pkgDescription}</p>
-                    )}
-                    {/* Package Services - Horizontal Table */}
-                    {pkgServices.length > 0 && (
-                      <div className="mt-3">
-                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-indigo-100 rounded-t-lg">
-                          <div className="col-span-1 text-xs font-semibold text-indigo-700">#</div>
-                          <div className="col-span-3 text-xs font-semibold text-indigo-700">Service</div>
-                          <div className="col-span-4 text-xs font-semibold text-indigo-700">Description</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-center">Frequency</div>
-                          <div className="col-span-2 text-xs font-semibold text-indigo-700 text-right">Visits</div>
-                        </div>
-                        <div className="border border-indigo-100 rounded-b-lg divide-y divide-indigo-50">
-                          {pkgServices.map((svc, idx) => (
-                            <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2 items-center bg-white">
-                              <div className="col-span-1">
-                                <span className="w-5 h-5 bg-indigo-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                              </div>
-                              <div className="col-span-3">
-                                <p className="font-medium text-gray-800 text-sm">{decodeHtml(svc.name || svc.service)}</p>
-                              </div>
-                              <div className="col-span-4 overflow-hidden">
-                                <p className={`text-xs text-gray-500 break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</p>
-                              </div>
-                              <div className="col-span-2 text-center">
-                                <p className="text-sm text-indigo-600">{svc.frequencyType || svc.frequency_type || 'Monthly'}</p>
-                              </div>
-                              <div className="col-span-2 text-right">
-                                <p className="text-sm text-indigo-700 font-semibold">{svc.frequency_count ?? svc.frequencyCount ?? 0}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Services on the estimate */}
-              {viewEstimate.addons && viewEstimate.addons.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Services</p>
-                  <EstimateServicesTable rows={viewEstimate.addons} decode={decodeHtml} />
-                </div>
-              )}
-
-              {/* Billing Duration */}
-              <div className="border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Billing</span>
-                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
-                </div>
-              </div>
-
-              {/* Price Summary */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>₹{Number(viewEstimate.subtotal || 0).toLocaleString()}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-₹{Number(viewEstimate.discount_amount).toLocaleString()}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>₹{Number(viewEstimate.gst_amount || 0).toLocaleString()}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">₹{Number(viewEstimate.total_amount || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description / Notes - After Price Summary */}
-              {viewEstimate.description && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description / Notes</p>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{viewEstimate.description}</p>
-                </div>
-              )}
-
-              {/* Terms & Conditions - shown only when this estimate carries them */}
-              <EstimateTermsSection estimate={viewEstimate} className="border-t border-gray-100 pt-4" />
-
-              {/* Created By */}
-              <div className="border-t border-gray-100 pt-4 text-xs text-gray-400">
-                Created by: {viewEstimate.created_by_name || '-'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* View AMC Package Modal */}
       {viewAmcPackage && (

@@ -168,10 +168,13 @@ const generateEstimatePDF = async (estimate) => {
       const MARGIN = 50;
       const CONTENT_WIDTH = 495;          // 595pt page less both margins
       const COL_GUTTER = 15;
-      const COL_WIDTH = (CONTENT_WIDTH - COL_GUTTER) / 2;
-      const COL_X = [MARGIN, MARGIN + COL_WIDTH + COL_GUTTER];
+      // Three columns, because the detail fields are short: a two-column grid left half of every
+      // line empty and stretched the front page over most of a sheet.
+      const COLUMNS = 3;
+      const COL_WIDTH = (CONTENT_WIDTH - COL_GUTTER * (COLUMNS - 1)) / COLUMNS;
+      const COL_X = Array.from({ length: COLUMNS }, (_, index) => MARGIN + index * (COL_WIDTH + COL_GUTTER));
       const LABEL_COLOR = '#6b7280';
-      const GAP = { heading: 15, row: 11, section: 20, label: 10 };
+      const GAP = { heading: 11, row: 7, section: 14, label: 8.5 };
       const pageHeight = 780;             // A4 usable height
       const money = value => Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
@@ -189,14 +192,17 @@ const generateEstimatePDF = async (estimate) => {
         return GAP.label + doc.heightOfString(text, { width });
       };
 
-      // Two fields to a line, always on the same two column edges. A field with nothing in it is
-      // skipped without leaving a gap, and the line is as tall as its taller side.
-      const fieldRow = (left, right) => {
-        const filled = value => value !== undefined && value !== null && value !== '';
-        let used = 0;
-        if (filled(left?.[1])) used = Math.max(used, drawField(left[0], left[1], COL_X[0], COL_WIDTH));
-        if (filled(right?.[1])) used = Math.max(used, drawField(right[0], right[1], COL_X[1], COL_WIDTH));
-        if (used) y += used + GAP.row;
+      // The fields of a section, flowed across the columns in order. Empty ones are dropped before
+      // anything is placed, so a missing Division or Property ID no longer leaves a hole with the
+      // next field stranded on the far side of the page -- they simply close up.
+      const fieldGrid = (fields) => {
+        const present = fields.filter(field => Array.isArray(field) && field[1] !== undefined && field[1] !== null && field[1] !== '');
+        for (let index = 0; index < present.length; index += COLUMNS) {
+          const line = present.slice(index, index + COLUMNS);
+          const used = line.reduce((tallest, [label, value], column) =>
+            Math.max(tallest, drawField(label, value, COL_X[column], COL_WIDTH)), 0);
+          y += used + GAP.row;
+        }
       };
 
       // A value too long for half the page -- an address, a note -- spans both columns
@@ -206,31 +212,36 @@ const generateEstimatePDF = async (estimate) => {
       };
 
       const dateStr = new Date(createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-      fieldRow(['Estimate No.', estimateId || 'N/A'], ['Date', dateStr]);
-      y += GAP.section - GAP.row;
+      // The date sits in the last column, so it reads down the right edge of the page
+      const headerHeight = Math.max(
+        drawField('Estimate No.', estimateId || 'N/A', COL_X[0], COL_WIDTH),
+        drawField('Date', dateStr, COL_X[COLUMNS - 1], COL_WIDTH)
+      );
+      y += headerHeight + GAP.section;
 
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
 
       sectionHeading('Property Details');
-      fieldRow(['Name', propertyName], ['Type', propTypeLabel]);
-      fieldRow(['Zone', zone], ['Division', division]);
-      fieldRow(['Property ID', propertyCode], ['City', city]);
-      fieldRow(['Blocks', numberOfBlocks], ['Total Units', totalUnits]);
-      fieldRow(['Tower / Building', towerName], ['Block Number', blockNumber]);
-      fieldRow(['Villa / Plot Number', villaPlotNumber], null);
+      fieldGrid([
+        ['Name', propertyName], ['Type', propTypeLabel], ['Property ID', propertyCode],
+        ['Zone', zone], ['Division', division], ['City', city],
+        ['Blocks', numberOfBlocks], ['Total Units', totalUnits],
+        ['Tower / Building', towerName], ['Block Number', blockNumber], ['Villa / Plot Number', villaPlotNumber]
+      ]);
       wideField('Address', address);
       y += GAP.section - GAP.row;
 
       sectionHeading('Customer Details');
-      fieldRow(['Name', customerName], ['Phone', customerPhone]);
-      fieldRow(['Email', customerEmail], null);
+      fieldGrid([['Name', customerName], ['Phone', customerPhone], ['Email', customerEmail]]);
       y += GAP.section - GAP.row;
 
       // Work Order Details (only for work order estimates) - same two columns as the sections above
       if (isWorkOrderEstimate && workOrderId) {
         sectionHeading('Work Order Details');
-        fieldRow(['Work Order ID', workOrderId], ['Category', workOrderCategory]);
-        fieldRow(['Subcategory', workOrderSubcategory], ['Priority', String(workOrderPriority || '').toUpperCase()]);
+        fieldGrid([
+          ['Work Order ID', workOrderId], ['Category', workOrderCategory],
+          ['Subcategory', workOrderSubcategory], ['Priority', String(workOrderPriority || '').toUpperCase()]
+        ]);
         y += GAP.section - GAP.row;
       }
 
@@ -270,7 +281,7 @@ const generateEstimatePDF = async (estimate) => {
         { label: 'Frequency', width: 74, align: 'left' },
         { label: 'Visits', width: 40, align: 'right' },
         { label: 'Qty', width: 34, align: 'right' },
-        { label: 'Price (₹)', width: 77, align: 'right' }
+        { label: 'Price (Rs.)', width: 77, align: 'right' }
       ];
       const CELL_PAD = 8;
       const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
@@ -324,7 +335,7 @@ const generateEstimatePDF = async (estimate) => {
       // Billing Duration - on the grid, like every other field
       const billingValue = billingDuration || billing_duration || 'Yearly';
       const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-      fieldRow(['Billing', formattedBilling], null);
+      fieldGrid([['Billing', formattedBilling]]);
       y += GAP.section - GAP.row;
 
       if (!isWOEstimate && svcList.length > 0) {
@@ -966,9 +977,9 @@ const generateReceiptPDF = async (payment) => {
       doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold')
          .text('✓', margin + 12, yPos + 10);
 
-      // "You paid ₹X,XXX" heading
+      // "You paid Rs. X,XXX" heading
       doc.fillColor(darkGray).fontSize(22).font('Helvetica-Bold')
-         .text(`You paid ₹${amountPaid.toLocaleString('en-IN')}`, margin + 50, yPos + 8);
+         .text(`You paid Rs. ${amountPaid.toLocaleString('en-IN')}`, margin + 50, yPos + 8);
 
       // "to Company Name on Date"
       doc.fillColor(lightGray).fontSize(12).font('Helvetica')
@@ -997,13 +1008,13 @@ const generateReceiptPDF = async (payment) => {
       addDetailRow('Invoice no.', invoiceId || paymentId, blue);
 
       // Invoice amount (total)
-      addDetailRow('Invoice amount', `₹${totalInvoice.toLocaleString('en-IN')}`);
+      addDetailRow('Invoice amount', `Rs. ${totalInvoice.toLocaleString('en-IN')}`);
 
       // Amount paid
-      addDetailRow('Amount paid', `₹${amountPaid.toLocaleString('en-IN')}`, darkGray, true);
+      addDetailRow('Amount paid', `Rs. ${amountPaid.toLocaleString('en-IN')}`, darkGray, true);
 
       // Remaining balance
-      const balanceText = remaining <= 0 ? '₹0' : `₹${remaining.toLocaleString('en-IN')}`;
+      const balanceText = remaining <= 0 ? 'Rs. 0' : `Rs. ${remaining.toLocaleString('en-IN')}`;
       const balanceColor = remaining <= 0 ? green : '#ef4444';
       addDetailRow('Remaining balance', balanceText, balanceColor, true);
 
