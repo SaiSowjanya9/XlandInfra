@@ -132,7 +132,15 @@ const drawPDFHeader = (doc, margin) => {
 // leaves nowhere for two facing blocks. Mirrors drawEstimateLetterhead in
 // admin-portal/src/utils/pdfExport.js, so a downloaded estimate and an emailed one are the same
 // document.
-// The portal's warm palette (`admin-portal/tailwind.config.js`), which the estimate is drawn in
+/** Figures read the same on every document: grouped the Indian way, paise only where they exist. */
+const money = value => Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+/** Dates read the same on every document: 29 Sep 2026, in IST. */
+const formatDocumentDate = (value) => (value
+  ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
+  : '-');
+
+// The portal's warm palette (`admin-portal/tailwind.config.js`), which every document is drawn in
 const WARM = {
   section: '#FFF9EE',
   accentSoft: '#FEF3E2',
@@ -169,12 +177,17 @@ const drawContactIcon = (doc, kind, x, y, size) => {
   }
 };
 
-const drawEstimateLetterhead = (doc, margin, estimate) => {
+/**
+ * The letterhead every customer-facing document opens with -- estimate, invoice and receipt alike,
+ * so a customer who receives all three receives one house style rather than three.
+ *
+ * `party` is the card facing the company: `{ title, name, rows }`. `meta` is the ruled strip's
+ * fields, `[label, value]`, shared out evenly across the width.
+ */
+const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
   const pageWidth = 595;
   const gold = '#C9A227';
   const labelGray = '#6b7280';
-  const date = new Date(estimate.createdAt || Date.now())
-    .toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
   // Gold rule across the head of the page
   doc.rect(0, 0, pageWidth, 6).fill(gold);
@@ -263,20 +276,14 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
   });
   const companyBottom = lineY;
 
-  // --- Right: BILL TO ---
+  // --- Right: the party the document is addressed to ---
   const boxWidth = 200;
   const boxX = pageWidth - margin - boxWidth;
   const capHeight = 16;
-  const rows = [
-    ['Phone', estimate.customerPhone],
-    ['Email', estimate.customerEmail],
-    ['Property', estimate.propertyName],
-    ['Prop ID', estimate.propertyCode],
-    ['City', estimate.city]
-  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const rows = (party.rows || []).filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   // Measured before anything is drawn, so the box is exactly as tall as its contents
-  const nameText = decodeHtml(String(estimate.customerName || '-'));
+  const nameText = decodeHtml(String(party.name || '-'));
   doc.fontSize(9.5).font('Helvetica-Bold');
   const nameHeight = doc.heightOfString(nameText, { width: boxWidth - 16 });
   doc.fontSize(7).font('Helvetica');
@@ -288,7 +295,7 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
   doc.strokeColor(WARM.border).lineWidth(0.5)
      .moveTo(boxX, logoY + capHeight).lineTo(boxX + boxWidth, logoY + capHeight).stroke();
   doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#8A6D12')
-     .text('BILL TO', boxX + 10, logoY + 5.5, { characterSpacing: 1.4, lineBreak: false });
+     .text(String(party.title || 'Bill To').toUpperCase(), boxX + 10, logoY + 5.5, { characterSpacing: 1.4, lineBreak: false });
 
   let rowY = logoY + capHeight + 10;
   doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#111827')
@@ -311,18 +318,12 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
   doc.moveTo(margin, y).lineTo(pageWidth - margin, y).stroke();
   doc.moveTo(margin, y + stripHeight).lineTo(pageWidth - margin, y + stripHeight).stroke();
 
-  // The strip does not announce the word ESTIMATE -- what the document is is not in doubt -- so
-  // its four fields share the width evenly instead of crowding to the left of it.
-  const billing = String(estimate.billingDuration || estimate.billing_duration || 'Yearly');
-  const estimateType = String(estimate.estimateType || '-').replace(/_/g, ' ');
+  // The strip does not announce what the document is -- that is never in doubt -- so its fields
+  // share the width evenly instead of crowding to the left of a label.
   const stripWidth = pageWidth - margin * 2;
-  const fieldWidth = (stripWidth - 32) / 4;
-  const fields = [
-    ['ESTIMATE NO.', estimate.estimateId || '-'],
-    ['DATE', date],
-    ['TYPE', estimateType.charAt(0).toUpperCase() + estimateType.slice(1)],
-    ['BILLING', billing.charAt(0).toUpperCase() + billing.slice(1).replace('-', ' ')]
-  ].map(([label, value], index) => [label, value, margin + 16 + index * fieldWidth, fieldWidth - 10]);
+  const stated = meta.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const fieldWidth = (stripWidth - 32) / Math.max(stated.length, 1);
+  const fields = stated.map(([label, value], index) => [label, value, margin + 16 + index * fieldWidth, fieldWidth - 10]);
   fields.forEach(([label, value, x, width]) => {
     doc.fontSize(5.5).font('Helvetica').fillColor(labelGray)
        .text(label, x, y + 7, { width, characterSpacing: 0.4, lineBreak: false });
@@ -333,6 +334,172 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
 
   doc.font('Helvetica');
   return y + stripHeight + 18;
+};
+
+/** The letterhead an estimate opens with: the customer in BILL TO, the estimate named in the strip. */
+const drawEstimateLetterhead = (doc, margin, estimate) => {
+  const billing = String(estimate.billingDuration || estimate.billing_duration || 'Yearly');
+  const estimateType = String(estimate.estimateType || '-').replace(/_/g, ' ');
+  const sentence = text => String(text).charAt(0).toUpperCase() + String(text).slice(1);
+  return drawLetterhead(doc, margin, {
+    party: {
+      title: 'Bill To',
+      name: estimate.customerName,
+      rows: [
+        ['Phone', estimate.customerPhone],
+        ['Email', estimate.customerEmail],
+        ['Property', estimate.propertyName],
+        ['Prop ID', estimate.propertyCode],
+        ['City', estimate.city]
+      ]
+    },
+    meta: [
+      ['ESTIMATE NO.', estimate.estimateId || '-'],
+      ['DATE', formatDocumentDate(estimate.createdAt)],
+      ['TYPE', sentence(estimateType)],
+      ['BILLING', sentence(billing.replace('-', ' '))]
+    ]
+  });
+};
+
+const PAGE = { width: 595, bottom: 772 };
+const CONTENT = PAGE.width - 100;                          // A4 less a 50pt margin either side
+const DOC_GAP = { heading: 17, row: 7, section: 14 };
+const stated = field => Array.isArray(field) && field[1] !== undefined && field[1] !== null && field[1] !== '';
+
+/** A section's name, in warm text, with air beneath it before whatever it introduces. */
+const drawSectionHeading = (doc, y, text, margin = 50) => {
+  doc.fontSize(10).fillColor(WARM.text).font('Helvetica-Bold').text(text, margin, y, { lineBreak: false });
+  return y + DOC_GAP.heading;
+};
+
+/**
+ * A section's fields as a ruled table: the label in a cream cell, its value in the white cell
+ * beside it, two pairs to a line, so the block lines up with the items table under it. `wide` rows
+ * -- an address, a description -- take a line of their own. Empty fields are dropped before
+ * anything is placed, so the rest close up rather than leaving a hole in mid-air.
+ */
+const drawDetailTable = (doc, y, fields, { margin = 50, wide = [] } = {}) => {
+  const pairWidth = CONTENT / 2;
+  const labelWidth = 96;
+  const pad = 6;
+  const pairs = fields.filter(stated);
+  const wideRows = wide.filter(stated);
+  if (!pairs.length && !wideRows.length) return y;
+
+  const lines = [];
+  for (let index = 0; index < pairs.length; index += 2) lines.push({ cells: pairs.slice(index, index + 2), full: false });
+  wideRows.forEach(field => lines.push({ cells: [field], full: true }));
+
+  const top = y;
+  lines.forEach(({ cells, full }) => {
+    const width = full ? CONTENT : pairWidth;
+    doc.fontSize(8).font('Helvetica-Bold');
+    const height = Math.max(18, ...cells.map(([, value]) =>
+      doc.heightOfString(decodeHtml(String(value)), { width: width - labelWidth - pad * 2 }) + pad * 2));
+
+    cells.forEach(([label, value], pair) => {
+      const x = margin + (full ? 0 : pair * pairWidth);
+      doc.rect(x, y, labelWidth, height).fillAndStroke(WARM.section, WARM.border);
+      doc.rect(x + labelWidth, y, width - labelWidth, height).fillAndStroke('#ffffff', WARM.border);
+      doc.fontSize(6.5).font('Helvetica-Bold').fillColor(WARM.muted)
+         .text(String(label).toUpperCase(), x + pad, y + pad + 1, { width: labelWidth - pad * 2, lineBreak: false });
+      doc.fontSize(8).font('Helvetica-Bold').fillColor(WARM.text)
+         .text(decodeHtml(String(value)), x + labelWidth + pad, y + pad, { width: width - labelWidth - pad * 2 });
+    });
+    // An odd last pair leaves no half-empty cell behind: the line is closed off plainly
+    if (cells.length === 1 && !full) doc.rect(margin + pairWidth, y, pairWidth, height).fillAndStroke('#ffffff', WARM.border);
+    y += height;
+  });
+  doc.rect(margin, top, CONTENT, y - top).stroke(WARM.border);
+  return y;
+};
+
+/**
+ * The items on the document: a cream header of uppercase labels, and white rows told apart by the
+ * rule between them -- never by banding, which made the table the loudest thing on the page. The
+ * header repeats when the table crosses a page.
+ *
+ * `columns` are `{ label, width, align }` and add up to the content width; `rows` are arrays of
+ * cell values in the same order.
+ */
+const drawItemsTable = (doc, y, { columns, rows, margin = 50 }) => {
+  const pad = 8;
+  const edges = columns.reduce((all, column) => [...all, all[all.length - 1] + column.width], [margin]);
+  const cellWidth = index => columns[index].width - pad * 2;
+
+  const header = () => {
+    doc.rect(margin, y, CONTENT, 20).fillAndStroke(WARM.section, WARM.border);
+    doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.muted);
+    columns.forEach((column, index) => doc.text(String(column.label).toUpperCase(), edges[index] + pad, y + 7,
+      { width: cellWidth(index), align: column.align || 'left', lineBreak: false, ellipsis: false }));
+    y += 20;
+  };
+
+  header();
+  rows.forEach(cells => {
+    doc.fontSize(8).font('Helvetica');
+    const height = Math.max(24, ...cells.map((text, column) =>
+      doc.heightOfString(String(text), { width: cellWidth(column) }) + pad * 2));
+    if (y + height > PAGE.bottom - 60) { doc.addPage(); y = margin; header(); }
+    doc.rect(margin, y, CONTENT, height).fillAndStroke('#ffffff', WARM.border);
+    doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
+    cells.forEach((text, column) => doc.text(String(text), edges[column] + pad, y + pad,
+      { width: cellWidth(column), align: columns[column].align || 'left' }));
+    y += height;
+  });
+  return y + DOC_GAP.row;
+};
+
+/**
+ * The money, in a card against the right edge: the figures line up on one edge, the labels on
+ * another, and the total is ruled off on the tan accent so it is the last thing the eye lands on.
+ * Dark text on the tan -- white on it does not meet contrast.
+ */
+const drawSummaryCard = (doc, y, { rows = [], total, caption = 'Price Summary', margin = 50 }) => {
+  const width = 205;
+  const x = margin + CONTENT - width;
+  const capHeight = 16;
+  const rowHeight = 15;
+  const totalHeight = 24;
+  if (y + capHeight + rows.length * rowHeight + 6 + totalHeight > PAGE.bottom - 16) { doc.addPage(); y = margin; }
+
+  doc.rect(x, y, width, capHeight + rows.length * rowHeight + 6).fillAndStroke('#ffffff', WARM.border);
+  doc.rect(x, y, width, capHeight).fill(WARM.section);
+  doc.strokeColor(WARM.border).lineWidth(0.6).moveTo(x, y + capHeight).lineTo(x + width, y + capHeight).stroke();
+  doc.fontSize(6.5).font('Helvetica-Bold').fillColor(WARM.muted)
+     .text(String(caption).toUpperCase(), x + 10, y + 5.5, { characterSpacing: 1.2, lineBreak: false });
+
+  let rowY = y + capHeight + 5;
+  rows.forEach(([label, value, colour]) => {
+    doc.fontSize(8).font('Helvetica').fillColor(WARM.muted).text(label, x + 10, rowY, { width: 110, lineBreak: false });
+    doc.font('Helvetica-Bold').fillColor(colour || WARM.text)
+       .text(value, x + 120, rowY, { width: width - 130, align: 'right', lineBreak: false });
+    rowY += rowHeight;
+  });
+
+  const totalY = y + capHeight + rows.length * rowHeight + 6;
+  doc.rect(x, totalY, width, totalHeight).fill(WARM.accent);
+  doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.text)
+     .text(String(total[0]).toUpperCase(), x + 10, totalY + 8.5, { characterSpacing: 1.4, lineBreak: false });
+  doc.fontSize(10.5).font('Helvetica-Bold').fillColor(WARM.text)
+     .text(total[1], x + 60, totalY + 7, { width: width - 70, align: 'right', lineBreak: false });
+  doc.font('Helvetica');
+  return totalY + totalHeight + DOC_GAP.section;
+};
+
+/**
+ * The footer: the company and how to reach it, centred, and nothing else. No "computer-generated
+ * document" note, no automated-mail disclaimer, no watermark -- these are documents a customer is
+ * asked to act on, and a disclaimer across one reads as though it were a draft. It stays inside the
+ * bottom margin, or PDFKit flows it onto a blank extra page.
+ */
+const drawDocumentFooter = (doc, y, margin = 50) => {
+  const footerY = PAGE.bottom;
+  if (y >= footerY - 14) return;
+  doc.strokeColor(WARM.border).lineWidth(0.5).moveTo(margin, footerY - 8).lineTo(margin + CONTENT, footerY - 8).stroke();
+  doc.fontSize(6).font('Helvetica').fillColor('#9ca3af')
+     .text(COMPANY_FOOTER_LINE, margin, footerY, { width: CONTENT, align: 'center', lineBreak: false });
 };
 
 // Generate estimate PDF and return as buffer
@@ -710,11 +877,16 @@ const generateEstimatePDF = async (estimate) => {
   });
 };
 
-// Generate invoice PDF and return as buffer - Compact Single Page Design (Image 2)
+// Generate invoice PDF and return as buffer.
+//
+// Built from the same furniture as the estimate -- `drawLetterhead`, `drawDetailTable`,
+// `drawItemsTable`, `drawSummaryCard`, `drawDocumentFooter` -- so a customer who receives an
+// estimate and then an invoice receives one house style rather than two. What it replaced was a
+// bespoke layout of gold banners, cream cards and hand-wrapped text that shared nothing with it.
 const generateInvoicePDF = async (invoice) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 0 });
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const chunks = [];
 
       doc.on('data', chunk => chunks.push(chunk));
@@ -725,468 +897,128 @@ const generateInvoicePDF = async (invoice) => {
         invoiceId, estimateId, invoiceType, customerName, customerEmail, customerPhone,
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
-        lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage, totalAmount, balanceAmount,
+        lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage,
+        totalAmount, balanceAmount, amountPaid,
         workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
-      
-      // Check if work order invoice - by invoiceType OR presence of workOrderId
-      const isWorkOrderInvoice = invoiceType === 'work_order' || (workOrderId && workOrderId.length > 0);
-      const pageWidth = 595;
-      const pageHeight = 842;
-      const margin = 40;
-      const contentWidth = pageWidth - (margin * 2);
 
-      const safeNum = (val) => {
-        const num = parseFloat(val);
-        return isNaN(num) ? 0 : Math.round(num);
-      };
-      const safeSubtotal = safeNum(subtotal);
-      const safeDiscount = safeNum(discountAmount);
-      const safeTax = safeNum(taxAmount);
-      const safeTotal = safeNum(totalAmount);
-      // A rate nobody set is 0, not 18: the figure printed must be the one the invoice carries
-      const safeTaxPercent = safeNum(taxPercentage);
+      const MARGIN = 50;
+      const figure = value => { const number = parseFloat(value); return Number.isFinite(number) ? number : 0; };
+      const rupees = value => `Rs. ${money(figure(value))}`;
+      const isWorkOrder = invoiceType === 'work_order' || !!(workOrderId && String(workOrderId).length);
 
-      // Colors per design spec (Image 2)
-      const headerBlack = '#151515';
-      const gold = '#C9A227';
-      const lightGold = '#E8C66A';
-      const primaryText = '#171717';
-      const secondaryText = '#555555';
-      const borderGray = '#E5E5E5';
-      const cardBg = '#FBF7EE';
-      const white = '#ffffff';
-
-      // Parse line items first to calculate dynamic sizing
       let items = [];
-      try {
-        items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []);
-      } catch (e) { items = []; }
-      
-      // Calculate if we need compact mode (many items)
-      const itemCount = items.length;
-      const isCompact = itemCount > 4;
+      try { items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []); } catch (error) { items = []; }
+      if (!Array.isArray(items)) items = [];
 
-      // ===== HEADER - Use shared function =====
-      let y = drawPDFHeader(doc, margin);
+      const paid = figure(amountPaid);
+      const balance = balanceAmount === undefined || balanceAmount === null ? figure(totalAmount) : figure(balanceAmount);
 
-      // ===== ID / DATE / DUE ROW (Compact) =====
-      doc.fontSize(8).fillColor(secondaryText).text('ID:', margin, y);
-      doc.fontSize(10).fillColor(primaryText).font('Helvetica-Bold').text(invoiceId || 'N/A', margin + 12, y);
-      
-      const dateX = pageWidth - margin - 100;
-      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Date:', dateX, y);
-      const invDateStr = invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(invDateStr, dateX + 28, y);
-      
-      // Estimate and Due on same line (y + 12)
-      if (estimateId) {
-        doc.fontSize(7).fillColor(gold).font('Helvetica').text(`Estimate: ${estimateId}`, margin, y + 12);
-      }
-      doc.fontSize(8).fillColor(secondaryText).font('Helvetica').text('Due:', dateX, y + 12);
-      const dueDateStr = dueDate ? new Date(dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text(dueDateStr, dateX + 28, y + 12);
-      
-      doc.font('Helvetica');
-      y += 28;
-
-      // ===== TOTAL AMOUNT DUE BANNER (Compact) =====
-      const bannerHeight = 22;
-      doc.roundedRect(margin, y, contentWidth, bannerHeight, 4).fill(gold);
-      doc.fontSize(6).fillColor(white).text('TOTAL AMOUNT DUE', pageWidth / 2 - 28, y + 4);
-      doc.fontSize(11).fillColor(white).font('Helvetica-Bold').text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, pageWidth / 2 - 30, y + 12);
-      doc.font('Helvetica');
-      y += bannerHeight + 8;
-
-      // ===== PROPERTY & CUSTOMER DETAILS (cream bg, compact) =====
-      const cardWidth = (contentWidth - 10) / 2;
-      const cardHeight = 80;
-      
-      // Property Details Card
-      doc.roundedRect(margin, y, cardWidth, cardHeight, 5).fill(cardBg);
-      
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('PROPERTY DETAILS', margin + 10, y + 8);
-      doc.font('Helvetica');
-      
-      let py = y + 20;
-      const lineH = 11;
-      doc.fontSize(7).fillColor(secondaryText);
-      doc.text(`Property ID: ${propertyCode || '-'}`, margin + 10, py); py += lineH;
-      doc.text(`Name: ${decodeHtml(propertyName) || '-'}`, margin + 10, py); py += lineH;
-      doc.text(`Type: ${propertyType || '-'}`, margin + 10, py); py += lineH;
-      doc.text(`Zone: ${zone || '-'}`, margin + 10, py); py += lineH;
-      doc.text(`City: ${city || '-'}`, margin + 10, py);
-
-      // Customer Details Card
-      const custX = margin + cardWidth + 10;
-      doc.roundedRect(custX, y, cardWidth, cardHeight, 5).fill(cardBg);
-      
-      doc.fontSize(8).fillColor(primaryText).font('Helvetica-Bold').text('CUSTOMER DETAILS', custX + 10, y + 8);
-      doc.font('Helvetica');
-      
-      let cy = y + 20;
-      doc.fontSize(7).fillColor(secondaryText);
-      doc.text(`Name: ${decodeHtml(customerName) || '-'}`, custX + 10, cy); cy += lineH;
-      doc.text(`Phone: ${customerPhone || '-'}`, custX + 10, cy); cy += lineH;
-      const emailStr = customerEmail || '-';
-      doc.text(`Email: ${emailStr.length > 30 ? emailStr.substring(0, 30) + '...' : emailStr}`, custX + 10, cy); cy += lineH;
-      doc.text(`City: ${city || '-'}`, custX + 10, cy);
-
-      y += cardHeight + 10;
-
-      // ===== WORK ORDER DETAILS (for work order invoices) =====
-      if (isWorkOrderInvoice) {
-        // Get work order details from invoice data or first line item
-        const woItem = items[0] || {};
-        const category = workOrderCategory || woItem.category || woItem.serviceCategory || '-';
-        const subcategory = workOrderSubcategory || woItem.subcategory || woItem.serviceSubcategory || '-';
-        const woDescription = decodeHtml(workOrderDescription || woItem.description || woItem.details || '');
-        
-        // Section header - no decorative line
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('WORK ORDER DETAILS', margin, y + 3, { lineBreak: false });
-        doc.font('Helvetica');
-        y += 16;
-        
-        // Work order details box - orange tinted
-        const hasDescription = woDescription && woDescription.length > 0;
-        const woBoxHeight = hasDescription && woDescription.length > 50 ? 70 : (hasDescription ? 60 : 45);
-        doc.roundedRect(margin, y, contentWidth, woBoxHeight, 4).fill('#FFF7ED').stroke('#FDBA74');
-        
-        // Three columns: Work Order ID, Category, Subcategory
-        const col1 = margin + 12;
-        const col2 = margin + 180;
-        const col3 = margin + 340;
-        
-        doc.fontSize(7).fillColor('#9A3412');
-        doc.text('Work Order ID', col1, y + 10);
-        doc.text('Category', col2, y + 10);
-        doc.text('Subcategory', col3, y + 10);
-        
-        doc.fontSize(9).fillColor('#EA580C').font('Helvetica-Bold');
-        doc.text(workOrderId || '-', col1, y + 22);
-        doc.font('Helvetica').fillColor(primaryText);
-        doc.text(category, col2, y + 22);
-        doc.text(subcategory, col3, y + 22);
-        
-        // Description row if exists - centered
-        if (hasDescription) {
-          doc.fontSize(7).fillColor('#9A3412').text('Description', margin, y + 38, { width: contentWidth, align: 'center' });
-          doc.fontSize(8).fillColor(primaryText).text(woDescription.substring(0, 100), margin, y + 50, { width: contentWidth, align: 'center' });
-        }
-        
-        y += woBoxHeight + 15;
-      }
-
-      // ===== SERVICES INCLUDED TABLE =====
-      // Filter to only include services (exclude addons)
-      const serviceItems = items.filter(item => {
-        const desc = String(item.description || item.name || '').toLowerCase();
-        const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
-        return !isAddon;
+      // ===== LETTERHEAD =====
+      // The due date is the one figure on an invoice that carries a deadline, so it is picked out
+      // in red exactly as the estimate's Valid Until is.
+      let y = drawLetterhead(doc, MARGIN, {
+        party: {
+          title: 'Bill To',
+          name: customerName,
+          rows: [
+            ['Phone', customerPhone],
+            ['Email', customerEmail],
+            ['Property', propertyName],
+            ['Prop ID', propertyCode],
+            ['City', city]
+          ]
+        },
+        meta: [
+          ['INVOICE NO.', invoiceId || '-'],
+          ['DATE', formatDocumentDate(invoiceDate)],
+          ['DUE DATE', formatDocumentDate(dueDate)],
+          ['BALANCE DUE', rupees(balance)]
+        ]
       });
-      
-      // Filter addon items
-      const addonItems = items.filter(item => {
-        if (item.type === 'addon') return true;
-        const desc = String(item.description || item.name || '').toLowerCase();
-        return desc.includes('add-on') || desc.includes('addon');
+
+      // ===== PROPERTY DETAILS =====
+      const propertyTypeLabel = { GC: 'Gated Community', APT: 'Apartment', VILLA: 'Villa', FLAT: 'Flat', PLOT: 'Plot' }[propertyType] || propertyType;
+      const propertyFields = [
+        ['Name', propertyName], ['Type', propertyTypeLabel], ['Property ID', propertyCode],
+        ['Zone', zone], ['City', city],
+        ['Billing', billingDuration ? String(billingDuration).replace('-', ' ').replace(/^./, c => c.toUpperCase()) : ''],
+        ['Estimate', estimateId]
+      ];
+      if (propertyFields.some(stated)) {
+        y = drawSectionHeading(doc, y, 'Property Details', MARGIN);
+        y = drawDetailTable(doc, y, propertyFields, { margin: MARGIN });
+        y += DOC_GAP.section;
+      }
+
+      // ===== WORK ORDER DETAILS =====
+      if (isWorkOrder) {
+        const firstItem = items[0] || {};
+        y = drawSectionHeading(doc, y, 'Work Order Details', MARGIN);
+        y = drawDetailTable(doc, y, [
+          ['Work Order ID', workOrderId],
+          ['Category', workOrderCategory || firstItem.category || firstItem.serviceCategory],
+          ['Subcategory', workOrderSubcategory || firstItem.subcategory || firstItem.serviceSubcategory]
+        ], {
+          margin: MARGIN,
+          wide: [['Description', workOrderDescription || firstItem.description || firstItem.details]]
+        });
+        y += DOC_GAP.section;
+      }
+
+      // ===== ITEMS =====
+      // One table, whatever the line is: an invoice bills for services and they are all billed the
+      // same way. The old layout split them into "Services Included" and "Add-ons" by sniffing the
+      // word "addon" out of a description, which put a service in the wrong table on a typo.
+      if (items.length) {
+        y = drawSectionHeading(doc, y, isWorkOrder ? 'Work Billed' : 'Services Billed', MARGIN);
+        y = drawItemsTable(doc, y, {
+          margin: MARGIN,
+          columns: [
+            { label: '#', width: 26 },
+            { label: 'Description', width: 199 },
+            { label: 'Frequency', width: 78 },
+            { label: 'Visits', width: 44, align: 'right' },
+            { label: 'Qty', width: 34, align: 'right' },
+            { label: 'Amount (Rs.)', width: 114, align: 'right' }
+          ],
+          rows: items.map((item, index) => {
+            const name = decodeHtml(String(item.description || item.name || item.serviceName || item.service_name || 'Service'));
+            const detail = decodeHtml(String(item.details || item.serviceDescription || ''));
+            const quantity = item.quantity ?? item.qty;
+            const amount = item.amount ?? item.totalPrice ?? item.total_price ?? item.unitPrice ?? item.unit_price ?? 0;
+            return [
+              String(index + 1),
+              [name, detail].filter(Boolean).join('\n'),
+              String(item.frequency || item.frequencyType || item.frequency_type || '-').replace(/^\d+x\s*/i, ''),
+              String(item.visits ?? item.frequencyCount ?? item.frequency_count ?? 1),
+              quantity === undefined || quantity === null || quantity === '' ? '-' : String(quantity),
+              money(figure(amount))
+            ];
+          })
+        });
+      }
+
+      // ===== SUMMARY =====
+      // Amount Paid and Balance Due appear only once something has been paid: on a fresh invoice
+      // the balance is the total, and saying so twice adds nothing.
+      const summaryRows = [['Subtotal', rupees(subtotal)]];
+      if (figure(discountAmount) > 0) {
+        summaryRows.push([`Discount (${money(figure(discountPercentage))}%)`, `- ${rupees(discountAmount)}`, '#047857']);
+      }
+      summaryRows.push([`GST (${money(figure(taxPercentage))}%)`, rupees(taxAmount)]);
+      if (paid > 0) {
+        summaryRows.push(['Amount Paid', `- ${rupees(paid)}`, '#047857']);
+        summaryRows.push(['Balance Due', rupees(balance)]);
+      }
+      y = drawSummaryCard(doc, y, {
+        margin: MARGIN,
+        caption: 'Invoice Summary',
+        rows: summaryRows,
+        total: ['Total', rupees(totalAmount)]
       });
-      
-      if (!isWorkOrderInvoice && serviceItems.length > 0) {
-        // Section header - no decorative line
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES INCLUDED', margin, y + 3, { lineBreak: false });
-        doc.font('Helvetica');
-        y += 18;
-        
-        // Table header - Gold background
-        // Column positions: # | Service | Description (centered header) | Frequency | Visits
-        const tableHeaderH = 20;
-        const colNum = margin + 8;
-        const colService = margin + 28;
-        const colServiceW = 70;
-        const colDesc = margin + 100;
-        const colDescW = 280; // Wide description column
-        const colFreq = margin + 390;
-        const colVisits = margin + 460;
-        
-        doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
-        doc.fontSize(8).fillColor(white);
-        doc.text('#', colNum, y + 6);
-        doc.text('Service', colService, y + 6);
-        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6); // Centered header
-        doc.text('Frequency', colFreq, y + 6);
-        doc.text('Visits', colVisits, y + 6);
-        y += tableHeaderH;
 
-        // Helper function to manually wrap text into lines
-        const wrapText = (text, maxCharsPerLine) => {
-          const words = text.split(' ');
-          const lines = [];
-          let currentLine = '';
-          
-          words.forEach(word => {
-            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
-              currentLine = (currentLine + ' ' + word).trim();
-            } else {
-              if (currentLine) lines.push(currentLine);
-              currentLine = word;
-            }
-          });
-          if (currentLine) lines.push(currentLine);
-          return lines;
-        };
-
-        // Table rows - with full description wrapping to multiple lines
-        // Check for page break and add new page if needed
-        const checkPageBreak = (neededHeight) => {
-          const reservedForSummary = 150; // Space for price summary + footer
-          if (y + neededHeight > pageHeight - reservedForSummary) {
-            doc.addPage();
-            y = margin;
-            // Redraw table header on new page
-            doc.rect(margin, y, contentWidth, tableHeaderH).fill(gold);
-            doc.fontSize(8).fillColor(white);
-            doc.text('#', colNum, y + 6);
-            doc.text('Service', colService, y + 6);
-            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
-            doc.text('Frequency', colFreq, y + 6);
-            doc.text('Visits', colVisits, y + 6);
-            y += tableHeaderH;
-          }
-        };
-
-        serviceItems.forEach((item, idx) => {
-          // Get service name from dedicated name field first
-          const serviceName = decodeHtml(item.name || item.serviceName || item.service_name || 'Service');
-          
-          // Get description from all possible fields - prioritize dedicated description fields
-          let serviceDesc = decodeHtml(
-            item.details || 
-            item.service_description || 
-            item.serviceDescription || 
-            item.itemDescription ||
-            ''
-          );
-          
-          // If no dedicated description field, check the main description field
-          if (!serviceDesc && item.description) {
-            const fullDesc = decodeHtml(String(item.description));
-            // Only split if description starts with service name followed by " - "
-            if (fullDesc.toLowerCase().startsWith(serviceName.toLowerCase() + ' - ')) {
-              serviceDesc = fullDesc.substring(serviceName.length + 3); // Remove "ServiceName - "
-            } else if (fullDesc.toLowerCase() !== serviceName.toLowerCase()) {
-              // Use full description if it's different from the name
-              serviceDesc = fullDesc;
-            }
-          }
-          
-          if (!serviceDesc) serviceDesc = '-';
-          
-          const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
-          const visits = item.visits || item.frequencyCount || item.quantity || 1;
-          
-          console.log(`[PDF-v3] Row ${idx + 1}: name="${serviceName}", desc="${serviceDesc}"`);
-          
-          // Manually wrap description text into lines (45 chars per line)
-          const descLines = wrapText(serviceDesc, 50);
-          const lineHeight = 9;
-          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
-          
-          // Check if we need a page break before this row
-          checkPageBreak(rowH);
-          
-          // Draw row background
-          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
-          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
-          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
-          
-          // Draw # column
-          doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
-          
-          // Draw Service name
-          doc.text(serviceName, colService, y + 6, { width: colServiceW, lineBreak: false });
-          
-          // Draw Description - each line manually, centered in the description column
-          doc.fillColor(secondaryText);
-          let descY = y + 6;
-          descLines.forEach((line, lineIdx) => {
-            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
-          });
-          
-          // Draw Frequency and Visits (top-aligned)
-          doc.fillColor(primaryText);
-          doc.text(freq, colFreq, y + 6, { lineBreak: false });
-          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
-          
-          y += rowH;
-        });
-
-        y += 15;
-      }
-
-      // ===== ADD-ONS TABLE =====
-      if (!isWorkOrderInvoice && addonItems.length > 0) {
-        // Section header
-        doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('SERVICES', margin, y + 3, { lineBreak: false });
-        doc.font('Helvetica');
-        y += 18;
-        
-        // Table header - Purple background for addons
-        const tableHeaderH = 20;
-        const colNum = margin + 8;
-        const colAddon = margin + 28;
-        const colAddonW = 70;
-        const colDesc = margin + 100;
-        const colDescW = 220; // Description column
-        const colFreq = margin + 330;
-        const colVisits = margin + 400;
-        const colPrice = margin + 450;
-        
-        const addonGold = '#c9a227';
-        doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
-        doc.fontSize(8).fillColor(white);
-        doc.text('#', colNum, y + 6);
-        doc.text('Service', colAddon, y + 6);
-        doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
-        doc.text('Frequency', colFreq, y + 6);
-        doc.text('Visits', colVisits, y + 6);
-        doc.text('Price', colPrice, y + 6);
-        y += tableHeaderH;
-
-        // Helper function to wrap text
-        const wrapAddonText = (text, maxCharsPerLine) => {
-          const words = text.split(' ');
-          const lines = [];
-          let currentLine = '';
-          
-          words.forEach(word => {
-            if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
-              currentLine = (currentLine + ' ' + word).trim();
-            } else {
-              if (currentLine) lines.push(currentLine);
-              currentLine = word;
-            }
-          });
-          if (currentLine) lines.push(currentLine);
-          return lines;
-        };
-
-        // Check page break function for addons
-        const checkAddonPageBreak = (neededHeight) => {
-          const reservedForSummary = 150;
-          if (y + neededHeight > pageHeight - reservedForSummary) {
-            doc.addPage();
-            y = margin;
-            doc.rect(margin, y, contentWidth, tableHeaderH).fill(addonGold);
-            doc.fontSize(8).fillColor(white);
-            doc.text('#', colNum, y + 6);
-            doc.text('Service', colAddon, y + 6);
-            doc.text('Description', colDesc + (colDescW / 2) - 25, y + 6);
-            doc.text('Frequency', colFreq, y + 6);
-            doc.text('Visits', colVisits, y + 6);
-            doc.text('Price', colPrice, y + 6);
-            y += tableHeaderH;
-          }
-        };
-
-        addonItems.forEach((item, idx) => {
-          // Parse addon name and description
-          const fullDesc = decodeHtml(item.description || item.name || 'Service');
-          let addonName = fullDesc;
-          let addonDesc = '-';
-          
-          if (fullDesc.includes(' - ')) {
-            const parts = fullDesc.split(' - ');
-            addonName = parts[0];
-            addonDesc = parts.slice(1).join(' - ') || '-';
-          }
-          
-          const freq = item.frequency || item.frequencyType || item.billingDuration || '-';
-          const visits = item.visits || item.frequencyCount || item.quantity || 1;
-          const price = parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0);
-          
-          const descLines = wrapAddonText(addonDesc, 40);
-          const lineHeight = 9;
-          const rowH = Math.max(22, (descLines.length * lineHeight) + 10);
-          
-          checkAddonPageBreak(rowH);
-          
-          const rowColor = idx % 2 === 0 ? '#FAFAFA' : white;
-          doc.rect(margin, y, contentWidth, rowH).fill(rowColor);
-          doc.rect(margin, y, contentWidth, rowH).lineWidth(0.3).stroke(borderGray);
-          
-          doc.fontSize(7).fillColor(primaryText);
-          doc.text(`${idx + 1}`, colNum, y + 6, { lineBreak: false });
-          doc.text(addonName.substring(0, 15), colAddon, y + 6, { width: colAddonW, lineBreak: false });
-          
-          doc.fillColor(secondaryText);
-          let descY = y + 6;
-          descLines.forEach((line, lineIdx) => {
-            doc.text(line, colDesc, descY + (lineIdx * lineHeight), { width: colDescW, align: 'center', lineBreak: false });
-          });
-          
-          doc.fillColor(primaryText);
-          doc.text(freq, colFreq, y + 6, { lineBreak: false });
-          doc.text(`${visits}`, colVisits, y + 6, { lineBreak: false });
-          doc.text(`Rs.${price.toLocaleString('en-IN')}`, colPrice, y + 6, { lineBreak: false });
-          
-          y += rowH;
-        });
-
-        y += 15;
-      }
-
-      // ===== PRICE SUMMARY - Right aligned (no icon) =====
-      const summaryWidth = 170;
-      const summaryX = pageWidth - margin - summaryWidth;
-      
-      doc.fontSize(9).fillColor(primaryText).font('Helvetica-Bold').text('PRICE SUMMARY', summaryX, y + 2, { lineBreak: false });
-      doc.font('Helvetica');
-      y += 20;
-      
-      // Summary box
-      const summaryHeight = safeDiscount > 0 ? 70 : 58;
-      doc.roundedRect(summaryX, y, summaryWidth, summaryHeight, 4).lineWidth(0.5).stroke(borderGray);
-      
-      let sy = y + 12;
-      doc.fontSize(8).fillColor(secondaryText);
-      doc.text('Subtotal:', summaryX + 12, sy);
-      doc.fillColor(primaryText).text(`Rs. ${safeSubtotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
-      sy += 12;
-      
-      if (safeDiscount > 0) {
-        doc.fillColor('#059669').text(`Discount:`, summaryX + 12, sy);
-        doc.text(`-Rs. ${safeDiscount.toLocaleString('en-IN')}`, summaryX + 100, sy);
-        sy += 12;
-      }
-      
-      doc.fillColor(secondaryText).text(`GST (${safeTaxPercent}.00%):`, summaryX + 12, sy);
-      doc.fillColor(primaryText).text(`Rs. ${safeTax.toLocaleString('en-IN')}`, summaryX + 100, sy);
-      sy += 12;
-      
-      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(summaryX + 8, sy).lineTo(summaryX + summaryWidth - 8, sy).stroke();
-      sy += 10;
-      
-      doc.fontSize(9).fillColor(gold).font('Helvetica-Bold').text('Total:', summaryX + 12, sy);
-      doc.text(`Rs. ${safeTotal.toLocaleString('en-IN')}`, summaryX + 100, sy);
-      doc.font('Helvetica');
-
-      y = y + summaryHeight + 20;
-
-      // ===== FOOTER =====
-      // Ensure footer is at bottom of page
-      const footerY = Math.max(y, pageHeight - 50);
-      doc.strokeColor(borderGray).lineWidth(0.5).moveTo(margin, footerY).lineTo(pageWidth - margin, footerY).stroke();
-      
-      // Heart icon (outlined)
-      doc.circle(margin + 8, footerY + 12, 5).lineWidth(0.5).stroke(borderGray);
-      
-      doc.fontSize(8).fillColor(secondaryText).text(
-        'We appreciate your trust in our services.',
-        margin + 18, footerY + 9
-      );
-
+      drawDocumentFooter(doc, y, MARGIN);
       doc.end();
     } catch (error) {
       reject(error);
@@ -1194,7 +1026,12 @@ const generateInvoicePDF = async (invoice) => {
   });
 };
 
-// Generate Payment Receipt PDF - Simple clean design
+// Generate Payment Receipt PDF.
+//
+// The same furniture as the estimate and the invoice -- letterhead, ruled detail table, summary
+// card, footer -- so the three documents a customer receives read as one house style. What it
+// replaced was a green-and-blue layout of its own, and a footer carrying a Hyderabad address and a
+// placeholder GST number the company does not trade under.
 const generateReceiptPDF = async (payment) => {
   return new Promise((resolve, reject) => {
     try {
@@ -1206,148 +1043,79 @@ const generateReceiptPDF = async (payment) => {
       doc.on('error', reject);
 
       const {
-        paymentId,
-        invoiceId,
-        customerName,
-        propertyName,
+        paymentId, invoiceId, customerName, customerEmail, customerPhone, propertyName, propertyCode,
         amount,          // Amount paid in this transaction
         invoiceAmount,   // Total invoice amount
         balanceAmount,   // Remaining balance after this payment
-        paymentMethod,
-        paymentDate,
-        transactionReference,
-        referenceNumber,
-        status
+        paymentMethod, paymentDate, transactionReference, referenceNumber, status
       } = payment;
 
-      const margin = 50;
-      const green = '#22c55e';
-      const darkGray = '#1f2937';
-      const lightGray = '#6b7280';
-      const blue = '#3b82f6';
+      const MARGIN = 50;
+      const figure = value => { const number = parseFloat(value); return Number.isFinite(number) ? number : 0; };
+      const rupees = value => `Rs. ${money(figure(value))}`;
+      const amountPaid = figure(amount);
+      const totalInvoice = figure(invoiceAmount) || amountPaid;
+      const remaining = figure(balanceAmount);
+      const methodLabel = String(paymentMethod || '')
+        .replace(/[_-]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase()) || '-';
 
-      // Calculate values
-      const amountPaid = parseFloat(amount) || 0;
-      const totalInvoice = parseFloat(invoiceAmount) || amountPaid;
-      const remaining = parseFloat(balanceAmount) || 0;
+      // ===== LETTERHEAD =====
+      // RECEIVED FROM, not BILL TO: money has already changed hands, and a receipt acknowledges it
+      // rather than asking for it. The amount paid is the figure the reader is looking for, so it
+      // is in the strip beside the date.
+      let y = drawLetterhead(doc, MARGIN, {
+        party: {
+          title: 'Received From',
+          name: customerName,
+          rows: [
+            ['Phone', customerPhone],
+            ['Email', customerEmail],
+            ['Property', propertyName],
+            ['Prop ID', propertyCode]
+          ]
+        },
+        meta: [
+          ['RECEIPT NO.', paymentId || '-'],
+          ['DATE', formatDocumentDate(paymentDate || Date.now())],
+          ['AMOUNT PAID', rupees(amountPaid)],
+          ['STATUS', String(status || 'Paid').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())]
+        ]
+      });
 
-      // Format date
-      const paymentDateFormatted = paymentDate ? new Date(paymentDate).toLocaleDateString('en-IN', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-      }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      // ===== PAYMENT DETAILS =====
+      y = drawSectionHeading(doc, y, 'Payment Details', MARGIN);
+      y = drawDetailTable(doc, y, [
+        ['Invoice', invoiceId],
+        ['Method', methodLabel],
+        ['Transaction Ref', transactionReference],
+        ['Reference No.', referenceNumber],
+        ['Property', propertyName],
+        ['Property ID', propertyCode]
+      ], { margin: MARGIN });
+      y += DOC_GAP.section;
 
-      // Payment method labels
-      const methodLabels = {
-        razorpay: 'Card/Net Banking',
-        cash: 'Cash',
-        bank_transfer: 'Bank Transfer',
-        upi: 'UPI',
-        check: 'Cheque'
-      };
+      // ===== SUMMARY =====
+      // What the invoice came to, what this payment settled, and what is left. A receipt that
+      // states only the amount paid leaves the reader to work out whether they still owe anything.
+      const summaryRows = [
+        ['Invoice Total', rupees(totalInvoice)],
+        ['This Payment', `- ${rupees(amountPaid)}`, '#047857']
+      ];
+      y = drawSummaryCard(doc, y, {
+        margin: MARGIN,
+        caption: 'Payment Summary',
+        rows: summaryRows,
+        total: [remaining > 0 ? 'Balance Due' : 'Fully Paid', rupees(remaining)]
+      });
 
-      let yPos = margin;
+      y = drawSectionHeading(doc, y, 'Thank You', MARGIN);
+      doc.fontSize(9).font('Helvetica').fillColor('#333333')
+         .text(remaining > 0
+           ? `We have received ${rupees(amountPaid)} against invoice ${invoiceId || ''}. A balance of ${rupees(remaining)} remains outstanding.`
+           : `We have received ${rupees(amountPaid)} against invoice ${invoiceId || ''}. This invoice is now settled in full.`,
+           MARGIN, y, { width: CONTENT, lineGap: 3 });
 
-      // ========== HEADER SECTION ==========
-      // Green checkmark circle
-      doc.circle(margin + 20, yPos + 20, 18).fill(green);
-      doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold')
-         .text('✓', margin + 12, yPos + 10);
-
-      // "You paid Rs. X,XXX" heading
-      doc.fillColor(darkGray).fontSize(22).font('Helvetica-Bold')
-         .text(`You paid Rs. ${amountPaid.toLocaleString('en-IN')}`, margin + 50, yPos + 8);
-
-      // "to Company Name on Date"
-      doc.fillColor(lightGray).fontSize(12).font('Helvetica')
-         .text(`to XLAND INFRA on ${paymentDateFormatted}`, margin + 50, yPos + 35);
-
-      yPos += 80;
-
-      // Divider line
-      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
-      yPos += 30;
-
-      // ========== PAYMENT DETAILS SECTION ==========
-      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold')
-         .text('Payment details', margin, yPos);
-      yPos += 35;
-
-      // Helper function for detail rows
-      const addDetailRow = (label, value, valueColor = darkGray, isBold = false) => {
-        doc.fillColor(lightGray).fontSize(11).font('Helvetica').text(label, margin, yPos);
-        doc.fillColor(valueColor).font(isBold ? 'Helvetica-Bold' : 'Helvetica')
-           .text(value, 350, yPos, { width: 195, align: 'right' });
-        yPos += 28;
-      };
-
-      // Invoice no.
-      addDetailRow('Invoice no.', invoiceId || paymentId, blue);
-
-      // Invoice amount (total)
-      addDetailRow('Invoice amount', `Rs. ${totalInvoice.toLocaleString('en-IN')}`);
-
-      // Amount paid
-      addDetailRow('Amount paid', `Rs. ${amountPaid.toLocaleString('en-IN')}`, darkGray, true);
-
-      // Remaining balance
-      const balanceText = remaining <= 0 ? 'Rs. 0' : `Rs. ${remaining.toLocaleString('en-IN')}`;
-      const balanceColor = remaining <= 0 ? green : '#ef4444';
-      addDetailRow('Remaining balance', balanceText, balanceColor, true);
-
-      yPos += 10;
-
-      // Divider line
-      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
-      yPos += 25;
-
-      // Status
-      const statusText = remaining <= 0 ? 'Fully Paid' : 'Partially Paid';
-      addDetailRow('Status', statusText, remaining <= 0 ? green : '#f59e0b', true);
-
-      // Payment method
-      addDetailRow('Payment method', methodLabels[paymentMethod] || paymentMethod || '-');
-
-      // Reference/Transaction ID
-      if (transactionReference || referenceNumber) {
-        addDetailRow('Reference ID', transactionReference || referenceNumber);
-      }
-
-      // Receipt ID
-      addDetailRow('Receipt ID', paymentId);
-
-      // Customer/Property
-      if (customerName || propertyName) {
-        addDetailRow('Customer', customerName || propertyName);
-      }
-
-      yPos += 30;
-
-      // ========== FOOTER NOTE ==========
-      doc.fillColor(lightGray).fontSize(10).font('Helvetica')
-         .text("Please don't reply to this email, if you need any help regarding this message, please contact the business directly.", margin, yPos, { width: 495 });
-      
-      yPos += 50;
-
-      doc.fillColor(darkGray).fontSize(11).font('Helvetica')
-         .text('Thank you,', margin, yPos);
-      yPos += 18;
-      doc.fillColor(darkGray).fontSize(11).font('Helvetica-Bold')
-         .text(COMPANY.legalName, margin, yPos);
-
-      // ========== COMPANY FOOTER ==========
-      // From `companyInfo.js`, like every other customer-facing document. What stood here was a
-      // Gachibowli, Hyderabad address the company does not trade from and a GST number --
-      // 36AADCX1234A1Z5 -- that is plainly a placeholder. A made-up tax number on an invoice is
-      // worse than none, so it is gone rather than guessed at; put the real one here when it is
-      // known, and take it from `companyInfo.js` so it cannot drift again.
-      yPos = 750;
-      doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
-      yPos += 15;
-      doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
-         .text(COMPANY.addressLines.join(', '), margin, yPos, { align: 'center' });
-      yPos += 12;
-      doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, margin, yPos, { align: 'center' });
-
+      drawDocumentFooter(doc, y + 40, MARGIN);
       doc.end();
     } catch (error) {
       reject(error);

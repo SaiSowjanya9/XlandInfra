@@ -18,6 +18,16 @@ const CONTACT_ICON_CID = { phone: 'xland-icon-phone', email: 'xland-icon-email',
 const CONTACT_ICON_ATTACHMENTS = Object.entries(CONTACT_ICON_CID).map(([kind, cid]) => ({
   filename: `${kind}.png`, path: path.join(__dirname, `../assets/icons/${kind}.png`), cid
 }));
+/**
+ * The letterhead's images, ready to attach. Every document that draws the letterhead needs them --
+ * the estimate email here, the invoice email in `invoiceService` -- so the list is exported rather
+ * than written out twice: a message whose `cid:` references have no attachments behind them shows
+ * the letterhead with broken images.
+ */
+const BRAND_INLINE_IMAGES = [
+  { filename: 'xland-logo.png', path: LOGO_ICON_PATH, cid: ESTIMATE_LOGO_CID },
+  ...CONTACT_ICON_ATTACHMENTS
+];
 
 /**
  * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
@@ -1138,8 +1148,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     // The logo travels with the message rather than being hotlinked: an <img> pointing at the
     // website is blocked by default in Outlook and Gmail, which left the letterhead headless.
     attachments: [
-      { filename: 'xland-logo.png', path: LOGO_ICON_PATH, cid: ESTIMATE_LOGO_CID },
-      ...CONTACT_ICON_ATTACHMENTS,
+      ...BRAND_INLINE_IMAGES,
       ...(pdfBuffer ? [{ filename: `Estimate_${estimateId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }] : [])
     ],
     html: `
@@ -2766,6 +2775,7 @@ const sendEmail = async ({ to, subject, html, text, attachments }) => {
 };
 
 module.exports = {
+  BRAND_INLINE_IMAGES,
   sendWorkOrderNotification,
   sendWorkOrderCreatedNotification,
   sendWorkOrderCompletedNotification,
