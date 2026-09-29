@@ -483,7 +483,8 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Property Details', margin, y);
-      y += 7;
+      // A heading needs air under it: a 10pt line is ~3.5mm tall, so it was sitting on its content
+      y += 9;
 
       const propertyFields = [
         ['Name', decodeHtml(String(data.propertyName || data.communityName || ''))],
@@ -599,7 +600,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('PACKAGE DESCRIPTION', margin, y);
-      y += 4;
+      y += 6;
       
       doc.setFillColor(...cardBg);
       doc.setDrawColor(...borderLight);
@@ -715,7 +716,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(priced ? 'AMC PACKAGE - SERVICES INCLUDED' : 'SERVICES INCLUDED', margin, y);
-      y += 6;
+      y += 8;
 
       autoTable(doc, {
         startY: y,
@@ -733,7 +734,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('SERVICES', margin, y);
-      y += 6;
+      y += 8;
 
       autoTable(doc, {
         startY: y,
@@ -852,7 +853,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('NOTES', margin, y);
-      y += 6;
+      y += 8;
       
       const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2);
       doc.setTextColor(...darkText);
@@ -873,7 +874,7 @@ const generatePDF = (data, type, filename) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('TERMS & CONDITIONS', margin, y);
-      y += 6;
+      y += 8;
 
       doc.setTextColor(...darkText);
       doc.setFontSize(7.5);

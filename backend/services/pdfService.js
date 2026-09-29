@@ -380,7 +380,9 @@ const generateEstimatePDF = async (estimate) => {
       const COL_WIDTH = (CONTENT_WIDTH - COL_GUTTER * (COLUMNS - 1)) / COLUMNS;
       const COL_X = Array.from({ length: COLUMNS }, (_, index) => MARGIN + index * (COL_WIDTH + COL_GUTTER));
       const LABEL_COLOR = '#6b7280';
-      const GAP = { heading: 11, row: 7, section: 14, label: 8.5 };
+      // `heading` is the drop from a heading's top to the first thing under it. A 10pt line is
+      // about 11pt tall, so the old 11 left the heading sitting directly on its own content.
+      const GAP = { heading: 17, row: 7, section: 14, label: 8.5 };
       const pageHeight = 780;             // A4 usable height
       const money = value => Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 

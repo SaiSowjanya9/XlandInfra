@@ -1120,7 +1120,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       <td style="padding: 6px 12px; font-size: 12px; color: ${WARM.muted}; border-bottom: 1px solid ${WARM.border};">${label}</td>
       <td style="padding: 6px 12px; font-size: 12px; font-weight: 600; color: ${color}; text-align: right; border-bottom: 1px solid ${WARM.border}; white-space: nowrap;">${value}</td>
     </tr>`;
-  const sectionHeading = label => `<p style="margin: 22px 0 8px 0; color: ${WARM.text}; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px;">${label}</p>`;
+  // The bottom margin is the air under a heading, and it needs to be more than a line's leading
+  const sectionHeading = label => `<p style="margin: 24px 0 11px 0; color: ${WARM.text}; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px;">${label}</p>`;
   const servicesTable = (rows, heading) => `
     ${sectionHeading(heading)}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
