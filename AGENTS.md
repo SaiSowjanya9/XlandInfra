@@ -208,7 +208,8 @@ nothing here may be applied globally.
   typed by hand has a price and no cost, so a chart that hid it would hide real money while the
   totals that included it would report a margin approaching 100%. So the bars show it — a customer
   price, no vendor bar, and the whole of it apparently margin — and the totals leave it out. The
-  two are therefore counting different sets, which the line under the heading states outright.
+  line under the heading states the estimate count for the range and nothing more: it used to name
+  the uncosted ones too, which was a sentence of caveat above a chart that shows them plainly.
 - **XLAND cost is the markup in rupees, not the `operating_cost` field.** ₹4,000 of vendor cost at
   30% earns ₹1,200 and the customer pays ₹5,200, which is what the service form's preview has
   always called XLAND's cost (`vendorCost × markup / 100`). This panel showed `operating_cost`
