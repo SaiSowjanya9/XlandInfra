@@ -130,12 +130,15 @@ const drawPDFHeader = (doc, margin) => {
   
   // The whole lockup -- logo, company name and the PVT LTD rule under it -- is measured first and
   // then centred on the page, rather than being pinned to the left margin. PVT LTD is centred on
-  // the name above it instead of starting at the same X, which left it hanging to one side.
+  // the name above it instead of starting at the same X, which left it hanging to one side, and the
+  // two text lines are centred on the logo's own height rather than pinned near its top.
   const logoSize = 14;
+  const logoY = 2;
   const logoGap = 5;
   const pvtLtdText = 'PVT LTD';
   const lineLen = 4;
-  const gap = 0.3;
+  const gap = 0.8;
+  const mm = points => points * 0.3528;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
@@ -150,26 +153,30 @@ const drawPDFHeader = (doc, margin) => {
   // Centred, but never tighter than the page margin on a narrower page size
   const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
   const textCenterX = lockupX + logoSize + logoGap + textWidth / 2;
+  // Centred on the logo's midline, so it holds whether the text block is the taller of the two
+  const titleHeight = mm(10);
+  const suffixHeight = mm(4);
+  const suffixDrop = mm(2);
+  const blockTop = logoY + logoSize / 2 - (titleHeight + suffixDrop + suffixHeight) / 2;
 
   try {
-    doc.addImage(XLAND_LOGO_ICON, 'PNG', lockupX, 2, logoSize, logoSize);
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', lockupX, logoY, logoSize, logoSize);
   } catch (e) {
     doc.setFillColor(...gold);
-    doc.roundedRect(lockupX, 2, logoSize, logoSize, 1, 1, 'F');
+    doc.roundedRect(lockupX, logoY, logoSize, logoSize, 1, 1, 'F');
   }
 
-  // Company name - XLAND INFRA. The two lines sit either side of the strip's middle, so the text
-  // block reads level with the logo beside it rather than riding above it.
+  // Company name - XLAND INFRA, set on its baseline within the centred block
   doc.setTextColor(...gold);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('XLAND INFRA', textCenterX, 7.4, { align: 'center' });
+  doc.text('XLAND INFRA', textCenterX, blockTop + titleHeight * 0.72, { align: 'center' });
 
   // PVT LTD with a rule on each side, centred under the name
   doc.setFontSize(4);
   doc.setFont('helvetica', 'normal');
   const pvtStartX = textCenterX - pvtWidth / 2;
-  const lineY = 12;
+  const lineY = blockTop + titleHeight + suffixDrop + suffixHeight / 2;
   doc.setDrawColor(...gold);
   doc.setLineWidth(0.25);
   // Left line
@@ -286,11 +293,22 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 1, 1, 'F');
   }
 
+  // The name and its ruled suffix are one block, centred on the logo's own height rather than
+  // pinned near its top -- the two sat level with the logo's upper half, which read as though the
+  // name were floating off it. Point sizes are converted to mm, the unit this document is in.
   const textX = logoX + logoSize + logoGap;
+  const mm = points => points * 0.3528;
+  const titleHeight = mm(14);
+  const suffixHeight = mm(5.5);
+  const suffixDrop = mm(5);                               // name baseline down to the rule
+  const blockHeight = titleHeight + suffixDrop + suffixHeight;
+  const blockTop = logoY + Math.max(0, (logoSize - blockHeight) / 2);
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(26, 26, 26);
-  doc.text(COMPANY.name, textX, logoY + 6, { charSpace: nameSpacing });
+  // jsPDF sets text on its baseline, so the cap height is added to the block's top
+  doc.text(COMPANY.name, textX, blockTop + titleHeight * 0.72, { charSpace: nameSpacing });
 
   // PVT LTD, ruled on both sides and centred under the name, in the same near-black as the name
   doc.setFont('helvetica', 'normal');
@@ -299,7 +317,7 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const suffixWidth = doc.getTextWidth(COMPANY.suffix) + suffixSpacing * COMPANY.suffix.length;
   const lockupWidth = ruleLength + ruleGap + suffixWidth + ruleGap + ruleLength;
   const suffixX = textX + Math.max(0, (nameWidth - lockupWidth) / 2);
-  const ruleY = logoY + 9.5;
+  const ruleY = blockTop + titleHeight * 0.72 + suffixDrop;
   doc.setDrawColor(26, 26, 26);
   doc.setLineWidth(0.2);
   doc.line(suffixX, ruleY, suffixX + ruleLength, ruleY);

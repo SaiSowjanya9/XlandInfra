@@ -5,8 +5,11 @@ const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../util
 const path = require('path');
 
 // Logo file path - the brand mark on its own, without the typeset name, since every layout here
-// sets the name itself beside it. `logo-contract.png` is `Contract Logo.png` scaled to 314px so a
-// 1.2MB original is not embedded in every emailed PDF.
+// sets the name itself beside it. `logo-contract.png` is `Contract Logo.png` scaled to 314px, so a
+// 1.2MB original is not embedded in every emailed PDF, and with a **transparent** background: the
+// same file has to read on the estimate's white letterhead and on the invoice's black header strip.
+// A white-backed version showed as a white box on the strip, and the icon it replaced was a pale
+// rendering that all but vanished on white.
 const LOGO_PATH = path.join(__dirname, '../assets/logo-contract.png');
 
 /**
@@ -60,19 +63,23 @@ const drawPDFHeader = (doc, margin) => {
   doc.rect(0, headerHeight, 595, 2).fill(gold);
   
   // The lockup -- logo, company name and the PVT LTD rule -- is measured and then centred on the
-  // page rather than pinned to the left margin, and PVT LTD is centred on the name above it.
-  // Mirrors drawPDFHeader in admin-portal/src/utils/pdfExport.js: a downloaded estimate and an
-  // emailed one carry the same header.
+  // page rather than pinned to the left margin; PVT LTD is centred on the name above it, and the
+  // two text lines are centred on the **logo's own height** rather than pinned near its top.
+  // Mirrors drawPDFHeader in admin-portal/src/utils/pdfExport.js: an invoice or receipt downloaded
+  // from the portal and one sent by email carry the same header.
   const pageWidth = 595;
   const logoSize = 16;
+  const logoY = 3;
   const logoGap = 8;
   const lineLen = 4;
-  const gap = 0.5;
+  const gap = 1.5;
 
   doc.fontSize(10).font('Helvetica-Bold');
   const nameWidth = doc.widthOfString('XLAND INFRA');
+  const titleHeight = doc.currentLineHeight();
   doc.fontSize(4).font('Helvetica');
   const pvtLtdWidth = doc.widthOfString('PVT LTD');
+  const suffixHeight = doc.currentLineHeight();
   const pvtWidth = lineLen + gap + pvtLtdWidth + gap + lineLen;
 
   const textWidth = Math.max(nameWidth, pvtWidth);
@@ -80,24 +87,27 @@ const drawPDFHeader = (doc, margin) => {
   // Centred, but never tighter than the page margin
   const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
   const textX = lockupX + logoSize + logoGap;
+  // Centred on the logo's midline, so it holds whether the text block is the taller of the two
+  const suffixDrop = 2;
+  const blockTop = logoY + logoSize / 2 - (titleHeight + suffixDrop + suffixHeight) / 2;
 
   // Logo - small size
   try {
-    doc.image(LOGO_PATH, lockupX, 3, { width: logoSize, height: logoSize });
+    doc.image(LOGO_PATH, lockupX, logoY, { fit: [logoSize, logoSize], align: 'center', valign: 'center' });
   } catch (logoErr) {
-    doc.roundedRect(lockupX, 3, logoSize, logoSize, 1).fill(gold);
+    doc.roundedRect(lockupX, logoY, logoSize, logoSize, 1).fill(gold);
   }
 
   // Company name - XLAND INFRA, centred over the text column
   doc.fontSize(10).fillColor(gold).font('Helvetica-Bold')
-     .text('XLAND INFRA', textX, 4, { width: textWidth, align: 'center', lineBreak: false });
+     .text('XLAND INFRA', textX, blockTop, { width: textWidth, align: 'center', lineBreak: false });
 
   // PVT LTD with a rule on each side, centred under the name
   doc.fontSize(4).fillColor(gold).font('Helvetica');
   doc.strokeColor(gold).lineWidth(0.25);
 
   const pvtStartX = textX + (textWidth - pvtWidth) / 2;
-  const lineY = 15;
+  const lineY = blockTop + titleHeight + suffixDrop + suffixHeight / 2;
 
   // Left line
   doc.moveTo(pvtStartX, lineY).lineTo(pvtStartX + lineLen, lineY).stroke();
@@ -207,16 +217,27 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 2).fill(gold);
   }
 
+  // The name and its ruled suffix are one block, centred on the logo's own height rather than
+  // pinned near its top -- the two sat level with the logo's upper half, which read as though the
+  // name were floating off it.
   const textX = logoX + logoSize + logoGap;
+  doc.fontSize(14).font('Helvetica-Bold');
+  const titleHeight = doc.currentLineHeight();
+  doc.fontSize(5.5).font('Helvetica');
+  const suffixHeight = doc.currentLineHeight();
+  const suffixDrop = 5;                                   // name baseline to the rule
+  const blockHeight = titleHeight + suffixDrop + suffixHeight;
+  const blockTop = logoY + Math.max(0, (logoSize - blockHeight) / 2);
+
   doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a1a1a')
-     .text(COMPANY.name, textX, logoY + 2, { characterSpacing: 1.2, lineBreak: false });
+     .text(COMPANY.name, textX, blockTop, { characterSpacing: 1.2, lineBreak: false });
 
   // PVT LTD, ruled on both sides and centred under the name, in the same near-black as the name
   doc.fontSize(5.5).font('Helvetica').fillColor('#1a1a1a');
   const suffixWidth = doc.widthOfString(COMPANY.suffix, { characterSpacing: 1.8 });
   const lockupWidth = ruleLength + ruleGap + suffixWidth + ruleGap + ruleLength;
   const suffixX = textX + Math.max(0, (nameWidth - lockupWidth) / 2);
-  const ruleY = logoY + 22;
+  const ruleY = blockTop + titleHeight + suffixDrop;
   doc.strokeColor('#1a1a1a').lineWidth(0.4);
   doc.moveTo(suffixX, ruleY).lineTo(suffixX + ruleLength, ruleY).stroke();
   doc.text(COMPANY.suffix, suffixX + ruleLength + ruleGap, ruleY - 3, { characterSpacing: 1.8, lineBreak: false });
