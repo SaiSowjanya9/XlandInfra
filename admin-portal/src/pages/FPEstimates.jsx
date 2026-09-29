@@ -106,7 +106,7 @@ const handleDateInput = (value, setter) => {
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_3.5rem_6.5rem_2.5rem]';
+const PACKAGE_ROW_GRID = 'grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_4rem_6.5rem_4rem]';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -3573,9 +3573,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     {/* Method and Input are separate columns -- one states how the service is
                         priced, the other takes the amount -- so the row sizes its own columns. */}
                     <div className={`grid ${PACKAGE_ROW_GRID} gap-2 px-3 py-2 bg-warm-section rounded-[10px] mb-3`}>
-                      {['Service', 'Description', 'Method', 'Input', 'Frequency', 'Visits', 'Price', 'Action'].map((label, index) => (
-                        <div key={label} className={index === 6 ? 'text-right' : index === 7 ? 'text-center' : undefined}>
-                          <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider">{label}</span>
+                      {[['Service', 'text-left'], ['Description', 'text-left'], ['Method', 'text-left'], ['Input', 'text-left'],
+                        ['Frequency', 'text-left'], ['Visits', 'text-left'], ['Price', 'text-right'], ['Action', 'text-center']].map(([label, align]) => (
+                        <div key={label} className={`px-2 ${align}`}>
+                          <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider whitespace-nowrap">{label}</span>
                         </div>
                       ))}
                     </div>
@@ -3617,7 +3618,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               what its Input asks for. */}
                           <div className={row.catalogServiceId ? undefined : 'relative'}>
                             {row.catalogServiceId
-                              ? <span className="block text-xs text-warm-muted">{methodLabel(row.pricingMethod)}</span>
+                              ? <span className="block px-2 text-xs text-warm-muted">{methodLabel(row.pricingMethod)}</span>
                               : <>
                                 <select
                                   value={row.pricingMethod || ''}
