@@ -1,10 +1,13 @@
 const PDFDocument = require('pdfkit');
 const { customerEstimateData } = require('../utils/estimateData');
 const { estimateTermsLines } = require('../utils/estimateTerms');
+const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../utils/companyInfo');
 const path = require('path');
 
-// Logo file path - icon only (without text) for horizontal layout - OPTIMIZED for smaller PDF size
-const LOGO_PATH = path.join(__dirname, '../assets/logo-icon-optimized.png');
+// Logo file path - the brand mark on its own, without the typeset name, since every layout here
+// sets the name itself beside it. `logo-contract.png` is `Contract Logo.png` scaled to 314px so a
+// 1.2MB original is not embedded in every emailed PDF.
+const LOGO_PATH = path.join(__dirname, '../assets/logo-contract.png');
 
 /**
  * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
@@ -109,6 +112,200 @@ const drawPDFHeader = (doc, margin) => {
   return headerHeight + 8; // Return starting Y position for content
 };
 
+// ===== ESTIMATE LETTERHEAD =====
+// An estimate opens as a letter does: the logo, XLAND INFRA with PVT LTD ruled beneath it and the
+// company's own contact lines down the left, and BILL TO -- the customer -- facing them on the
+// right; under both, a strip naming the document, its number, date, type and billing cycle.
+// `drawPDFHeader` above is the centred brand strip, which the invoice still uses; a centred lockup
+// leaves nowhere for two facing blocks. Mirrors drawEstimateLetterhead in
+// admin-portal/src/utils/pdfExport.js, so a downloaded estimate and an emailed one are the same
+// document.
+// The portal's warm palette (`admin-portal/tailwind.config.js`), which the estimate is drawn in
+const WARM = {
+  section: '#FFF9EE',
+  accentSoft: '#FEF3E2',
+  border: '#EADFCF',
+  accent: '#D4A574',
+  text: '#1F2937',
+  muted: '#6B7280'
+};
+
+// The icon beside a contact line, drawn from primitives rather than from a glyph: Helvetica has no
+// handset or envelope, and embedding a symbol font or three PNGs for 8pt of line art is not worth
+// the bytes in a document that is emailed. Mirrors drawContactIcon in the portal's pdfExport.js.
+const drawContactIcon = (doc, kind, x, y, size) => {
+  doc.strokeColor('#C9A227').lineWidth(0.6);
+  if (kind === 'phone') {
+    // A handset: a rounded body with the earpiece slot across the top. Narrower than this and it
+    // reads as a plain bar at 7pt.
+    const width = size * 0.66;
+    const left = x + (size - width) / 2;
+    doc.roundedRect(left, y, width, size, size * 0.18).stroke();
+    doc.moveTo(left + width * 0.28, y + size * 0.19).lineTo(left + width * 0.72, y + size * 0.19).stroke();
+  } else if (kind === 'email') {
+    // An envelope: the body, and the flap folding to its middle
+    const top = y + size * 0.16;
+    const height = size * 0.68;
+    doc.roundedRect(x, top, size, height, size * 0.1).stroke();
+    doc.moveTo(x, top).lineTo(x + size / 2, top + height * 0.55).lineTo(x + size, top).stroke();
+  } else if (kind === 'website') {
+    // A globe: the sphere, its meridian and its equator
+    const radius = size / 2;
+    doc.circle(x + radius, y + radius, radius).stroke();
+    doc.ellipse(x + radius, y + radius, radius * 0.45, radius).stroke();
+    doc.moveTo(x, y + radius).lineTo(x + size, y + radius).stroke();
+  }
+};
+
+const drawEstimateLetterhead = (doc, margin, estimate) => {
+  const pageWidth = 595;
+  const gold = '#C9A227';
+  const labelGray = '#6b7280';
+  const date = new Date(estimate.createdAt || Date.now())
+    .toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+
+  // Gold rule across the head of the page
+  doc.rect(0, 0, pageWidth, 6).fill(gold);
+
+  // --- Left: the company, as one centred stack ---
+  // The logo and the name share the first line; the tagline, address and contact lines are then
+  // centred on the whole lockup rather than under the name alone, which left them adrift to the
+  // right of the logo. Everything is measured first so the block can be centred on itself.
+  const logoSize = 46;
+  const logoY = 22;
+  const logoGap = 11;
+  const ruleLength = 12;
+  const ruleGap = 4;
+  const iconSize = 7;
+  const iconGap = 12;
+
+  doc.fontSize(14).font('Helvetica-Bold');
+  const nameWidth = doc.widthOfString(COMPANY.name, { characterSpacing: 1.2 });
+  const headRowWidth = logoSize + logoGap + nameWidth;
+
+  const taglineText = String(COMPANY.tagline).toUpperCase();
+  doc.fontSize(6.5).font('Helvetica');
+  const taglineWidth = doc.widthOfString(taglineText, { characterSpacing: 0.7 });
+  doc.fontSize(7.5);
+  const addressWidths = COMPANY.addressLines.map(line => doc.widthOfString(line));
+  const contactWidths = COMPANY_CONTACT_LINES.map(([, value]) => iconGap + doc.widthOfString(String(value)));
+
+  const blockWidth = Math.max(headRowWidth, taglineWidth, ...addressWidths, ...contactWidths);
+  const centred = width => margin + (blockWidth - width) / 2;
+
+  const logoX = centred(headRowWidth);
+  try {
+    // `fit` rather than width and height: forcing a non-square icon square squashed it
+    doc.image(LOGO_PATH, logoX, logoY, { fit: [logoSize, logoSize], align: 'center', valign: 'center' });
+  } catch (logoErr) {
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 2).fill(gold);
+  }
+
+  const textX = logoX + logoSize + logoGap;
+  doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a1a1a')
+     .text(COMPANY.name, textX, logoY + 2, { characterSpacing: 1.2, lineBreak: false });
+
+  // PVT LTD, ruled on both sides and centred under the name, in the same near-black as the name
+  doc.fontSize(5.5).font('Helvetica').fillColor('#1a1a1a');
+  const suffixWidth = doc.widthOfString(COMPANY.suffix, { characterSpacing: 1.8 });
+  const lockupWidth = ruleLength + ruleGap + suffixWidth + ruleGap + ruleLength;
+  const suffixX = textX + Math.max(0, (nameWidth - lockupWidth) / 2);
+  const ruleY = logoY + 22;
+  doc.strokeColor('#1a1a1a').lineWidth(0.4);
+  doc.moveTo(suffixX, ruleY).lineTo(suffixX + ruleLength, ruleY).stroke();
+  doc.text(COMPANY.suffix, suffixX + ruleLength + ruleGap, ruleY - 3, { characterSpacing: 1.8, lineBreak: false });
+  doc.moveTo(suffixX + lockupWidth - ruleLength, ruleY).lineTo(suffixX + lockupWidth, ruleY).stroke();
+
+  doc.fontSize(6.5).font('Helvetica').fillColor(labelGray)
+     .text(taglineText, centred(taglineWidth), logoY + logoSize + 6, { characterSpacing: 0.7, lineBreak: false });
+
+  let lineY = logoY + logoSize + 18;
+  doc.fontSize(7.5);
+  COMPANY.addressLines.forEach((line, index) => {
+    doc.fillColor('#4b5563').text(line, centred(addressWidths[index]), lineY, { lineBreak: false });
+    lineY += 10;
+  });
+  COMPANY_CONTACT_LINES.forEach(([kind, value], index) => {
+    const lineX = centred(contactWidths[index]);
+    // The icon sits on the line's x-height rather than its baseline, or it floats above the text
+    drawContactIcon(doc, kind, lineX, lineY + 0.5, iconSize);
+    doc.fillColor('#4b5563').text(String(value), lineX + iconGap, lineY, { lineBreak: false });
+    lineY += 11;
+  });
+  const companyBottom = lineY;
+
+  // --- Right: BILL TO ---
+  const boxWidth = 200;
+  const boxX = pageWidth - margin - boxWidth;
+  const capHeight = 16;
+  const rows = [
+    ['Phone', estimate.customerPhone],
+    ['Email', estimate.customerEmail],
+    ['Property', estimate.propertyName],
+    ['Prop ID', estimate.propertyCode],
+    ['City', estimate.city]
+  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+  // Measured before anything is drawn, so the box is exactly as tall as its contents
+  const nameText = decodeHtml(String(estimate.customerName || '-'));
+  doc.fontSize(9.5).font('Helvetica-Bold');
+  const nameHeight = doc.heightOfString(nameText, { width: boxWidth - 16 });
+  doc.fontSize(7).font('Helvetica');
+  const rowHeights = rows.map(([, value]) => doc.heightOfString(decodeHtml(String(value)), { width: boxWidth - 62 }));
+  const bodyHeight = 10 + nameHeight + 4 + rowHeights.reduce((sum, height) => sum + height + 2, 0) + 8;
+
+  doc.rect(boxX, logoY, boxWidth, capHeight + bodyHeight).fillAndStroke('#ffffff', WARM.border);
+  doc.rect(boxX, logoY, boxWidth, capHeight).fill(WARM.accentSoft);
+  doc.strokeColor(WARM.border).lineWidth(0.5)
+     .moveTo(boxX, logoY + capHeight).lineTo(boxX + boxWidth, logoY + capHeight).stroke();
+  doc.fontSize(6.5).font('Helvetica-Bold').fillColor('#8A6D12')
+     .text('BILL TO', boxX + 10, logoY + 5.5, { characterSpacing: 1.4, lineBreak: false });
+
+  let rowY = logoY + capHeight + 10;
+  doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#111827')
+     .text(nameText, boxX + 10, rowY, { width: boxWidth - 16 });
+  rowY += nameHeight + 4;
+
+  rows.forEach(([label, value], index) => {
+    doc.fontSize(6).font('Helvetica-Bold').fillColor(labelGray)
+       .text(String(label).toUpperCase(), boxX + 10, rowY + 1, { width: 42, lineBreak: false });
+    doc.fontSize(7).font('Helvetica').fillColor('#374151')
+       .text(decodeHtml(String(value)), boxX + 52, rowY, { width: boxWidth - 62 });
+    rowY += rowHeights[index] + 2;
+  });
+
+  // --- The strip naming the document ---
+  let y = Math.max(companyBottom, logoY + capHeight + bodyHeight) + 12;
+  const stripHeight = 30;
+  doc.rect(margin, y, pageWidth - margin * 2, stripHeight).fill(WARM.section);
+  doc.strokeColor(WARM.border).lineWidth(0.6);
+  doc.moveTo(margin, y).lineTo(pageWidth - margin, y).stroke();
+  doc.moveTo(margin, y + stripHeight).lineTo(pageWidth - margin, y + stripHeight).stroke();
+
+  // The strip does not announce the word ESTIMATE -- what the document is is not in doubt -- so
+  // its four fields share the width evenly instead of crowding to the left of it.
+  const billing = String(estimate.billingDuration || estimate.billing_duration || 'Yearly');
+  const estimateType = String(estimate.estimateType || '-').replace(/_/g, ' ');
+  const stripWidth = pageWidth - margin * 2;
+  const fieldWidth = (stripWidth - 32) / 4;
+  const fields = [
+    ['ESTIMATE NO.', estimate.estimateId || '-'],
+    ['DATE', date],
+    ['TYPE', estimateType.charAt(0).toUpperCase() + estimateType.slice(1)],
+    ['BILLING', billing.charAt(0).toUpperCase() + billing.slice(1).replace('-', ' ')]
+  ].map(([label, value], index) => [label, value, margin + 16 + index * fieldWidth, fieldWidth - 10]);
+  fields.forEach(([label, value, x, width]) => {
+    doc.fontSize(5.5).font('Helvetica').fillColor(labelGray)
+       .text(label, x, y + 7, { width, characterSpacing: 0.4, lineBreak: false });
+    // One line only: the strip is a glance, and a wrapped value would push into the row below
+    doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#111827')
+       .text(String(value), x, y + 17, { width, lineBreak: false, ellipsis: true });
+  });
+
+  doc.font('Helvetica');
+  return y + stripHeight + 18;
+};
+
 // Generate estimate PDF and return as buffer
 const generateEstimatePDF = async (estimate) => {
   estimate = customerEstimateData(estimate);
@@ -153,14 +350,18 @@ const generateEstimatePDF = async (estimate) => {
       const safeGstPercent = safeNum(gstPercent);
       const safeTotal = safeNum(total);
 
-      // Colors
+      // Colors. The estimate is drawn in the portal's warm palette (`tailwind.config.js`), so it
+      // reads the same on paper as it does on screen: cream section bars, warm rules, the tan
+      // accent on the total. `navy` is kept as the name every heading is set in, but it is the
+      // warm text colour now -- nothing in an estimate is slate blue.
       const black = '#1a1a1a';
       const gold = '#d4a84b';
-      const navy = '#1e3a5f';
-      const lightGray = '#f8f9fa';
+      const navy = WARM.text;
+      const lightGray = WARM.section;
 
-      // ===== HEADER - Use shared function =====
-      let y = drawPDFHeader(doc, 50);
+      // ===== HEADER =====
+      // The letterhead: company left, BILL TO right, and the strip naming the estimate under both
+      let y = drawEstimateLetterhead(doc, 50, estimate);
 
       // ===== LAYOUT GRID =====
       // One grid and one set of gaps for the whole document. Every label sits on one of two column
@@ -183,66 +384,78 @@ const generateEstimatePDF = async (estimate) => {
         y += GAP.heading;
       };
 
-      // A field is its label with its value underneath, both confined to one column, so a value
-      // that wraps can never run into the column beside it. Returns the height it used.
-      const drawField = (label, value, x, width) => {
-        const text = decodeHtml(String(value));
-        doc.fontSize(7.5).font('Helvetica').fillColor(LABEL_COLOR).text(label.toUpperCase(), x, y, { width, lineBreak: false });
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#333333').text(text, x, y + GAP.label, { width });
-        return GAP.label + doc.heightOfString(text, { width });
-      };
-
-      // The fields of a section, flowed across the columns in order. Empty ones are dropped before
-      // anything is placed, so a missing Division or Property ID no longer leaves a hole with the
-      // next field stranded on the far side of the page -- they simply close up.
-      const fieldGrid = (fields) => {
+      /**
+       * A section's fields as a ruled table: the label in a cream cell, its value in the white
+       * cell beside it, two pairs to a line. Every cell is on the same grid, so the block lines up
+       * with the services table under it. It replaces the floating label-over-value grid, where
+       * each field found its own baseline and a missing one left a hole in mid-air.
+       *
+       * A value too long for half the width -- an address -- is passed as `wide` and takes a line
+       * of its own. Empty fields are dropped before anything is placed, so the rest close up.
+       */
+      const PAIR_WIDTH = CONTENT_WIDTH / 2;
+      const LABEL_WIDTH = 96;
+      const CELL_PADDING = 6;
+      const detailTable = (fields, { wide = [] } = {}) => {
         const present = fields.filter(field => Array.isArray(field) && field[1] !== undefined && field[1] !== null && field[1] !== '');
-        for (let index = 0; index < present.length; index += COLUMNS) {
-          const line = present.slice(index, index + COLUMNS);
-          const used = line.reduce((tallest, [label, value], column) =>
-            Math.max(tallest, drawField(label, value, COL_X[column], COL_WIDTH)), 0);
-          y += used + GAP.row;
-        }
+        const wideRows = wide.filter(field => Array.isArray(field) && field[1] !== undefined && field[1] !== null && field[1] !== '');
+        if (!present.length && !wideRows.length) return;
+
+        const lines = [];
+        for (let index = 0; index < present.length; index += 2) lines.push(present.slice(index, index + 2));
+        wideRows.forEach(field => lines.push([field]));
+
+        const top = y;
+        lines.forEach((line, lineIndex) => {
+          const full = line.length === 1 && lineIndex >= Math.ceil(present.length / 2);
+          const valueWidth = (full ? CONTENT_WIDTH : PAIR_WIDTH) - LABEL_WIDTH - CELL_PADDING * 2;
+          doc.fontSize(8).font('Helvetica-Bold');
+          const height = Math.max(18, ...line.map(([, value]) =>
+            doc.heightOfString(decodeHtml(String(value)), { width: valueWidth }) + CELL_PADDING * 2));
+
+          line.forEach(([label, value], pair) => {
+            const x = MARGIN + (full ? 0 : pair * PAIR_WIDTH);
+            const width = full ? CONTENT_WIDTH : PAIR_WIDTH;
+            doc.rect(x, y, LABEL_WIDTH, height).fillAndStroke(WARM.section, WARM.border);
+            doc.rect(x + LABEL_WIDTH, y, width - LABEL_WIDTH, height).fillAndStroke('#ffffff', WARM.border);
+            doc.fontSize(6.5).font('Helvetica-Bold').fillColor(LABEL_COLOR)
+               .text(String(label).toUpperCase(), x + CELL_PADDING, y + CELL_PADDING + 1,
+                 { width: LABEL_WIDTH - CELL_PADDING * 2, lineBreak: false });
+            doc.fontSize(8).font('Helvetica-Bold').fillColor(WARM.text)
+               .text(decodeHtml(String(value)), x + LABEL_WIDTH + CELL_PADDING, y + CELL_PADDING,
+                 { width: width - LABEL_WIDTH - CELL_PADDING * 2 });
+          });
+          // An odd last pair leaves no half-empty cell behind: the line is closed off plainly
+          if (line.length === 1 && !full) {
+            doc.rect(MARGIN + PAIR_WIDTH, y, PAIR_WIDTH, height).fillAndStroke('#ffffff', WARM.border);
+          }
+          y += height;
+        });
+        // One outline around the whole block, so the inner rules read as a grid rather than boxes
+        doc.rect(MARGIN, top, CONTENT_WIDTH, y - top).stroke(WARM.border);
       };
 
-      // A value too long for half the page -- an address, a note -- spans both columns
-      const wideField = (label, value) => {
-        if (value === undefined || value === null || value === '') return;
-        y += drawField(label, value, MARGIN, CONTENT_WIDTH) + GAP.row;
-      };
-
-      const dateStr = new Date(createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-      // The date sits in the last column, so it reads down the right edge of the page
-      const headerHeight = Math.max(
-        drawField('Estimate No.', estimateId || 'N/A', COL_X[0], COL_WIDTH),
-        drawField('Date', dateStr, COL_X[COLUMNS - 1], COL_WIDTH)
-      );
-      y += headerHeight + GAP.section;
-
+      // The estimate number and date are in the letterhead strip above, and the customer is in
+      // BILL TO beside it, so neither is stated again here.
       const propTypeLabel = { 'GC': 'Gated Community', 'APT': 'Apartment', 'VILLA': 'Villa', 'PLOT': 'Plot' }[propertyType] || propertyType;
 
       sectionHeading('Property Details');
-      fieldGrid([
+      detailTable([
         ['Name', propertyName], ['Type', propTypeLabel], ['Property ID', propertyCode],
         ['Zone', zone], ['Division', division], ['City', city],
         ['Blocks', numberOfBlocks], ['Total Units', totalUnits],
         ['Tower / Building', towerName], ['Block Number', blockNumber], ['Villa / Plot Number', villaPlotNumber]
-      ]);
-      wideField('Address', address);
-      y += GAP.section - GAP.row;
-
-      sectionHeading('Customer Details');
-      fieldGrid([['Name', customerName], ['Phone', customerPhone], ['Email', customerEmail]]);
-      y += GAP.section - GAP.row;
+      ], { wide: [['Address', address]] });
+      y += GAP.section;
 
       // Work Order Details (only for work order estimates) - same two columns as the sections above
       if (isWorkOrderEstimate && workOrderId) {
         sectionHeading('Work Order Details');
-        fieldGrid([
+        detailTable([
           ['Work Order ID', workOrderId], ['Category', workOrderCategory],
           ['Subcategory', workOrderSubcategory], ['Priority', String(workOrderPriority || '').toUpperCase()]
         ]);
-        y += GAP.section - GAP.row;
+        y += GAP.section;
       }
 
       // Package Description - the panel is as tall as the text measures, not a guess from its length
@@ -278,8 +491,9 @@ const generateEstimatePDF = async (estimate) => {
         { label: '#', width: 22, align: 'left' },
         { label: 'Service', width: 104, align: 'left' },
         { label: 'Description', width: 144, align: 'left' },
-        { label: 'Frequency', width: 74, align: 'left' },
-        { label: 'Visits', width: 40, align: 'right' },
+        { label: 'Frequency', width: 70, align: 'left' },
+        // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
+        { label: 'Visits', width: 44, align: 'right' },
         { label: 'Qty', width: 34, align: 'right' },
         { label: 'Price (Rs.)', width: 77, align: 'right' }
       ];
@@ -287,11 +501,13 @@ const generateEstimatePDF = async (estimate) => {
       const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
       const cellWidth = index => TABLE_COLS[index].width - CELL_PAD * 2;
 
+      // The cream skin the portal's services table is drawn in: a warm section bar with muted
+      // labels, warm rules between the rows, and figures in warm text
       const drawTableHeader = () => {
-        doc.rect(MARGIN, y, CONTENT_WIDTH, 20).fill(navy);
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#ffffff');
-        TABLE_COLS.forEach((col, index) => doc.text(col.label, COL_EDGES[index] + CELL_PAD, y + 6.5,
-          { width: cellWidth(index), align: col.align, lineBreak: false }));
+        doc.rect(MARGIN, y, CONTENT_WIDTH, 20).fillAndStroke(WARM.section, WARM.border);
+        doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.muted);
+        TABLE_COLS.forEach((col, index) => doc.text(col.label.toUpperCase(), COL_EDGES[index] + CELL_PAD, y + 7,
+          { width: cellWidth(index), align: col.align, lineBreak: false, ellipsis: false }));
         y += 20;
       };
 
@@ -303,8 +519,8 @@ const generateEstimatePDF = async (estimate) => {
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
           if (y + height > pageHeight) { doc.addPage(); y = MARGIN; drawTableHeader(); }
-          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fill(index % 2 === 0 ? lightGray : '#ffffff');
-          doc.fontSize(8).font('Helvetica').fillColor('#333333');
+          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fillAndStroke(index % 2 === 0 ? '#FFFCF6' : '#ffffff', WARM.border);
+          doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
           cells.forEach((text, column) => doc.text(String(text), COL_EDGES[column] + CELL_PAD, y + CELL_PAD,
             { width: cellWidth(column), align: TABLE_COLS[column].align }));
           y += height;
@@ -332,14 +548,10 @@ const generateEstimatePDF = async (estimate) => {
       const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
       const isWOEstimate = isWorkOrderEstimate || hasWorkOrderId || estimateType === 'work_order';
       
-      // Billing Duration - on the grid, like every other field
-      const billingValue = billingDuration || billing_duration || 'Yearly';
-      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-      fieldGrid([['Billing', formattedBilling]]);
-      y += GAP.section - GAP.row;
+      // Billing is stated in the letterhead strip, so it is not repeated here
 
       if (!isWOEstimate && svcList.length > 0) {
-        sectionHeading('Services Included');
+        sectionHeading('AMC Package - Services Included');
         // A package's services are covered by the package price, so no per-row price is stated
         drawServicesTable(svcList.map(item => tableRow(item, { priced: false })));
       }
@@ -380,29 +592,47 @@ const generateEstimatePDF = async (estimate) => {
       }
       
       // ===== PRICE SUMMARY =====
-      // A money block reads down its own right edge: the figures line up on one edge, the labels on
-      // another, and the total is ruled off above so it is the last thing the eye lands on.
-      sectionHeading('Price Summary');
-
-      const SUMMARY_WIDTH = 230;
+      // A money block reads down its own right edge: the figures line up on one edge, the labels
+      // on another, and the total is ruled off in black so it is the last thing the eye lands on.
+      const SUMMARY_WIDTH = 205;
       const SUMMARY_X = MARGIN + CONTENT_WIDTH - SUMMARY_WIDTH;
-      const SUMMARY_LABEL_WIDTH = 120;
-      const summaryLine = (label, value, strong = false) => {
-        doc.fontSize(strong ? 10 : 9).font(strong ? 'Helvetica-Bold' : 'Helvetica').fillColor(strong ? navy : LABEL_COLOR)
-           .text(label, SUMMARY_X, y, { width: SUMMARY_LABEL_WIDTH, lineBreak: false });
-        doc.font('Helvetica-Bold').fillColor(strong ? navy : '#333333')
-           .text(value, SUMMARY_X + SUMMARY_LABEL_WIDTH, y, { width: SUMMARY_WIDTH - SUMMARY_LABEL_WIDTH, align: 'right', lineBreak: false });
-        y += strong ? 17 : 14;
-      };
+      const CAP_HEIGHT = 16;
+      const ROW_HEIGHT = 15;
+      const TOTAL_HEIGHT = 24;
+      const summaryRows = [
+        ['Subtotal', `Rs. ${money(safeSubtotal)}`],
+        ...(safeDiscount > 0 || safeDiscountAmount > 0 ? [[`Discount (${safeDiscount}%)`, `- Rs. ${money(safeDiscountAmount)}`]] : []),
+        [`GST (${safeGstPercent}%)`, `Rs. ${money(safeTax)}`]
+      ];
+      const summaryHeight = CAP_HEIGHT + summaryRows.length * ROW_HEIGHT + 6 + TOTAL_HEIGHT;
+      if (y + summaryHeight > pageHeight) { doc.addPage(); y = MARGIN; }
 
-      summaryLine('Subtotal', `Rs. ${money(safeSubtotal)}`);
-      if (safeDiscount > 0 || safeDiscountAmount > 0) summaryLine(`Discount (${safeDiscount}%)`, `- Rs. ${money(safeDiscountAmount)}`);
-      summaryLine(`GST (${safeGstPercent}%)`, `Rs. ${money(safeTax)}`);
-      doc.strokeColor('#e0e0e0').lineWidth(0.5).moveTo(SUMMARY_X, y + 1).lineTo(MARGIN + CONTENT_WIDTH, y + 1).stroke();
-      y += 7;
-      summaryLine('TOTAL', `Rs. ${money(safeTotal)}`, true);
+      doc.rect(SUMMARY_X, y, SUMMARY_WIDTH, CAP_HEIGHT + summaryRows.length * ROW_HEIGHT + 6)
+         .fillAndStroke('#ffffff', WARM.border);
+      doc.rect(SUMMARY_X, y, SUMMARY_WIDTH, CAP_HEIGHT).fill(WARM.section);
+      doc.strokeColor(WARM.border).lineWidth(0.6)
+         .moveTo(SUMMARY_X, y + CAP_HEIGHT).lineTo(SUMMARY_X + SUMMARY_WIDTH, y + CAP_HEIGHT).stroke();
+      doc.fontSize(6.5).font('Helvetica-Bold').fillColor(WARM.muted)
+         .text('PRICE SUMMARY', SUMMARY_X + 10, y + 5.5, { characterSpacing: 1.2, lineBreak: false });
+
+      let summaryY = y + CAP_HEIGHT + 5;
+      summaryRows.forEach(([label, value]) => {
+        doc.fontSize(8).font('Helvetica').fillColor(WARM.muted)
+           .text(label, SUMMARY_X + 10, summaryY, { width: 110, lineBreak: false });
+        doc.font('Helvetica-Bold').fillColor(WARM.text)
+           .text(value, SUMMARY_X + 120, summaryY, { width: SUMMARY_WIDTH - 130, align: 'right', lineBreak: false });
+        summaryY += ROW_HEIGHT;
+      });
+
+      // The total sits on the tan accent in dark text: white on tan does not meet contrast
+      const totalY = y + CAP_HEIGHT + summaryRows.length * ROW_HEIGHT + 6;
+      doc.rect(SUMMARY_X, totalY, SUMMARY_WIDTH, TOTAL_HEIGHT).fill(WARM.accent);
+      doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.text)
+         .text('TOTAL', SUMMARY_X + 10, totalY + 8.5, { characterSpacing: 1.4, lineBreak: false });
+      doc.fontSize(10.5).font('Helvetica-Bold').fillColor(WARM.text)
+         .text(`Rs. ${money(safeTotal)}`, SUMMARY_X + 60, totalY + 7, { width: SUMMARY_WIDTH - 70, align: 'right', lineBreak: false });
       doc.font('Helvetica');
-      y += GAP.section - 17;
+      y = totalY + TOTAL_HEIGHT + GAP.section;
 
       // Notes/Description
       if (description) {
@@ -426,6 +656,18 @@ const generateEstimatePDF = async (estimate) => {
           doc.text(text, MARGIN, y, { width: CONTENT_WIDTH, lineGap: 2, continued: false });
           y += height + 4;
         });
+      }
+
+      // Footer: who sent it and how to reach them, on the last page. It must stay inside the
+      // document's bottom margin (842 less 50), or PDFKit flows it onto a blank extra page.
+      const footerY = 772;
+      if (y < footerY - 14) {
+        // The company and how to reach it, and nothing else: no "computer-generated document"
+        // note, no automated-mail disclaimer, no watermark. An estimate is a document the customer
+        // is asked to approve, and a disclaimer across it reads as though it were a draft.
+        doc.strokeColor(WARM.border).lineWidth(0.5).moveTo(MARGIN, footerY - 8).lineTo(MARGIN + CONTENT_WIDTH, footerY - 8).stroke();
+        doc.fontSize(6).font('Helvetica').fillColor('#9ca3af')
+           .text(COMPANY_FOOTER_LINE, MARGIN, footerY, { width: CONTENT_WIDTH, align: 'center', lineBreak: false });
       }
 
       doc.end();

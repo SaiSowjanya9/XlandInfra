@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEstimateAddons, getAddonPrice, getServiceDescription } from './estimatePackageUtils';
 import { estimateTermsLines } from './estimateTerms';
+import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } from './companyInfo';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 
 // Debug logger - only logs in development
@@ -182,6 +183,234 @@ const drawPDFHeader = (doc, margin) => {
   return headerHeight + 8; // Return starting Y position for content
 };
 
+// The portal's warm palette (`tailwind.config.js`), so an estimate reads the same on paper as it
+// does on screen: cream section bars, warm rules, the tan accent on the total. Nothing in an
+// estimate is drawn in the old slate blue; the package export still is.
+const WARM = {
+  section: [255, 249, 238],   // warm.section     #FFF9EE
+  accentSoft: [254, 243, 226], // warm.accent-soft #FEF3E2
+  border: [234, 223, 207],    // warm.border      #EADFCF
+  accent: [212, 165, 116],    // warm.accent      #D4A574
+  text: [31, 41, 55],         // warm.text        #1F2937
+  muted: [107, 114, 128]      // warm.muted       #6B7280
+};
+
+// ===== ESTIMATE LETTERHEAD =====
+// An estimate opens as a letter does: the logo, XLAND INFRA with PVT LTD ruled beneath it and the
+// company's own contact lines down the left, and BILL TO -- the customer -- facing them on the
+// right. Under both, a strip naming the document, its number, date, type and billing cycle.
+// `drawPDFHeader` above is the centred brand strip the package export still uses; an estimate no
+// longer uses it, because a centred lockup leaves nowhere for the two facing blocks.
+// Mirrored by drawEstimateLetterhead in backend/services/pdfService.js, so the PDF a portal
+// downloads and the PDF the customer is emailed are the same document.
+// The icon beside a contact line, drawn from primitives rather than from a glyph: Helvetica has no
+// handset or envelope, and embedding a symbol font or three PNGs for 3mm of line art is not worth
+// the bytes in a document that is emailed. Matches the lucide icons the portal renders.
+const drawContactIcon = (doc, kind, x, y, size) => {
+  doc.setDrawColor(201, 162, 39);
+  doc.setLineWidth(0.22);
+  if (kind === 'phone') {
+    // A handset: a rounded body with the earpiece slot across the top. Narrower than this and it
+    // reads as a plain bar at this size.
+    const width = size * 0.66;
+    const left = x + (size - width) / 2;
+    doc.roundedRect(left, y, width, size, size * 0.18, size * 0.18, 'S');
+    doc.line(left + width * 0.28, y + size * 0.19, left + width * 0.72, y + size * 0.19);
+  } else if (kind === 'email') {
+    // An envelope: the body, and the flap folding to its middle
+    const top = y + size * 0.16;
+    const height = size * 0.68;
+    doc.roundedRect(x, top, size, height, size * 0.1, size * 0.1, 'S');
+    doc.line(x, top, x + size / 2, top + height * 0.55);
+    doc.line(x + size, top, x + size / 2, top + height * 0.55);
+  } else if (kind === 'website') {
+    // A globe: the sphere, its meridian and its equator
+    const radius = size / 2;
+    doc.circle(x + radius, y + radius, radius, 'S');
+    doc.ellipse(x + radius, y + radius, radius * 0.45, radius, 'S');
+    doc.line(x, y + radius, x + size, y + radius);
+  }
+};
+
+const drawEstimateLetterhead = (doc, margin, data) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const gold = [201, 162, 39];
+  const labelGray = [107, 114, 128];
+
+  // Gold rule across the head of the page
+  doc.setFillColor(...gold);
+  doc.rect(0, 0, pageWidth, 2.5, 'F');
+
+  // --- Left: the company, as one centred stack ---
+  // The logo and the name share the first line; the tagline, address and contact lines are then
+  // centred on the whole lockup rather than under the name alone, which left them adrift to the
+  // right of the logo. Everything is measured first so the block can be centred on itself.
+  const logoSize = 16;
+  const logoY = 8;
+  const logoGap = 4;
+  const nameSpacing = 0.5;
+  const suffixSpacing = 0.7;
+  const ruleLength = 5;
+  const ruleGap = 1.6;
+  const iconSize = 2.6;
+  const iconGap = 4.4;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  // getTextWidth ignores charSpace, so the spacing has to be added back by hand
+  const nameWidth = doc.getTextWidth(COMPANY.name) + nameSpacing * COMPANY.name.length;
+  const headRowWidth = logoSize + logoGap + nameWidth;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  const taglineText = String(COMPANY.tagline).toUpperCase();
+  const taglineWidth = doc.getTextWidth(taglineText) + 0.3 * taglineText.length;
+  doc.setFontSize(7.5);
+  const addressWidths = COMPANY.addressLines.map(line => doc.getTextWidth(line));
+  const contactWidths = COMPANY_CONTACT_LINES.map(([, value]) => iconSize + iconGap - 1.8 + doc.getTextWidth(String(value)));
+
+  const blockWidth = Math.max(headRowWidth, taglineWidth, ...addressWidths, ...contactWidths);
+  const blockX = margin;
+  const centred = width => blockX + (blockWidth - width) / 2;
+
+  const logoX = centred(headRowWidth);
+  try {
+    doc.addImage(XLAND_LOGO_ICON, 'PNG', logoX, logoY, logoSize, logoSize);
+  } catch (e) {
+    doc.setFillColor(...gold);
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 1, 1, 'F');
+  }
+
+  const textX = logoX + logoSize + logoGap;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(26, 26, 26);
+  doc.text(COMPANY.name, textX, logoY + 6, { charSpace: nameSpacing });
+
+  // PVT LTD, ruled on both sides and centred under the name, in the same near-black as the name
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.5);
+  doc.setTextColor(26, 26, 26);
+  const suffixWidth = doc.getTextWidth(COMPANY.suffix) + suffixSpacing * COMPANY.suffix.length;
+  const lockupWidth = ruleLength + ruleGap + suffixWidth + ruleGap + ruleLength;
+  const suffixX = textX + Math.max(0, (nameWidth - lockupWidth) / 2);
+  const ruleY = logoY + 9.5;
+  doc.setDrawColor(26, 26, 26);
+  doc.setLineWidth(0.2);
+  doc.line(suffixX, ruleY, suffixX + ruleLength, ruleY);
+  doc.text(COMPANY.suffix, suffixX + ruleLength + ruleGap, ruleY + 0.7, { charSpace: suffixSpacing });
+  doc.line(suffixX + lockupWidth - ruleLength, ruleY, suffixX + lockupWidth, ruleY);
+
+  doc.setFontSize(6.5);
+  doc.setTextColor(...labelGray);
+  doc.text(taglineText, centred(taglineWidth), logoY + logoSize + 2.5, { charSpace: 0.3 });
+
+  let lineY = logoY + logoSize + 7;
+  doc.setFontSize(7.5);
+  doc.setTextColor(75, 85, 99);
+  COMPANY.addressLines.forEach((line, index) => {
+    doc.text(line, centred(addressWidths[index]), lineY);
+    lineY += 3.6;
+  });
+  COMPANY_CONTACT_LINES.forEach(([kind, value], index) => {
+    const lineX = centred(contactWidths[index]);
+    // The icon sits on the line's x-height rather than its baseline, or it floats above the text
+    drawContactIcon(doc, kind, lineX, lineY - 2.3, iconSize);
+    doc.setTextColor(75, 85, 99);
+    doc.text(String(value), lineX + iconGap, lineY);
+    lineY += 3.8;
+  });
+  const companyBottom = lineY;
+
+  // --- Right: BILL TO ---
+  const boxWidth = 70;
+  const boxX = pageWidth - margin - boxWidth;
+  const capHeight = 5.5;
+  const rows = [
+    ['Phone', data.customerPhone],
+    ['Email', data.customerEmail],
+    ['Property', data.propertyName || data.communityName],
+    ['Prop ID', data.propertyCode],
+    ['City', data.city]
+  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+  // Measured before anything is drawn, so the box is exactly as tall as its contents
+  doc.setFontSize(7);
+  const wrapped = rows.map(([label, value]) => [label, doc.splitTextToSize(decodeHtml(String(value)), boxWidth - 22)]);
+  doc.setFontSize(9.5);
+  const nameLines = doc.splitTextToSize(decodeHtml(String(data.customerName || '-')), boxWidth - 8);
+  const bodyHeight = 3 + nameLines.length * 4 + 1.5 + wrapped.reduce((height, [, lines]) => height + lines.length * 3.4, 0) + 3;
+  const boxHeight = capHeight + bodyHeight;
+
+  doc.setFillColor(...WARM.accentSoft);
+  doc.setDrawColor(...WARM.border);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(boxX, logoY, boxWidth, boxHeight, 1.5, 1.5, 'FD');
+  doc.setFillColor(255, 255, 255);
+  doc.rect(boxX + 0.2, logoY + capHeight, boxWidth - 0.4, bodyHeight - 0.6, 'F');
+  doc.setDrawColor(...WARM.border);
+  doc.line(boxX, logoY + capHeight, boxX + boxWidth, logoY + capHeight);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(138, 109, 18);
+  doc.text('BILL TO', boxX + 4, logoY + 3.7, { charSpace: 0.6 });
+
+  let rowY = logoY + capHeight + 4.5;
+  doc.setFontSize(9.5);
+  doc.setTextColor(17, 24, 39);
+  doc.text(nameLines, boxX + 4, rowY);
+  rowY += nameLines.length * 4 + 1.5;
+
+  wrapped.forEach(([label, lines]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    doc.setTextColor(...labelGray);
+    doc.text(String(label).toUpperCase(), boxX + 4, rowY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(55, 65, 81);
+    doc.text(lines, boxX + 18, rowY);
+    rowY += lines.length * 3.4;
+  });
+
+  // --- The strip naming the document ---
+  let y = Math.max(companyBottom, logoY + boxHeight) + 4;
+  const stripHeight = 11;
+  doc.setFillColor(...WARM.section);
+  doc.rect(margin, y, pageWidth - margin * 2, stripHeight, 'F');
+  doc.setDrawColor(...WARM.border);
+  doc.setLineWidth(0.25);
+  doc.line(margin, y, pageWidth - margin, y);
+  doc.line(margin, y + stripHeight, pageWidth - margin, y + stripHeight);
+
+  // The strip does not announce the word ESTIMATE -- what the document is is not in doubt -- so
+  // its four fields share the width evenly instead of crowding to the left of it.
+  const billing = String(data.billingDuration || data.billing_duration || 'Yearly');
+  const estimateType = String(data.estimateType || data.estimate_type || '-').replace(/_/g, ' ');
+  const stripWidth = pageWidth - margin * 2;
+  const fieldWidth = (stripWidth - 12) / 4;
+  const fields = [
+    ['ESTIMATE NO.', String(data.estimateId || data.packageId || '-')],
+    ['DATE', formatDate(data.createdAt)],
+    ['TYPE', estimateType.charAt(0).toUpperCase() + estimateType.slice(1)],
+    ['BILLING', billing.charAt(0).toUpperCase() + billing.slice(1).replace('-', ' ')]
+  ].map(([label, value], index) => [label, value, margin + 6 + index * fieldWidth, fieldWidth - 4]);
+  fields.forEach(([label, value, x, width]) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(...labelGray);
+    doc.text(label, x, y + 4);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(17, 24, 39);
+    // One line only: the strip is a glance, and a wrapped value would push into the row below
+    doc.text(doc.splitTextToSize(value, width)[0] || '-', x, y + 8.4);
+  });
+
+  return y + stripHeight + 7;
+};
+
 // Generate Premium PDF with professional design
 const generatePDF = (data, type, filename) => {
   try {
@@ -200,37 +429,40 @@ const generatePDF = (data, type, filename) => {
     const cardBgBlue = [239, 246, 255];      // Light blue (blue-50)
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
+    const { section: warmSection, border: warmBorder, accent: warmAccent, text: warmText, muted: warmMuted } = WARM;
+    // An estimate's headings read in warm text; a package export keeps the navy it had
+    const heading = type === 'estimate' ? warmText : navy;
 
-    // ===== HEADER - Use shared function =====
-    let y = drawPDFHeader(doc, margin);
-    // y is already set by drawPDFHeader return value
+    // ===== HEADER =====
+    // An estimate gets the letterhead -- company left, BILL TO right, document strip under both.
+    // A package export keeps the centred brand strip and its own ID / date row.
+    let y;
+    if (type === 'estimate') {
+      y = drawEstimateLetterhead(doc, margin, data);
+    } else {
+      y = drawPDFHeader(doc, margin);
+      const metaY = y + 4;
+      doc.setFontSize(7);
+      doc.setTextColor(107, 114, 128); // gray-500
+      doc.text('PACKAGE NO.', margin, metaY);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(17, 24, 39); // gray-900
+      const estId = String(data.estimateId || data.packageId || 'N/A');
+      doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin, metaY + 5);
 
-    // ===== DOCUMENT INFO ROW - Plain =====
-    const metaY = y + 4;
-    
-    // Estimate/Package ID
-    const docType = type === 'estimate' ? 'ESTIMATE' : 'PACKAGE';
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128); // gray-500
-    doc.text(docType + ' NO.', margin, metaY);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(17, 24, 39); // gray-900
-    const estId = String(data.estimateId || data.packageId || 'N/A');
-    doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin, metaY + 5);
-    
-    // Date
-    const col2X = margin + 80;
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(107, 114, 128);
-    doc.text('DATE', col2X, metaY);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(17, 24, 39);
-    doc.text(formatDate(data.createdAt), col2X, metaY + 5);
-    
-    y += 18;
+      const col2X = margin + 80;
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(107, 114, 128);
+      doc.text('DATE', col2X, metaY);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(17, 24, 39);
+      doc.text(formatDate(data.createdAt), col2X, metaY + 5);
+
+      y += 18;
+    }
 
     // ===== PROPERTY DETAILS (Plain, stacked vertically) =====
     if (type !== 'package') {
@@ -242,138 +474,81 @@ const generatePDF = (data, type, filename) => {
       const isPlot = ['PLOT', 'PL'].includes(propType);
       
       // Property Details Header
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Property Details', margin, y);
-      y += 6;
-      
-      // Property info in rows
-      doc.setFontSize(8);
-      const col1 = margin;
-      const col2 = margin + 45;
-      const col3 = margin + 100;
-      const col4 = margin + 145;
-      
-      // Row 1: Name & Type
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Name:', col1, y);
-      doc.text('Type:', col3, y);
-      y += 4;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      const propName = decodeHtml(String(data.propertyName || data.communityName || '-'));
-      doc.text(propName.length > 25 ? propName.substring(0, 25) + '...' : propName, col1, y);
-      const typeLabel = isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : String(data.propertyType || '-');
-      doc.text(typeLabel, col3, y);
-      y += 5;
-      
-      // Row 2: Zone & Division
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Zone:', col1, y);
-      const isPropertyBased = data.estimateType === 'property_based' || data.estimate_type === 'property_based' || data.propertyId || data.property_id;
-      const hasDivision = isPropertyBased && (data.division || data.divisionName || data.division_name);
-      if (hasDivision) doc.text('Division:', col3, y);
-      y += 4;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(data.zone || '-'), col1, y);
-      if (hasDivision) doc.text(String(data.division || data.divisionName || data.division_name), col3, y);
-      y += 5;
-      
-      // Property-type specific fields
-      if (isGC) {
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('No. of Blocks:', col1, y);
-        doc.text('Total Units:', col3, y);
-        y += 4;
-        doc.setTextColor(...darkText);
+      y += 7;
+
+      const propertyFields = [
+        ['Name', decodeHtml(String(data.propertyName || data.communityName || ''))],
+        ['Type', isGC ? 'Gated Community' : isApt ? 'Apartment' : isVilla ? 'Villa' : isFlat ? 'Flat' : isPlot ? 'Plot' : data.propertyType],
+        ['Property ID', data.propertyCode],
+        ['Zone', data.zone],
+        ...((data.estimateType === 'property_based' || data.estimate_type === 'property_based' || data.propertyId || data.property_id)
+          ? [['Division', data.division || data.divisionName || data.division_name]] : []),
+        ['City', data.city],
+        ...(isGC ? [['No. of Blocks', data.numberOfBlocks || data.number_of_blocks], ['Total Units', data.totalUnits || data.total_units]] : []),
+        ...(isApt ? [['Tower / Building', data.towerName || data.tower_name], ['Block Number', data.blockNumber || data.block_number],
+          ['No. of Units', data.totalUnits || data.total_units]] : []),
+        ...(isVilla || isFlat || isPlot
+          ? [[isVilla ? 'Villa Number' : isFlat ? 'Flat Number' : 'Plot Number', data.villaPlotNumber || data.villa_plot_number]] : [])
+      ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+      // The fields are a ruled table, not a floating grid: the label in a cream cell, its value
+      // in the white cell beside it, two pairs to a line, so the block lines up with the services
+      // table under it. Mirrors detailTable in backend/services/pdfService.js. An address takes a
+      // line of its own; empty fields are dropped, so the rest close up.
+      const contentWidth = pageWidth - margin * 2;
+      const pairWidth = contentWidth / 2;
+      const labelWidth = 34;
+      const pad = 2.2;
+      const address = decodeHtml(String(data.address || data.propertyAddress || ''));
+      const lines = [];
+      for (let index = 0; index < propertyFields.length; index += 2) lines.push(propertyFields.slice(index, index + 2));
+      if (address) lines.push([['Address', address], null]);
+
+      const tableTop = y;
+      lines.forEach((line, lineIndex) => {
+        const full = address && lineIndex === lines.length - 1;
+        const width = full ? contentWidth : pairWidth;
+        doc.setFontSize(8.5);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(data.numberOfBlocks || data.number_of_blocks || '-'), col1, y);
-        doc.text(String(data.totalUnits || data.total_units || '-'), col3, y);
-        y += 5;
-      } else if (isApt) {
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('Tower:', col1, y);
-        doc.text('Block No.:', col3, y);
-        y += 4;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.towerName || data.tower_name || '-'), col1, y);
-        doc.text(String(data.blockNumber || data.block_number || '-'), col3, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('No. of Units:', col1, y);
-        y += 4;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.totalUnits || data.total_units || '-'), col1, y);
-        y += 5;
-      } else if (isVilla || isFlat || isPlot) {
-        const label = isVilla ? 'Villa Number:' : isFlat ? 'Flat Number:' : 'Plot Number:';
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text(label, col1, y);
-        y += 4;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.villaPlotNumber || data.villa_plot_number || '-'), col1, y);
-        y += 5;
-      }
-      
-      y += 4;
-      
-      // ===== CUSTOMER DETAILS =====
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Customer Details', margin, y);
-      y += 6;
-      
-      doc.setFontSize(8);
-      
-      // Row 1: Name & Phone
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Name:', col1, y);
-      doc.text('Phone:', col3, y);
-      y += 4;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      const custName = decodeHtml(String(data.customerName || '-'));
-      doc.text(custName.length > 25 ? custName.substring(0, 25) + '...' : custName, col1, y);
-      doc.text(String(data.customerPhone || '-'), col3, y);
-      y += 5;
-      
-      // Row 2: Email
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...lightText);
-      doc.text('Email:', col1, y);
-      y += 4;
-      doc.setTextColor(...darkText);
-      doc.setFont('helvetica', 'bold');
-      const email = String(data.customerEmail || '-');
-      doc.text(email.length > 45 ? email.substring(0, 45) + '...' : email, col1, y);
-      y += 5;
-      
-      // Row 3: City
-      if (data.city) {
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...lightText);
-        doc.text('City:', col1, y);
-        y += 4;
-        doc.setTextColor(...darkText);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(data.city || '-'), col1, y);
-        y += 5;
-      }
-      
-      y += 6;
+        const cells = line.filter(Boolean).map(([label, value]) =>
+          [label, doc.splitTextToSize(String(value), width - labelWidth - pad * 2)]);
+        const height = Math.max(6.4, ...cells.map(([, wrapped]) => wrapped.length * 3.6 + pad * 2));
+
+        cells.forEach(([label, wrapped], pair) => {
+          const x = margin + (full ? 0 : pair * pairWidth);
+          doc.setFillColor(...warmSection);
+          doc.setDrawColor(...warmBorder);
+          doc.setLineWidth(0.2);
+          doc.rect(x, y, labelWidth, height, 'FD');
+          doc.setFillColor(255, 255, 255);
+          doc.rect(x + labelWidth, y, width - labelWidth, height, 'FD');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(5.5);
+          doc.setTextColor(...warmMuted);
+          doc.text(String(label).toUpperCase(), x + pad, y + pad + 2.4);
+          doc.setFontSize(8.5);
+          doc.setTextColor(...warmText);
+          doc.text(wrapped, x + labelWidth + pad, y + pad + 2.6);
+        });
+        // An odd last pair leaves no half-empty cell behind: the line is closed off plainly
+        if (cells.length === 1 && !full) {
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(...warmBorder);
+          doc.rect(margin + pairWidth, y, pairWidth, height, 'FD');
+        }
+        y += height;
+      });
+      // One outline around the whole block, so the inner rules read as a grid rather than boxes
+      doc.setDrawColor(...warmBorder);
+      doc.rect(margin, tableTop, contentWidth, y - tableTop, 'S');
+
+      // The customer is named in BILL TO at the head of the page, so there is no Customer Details
+      // section here: it would state the same three fields twice.
+      y += 10;
     }
 
     // ===== WORK ORDER DETAILS (only for work order estimates) - Compact 4-column layout =====
@@ -383,7 +558,7 @@ const generatePDF = (data, type, filename) => {
       doc.setDrawColor(229, 231, 235);
       doc.roundedRect(margin, y, pageWidth - margin * 2, woBoxHeight, 2, 2, 'FD');
       
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('Work Order Details', margin + 6, y + 5);
@@ -415,7 +590,7 @@ const generatePDF = (data, type, filename) => {
 
     // ===== AMC PACKAGE DESCRIPTION =====
     if (data.amcPackageDescription && data.amcPackageDescription.trim()) {
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('PACKAGE DESCRIPTION', margin, y);
@@ -435,104 +610,131 @@ const generatePDF = (data, type, filename) => {
       y += descBoxH + 4;
     }
 
-    // ===== BILLING DURATION (left side, just above services) =====
-    const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
-    const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Billing:', margin, y);
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formattedBilling, margin + 18, y);
-    y += 8;
+    // Billing is stated in the header strip on an estimate; a package export still names it here
+    if (type !== 'estimate') {
+      const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
+      const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...mediumText);
+      doc.text('Billing:', margin, y);
+      doc.setTextColor(...darkText);
+      doc.setFont('helvetica', 'bold');
+      doc.text(formattedBilling, margin + 18, y);
+      y += 8;
+    }
 
     // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
     const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
     const services = data.services || data.packageServices || [];
     
-    if (!isWorkOrder && services.length > 0) {
-      doc.setTextColor(...navy);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES INCLUDED', margin, y);
-      y += 6;
-
-      const tableBody = services.map((s, idx) => {
-            const freqCount = s.frequencyCount ?? s.frequency_count ?? s.frequency ?? 1;
-            let freqType = String(s.frequencyType || s.frequency_type || 'Monthly');
-            // Remove "Nx " prefix if present
-            freqType = freqType.replace(/^\d+x\s*/i, '');
-            return [
-              String(idx + 1),
-              decodeHtml(String(s.name || s.service || 'Service')),
-              decodeHtml(String(s.description || '-')),
-              String(freqType),
-              String(freqCount)
-            ];
-          });
-
-      autoTable(doc, {
-      startY: y,
-      head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
-      body: tableBody,
+    // Both service lists share one renderer, and an estimate's carries the two columns the
+    // backend's emailed PDF has always had -- Qty and Price -- so the downloaded document and the
+    // attached one are the same. A package's own services are covered by the package price, so
+    // their Price cell reads as a dash rather than as zero.
+    const priced = type === 'estimate';
+    // Uppercase and aligned per column, as the backend's PDF sets them
+    const serviceHead = priced
+      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'QTY', 'PRICE (RS.)']]
+      : [['#', 'Service', 'Description', 'Frequency', 'Visits']];
+    const serviceColumnStyles = priced ? {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 36, halign: 'left' },
+      2: { cellWidth: 56, halign: 'left' },
+      3: { cellWidth: 26, halign: 'center' },
+      4: { cellWidth: 14, halign: 'center' },
+      5: { cellWidth: 12, halign: 'center' },
+      6: { cellWidth: 26, halign: 'right' }
+    } : {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 38, halign: 'left' },
+      2: { cellWidth: 82, halign: 'left' },
+      3: { cellWidth: 32, halign: 'center' },
+      4: { cellWidth: 16, halign: 'center' }
+    };
+    // An estimate's tables are drawn in the cream skin the portal uses -- warm section header,
+    // warm rules, figures in warm text. A package export keeps the slate header it had.
+    const serviceTableStyles = priced ? {
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 2.5, lineColor: warmBorder, lineWidth: 0.2, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
+      headStyles: { fillColor: warmSection, textColor: warmMuted, fontStyle: 'bold', fontSize: 6.5, lineColor: warmBorder },
+      bodyStyles: { textColor: warmText, lineColor: warmBorder, minCellHeight: 8 },
+      columnStyles: serviceColumnStyles,
+      alternateRowStyles: { fillColor: [255, 252, 246] },
+      rowPageBreak: 'avoid',
+      // autoTable applies columnStyles to the body only, so a header would sit centred over a
+      // left-aligned column. Give each header the alignment its column already has.
+      didParseCell: (data) => {
+        const align = serviceColumnStyles[data.column.index]?.halign;
+        if (data.section === 'head' && align) data.cell.styles.halign = align;
+      }
+    } : {
       margin: { left: margin, right: margin },
       styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
       headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
       bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
-      columnStyles: {
-        0: { cellWidth: 12, halign: 'center' },
-        1: { cellWidth: 38, halign: 'left' },
-        2: { cellWidth: 82, halign: 'left' },
-        3: { cellWidth: 32, halign: 'center' },
-        4: { cellWidth: 16, halign: 'center' }
-      },
+      columnStyles: serviceColumnStyles,
       alternateRowStyles: { fillColor: [252, 252, 253] },
       rowPageBreak: 'avoid'
+    };
+    // The category says what kind of service this is, so it reads under the name rather than among
+    // the details -- the same place the modal and the backend's PDF set it. `getServiceDescription`
+    // leads its detail line with the same category, so that copy is dropped: printing it in both
+    // columns of the same row says nothing twice.
+    const withoutCategory = (text, category) => {
+      if (!text || !category) return text || '';
+      return String(text).split('\n').map(line => {
+        const trimmed = line.trim();
+        if (!trimmed.toLowerCase().startsWith(String(category).toLowerCase())) return trimmed;
+        return trimmed.slice(String(category).length).replace(/^\s*\|\s*/, '').trim();
+      }).filter(Boolean).join('\n');
+    };
+    const serviceRow = (item, index, { charged = true } = {}) => {
+      const category = decodeHtml(String(item.category || ''));
+      const name = [decodeHtml(String(item.name || item.service || item.serviceName || item.service_name || 'Service')),
+        category].filter(Boolean).join('\n');
+      const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
+      const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
+      const details = withoutCategory(decodeHtml(String(item.description || '')), category);
+      const row = [String(index + 1), name, details || '-', freqType, String(visits)];
+      if (!priced) return row;
+      // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so with
+      // a dash rather than inventing a 1
+      row.push(item.quantity == null || item.quantity === '' ? '-' : String(item.quantity));
+      row.push(charged ? formatCurrency(getAddonPrice(item)) : '-');
+      return row;
+    };
+
+    if (!isWorkOrder && services.length > 0) {
+      doc.setTextColor(...heading);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(priced ? 'AMC PACKAGE - SERVICES INCLUDED' : 'SERVICES INCLUDED', margin, y);
+      y += 6;
+
+      autoTable(doc, {
+        startY: y,
+        head: serviceHead,
+        body: services.map((service, index) => serviceRow(service, index, { charged: false })),
+        ...serviceTableStyles
       });
 
       y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ===== ADD-ONS TABLE (Skip for Work Order Estimates) =====
+    // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
     if (!isWorkOrder && data.addons && data.addons.length > 0) {
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('SERVICES', margin, y);
       y += 6;
 
-      const addonsBody = data.addons.map((a, idx) => {
-        const freqCount = a.frequencyCount ?? a.frequency_count ?? a.visits ?? 1;
-        let freqType = String(a.frequencyType || a.frequency_type || a.frequency || 'Monthly');
-        // Remove "Nx " prefix if present
-        freqType = freqType.replace(/^\d+x\s*/i, '');
-        return [
-          String(idx + 1),
-          decodeHtml(String(a.name || a.serviceName || a.service_name || 'Service')),
-          decodeHtml(String(a.description || '-')),
-          String(freqType),
-          String(freqCount)
-        ];
-      });
-
       autoTable(doc, {
         startY: y,
-        head: [['#', 'Service', 'Description', 'Frequency', 'Visits']],
-        body: addonsBody,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 7, cellPadding: 2.5, lineColor: [50, 50, 50], lineWidth: 0.3, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
-        headStyles: { fillColor: slate, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7, lineColor: [50, 50, 50], halign: 'center' },
-        bodyStyles: { textColor: darkText, lineColor: [100, 100, 100], minCellHeight: 8 },
-        columnStyles: {
-          0: { cellWidth: 12, halign: 'center' },
-          1: { cellWidth: 38, halign: 'left' },
-          2: { cellWidth: 82, halign: 'left' },
-          3: { cellWidth: 32, halign: 'center' },
-          4: { cellWidth: 16, halign: 'center' }
-        },
-        alternateRowStyles: { fillColor: [252, 252, 253] },
-        rowPageBreak: 'avoid'
+        head: serviceHead,
+        body: data.addons.map((addon, index) => serviceRow(addon, index)),
+        ...serviceTableStyles
       });
 
       y = doc.lastAutoTable.finalY + 8;
@@ -542,7 +744,7 @@ const generatePDF = (data, type, filename) => {
       if (y + 12 > pageHeight) { doc.addPage(); y = 20; }
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.text('Total Services Price', margin, y);
       doc.text(formatCurrency(data.addonsTotal ?? data.addons.reduce((sum, addon) => sum + getAddonPrice(addon), 0)), pageWidth - margin, y, { align: 'right' });
       y += 10;
@@ -577,60 +779,62 @@ const generatePDF = (data, type, filename) => {
     const total = savedTotal != null && Number.isFinite(Number(savedTotal)) ? Number(savedTotal) : Math.round((afterDiscount + gstAmount + Number.EPSILON) * 100) / 100;
     const hasDiscount = discountAmount > 0;
 
-    // Check for page break
-    if (y + 50 > pageHeight) {
+    // A money block reads down its own right edge: the figures line up on one edge, the labels on
+    // another, and the total is ruled off in black so it is the last thing the eye lands on.
+    const sumWidth = 72;
+    const sumX = pageWidth - margin - sumWidth;
+    const sumRows = [
+      ['Subtotal', formatCurrency(subtotal)],
+      ...(hasDiscount ? [[`Discount (${discountPercent}%)`, '- ' + formatCurrency(discountAmount)]] : []),
+      [`GST (${gstPercent}%)`, formatCurrency(gstAmount)]
+    ];
+    const capH = 5.5;
+    const rowH = 5.4;
+    const totalH = 8.5;
+    const sumHeight = capH + sumRows.length * rowH + totalH + 2;
+
+    // Break only if the block will not actually fit above the footer: a fixed 50mm guard pushed a
+    // 35mm summary onto a page of its own with a third of the previous page still empty
+    if (y + sumHeight > pageHeight - 20) {
       doc.addPage();
       y = 20;
     }
 
-    // Price Summary Title
-    doc.setTextColor(...navy);
-    doc.setFontSize(10);
+    doc.setFillColor(...warmSection);
+    doc.setDrawColor(...warmBorder);
+    doc.setLineWidth(0.25);
+    doc.rect(sumX, y, sumWidth, capH, 'FD');
     doc.setFont('helvetica', 'bold');
-    doc.text('PRICE SUMMARY', margin, y);
-    y += 8;
-    
-    // Price rows - plain text
-    const priceCol1 = margin;
-    const priceCol2 = margin + 60;
-    
-    // Subtotal
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text('Subtotal:', priceCol1, y);
-    doc.setTextColor(...darkText);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(subtotal), priceCol2, y);
-    y += 6;
-    
-    // Discount (if applicable)
-    if (hasDiscount) {
+    doc.setFontSize(6.5);
+    doc.setTextColor(...warmMuted);
+    doc.text('PRICE SUMMARY', sumX + 3, y + 3.7, { charSpace: 0.5 });
+
+    doc.setDrawColor(...warmBorder);
+    doc.rect(sumX, y + capH, sumWidth, sumRows.length * rowH + 2, 'S');
+    let rowY = y + capH + 4.6;
+    sumRows.forEach(([label, value]) => {
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...mediumText);
-      doc.text(`Discount (${discountPercent}%):`, priceCol1, y);
-      doc.setTextColor(...darkText);
+      doc.setFontSize(8);
+      doc.setTextColor(...warmMuted);
+      doc.text(label, sumX + 3, rowY);
       doc.setFont('helvetica', 'bold');
-      doc.text('-' + formatCurrency(discountAmount), priceCol2, y);
-      y += 6;
-    }
-    
-    // GST
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mediumText);
-    doc.text(`GST (${gstPercent}%):`, priceCol1, y);
-    doc.setTextColor(...darkText);
+      doc.setTextColor(...warmText);
+      doc.text(value, sumX + sumWidth - 3, rowY, { align: 'right' });
+      rowY += rowH;
+    });
+
+    // The total sits on the tan accent in dark text: white on tan does not meet contrast
+    const totalY = y + capH + sumRows.length * rowH + 2;
+    doc.setFillColor(...warmAccent);
+    doc.rect(sumX, totalY, sumWidth, totalH, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(gstAmount), priceCol2, y);
-    y += 8;
-    
-    // Total - bold and larger
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...navy);
-    doc.text('TOTAL:', priceCol1, y);
-    doc.text(formatCurrency(total), priceCol2, y);
-    y += 10;
+    doc.setFontSize(7);
+    doc.setTextColor(...warmText);
+    doc.text('TOTAL', sumX + 3, totalY + 5.6, { charSpace: 0.6 });
+    doc.setFontSize(10.5);
+    doc.text(formatCurrency(total), sumX + sumWidth - 3, totalY + 5.8, { align: 'right' });
+
+    y += sumHeight + 8;
 
     // ===== NOTES/DESCRIPTION (Plain) =====
     if (data.description && data.description.trim()) {
@@ -639,7 +843,7 @@ const generatePDF = (data, type, filename) => {
         y = 20;
       }
       
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('NOTES', margin, y);
@@ -660,7 +864,7 @@ const generatePDF = (data, type, filename) => {
         doc.addPage();
         y = 20;
       }
-      doc.setTextColor(...navy);
+      doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('TERMS & CONDITIONS', margin, y);
@@ -687,10 +891,13 @@ const generatePDF = (data, type, filename) => {
     doc.setLineWidth(0.3);
     doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
     
+    // The company and how to reach it, and nothing else: no "computer-generated document" note,
+    // no automated-mail disclaimer, no watermark. An estimate is a document the customer is asked
+    // to approve, and a disclaimer across it reads as though it were a draft.
     doc.setTextColor(...lightText);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('XLAND INFRA | This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
+    doc.text(COMPANY_FOOTER_LINE, pageWidth / 2, footerY, { align: 'center' });
 
     savePDFCrossPlatform(doc, filename);
     return true;
@@ -731,7 +938,9 @@ export const exportEstimateToPDF = (estimate) => {
             name: s.service || s.name || s.serviceName || 'Service',
             frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? s.visits ?? 1,
             frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
-            description: s.description || ''
+            description: s.description || '',
+            category: s.category || '',
+            quantity: s.quantity ?? null
           }));
         }
       } catch (e) { debug('[PDF] package_services parse error:', e); }
@@ -743,7 +952,9 @@ export const exportEstimateToPDF = (estimate) => {
         name: s.service || s.name || s.serviceName || 'Service',
         frequencyCount: s.frequencyCount ?? s.frequency ?? s.visits ?? 1,
         frequencyType: s.frequencyType || 'Monthly',
-        description: s.description || ''
+        description: s.description || '',
+        category: s.category || '',
+        quantity: s.quantity ?? null
       }));
     }
     // PRIORITY 2: Check serviceRows (package service rows from form)
@@ -764,7 +975,9 @@ export const exportEstimateToPDF = (estimate) => {
             name: inner.name || inner.service || 'Service',
             frequencyCount: inner.frequencyCount ?? inner.frequency ?? 1,
             frequencyType: inner.frequencyType || inner.frequency_type || 'Monthly',
-            description: getServiceDescription(inner)
+            description: getServiceDescription(inner),
+            category: inner.category || '',
+            quantity: inner.quantity ?? null
           }));
         }
         // Handle addon/service structure
@@ -772,7 +985,9 @@ export const exportEstimateToPDF = (estimate) => {
           name: s.name || s.service || s.serviceName || s.description || 'Service',
           frequencyCount: s.frequencyCount ?? s.frequency ?? s.visits ?? 1,
           frequencyType: s.frequencyType || s.frequency_type || s.billingType || s.billing || 'Monthly',
-          description: getServiceDescription(s)
+          description: getServiceDescription(s),
+          category: s.category || '',
+          quantity: s.quantity ?? null
         };
       }).flat();
     }
@@ -802,38 +1017,34 @@ export const exportEstimateToPDF = (estimate) => {
 
     // Parse addons from various formats (including descriptions)
     let addons = [];
-    
+
+    // A service as the document states it. Category, quantity and price are carried through
+    // rather than dropped: the table has a column for each of them, and an addon flattened to
+    // name and frequency alone printed every price as Rs. 0.
+    const exportService = (item) => ({
+      name: item.name || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service',
+      frequencyType: item.frequencyType || item.frequency_type || item.services?.[0]?.frequencyType || 'One-time',
+      frequencyCount: item.frequencyCount ?? item.frequency_count ?? item.visits ?? item.noOfVisits ?? item.no_of_visits ?? item.services?.[0]?.frequency ?? item.services?.[0]?.frequencyCount ?? 1,
+      description: getServiceDescription(item),
+      category: item.category || item.service_category || '',
+      quantity: item.quantity ?? item.pricingInputs?.quantity ?? null,
+      price: getAddonPrice(item)
+    });
+
     // Try addons array first
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
-      addons = estimate.addons.map(a => ({
-        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
-        frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-        description: getServiceDescription(a)
-      }));
+      addons = estimate.addons.map(exportService);
     }
     // Try addons_data JSON string (from backend)
     if (addons.length === 0 && estimate.addons_data) {
       try {
         const parsed = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          addons = parsed.map(a => ({
-            name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
-            frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-            frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-            description: getServiceDescription(a)
-          }));
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) addons = parsed.map(exportService);
       } catch (e) { debug('[PDF] addons_data parse error:', e); }
     }
     // Try selectedAddons array (from form)
     if (addons.length === 0 && estimate.selectedAddons && Array.isArray(estimate.selectedAddons) && estimate.selectedAddons.length > 0) {
-      addons = estimate.selectedAddons.map(a => ({
-        name: a.name || a.serviceName || a.service_name || a.services?.[0]?.name || 'Service',
-        frequencyType: a.frequencyType || a.frequency_type || a.services?.[0]?.frequencyType || 'One-time',
-        frequencyCount: a.frequencyCount ?? a.frequency_count ?? a.visits ?? a.noOfVisits ?? a.no_of_visits ?? a.services?.[0]?.frequency ?? a.services?.[0]?.frequencyCount ?? 1,
-        description: getServiceDescription(a)
-      }));
+      addons = estimate.selectedAddons.map(exportService);
     }
     
     debug('[PDF] Parsed addons:', addons);
@@ -844,6 +1055,8 @@ export const exportEstimateToPDF = (estimate) => {
       packageName: estimate.packageName || estimate.package_name,
       amcPackageDescription: estimate.amc_package_description || estimate.amcPackageDescription || '',
       propertyId: estimate.propertyId || estimate.property_id,
+      // The code the property is known by, named in BILL TO beside the customer
+      propertyCode: estimate.propertyCode || estimate.property_code,
       propertyType: estimate.propertyType || estimate.property_type || estimate.entryType || 'N/A',
       propertyName: estimate.propertyName || estimate.property_name,
       communityName: estimate.communityName || estimate.community_name || estimate.propertyName || estimate.property_name,
