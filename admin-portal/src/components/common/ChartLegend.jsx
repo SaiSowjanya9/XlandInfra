@@ -8,12 +8,34 @@
  * holds at any card width.
  *
  * Items are `{ label, value, color }`. `value` is already formatted by the caller, since one chart
- * counts and another totals money.
+ * counts and another totals money. An item may also set `line: true`, for a series drawn as a line
+ * rather than filled -- a dash reads as a line where a dot reads as a slice.
+ *
+ * `layout="row"` is the key that sits above a plot rather than beside it: the series named in a
+ * line, wrapping onto the next one when the card is narrow. It is used where the chart library's
+ * own legend will not do -- recharts orders its legend by the order the shapes are painted and
+ * floats it over the plot, where a data point can be drawn straight through it.
  */
-export default function ChartLegend({ items = [], className = '', size = 'sm' }) {
+export default function ChartLegend({ items = [], className = '', size = 'sm', layout = 'list' }) {
   const rows = items.filter(Boolean);
   if (!rows.length) return null;
   const text = size === 'xs' ? 'text-[11px]' : 'text-xs sm:text-sm';
+  if (layout === 'row') {
+    return (
+      <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${text} ${className}`}>
+        {rows.map((item, index) => (
+          <li key={item.key ?? item.label ?? index} className="flex items-center gap-1.5">
+            <span className={`shrink-0 ${item.line ? 'h-0.5 w-4 rounded' : 'h-2.5 w-2.5 rounded-sm'}`}
+              style={{ backgroundColor: item.color }} />
+            <span className="text-gray-600">{item.label}</span>
+            {item.value !== undefined && item.value !== null && item.value !== '' && (
+              <span className="whitespace-nowrap tabular-nums text-gray-500">{item.value}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  }
   return (
     <ul className={`w-full space-y-2 ${className}`}>
       {rows.map((item, index) => (

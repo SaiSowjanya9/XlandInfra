@@ -21,7 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import {
-  ComposedChart, Bar, Line, LabelList, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  ComposedChart, Bar, Line, LabelList, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
@@ -106,30 +106,39 @@ const marginTrendValue = (value, entry) => (entry?.dataKey === 'marginPercent'
 // recognises an estimate by the property before the number.
 const shortEstimateId = (id = '') => (id.length > 13 ? `${id.slice(0, 4)}…${id.slice(-5)}` : id);
 
-// The margin's own label, drawn on a chip. The line crosses the bars, so its label lands wherever
-// the percentage puts it -- on top of a bar's figure, or under the legend at 100% -- and two
-// numbers printed over each other are worse than either alone. The chip carries its own background,
-// so whatever it crosses, it stays readable.
+/**
+ * The margin's own label.
+ *
+ * A bar's figure is always drawn above the bar, and the line's dot for the same estimate sits at
+ * whatever height the percentage puts it -- which, for the middle bar of the group, is repeatedly
+ * the same place. So the label is drawn **below** the dot rather than above it: under a dot at 28%
+ * is the body of a bar, not another number, and under a dot at 100% is empty plot rather than the
+ * legend. Only a margin low enough for "below" to mean the axis itself is drawn above instead.
+ *
+ * The chip carries its own background, so where it does cross a bar it is still read as a figure.
+ */
 const MarginLabel = ({ x, y, value }) => {
   if (value == null || x == null || y == null) return null;
   const text = `${value}%`;
-  const width = text.length * 6.2 + 10;
+  const width = text.length * 6.2 + 12;
+  const below = Number(value) >= 12;
   return (
-    <g transform={`translate(${x}, ${y - 15})`}>
-      <rect x={-width / 2} y={-9} width={width} height={17} rx={8.5} fill="#EEF2FF" stroke="#C7D2FE" />
-      <text textAnchor="middle" dy={3.5} fontSize={10} fontWeight={600} fill="#4F6BED">{text}</text>
+    <g transform={`translate(${x}, ${y + (below ? 18 : -16)})`}>
+      <rect x={-width / 2} y={-9} width={width} height={18} rx={9} fill="#EEF2FF" stroke="#C7D2FE" />
+      <text textAnchor="middle" dy={4} fontSize={10} fontWeight={600} fill="#4F6BED">{text}</text>
     </g>
   );
 };
 
-// The legend states the series in the order the reader meets them -- what it costs, what we make,
-// what is paid, and the margin those come to. Recharts otherwise orders it by how the shapes are
-// painted, which put Customer Price first and Margin % in the middle of the costs.
-const MARGIN_CHART_LEGEND = [
-  { value: 'Vendor Cost', type: 'square', color: '#A5B4FC' },
-  { value: 'XLAND Cost', type: 'square', color: '#FCD34D' },
-  { value: 'Customer Price', type: 'square', color: '#6EE7B7' },
-  { value: 'Margin %', type: 'line', color: '#4F6BED' }
+// The legend is the panel's own, above the plot, not recharts'. Its `payload` and `height` props
+// were ignored here: the legend kept the order the shapes happen to be painted in -- Customer
+// Price first, Margin % in the middle of the costs -- and floated over the plot, where a 100%
+// margin point ran straight through it. Ours states the series in the order the reader meets them.
+const MARGIN_CHART_SERIES = [
+  { label: 'Vendor Cost', color: '#A5B4FC' },
+  { label: 'XLAND Cost', color: '#FCD34D' },
+  { label: 'Customer Price', color: '#6EE7B7' },
+  { label: 'Margin %', color: '#4F6BED', line: true }
 ];
 const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
   const row = rows[payload?.index] || {};
@@ -1077,14 +1086,16 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 The plot scrolls sideways rather than squeezing, since a group needs room for three
                 labelled bars; the card clips nothing, so the hover card is never cut off. */}
             {marginChart.length > 0 ? (
-              <div className="mt-5 overflow-x-auto">
+              <>
+              {/* Above the plot and outside it, so nothing the chart draws can cross it */}
+              <ChartLegend layout="row" size="xs" className="mt-5 justify-end" items={MARGIN_CHART_SERIES} />
+              <div className="mt-2 overflow-x-auto">
                 <div style={{ minWidth: Math.max(560, marginChart.length * 190) }} className="h-80 sm:h-[22rem]">
                   <ResponsiveContainer width="100%" height="100%">
-                    {/* The top margin is the room the bar figures and the margin chip stand in:
-                        without it the tallest label is clipped and the 100% point meets the legend.
-                        The bars of one estimate are kept close (`barGap`) and the estimates apart
+                    {/* The top margin is the room the tallest bar's figure stands in. The bars of
+                        one estimate are kept close (`barGap`) and the estimates apart
                         (`barCategoryGap`), so a group reads as a group. */}
-                    <ComposedChart data={marginChart} margin={{ top: 28, right: 12, left: 0, bottom: 16 }}
+                    <ComposedChart data={marginChart} margin={{ top: 22, right: 12, left: 0, bottom: 16 }}
                       barGap={2} barCategoryGap="22%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="estimateId" tickLine={false} axisLine={{ stroke: '#E2E8F0' }}
@@ -1095,9 +1106,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                         tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
                       <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={marginTrendValue}
                         footer={row => [row.property, row.propertyCode, row.createdAt && new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })].filter(Boolean).join(' · ')} />} />
-                      {/* Reserved its own row at the top, so no series label is drawn over it */}
-                      <Legend verticalAlign="top" align="right" height={28} payload={MARGIN_CHART_LEGEND}
-                        wrapperStyle={{ fontSize: 12 }} />
                       {/* The figures are compact -- ₹1.5L, not ₹1,50,300 -- because an exact label
                           is wider than the bar it belongs to and runs into its neighbour. Exact
                           figures are in the hover and in the cards above. */}
@@ -1118,6 +1126,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   </ResponsiveContainer>
                 </div>
               </div>
+              </>
             ) : (
               <p className="mt-5 text-sm text-gray-500">
                 {estimateMargins.estimateCount === 0
