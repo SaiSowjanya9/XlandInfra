@@ -83,13 +83,16 @@ const formatCurrencyShort = (amount) => {
   return '₹' + new Intl.NumberFormat('en-IN').format(num);
 };
 
-// For a chart axis, where ₹1,50,300 is too wide to repeat down the side of a 260px plot
+// For an axis tick or a label sitting over a bar, where ₹1,50,300 is wider than the bar itself and
+// runs into whatever is beside it. One decimal keeps ₹42.3K distinct from ₹42.8K; the exact figure
+// is a hover and a summary card away.
 const formatCurrencyCompact = (amount) => {
   const num = parseFloat(amount) || 0;
   const scale = Math.abs(num);
-  if (scale >= 1e7) return `₹${(num / 1e7).toFixed(scale >= 1e8 ? 0 : 1)}Cr`;
-  if (scale >= 1e5) return `₹${(num / 1e5).toFixed(scale >= 1e6 ? 0 : 1)}L`;
-  if (scale >= 1000) return `₹${Math.round(num / 1000)}K`;
+  const trim = value => `${Number(value.toFixed(1))}`;
+  if (scale >= 1e7) return `₹${trim(num / 1e7)}Cr`;
+  if (scale >= 1e5) return `₹${trim(num / 1e5)}L`;
+  if (scale >= 1000) return `₹${trim(num / 1000)}K`;
   return `₹${Math.round(num)}`;
 };
 
@@ -102,6 +105,32 @@ const marginTrendValue = (value, entry) => (entry?.dataKey === 'marginPercent'
 // what distinguishes one from another -- and names the property underneath it, as a reader
 // recognises an estimate by the property before the number.
 const shortEstimateId = (id = '') => (id.length > 13 ? `${id.slice(0, 4)}…${id.slice(-5)}` : id);
+
+// The margin's own label, drawn on a chip. The line crosses the bars, so its label lands wherever
+// the percentage puts it -- on top of a bar's figure, or under the legend at 100% -- and two
+// numbers printed over each other are worse than either alone. The chip carries its own background,
+// so whatever it crosses, it stays readable.
+const MarginLabel = ({ x, y, value }) => {
+  if (value == null || x == null || y == null) return null;
+  const text = `${value}%`;
+  const width = text.length * 6.2 + 10;
+  return (
+    <g transform={`translate(${x}, ${y - 15})`}>
+      <rect x={-width / 2} y={-9} width={width} height={17} rx={8.5} fill="#EEF2FF" stroke="#C7D2FE" />
+      <text textAnchor="middle" dy={3.5} fontSize={10} fontWeight={600} fill="#4F6BED">{text}</text>
+    </g>
+  );
+};
+
+// The legend states the series in the order the reader meets them -- what it costs, what we make,
+// what is paid, and the margin those come to. Recharts otherwise orders it by how the shapes are
+// painted, which put Customer Price first and Margin % in the middle of the costs.
+const MARGIN_CHART_LEGEND = [
+  { value: 'Vendor Cost', type: 'square', color: '#A5B4FC' },
+  { value: 'XLAND Cost', type: 'square', color: '#FCD34D' },
+  { value: 'Customer Price', type: 'square', color: '#6EE7B7' },
+  { value: 'Margin %', type: 'line', color: '#4F6BED' }
+];
 const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
   const row = rows[payload?.index] || {};
   return (
@@ -1049,9 +1078,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 labelled bars; the card clips nothing, so the hover card is never cut off. */}
             {marginChart.length > 0 ? (
               <div className="mt-5 overflow-x-auto">
-                <div style={{ minWidth: Math.max(560, marginChart.length * 210) }} className="h-72 sm:h-80">
+                <div style={{ minWidth: Math.max(560, marginChart.length * 190) }} className="h-80 sm:h-[22rem]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={marginChart} margin={{ top: 24, right: 8, left: 0, bottom: 16 }} barGap={6}>
+                    {/* The top margin is the room the bar figures and the margin chip stand in:
+                        without it the tallest label is clipped and the 100% point meets the legend.
+                        The bars of one estimate are kept close (`barGap`) and the estimates apart
+                        (`barCategoryGap`), so a group reads as a group. */}
+                    <ComposedChart data={marginChart} margin={{ top: 28, right: 12, left: 0, bottom: 16 }}
+                      barGap={2} barCategoryGap="22%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="estimateId" tickLine={false} axisLine={{ stroke: '#E2E8F0' }}
                         interval={0} height={44} tick={<EstimateAxisTick rows={marginChart} />} />
@@ -1061,20 +1095,24 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                         tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
                       <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={marginTrendValue}
                         footer={row => [row.property, row.propertyCode, row.createdAt && new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })].filter(Boolean).join(' · ')} />} />
-                      <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, paddingBottom: 12 }} />
-                      <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" fill="#A5B4FC" radius={[4, 4, 0, 0]} maxBarSize={44}>
-                        <LabelList dataKey="vendorCost" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      {/* Reserved its own row at the top, so no series label is drawn over it */}
+                      <Legend verticalAlign="top" align="right" height={28} payload={MARGIN_CHART_LEGEND}
+                        wrapperStyle={{ fontSize: 12 }} />
+                      {/* The figures are compact -- ₹1.5L, not ₹1,50,300 -- because an exact label
+                          is wider than the bar it belongs to and runs into its neighbour. Exact
+                          figures are in the hover and in the cards above. */}
+                      <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" fill="#A5B4FC" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        <LabelList dataKey="vendorCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 10, fill: '#475569' }} />
                       </Bar>
-                      <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" fill="#FCD34D" radius={[4, 4, 0, 0]} maxBarSize={44}>
-                        <LabelList dataKey="xlandCost" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" fill="#FCD34D" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        <LabelList dataKey="xlandCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 10, fill: '#475569' }} />
                       </Bar>
-                      <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#6EE7B7" radius={[4, 4, 0, 0]} maxBarSize={44}>
-                        <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#6EE7B7" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                        <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 10, fill: '#475569' }} />
                       </Bar>
                       <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#4F6BED"
                         strokeWidth={2} dot={{ r: 4, fill: '#4F6BED' }} activeDot={{ r: 5 }}>
-                        <LabelList dataKey="marginPercent" position="top" offset={10}
-                          formatter={value => `${value}%`} style={{ fontSize: 10, fontWeight: 600, fill: '#4F6BED' }} />
+                        <LabelList dataKey="marginPercent" content={<MarginLabel />} />
                       </Line>
                     </ComposedChart>
                   </ResponsiveContainer>
