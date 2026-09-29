@@ -34,11 +34,28 @@ export const rowInput = (row) => {
 export const isPricedRow = (row) => Boolean(row?.catalogServiceId);
 
 /**
+ * The property type a row is quoted against.
+ *
+ * The quote refuses a type the service does not cover -- "This service is not available for the
+ * selected property type", a 400 -- so sending the package's first type blindly left a row unpriced
+ * whenever the package had no type ticked yet, or its first type was one the service does not serve.
+ * Typing an amount then produced no price at all, with nothing to say why.
+ *
+ * So: the first of the package's own types the service actually covers, failing that the service's
+ * own first type, and failing that nothing -- which the quote will then answer for.
+ */
+export const quotePropertyType = (row, packageTypes = []) => {
+  const allowed = Array.isArray(row?.applicablePropertyTypes) ? row.applicablePropertyTypes : [];
+  const shared = (Array.isArray(packageTypes) ? packageTypes : []).find(type => !allowed.length || allowed.includes(type));
+  return shared || allowed[0] || '';
+};
+
+/**
  * Prices one row against the catalog. Returns the figures to store on it, or an error message.
  * `propertyType` is the package's first applicable type: a quote is validated against the types the
  * service allows, and no pricing method varies by type, so the first is enough.
  */
-export const quotePackageRow = async (row, { apiPath, propertyType, fpId, token, signal }) => {
+export const quotePackageRow = async (row, { apiPath, propertyType, propertyTypes, fpId, token, signal }) => {
   const input = rowInput(row);
   if (!isPricedRow(row)) return { skipped: true };
   if (input && (row.inputValue === '' || row.inputValue === null || row.inputValue === undefined)) {
@@ -47,7 +64,8 @@ export const quotePackageRow = async (row, { apiPath, propertyType, fpId, token,
   const body = {
     ...(input ? { [input.key]: row.inputValue } : {}),
     frequency: row.frequencyType, visits: row.frequencyCount,
-    property_type: propertyType || '', fpId: fpId || 'all'
+    // A type the service covers, or the quote refuses it and the row stays unpriced
+    property_type: propertyType || quotePropertyType(row, propertyTypes), fpId: fpId || 'all'
   };
   const response = await fetch(`${API_BASE}${apiPath}/${row.catalogServiceId}/quote`, {
     method: 'POST',

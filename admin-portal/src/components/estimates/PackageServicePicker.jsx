@@ -67,6 +67,9 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
         frequencyCount: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0,
         catalogServiceId: service.id, category: service.category || '',
         pricingMethod: service.pricing_method, unit: service.unit || '',
+        // The quote refuses a property type the service does not cover, so the row remembers which
+        // ones it does: that is what it is priced against until the package has a type of its own.
+        applicablePropertyTypes: service.applicable_property_types || [],
         // Capacity Slab prices from a table, so the row carries the table: the form lists every slab
         // and the capacity typed into the row decides which one applies.
         ...(service.pricing_method === 'capacity_slab' ? {
