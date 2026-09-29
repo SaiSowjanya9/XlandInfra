@@ -142,6 +142,12 @@ nothing here may be applied globally.
   wraps and carries a `title`, the figure sits right-aligned and `whitespace-nowrap`, and the colour
   dot is nudged `mt-[0.3em]` so it sits on the label's first line rather than halfway down a
   two-line one. A `value` is formatted by the caller, since one chart counts and another totals money.
+- **A chart library's own legend is not used where a data point can cross it.** Recharts ignored
+  both the `payload` order and the reserved `height` on the Payments margin chart: the legend kept
+  the order the shapes are painted in — Customer Price first, Margin % in the middle of the costs —
+  and floated over the plot, where a 100% margin point was drawn straight through it. `ChartLegend`
+  takes `layout="row"` for that case: the series named above the plot, outside it, in the order the
+  reader meets them, with `line: true` on an item drawn as a line rather than filled.
 - A donut and its legend **stack until `xl`**. A card in a three-column grid is narrow at every
   breakpoint below that, and a 130px chart beside a legend is what squeezed the labels in the first
   place. Where a label must keep a fixed column so bars line up, it wraps inside that column.
@@ -179,8 +185,15 @@ nothing here may be applied globally.
   figures in lakhs is otherwise flat on the floor. **Total Actual Cost is deliberately absent**:
   with no operating cost it is the vendor cost again under another name. The x-axis names the
   estimate over the property; a long id keeps its tail (`EST-…24188`), which is what distinguishes
-  one from another. The plot scrolls sideways at ~210px a group rather than squeezing three
+  one from another. The plot scrolls sideways at ~190px a group rather than squeezing three
   labelled bars into nothing. Do not reinstate the per-estimate table.
+- **Nothing is labelled where something else is already drawn.** Three collisions, three rules: bar
+  figures are **compact** (`₹1.5L`, not `₹1,50,300`), because an exact figure is wider than the
+  40px bar it labels and runs into its neighbour — the exact figures are in the hover and the cards
+  above. The margin's label is drawn **below** its dot, since above the dot is where the middle
+  bar's own figure already is, and it sits on a chip with its own background so that where it does
+  cross a bar it still reads; only a margin under 12% is drawn above, where below would be the
+  axis. And the legend is the panel's own, above the plot — see the Chart Legends rules.
 - **A calendar picks the timeline** (`DateRangeFilter`, the same control the other dashboards use)
   and everything in the panel follows it: the four summary cards are the range's totals, not the
   whole history, and the chart plots the estimates the range left. `utils/estimateMarginTrend.js`
