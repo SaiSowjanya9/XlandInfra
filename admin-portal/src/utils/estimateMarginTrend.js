@@ -45,6 +45,17 @@ export const estimatesInRange = (rows = [], { from, to } = {}) => {
 /**
  * The headline figures for a set of estimates.
  *
+ * **XLAND cost is the markup, not the `operating_cost` field.** ₹4,000 of vendor cost at 30% earns
+ * ₹1,200 and the customer pays ₹5,200 -- that ₹1,200 is what the service form has always called
+ * XLAND's cost, and what this panel showed instead was `operating_cost`, a separate overhead input
+ * that no property-based estimate carries. So it read ₹0 beside a margin of 28%, two figures that
+ * cannot both be true. It is derived here, never entered:
+ *
+ *   xlandCost = customerPrice − vendorCost − operatingCost
+ *
+ * which is the profit, so margin is `xlandCost / customerPrice` and the three figures add up:
+ * vendor cost plus XLAND cost (plus any operating cost) is exactly the customer price.
+ *
  * Only estimates that carry a cost are added up, which is the same rule the server applies to its
  * own totals: an estimate whose services were all typed by hand has a price and no cost, so
  * including it reports a margin approaching 100% and makes the panel read as profit we have no
@@ -57,13 +68,15 @@ export const estimateMarginSummary = (rows = []) => {
   const operatingCost = sum('operatingCost');
   const customerPrice = sum('customerPrice');
   const actualCost = round2(vendorCost + operatingCost);
-  const profit = round2(customerPrice - actualCost);
+  const xlandCost = round2(customerPrice - actualCost);
   return {
     estimateCount: rows.length,
     costedCount: costed.length,
     uncostedCount: rows.length - costed.length,
-    vendorCost, operatingCost, actualCost, customerPrice, profit,
-    marginPercent: customerPrice ? round2(profit / customerPrice * 100) : null
+    vendorCost, operatingCost, actualCost, customerPrice, xlandCost,
+    // The same number under the name the rest of the dashboard uses for it
+    profit: xlandCost,
+    marginPercent: customerPrice ? round2(xlandCost / customerPrice * 100) : null
   };
 };
 
@@ -100,13 +113,15 @@ export const estimateMarginBuckets = (rows = [], { from, to } = {}, now = new Da
     bucket.customerPrice = round2(bucket.customerPrice + amount(row.customerPrice));
   }
   return [...buckets.values()].map(bucket => {
-    const profit = round2(bucket.customerPrice - bucket.vendorCost - bucket.operatingCost);
+    // What XLAND makes on top of what the vendor charges -- the markup, in rupees. Stacked on the
+    // vendor cost it comes to exactly the customer price, which is what the chart draws.
+    const xlandCost = round2(bucket.customerPrice - bucket.vendorCost - bucket.operatingCost);
     return {
-      ...bucket, profit,
+      ...bucket, xlandCost, profit: xlandCost,
       // A bucket with nothing costed in it has no margin. It is null rather than 0: a quiet month
       // is not a month where we made nothing, and the chart bridges the gap instead of diving to
       // the floor and back
-      marginPercent: bucket.customerPrice ? round2(profit / bucket.customerPrice * 100) : null
+      marginPercent: bucket.customerPrice ? round2(xlandCost / bucket.customerPrice * 100) : null
     };
   });
 };

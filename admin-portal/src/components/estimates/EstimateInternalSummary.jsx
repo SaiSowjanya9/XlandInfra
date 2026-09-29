@@ -14,7 +14,10 @@ export default function EstimateInternalSummary({ costs, title = 'Internal Cost 
   // Actual cost, selling price and gross profit were dropped as restatements of those.
   const figures = [
     ['Total Vendor Cost', formatCurrency(costs.vendorCost)],
-    ['XLAND Operating Cost', formatCurrency(costs.operatingCost)],
+    // The markup in rupees, the same figure the service form and the package form call XLAND Cost:
+    // vendor cost plus this is the customer price. It showed `operatingCost`, a separate overhead
+    // no configured service carries, so it sat at ₹0 beside a real margin.
+    ['XLAND Cost', formatCurrency(costs.xlandCost)],
     ['Customer Price', formatCurrency(costs.sellingPrice)],
     ['Gross Margin %', costs.marginPercent == null ? '-' : `${costs.marginPercent}%`]
   ];

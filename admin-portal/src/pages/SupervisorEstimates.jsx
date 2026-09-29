@@ -1766,12 +1766,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                       </div>
                       
-                      {/* Summary */}
+                      {/* Summary. The package's own name is not a line of it: the field that sets
+                          it is in the form beside this panel, so repeating it said nothing. */}
                       <div className="border-t border-gray-200 pt-4 space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Package</span>
-                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || '—'}</span>
-                        </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Services</span>
                           <span className="font-medium text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>

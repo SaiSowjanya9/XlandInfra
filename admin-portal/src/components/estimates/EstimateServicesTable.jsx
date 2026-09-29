@@ -1,5 +1,5 @@
 import { formatCurrency, getAddonName, getAddonPrice, getServiceInput, getServiceMarginPercent,
-  getServiceMethodLabel, getServiceOperatingCost, getServiceRate, getServiceVendorCost } from '../../utils/estimatePackageUtils';
+  getServiceMethodLabel, getServiceXlandCost, getServiceRate, getServiceVendorCost } from '../../utils/estimatePackageUtils';
 
 /**
  * The services on a saved estimate: what the service is, how it was priced, what was measured at
@@ -52,8 +52,10 @@ const serviceColumns = (internal, decode) => {
   return [number, service, method, input, frequency, visits,
     { label: 'Vendor Cost (₹)', head: 'text-right', cell: 'text-right',
       render: row => <p className="text-xs text-gray-700">{money(getServiceVendorCost(row))}</p> },
+    // The markup in rupees, as on the service form -- not the operating-cost field, which is a
+    // separate overhead no configured service carries and which left this column reading zero
     { label: 'XLAND Cost (₹)', head: 'text-right', cell: 'text-right',
-      render: row => <p className="text-xs text-gray-700">{money(getServiceOperatingCost(row))}</p> },
+      render: row => <p className="text-xs text-gray-700">{money(getServiceXlandCost(row))}</p> },
     price,
     { label: 'Margin %', head: 'text-right', cell: 'text-right',
       render: row => <p className="text-xs font-semibold text-warm-accent-hover">{getServiceMarginPercent(row) == null ? '-' : `${getServiceMarginPercent(row)}%`}</p> }
