@@ -1047,16 +1047,10 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 onDateChange={(from, to) => setMarginRange({ from, to })}
               />
             </div>
-            {/* The totals leave out an estimate with no cost behind it, since a price with no cost
-                reports a margin approaching 100%. The chart still plots it, so the two are not
-                counting the same set and the difference is stated rather than left to be noticed. */}
             <p className="mt-3 text-xs text-gray-500">
               {marginSummary.estimateCount === 0
                 ? 'No active property-based estimates in this range'
-                : `${marginSummary.estimateCount} active ${marginSummary.estimateCount === 1 ? 'estimate' : 'estimates'} raised in this range` +
-                  (marginSummary.uncostedCount > 0
-                    ? ` · ${marginSummary.uncostedCount} with no vendor cost behind ${marginSummary.uncostedCount === 1 ? 'it is' : 'them are'} plotted but left out of the figures above`
-                    : '')}
+                : `${marginSummary.estimateCount} active ${marginSummary.estimateCount === 1 ? 'estimate' : 'estimates'} raised in this range`}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
