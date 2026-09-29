@@ -87,6 +87,141 @@ const buildScanParams = ({
 };
 
 // ============================================
+// What the scan was made with
+// ============================================
+
+/**
+ * Device, OS and browser from a user agent.
+ *
+ * Order is the whole difficulty. An iPhone says "iPhone; CPU iPhone OS 17_0 like Mac OS X", so a
+ * `/mac os x/` test placed above the iOS one claims every iPhone scan for macOS -- which is what the
+ * OS panel used to report, while the device panel correctly called the same scan mobile. The checks
+ * below go from the most specific to the least, and a UA that says nothing useful stays 'unknown'
+ * rather than being assigned a plausible default.
+ */
+const parseUserAgent = (ua) => {
+  const unknown = { device: 'unknown', deviceBrand: null, deviceModel: null, osName: null, osVersion: null, browserName: null, browserVersion: null };
+  if (!ua) return unknown;
+
+  const first = (pattern, transform = value => value) => {
+    const match = ua.match(pattern);
+    return match ? transform(match[1]) : null;
+  };
+
+  // --- Device ---
+  let device = 'unknown';
+  let deviceBrand = null;
+  let deviceModel = null;
+
+  if (/iphone|ipod/i.test(ua)) {
+    device = 'mobile'; deviceBrand = 'Apple'; deviceModel = /ipod/i.test(ua) ? 'iPod' : 'iPhone';
+  } else if (/ipad/i.test(ua)) {
+    device = 'tablet'; deviceBrand = 'Apple'; deviceModel = 'iPad';
+  } else if (/android/i.test(ua)) {
+    // Android's UA says "Mobile" for a phone and omits it for a tablet
+    device = /mobile/i.test(ua) ? 'mobile' : 'tablet';
+    deviceBrand = 'Android';
+    deviceModel = first(/android[^;)]*;\s*([^;)]+)/i, value => value.trim()) || 'Android Device';
+  } else if (/windows phone/i.test(ua)) {
+    device = 'mobile'; deviceBrand = 'Microsoft'; deviceModel = 'Windows Phone';
+  } else if (/macintosh|mac os x/i.test(ua)) {
+    // An iPad on iOS 13+ asks for desktop sites and sends this exact string, so some iPad scans are
+    // counted as Mac. Nothing in the UA distinguishes them; it is not guessed at here.
+    device = 'desktop'; deviceBrand = 'Apple'; deviceModel = 'Mac';
+  } else if (/windows nt/i.test(ua)) {
+    device = 'desktop'; deviceBrand = 'Microsoft'; deviceModel = 'PC';
+  } else if (/cros/i.test(ua)) {
+    device = 'desktop'; deviceBrand = 'Google'; deviceModel = 'Chromebook';
+  } else if (/linux|x11/i.test(ua)) {
+    device = 'desktop'; deviceBrand = 'Linux'; deviceModel = 'PC';
+  }
+
+  // --- OS: iOS and Android before the desktops, since both name another OS in passing ---
+  let osName = null;
+  let osVersion = null;
+
+  if (/iphone os|ipad;|cpu os/i.test(ua)) {
+    osName = 'iOS';
+    osVersion = first(/os (\d+[._]\d+)/i, value => value.replace(/_/g, '.'));
+  } else if (/android/i.test(ua)) {
+    osName = 'Android';
+    osVersion = first(/android (\d+(?:\.\d+)?)/i);
+  } else if (/windows nt/i.test(ua)) {
+    osName = 'Windows';
+    // Windows 11 reports itself as "Windows NT 10.0" and there is no way to tell the two apart from
+    // the UA. The old code had a `windows nt 11` branch that can never match, below one that labels
+    // every Windows 11 machine "10"; the version is simply left unsaid.
+    osVersion = first(/windows nt (\d+\.\d+)/i, value => (value === '10.0' ? null : value));
+  } else if (/mac os x/i.test(ua)) {
+    osName = 'macOS';
+    osVersion = first(/mac os x (\d+[._]\d+)/i, value => value.replace(/_/g, '.'));
+  } else if (/cros/i.test(ua)) {
+    osName = 'ChromeOS';
+  } else if (/linux|x11/i.test(ua)) {
+    osName = 'Linux';
+  }
+
+  // --- Browser: every Chromium browser also says "Chrome", and every one of them says "Safari" ---
+  let browserName = null;
+  let browserVersion = null;
+
+  if (/edg(?:e|a|ios)?\//i.test(ua)) {
+    browserName = 'Edge'; browserVersion = first(/edg(?:e|a|ios)?\/(\d+)/i);
+  } else if (/opr\/|opera/i.test(ua)) {
+    browserName = 'Opera'; browserVersion = first(/(?:opr|opera)\/(\d+)/i);
+  } else if (/samsungbrowser\//i.test(ua)) {
+    // The default browser on a Samsung phone, which is a lot of phones in India
+    browserName = 'Samsung Internet'; browserVersion = first(/samsungbrowser\/(\d+)/i);
+  } else if (/firefox\/|fxios\//i.test(ua)) {
+    browserName = 'Firefox'; browserVersion = first(/(?:firefox|fxios)\/(\d+)/i);
+  } else if (/crios\//i.test(ua)) {
+    // Chrome on iOS, which is Safari's engine wearing Chrome's name
+    browserName = 'Chrome'; browserVersion = first(/crios\/(\d+)/i);
+  } else if (/chromium\//i.test(ua)) {
+    browserName = 'Chromium'; browserVersion = first(/chromium\/(\d+)/i);
+  } else if (/chrome\//i.test(ua)) {
+    browserName = 'Chrome'; browserVersion = first(/chrome\/(\d+)/i);
+  } else if (/safari\//i.test(ua)) {
+    browserName = 'Safari'; browserVersion = first(/version\/(\d+)/i);
+  }
+
+  return { device, deviceBrand, deviceModel, osName, osVersion, browserName, browserVersion };
+};
+
+/**
+ * Bot detection. A scan wrongly called a bot is silently discarded, so the patterns name what they
+ * mean: `/snap/i` matched Snapchat's in-app browser and threw away real scans, and `/preview/i`,
+ * `/thumb/i` and `/embed/i` matched nothing a person browses with.
+ */
+const BOT_PATTERNS = [
+  // Search engine bots
+  /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
+  /yandexbot/i, /sogou/i, /exabot/i, /facebot/i, /ia_archiver/i,
+  // Social media crawlers, including the ones that fetch a link to draw its preview card
+  /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i, /pinterest/i,
+  /whatsapp/i, /telegrambot/i, /slackbot/i, /discordbot/i, /skypeuripreview/i,
+  // Generic bot patterns
+  /bot\b/i, /crawl/i, /spider/i, /scrape/i,
+  // Tools and libraries
+  /curl/i, /wget/i, /python/i, /java\//i, /httpclient/i, /libwww/i, /okhttp/i, /go-http-client/i,
+  /headless/i, /phantom/i, /selenium/i, /puppeteer/i, /playwright/i,
+  /snapshot/i, /thumbnail/i, /link-?preview/i,
+  // Monitoring and uptime
+  /pingdom/i, /uptimerobot/i, /statuscake/i, /newrelic/i, /datadog/i,
+  // Other
+  /mediapartners/i, /adsbot/i, /apis-google/i, /feedfetcher/i
+];
+
+const isBot = (ua) => {
+  if (!ua) return true;
+  if (BOT_PATTERNS.some(pattern => pattern.test(ua))) return true;
+  // A UA carrying a URL is a crawler naming its operator; one this short is not a browser
+  if (/https?:\/\//i.test(ua)) return true;
+  if (ua.length < 20) return true;
+  return false;
+};
+
+// ============================================
 // Trend buckets
 // ============================================
 
@@ -179,6 +314,8 @@ module.exports = {
   normalizeGeoLocation,
   referrerDomain,
   buildScanParams,
+  parseUserAgent,
+  isBot,
   PERIODS,
   DEFAULT_PERIOD,
   resolvePeriod,

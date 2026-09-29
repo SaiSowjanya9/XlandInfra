@@ -237,6 +237,54 @@ nothing here may be applied globally.
   cost, margin is measured against price, so `margin% = markup / (100 + markup) × 100`. 30% markup
   is a 23.08% margin.
 
+## QR Management
+
+- **`qr_scans` is the only source of any figure on the screen**, and a row on it means one request to
+  `/api/qr/r/:slug` — which only a scanned code produces. The per-row flags (`is_unique_user`,
+  `is_repeat_scan`) are written but never read back: a flag is decided once, by whichever request was
+  first, and cannot be corrected, whereas `COUNT(DISTINCT visitor_id)` can be recomputed and always
+  agrees with the rows. Counting "unique users" as `COUNT(*) WHERE is_unique_user` quietly meant
+  "first scans", and `SUM(is_repeat_scan)` reported one visitor's 40 scans as 39 returning visitors.
+  A visitor is a device fingerprint, so `COALESCE(visitor_id, CONCAT('scan:', id))` keeps a row that
+  predates fingerprinting as a visitor of its own instead of lumping them all together.
+- **A website visit is not a scan.** `POST /api/qr/track-visit` used to write a `qr_scans` row for
+  anyone who opened the site, staff included, and the total was reported as "Total Scans" — the very
+  data `cleanup_fake_qr_scans.sql` existed to purge. It and its caller in `frontend/src/App.jsx` are
+  gone; do not reintroduce page-visit tracking into this table.
+- **Bind no `undefined`, and never swallow the failure.** Commit 70ef43a2 swapped a hardcoded
+  `geoData` (which had `latitude`, `longitude` and `timezone` as null) for `getGeoLocation()`, which
+  returns none of those keys, so mysql2 threw `Bind parameters must not contain undefined` on every
+  scan insert and a `catch` only logged it: visitors were redirected and **not one scan was
+  recorded**, for months, while the dashboard showed page visits instead. The row is built by
+  `utils/qrScan.js` (`SCAN_INSERT_SQL` + `buildScanParams`) from one column list, a missing value
+  becomes SQL NULL, and the test asserts no parameter is ever undefined.
+  Regression test: `node --test backend/utils/qrScan.test.js`.
+- **Order matters in user-agent parsing, and getting it wrong misreports rather than loses.** An
+  iPhone sends "CPU iPhone OS 17_0 like Mac OS X", so a `/mac os x/` test above the iOS one filed
+  every iPhone scan under macOS while the device panel called the same scan mobile. Windows 11 sends
+  "Windows NT 10.0" and is not distinguishable, so no version is claimed rather than labelling it 10.
+  Bot patterns must name what they mean: `/snap/i` discarded every scan from Snapchat's in-app
+  browser. `parseUserAgent` and `isBot` live in `utils/qrScan.js` with their tests.
+- **A label must match its query.** "Verified Scans — mobile only (real users)" counted tablets too
+  and implied everything else was fake; it is "Phone & Tablet" of the same total now. "Active Now"
+  came from `qr_active_sessions`, which nothing but a scan ever updated, so it was already "scanned
+  in the last 5 minutes" — it says so. Total QR codes comes from `qr_codes`, not
+  `COUNT(DISTINCT qr_id) FROM qr_scans`, which omitted every code nobody had scanned yet.
+- **Send the token, and show the failure.** Every QR endpoint is `authenticate` + `adminOnly` since
+  the security audit (11da8865), and `QRManagement.jsx` called them with no `Authorization` header:
+  all three answered 401, every card fell back to `0`, and a dead page was indistinguishable from a
+  quiet one. Requests go through the page's `qrFetch`, a failed load names itself in a banner, and no
+  card invents a fallback figure. For the same reason the page is admin-only in the nav and has no FP
+  route: `adminOnly` rejects `operations_manager` and franchise partners with a 403.
+- The trend series is zero-filled server-side (`scanWindow` + `fillScanSeries`), by hour for `24h`
+  and by whole calendar day otherwise, so the chart's bars add up to the card above it and an empty
+  day is drawn as **no bar** — not as the 5%-tall stub the old floor gave it. Every query in
+  `/analytics/:qrId` uses that same window, including the scan list, which used to ignore the period.
+- `qr_analytics_daily` is retention only; `qr_analytics_hourly` and `qr_active_sessions` are no
+  longer written at all. `backend/database/qr_reset_analytics.sql` inspects the table, purges legacy
+  page-visit rows and rebuilds the daily roll-up from `qr_scans` so the two provably agree — run it
+  by hand, step by step, after taking a dump.
+
 ## Customer Category UI
 
 - Property Management and Add Customer category panels must use the shared `components/common/CategorySelection.jsx` design across portals. Keep equal white cards, matching icons and spacing, teal Residential styling, and the disabled Commercial "Coming Soon" badge. Preserve each page's existing category-selection handler.

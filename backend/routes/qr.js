@@ -8,7 +8,10 @@ const { authenticate } = require('../middleware/auth');
 // Rate limiting for scan endpoint
 const rateLimit = require('express-rate-limit');
 // Scan row construction and trend bucketing, with their own tests
-const { SCAN_INSERT_SQL, buildScanParams, normalizeGeoLocation, scanWindow, fillScanSeries } = require('../utils/qrScan');
+const {
+  SCAN_INSERT_SQL, buildScanParams, normalizeGeoLocation,
+  parseUserAgent, isBot, scanWindow, fillScanSeries
+} = require('../utils/qrScan');
 
 // Database pool will be passed from server.js
 let pool;
@@ -118,143 +121,9 @@ setInterval(() => {
   }
 }, 60000);
 
-// Parse User Agent
-const parseUserAgent = (ua) => {
-  if (!ua) return { device: 'unknown', os: 'unknown', browser: 'unknown' };
-  
-  const uaLower = ua.toLowerCase();
-  
-  // Device detection - order matters! Check mobile/tablet first, then default to desktop
-  let device = 'desktop';
-  let deviceBrand = '';
-  let deviceModel = '';
-  
-  // Check for explicit mobile/tablet indicators first
-  if (/iphone/i.test(ua)) {
-    device = 'mobile';
-    deviceBrand = 'Apple';
-    deviceModel = 'iPhone';
-  } else if (/ipad/i.test(ua)) {
-    device = 'tablet';
-    deviceBrand = 'Apple';
-    deviceModel = 'iPad';
-  } else if (/android/i.test(ua)) {
-    device = /mobile/i.test(ua) ? 'mobile' : 'tablet';
-    deviceBrand = 'Android';
-    const match = ua.match(/android[^;]*;\s*([^;)]+)/i);
-    deviceModel = match ? match[1].trim() : 'Android Device';
-  } else if (/windows phone/i.test(ua)) {
-    device = 'mobile';
-    deviceBrand = 'Microsoft';
-    deviceModel = 'Windows Phone';
-  } else if (/macintosh|mac os x/i.test(ua) && !/mobile|iphone|ipad/i.test(ua)) {
-    // Explicitly macOS desktop (not iPad in desktop mode)
-    device = 'desktop';
-    deviceBrand = 'Apple';
-    deviceModel = 'Mac';
-  } else if (/windows nt/i.test(ua)) {
-    device = 'desktop';
-    deviceBrand = 'Microsoft';
-    deviceModel = 'PC';
-  } else if (/linux/i.test(ua) && !/android/i.test(ua)) {
-    device = 'desktop';
-    deviceBrand = 'Linux';
-    deviceModel = 'PC';
-  }
-  
-  // OS detection
-  let osName = 'unknown';
-  let osVersion = '';
-  
-  if (/windows nt 10/i.test(ua)) { osName = 'Windows'; osVersion = '10'; }
-  else if (/windows nt 11/i.test(ua)) { osName = 'Windows'; osVersion = '11'; }
-  else if (/mac os x/i.test(ua)) {
-    osName = 'macOS';
-    const match = ua.match(/mac os x (\d+[._]\d+)/i);
-    osVersion = match ? match[1].replace('_', '.') : '';
-  } else if (/iphone os|ipad.*os/i.test(ua)) {
-    osName = 'iOS';
-    const match = ua.match(/os (\d+[._]\d+)/i);
-    osVersion = match ? match[1].replace('_', '.') : '';
-  } else if (/android/i.test(ua)) {
-    osName = 'Android';
-    const match = ua.match(/android (\d+\.?\d*)/i);
-    osVersion = match ? match[1] : '';
-  } else if (/linux/i.test(ua)) { osName = 'Linux'; }
-  
-  // Browser detection
-  let browserName = 'unknown';
-  let browserVersion = '';
-  
-  if (/edg\//i.test(ua)) {
-    browserName = 'Edge';
-    const match = ua.match(/edg\/(\d+)/i);
-    browserVersion = match ? match[1] : '';
-  } else if (/chrome/i.test(ua) && !/chromium/i.test(ua)) {
-    browserName = 'Chrome';
-    const match = ua.match(/chrome\/(\d+)/i);
-    browserVersion = match ? match[1] : '';
-  } else if (/safari/i.test(ua) && !/chrome/i.test(ua)) {
-    browserName = 'Safari';
-    const match = ua.match(/version\/(\d+)/i);
-    browserVersion = match ? match[1] : '';
-  } else if (/firefox/i.test(ua)) {
-    browserName = 'Firefox';
-    const match = ua.match(/firefox\/(\d+)/i);
-    browserVersion = match ? match[1] : '';
-  } else if (/opera|opr\//i.test(ua)) {
-    browserName = 'Opera';
-  }
-  
-  return {
-    device,
-    deviceBrand,
-    deviceModel,
-    osName,
-    osVersion,
-    browserName,
-    browserVersion
-  };
-};
-
-// Bot detection - Enhanced to filter out common bots and crawlers
-const isBot = (ua) => {
-  if (!ua) return true;
-  const uaLower = ua.toLowerCase();
-  
-  // Known bot user agents and patterns
-  const botPatterns = [
-    // Search engine bots
-    /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
-    /yandexbot/i, /sogou/i, /exabot/i, /facebot/i, /ia_archiver/i,
-    // Social media crawlers
-    /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i, /pinterest/i,
-    /whatsapp/i, /telegrambot/i, /slackbot/i, /discordbot/i,
-    // Generic bot patterns
-    /bot/i, /crawl/i, /spider/i, /scrape/i, /fetch/i,
-    // Tools and libraries
-    /curl/i, /wget/i, /python/i, /java\//i, /httpclient/i, /libwww/i,
-    /headless/i, /phantom/i, /selenium/i, /puppeteer/i, /playwright/i,
-    // Preview generators. Narrow on purpose: /snap/i discarded every scan made from Snapchat's
-    // in-app browser, and /preview/i, /thumb/i and /embed/i match nothing a person browses with.
-    /snapshot/i, /thumbnail/i, /link-?preview/i,
-    // Monitoring and uptime
-    /pingdom/i, /uptimerobot/i, /statuscake/i, /newrelic/i, /datadog/i,
-    // Other
-    /mediapartners/i, /adsbot/i, /apis-google/i, /feedfetcher/i
-  ];
-  
-  // Check if any pattern matches
-  if (botPatterns.some(pattern => pattern.test(ua))) {
-    return true;
-  }
-  
-  // Additional checks for suspicious patterns
-  if (uaLower.includes('http://') || uaLower.includes('https://')) return true;
-  if (ua.length < 20) return true; // Very short user agents are often bots
-  
-  return false;
-};
+// What a scan was made with, and whether it was made by a person. Both live in utils/qrScan.js with
+// their tests: they decide the Device Distribution and Browsers & OS panels, so getting them wrong
+// misreports the data rather than losing it, which is harder to notice.
 
 // Get client IP - improved detection for proxied requests
 const getClientIP = (req) => {
@@ -1000,6 +869,11 @@ const EXPORT_COLUMNS = [
   'os_name', 'os_version', 'browser_name', 'browser_version',
   'city', 'state', 'country', 'country_code'
 ];
+// The timestamp is formatted by MySQL: a DATE reaches the CSV as
+// "Tue Sep 29 2026 16:35:13 GMT-0500 (Central Daylight Time)", which no spreadsheet reads as a date
+const EXPORT_SELECT = EXPORT_COLUMNS
+  .map(column => (column === 'scanned_at' ? "DATE_FORMAT(scanned_at, '%Y-%m-%d %H:%i:%s') AS scanned_at" : column))
+  .join(', ');
 
 router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) => {
   try {
@@ -1016,7 +890,7 @@ router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) 
     const since = all ? null : scanWindow(period === '30d' ? '30d' : period).start;
     
     const [scans] = await pool.execute(
-      `SELECT ${EXPORT_COLUMNS.join(', ')}
+      `SELECT ${EXPORT_SELECT}
        FROM qr_scans
        WHERE qr_id = ?${all ? '' : ' AND scanned_at >= ?'}
        ORDER BY scanned_at DESC`,
