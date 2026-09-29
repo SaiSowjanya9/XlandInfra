@@ -3,7 +3,7 @@ const { pool } = require('../config/database');
 const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
 const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { normalizeEstimateService, isManualService, normalizeManualService } = require('../utils/estimateData');
-const { categoryOptions } = require('../utils/serviceCategories');
+const { categoryOptions, addCategory, removeCategory } = require('../utils/serviceCategories');
 const { parseService } = require('./serviceCatalog');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -40,10 +40,30 @@ router.get('/', async (req, res) => {
 });
 
 // Suggestions for the category field: the shared list plus any category this scope already used,
-// which is how a custom category typed on a saved service comes back in the dropdown.
+// which is how a custom category typed on a saved service comes back in the dropdown. FP staff
+// quote from the catalog but do not author it, so only the FP gets the save tick and the cross.
 router.get('/categories', async (req, res) => {
-  try { res.json({ success: true, data: await categoryOptions(pool, req.catalogFpId) }); }
-  catch (error) { handleError(res, error); }
+  try {
+    res.json({ success: true, data: await categoryOptions(pool, req.catalogFpId), canManage: isFranchisePartner(req.user.role) });
+  } catch (error) { handleError(res, error); }
+});
+
+// A category typed into the box and saved with the tick. It is stored against this FP, so one
+// franchise's categories never appear in another's dropdown.
+router.post('/categories', async (req, res) => {
+  try {
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can add categories.', 403);
+    res.status(201).json({ success: true, data: await addCategory(pool, req.catalogFpId, req.body.name, req.user.id) });
+  } catch (error) { handleError(res, error); }
+});
+
+// The cross beside a category this FP added and nothing uses yet; the shared ones (scope 0) and
+// any category already saved on a service, package or estimate are refused.
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can delete categories.', 403);
+    res.json({ success: true, data: await removeCategory(pool, req.catalogFpId, req.params.id) });
+  } catch (error) { handleError(res, error); }
 });
 
 router.post('/:id/quote', async (req, res) => {

@@ -3,6 +3,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import AutocompleteInput from '../common/AutocompleteInput';
+import useServiceCategories from '../../hooks/useServiceCategories';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { primaryInputLabel, unitGroupsFor, unitOptionsFor } from '../../utils/estimatePackageUtils';
 import { useSkinClasses } from '../../utils/estimateTheme';
@@ -111,9 +112,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const token = getAuthToken();
 
   // Form State
-  const [categories, setCategories] = useState([]);
-  const [categoryError, setCategoryError] = useState('');
-  const [categoryAttempt, setCategoryAttempt] = useState(0);
+  // The Category box reads, saves and deletes through the catalog this form is pointed at. A
+  // scoped portal (FP) owns its scope on the server, so no FP is sent with the request.
+  const { categories, canManage: canManageCategories, error: categoryError, reload: reloadCategories,
+    createCategory, deleteCategory } = useServiceCategories({ apiPath, fpId: scoped ? undefined : selectedFp?.id });
   const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     serviceName: '',
@@ -179,21 +181,6 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
       return { ...slab, id: index + 1, defaultFrequency: schedule.frequency, defaultVisitsPerYear: schedule.visits };
     }));
   }, [service]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setCategoryError('');
-    fetch(`${API_BASE}${apiPath}/categories`, {
-      headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
-    }).then(async response => {
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error('Unable to load categories.');
-      setCategories(result.data || []);
-    }).catch(error => {
-      if (error.name !== 'AbortError') setCategoryError('Unable to load categories. Please retry.');
-    });
-    return () => controller.abort();
-  }, [apiPath, scoped, token, categoryAttempt]);
 
   // Update unit options when pricing method changes
   const changePricingMethod = (pricingMethod) => {
@@ -404,7 +391,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const slabXlandCost = slabVendorCost == null || markupValue == null ? null : slabVendorCost * markupValue / 100;
   const slabCustomerPrice = slabXlandCost == null ? null : slabVendorCost + slabXlandCost;
 
-  const categoryNames = [...new Set(categories.map(category => category.name).filter(Boolean))];
+  // The tick saves a typed category into this list, so it is only listed once it has been saved:
+  // an option matching what is being typed is what would hide that save row.
+  const categoryChoices = categories.map(category => ({ label: category.name, value: category.name, id: category.id, removable: category.removable }));
   const scopeText = scopeLabel ?? (service
     ? (service.franchise_partner_id ? `For FP ${service.franchise_partner_id}` : 'Available to all FPs')
     : selectedFp?.id && selectedFp.id !== 'all' ? `For ${selectedFp.companyName || selectedFp.fpId || `FP ${selectedFp.id}`}` : 'Available to all FPs');
@@ -449,8 +438,10 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
               <div className={sk("grid gap-5 sm:grid-cols-2")}>
                 <Field label="Service Name *"><input required maxLength={150} value={formData.serviceName} onChange={event => setField('serviceName', event.target.value)} placeholder="e.g. Generator Maintenance" className={sk(inputClass)} /></Field>
                 <Field label="Category *">
-                  <AutocompleteInput value={formData.category} onChange={value => setField('category', value)} options={categoryNames}
-                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={100} showAllOnOpen />
+                  <AutocompleteInput value={formData.category} onChange={value => setField('category', value)} options={categoryChoices}
+                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={100} showAllOnOpen
+                    onCreateOption={canManageCategories ? createCategory : undefined}
+                    onDeleteOption={canManageCategories ? deleteCategory : undefined} />
                 </Field>
                 {/* Pricing Method — every method is visible so the form is never mistaken for a single-method screen */}
                 <div className={sk("sm:col-span-2")}>
@@ -492,7 +483,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                   <p className={sk(`${inputClass} bg-slate-50 text-slate-500`)}>{primaryInputLabel(formData.serviceName, formData.pricingMethod, formData.unit) || '—'}</p>
                 </Field>}
               </div>
-              {categoryError && <div role="alert" className={sk("mt-3 text-sm text-red-600")}>{categoryError} <button type="button" onClick={() => setCategoryAttempt(value => value + 1)} className={sk("font-semibold underline")}>Retry</button></div>}
+              {categoryError && <div role="alert" className={sk("mt-3 text-sm text-red-600")}>{categoryError} <button type="button" onClick={reloadCategories} className={sk("font-semibold underline")}>Retry</button></div>}
             </div>
             {/* Capacity Slab Configuration */}
             {isCapacitySlab && <div className={sk("border-t border-slate-100 p-5 sm:p-6")}>

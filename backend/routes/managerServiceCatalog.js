@@ -7,6 +7,7 @@ const { getAssignedZones, getEmployeeIdForZoneLookup, getCreatorIdentifier, buil
 const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { parseService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
 const { isManualService, normalizeManualService } = require('../utils/estimateData');
+const { categoryOptions } = require('../utils/serviceCategories');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const handleError = (res, error) => res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to process the manager service catalog request.' });
@@ -80,6 +81,15 @@ router.get('/', async (req, res) => {
     res.json({ success: true, data: services });
   } catch (error) { handleError(res, error); }
 });
+// The service form reads its Category suggestions from the catalog it is pointed at, so this has
+// to answer for the Manager too -- without it the dropdown is empty and the form says it cannot
+// load categories. Configuration is read-only here, so there is no save tick or delete cross.
+router.get('/categories', async (req, res) => {
+  try { res.json({ success: true, data: await categoryOptions(pool, req.catalogFpId), canManage: false }); }
+  catch (error) { handleError(res, error); }
+});
+router.post('/categories', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Managers.' }));
+router.delete('/categories/:id', (req, res) => res.status(403).json({ success: false, message: 'Service configuration is read-only for Managers.' }));
 router.get('/estimate-options', async (req, res) => {
   try {
     const scope = await context(req);
