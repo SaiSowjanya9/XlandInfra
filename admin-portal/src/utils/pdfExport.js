@@ -619,8 +619,9 @@ const generatePDF = (data, type, filename) => {
       doc.text('PACKAGE DESCRIPTION', margin, y);
       y += 6;
       
-      doc.setFillColor(...cardBg);
-      doc.setDrawColor(...borderLight);
+      // Cream on an estimate, like the panel the backend's PDF draws; grey on a package export
+      doc.setFillColor(...(type === 'estimate' ? warmSection : cardBg));
+      doc.setDrawColor(...(type === 'estimate' ? warmBorder : borderLight));
       const descLines = doc.splitTextToSize(String(data.amcPackageDescription), pageWidth - margin * 2 - 8);
       // Allow full description - up to 80 height and 20 lines
       const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 80);
@@ -683,7 +684,9 @@ const generatePDF = (data, type, filename) => {
       headStyles: { fillColor: warmSection, textColor: warmMuted, fontStyle: 'bold', fontSize: 6.5, lineColor: warmBorder },
       bodyStyles: { textColor: warmText, lineColor: warmBorder, minCellHeight: 6.5 },
       columnStyles: serviceColumnStyles,
-      alternateRowStyles: { fillColor: [255, 252, 246] },
+      // No banding: the cream belongs to the column header alone, and the rule between rows is
+      // enough to tell them apart
+      alternateRowStyles: { fillColor: [255, 255, 255] },
       rowPageBreak: 'avoid',
       // autoTable applies columnStyles to the body only, so a header would sit centred over a
       // left-aligned column. Give each header the alignment its column already has.

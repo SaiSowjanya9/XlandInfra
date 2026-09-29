@@ -547,7 +547,9 @@ const generateEstimatePDF = async (estimate) => {
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
           if (y + height > pageHeight) { doc.addPage(); y = MARGIN; drawTableHeader(); }
-          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fillAndStroke(index % 2 === 0 ? '#FFFCF6' : '#ffffff', WARM.border);
+          // White, every row: the cream belongs to the column header alone, and the rule between
+          // rows is enough to tell them apart. Banding the body made the table shout.
+          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fillAndStroke('#ffffff', WARM.border);
           doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
           cells.forEach((text, column) => doc.text(String(text), COL_EDGES[column] + CELL_PAD, y + CELL_PAD,
             { width: cellWidth(column), align: TABLE_COLS[column].align }));
