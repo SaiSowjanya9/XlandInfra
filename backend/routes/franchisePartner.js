@@ -4613,8 +4613,9 @@ router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstima
       await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN terms_conditions TEXT NULL`);
     } catch (e) { /* Column exists */ }
 
-    // Whether this estimate carries Terms & Conditions, and the text the creator saw
-    const estimateTerms = estimateTermsColumns(req.body);
+    // Whether this estimate carries Terms & Conditions, and the text the creator saw. An FP
+    // authors its own; this router is reachable by other roles, and theirs stay the default.
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
 
     // Stringify package_services for storage
     console.log('[Estimate Create] package_services received:', JSON.stringify(package_services));

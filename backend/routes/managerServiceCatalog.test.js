@@ -60,6 +60,7 @@ const pool = { execute: async (sql, params = []) => {
 require.cache[require.resolve('../config/database')] = { exports: { pool } };
 const { authenticate, generateToken } = require('../middleware/auth');
 const { attachManagerScope } = require('../middleware/managerScope');
+const { DEFAULT_ESTIMATE_TERMS_TEXT } = require('../utils/estimateTerms');
 const router = require('./managerServiceCatalog');
 
 test('Manager catalog is read-only and estimate operations enforce FP, property-source and zone scope', async t => {
@@ -113,6 +114,13 @@ test('Manager catalog is read-only and estimate operations enforce FP, property-
   assert.equal(addons[0].propertySnapshot.source_table, 'properties');
   assert.equal(addons[0].propertySnapshot.property_id, 'VILLA-NORTH');
   assert.equal(addons[0].pricingInputs.quantity, 10);
+  // The estimate carries Terms & Conditions at all - both columns were once left out of this
+  // insert, so a Manager's custom estimate went out with none - and they are the default clauses:
+  // authoring them belongs to Admin, Operations Manager and FP, so what a Manager sends is ignored
+  assert.deepEqual([inserts[0][23], inserts[0][24]], [1, DEFAULT_ESTIMATE_TERMS_TEXT]);
+  const ownTerms = await request('/custom-estimates', 'POST', { ...body, includeTerms: false, termsConditions: 'Only what the Manager typed.' });
+  assert.equal(ownTerms.status, 201);
+  assert.deepEqual([inserts[1][23], inserts[1][24]], [1, DEFAULT_ESTIMATE_TERMS_TEXT]);
   assert.deepEqual((await request('', 'GET', null, 'standalone')).data.map(row => row.id), [1]);
   assert.equal((await request('/estimate-options', 'GET', null, 'standalone')).status, 403);
   assert.equal((await request('/custom-estimates', 'POST', body, 'standalone')).status, 403);

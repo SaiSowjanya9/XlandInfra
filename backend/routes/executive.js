@@ -2039,8 +2039,8 @@ router.post('/estimates', requireExecutiveScope, async (req, res) => {
     } catch (e) { /* Column exists */ }
 
     // Use fp_estimates table (has all required columns)
-    // Whether this estimate carries Terms & Conditions, and the text the creator saw
-    const estimateTerms = estimateTermsColumns(req.body);
+    // An Executive does not author the clauses, so this is the default wording whatever was sent
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
 
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (

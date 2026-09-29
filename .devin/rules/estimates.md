@@ -123,6 +123,29 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
 - Visits column: count only.
 - Email format: `Monthly - 12 visits`.
 
+## Terms & Conditions
+
+- **Writing the clauses belongs to Admin, Operations Manager and FP; every other portal sends the
+  standard wording.** `components/estimates/TermsConditionsField` takes `editable`: the default is
+  the checkbox plus the textarea and the Reset to default link (admin `CreateEstimate.jsx`, which
+  serves both Admin and the Operations Manager, and `FPEstimates`), and `editable={false}` is the
+  same card with neither — the clauses are still listed under Preview, since a creator has to know
+  what the customer will read, but there is nothing to change and no box to untick. Manager,
+  Coordinator, Supervisor and Executive pass it, and Manager also passes `editableTerms={false}`
+  to `CustomEstimateBuilder`, which the admin Estimates page shares with it.
+- **The gate is the backend's.** `estimateTermsColumns(req.body, req.user.role)` returns the default
+  clauses for any role outside `TERMS_EDITOR_ROLES` (admin, operations_manager, franchise_partner,
+  franchise), whatever the request carried — a field missing from a screen is not what stops a
+  client from posting its own terms, and `requireFPScope` does not even check the role, so the FP
+  route is reachable by others. Pass `req.user.role` rather than the portal's own name for that
+  reason. Regression test: `node --test backend/utils/estimateTerms.test.js`.
+- **A restricted portal's estimate is never left bare.** Unable to choose is not the same as
+  choosing "no terms", so the fixed result is `include_terms = 1` with the default text. The
+  Manager's custom-estimate insert in `managerServiceCatalog.js` omitted both columns entirely and
+  therefore sent estimates out with no Terms & Conditions at all while the form appeared to offer
+  them; `managerServiceCatalog.test.js` now asserts the columns are written and that terms posted
+  by a Manager are ignored.
+
 ## View Modal and PDF Layout Order
 
 1. Estimate Details (ID, Type, Created Date)

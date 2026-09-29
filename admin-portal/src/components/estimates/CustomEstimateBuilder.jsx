@@ -134,7 +134,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   </section>;
 };
 
-export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess, apiPath = '/api/admin/service-catalog' }) {
+export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess, apiPath = '/api/admin/service-catalog', editableTerms = true }) {
   const [properties, setProperties] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [services, setServices] = useState([]);
@@ -144,7 +144,8 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
   const [discount, setDiscount] = useState(0);
   const [gst, setGst] = useState(18);
   const [notes, setNotes] = useState('');
-  // Terms & Conditions: included by default, editable, and stored with the estimate
+  // Terms & Conditions: included by default and stored with the estimate. The Manager's copy of
+  // this builder shows them read-only, so there the state keeps the default clauses untouched
   const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
   const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
   const [loading, setLoading] = useState(true);
@@ -241,7 +242,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
           </tr>)}</tbody></table></div> : <div className="p-8 text-center text-sm text-slate-400">{property ? 'Add individual services to build this estimate.' : 'Select a property to get started.'}</div>}
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-5"><Field label="Description / Notes"><textarea rows={3} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} placeholder="Notes for the customer" /></Field></section>
-        <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
+        <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} editable={editableTerms} />
       </main>
       <aside className="space-y-5">
         <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="mb-5 text-sm font-semibold text-slate-800">Estimate Summary</h2><dl className="space-y-4 text-xs text-slate-600">

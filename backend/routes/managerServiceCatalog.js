@@ -7,6 +7,7 @@ const { getAssignedZones, getEmployeeIdForZoneLookup, getCreatorIdentifier, buil
 const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { parseService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
 const { isManualService, normalizeManualService } = require('../utils/estimateData');
+const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { categoryOptions } = require('../utils/serviceCategories');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -108,16 +109,21 @@ router.post('/custom-estimates', async (req, res) => {
     const { property, rows, summary } = result;
     const estimateId = `EST-${randomUUID()}`;
     const addons = buildCatalogAddons(rows, property);
+    // A Manager does not author the clauses: the estimate carries the default wording. Writing
+    // these columns is what makes it carry any - the insert used to omit them, so a custom
+    // estimate went out with no Terms & Conditions while the form appeared to offer them.
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
     const [saved] = await pool.execute(`INSERT INTO fp_estimates (estimate_id, franchise_partner_id, property_id, property_code, estimate_type,
       client_name, client_email, client_phone, property_name, property_type, zone, division, city, address,
       subtotal, discount_percent, discount_amount, gst_percent, gst_amount, total_amount, addons_data, description,
-      created_by_id, created_by_name, created_by_role, status, package_services, package_price)
-      VALUES (?, ?, ?, ?, 'custom', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manager', 'draft', '[]', 0)`,
+      created_by_id, created_by_name, created_by_role, status, package_services, package_price, include_terms, terms_conditions)
+      VALUES (?, ?, ?, ?, 'custom', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manager', 'draft', '[]', 0, ?, ?)`,
     [estimateId, req.catalogFpId, property.id, property.property_id || null, property.customer_name || property.community_name,
       property.customer_email || null, property.customer_phone || null, property.community_name, property.entry_type,
       property.zone || null, property.division || null, property.city || null, property.address || null,
       summary.subtotal, summary.discountPercent, summary.discount, summary.gstPercent, summary.gst, summary.total,
-      JSON.stringify(addons), req.body.notes.trim(), req.managerId, getCreatorIdentifier(req) || req.user.username || 'Manager']);
+      JSON.stringify(addons), req.body.notes.trim(), req.managerId, getCreatorIdentifier(req) || req.user.username || 'Manager',
+      estimateTerms.include_terms, estimateTerms.terms_conditions]);
     res.status(201).json({ success: true, data: { id: saved.insertId, estimateId, ...result } });
   } catch (error) { handleError(res, error); }
 });

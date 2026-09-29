@@ -199,9 +199,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
-  // Terms & Conditions: on by default for a new estimate, editable before saving
-  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
-  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
+  // Terms & Conditions: the standard clauses. Editing them belongs to Admin, Operations Manager
+  // and FP, so a Coordinator estimate carries the default wording and the card is read-only
+  const { includeTerms, termsConditions } = newEstimateTerms();
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
@@ -798,8 +798,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-      <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
+      {/* Terms & Conditions - the standard clauses, shown but not editable in this portal */}
+      <TermsConditionsField include={includeTerms} terms={termsConditions} editable={false} />
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">

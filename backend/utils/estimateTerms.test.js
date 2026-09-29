@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   DEFAULT_ESTIMATE_TERMS, DEFAULT_ESTIMATE_TERMS_TEXT,
-  resolveEstimateTerms, estimateTermsLines, estimateTermsColumns
+  resolveEstimateTerms, estimateTermsLines, estimateTermsColumns, canEditEstimateTerms
 } = require('./estimateTerms');
 
 test('an estimate carries terms only when its creator chose to include them', () => {
@@ -26,13 +26,31 @@ test('the lines are the clauses, trimmed and without blanks', () => {
 });
 
 test('a create request stores the choice and the text the creator saw', () => {
-  assert.deepEqual(estimateTermsColumns({ includeTerms: true, termsConditions: 'Ours apply.' }),
-    { include_terms: 1, terms_conditions: 'Ours apply.' });
-  assert.deepEqual(estimateTermsColumns({ includeTerms: 'true' }),
-    { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT });
-  assert.deepEqual(estimateTermsColumns({}), { include_terms: 0, terms_conditions: null });
-  assert.deepEqual(estimateTermsColumns({ includeTerms: false, termsConditions: 'typed then unticked' }),
-    { include_terms: 0, terms_conditions: null });
+  for (const role of ['admin', 'operations_manager', 'franchise_partner', 'franchise']) {
+    assert.ok(canEditEstimateTerms(role), role);
+    assert.deepEqual(estimateTermsColumns({ includeTerms: true, termsConditions: 'Ours apply.' }, role),
+      { include_terms: 1, terms_conditions: 'Ours apply.' }, role);
+    assert.deepEqual(estimateTermsColumns({ includeTerms: 'true' }, role),
+      { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT }, role);
+    assert.deepEqual(estimateTermsColumns({}, role), { include_terms: 0, terms_conditions: null }, role);
+    assert.deepEqual(estimateTermsColumns({ includeTerms: false, termsConditions: 'typed then unticked' }, role),
+      { include_terms: 0, terms_conditions: null }, role);
+  }
+});
+
+test('only Admin, Operations Manager and FP author the clauses', () => {
+  // A Manager, Coordinator, Supervisor or Executive estimate carries the default wording: the
+  // form shows it read-only, and text posted straight at the API is ignored rather than stored.
+  const fixed = { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT };
+  for (const role of ['manager', 'coordinator', 'supervisor', 'executive', 'vendor', '', null, undefined]) {
+    assert.equal(canEditEstimateTerms(role), false, String(role));
+    assert.deepEqual(estimateTermsColumns({ includeTerms: true, termsConditions: 'Ours, actually.' }, role), fixed, String(role));
+    // Nor can such a portal drop the terms: unticking the box it is not shown changes nothing
+    assert.deepEqual(estimateTermsColumns({ includeTerms: false }, role), fixed, String(role));
+    assert.deepEqual(estimateTermsColumns({}, role), fixed, String(role));
+  }
+  // The role arrives from a token, so it is matched without regard to case
+  assert.ok(canEditEstimateTerms('Admin'));
 });
 
 test('the portal previews exactly the clauses the backend prints', async () => {
@@ -47,5 +65,5 @@ test('the portal previews exactly the clauses the backend prints', async () => {
   }
   // A new estimate includes the terms unless the creator unticks the box
   assert.deepEqual(frontend.newEstimateTerms(), { includeTerms: true, termsConditions: DEFAULT_ESTIMATE_TERMS_TEXT });
-  assert.deepEqual(estimateTermsColumns(frontend.newEstimateTerms()), { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT });
+  assert.deepEqual(estimateTermsColumns(frontend.newEstimateTerms(), 'admin'), { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT });
 });

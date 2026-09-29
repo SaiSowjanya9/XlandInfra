@@ -2384,8 +2384,8 @@ router.post('/estimates', requireSupervisorScope, async (req, res) => {
       await pool.query(`ALTER TABLE fp_estimates ADD COLUMN block_unit_types JSON`);
     } catch (e) { /* Column exists */ }
 
-    // Whether this estimate carries Terms & Conditions, and the text the creator saw
-    const estimateTerms = estimateTermsColumns(req.body);
+    // A Supervisor does not author the clauses, so this is the default wording whatever was sent
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
 
     const [result] = await pool.query(
       `INSERT INTO fp_estimates (
