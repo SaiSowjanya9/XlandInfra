@@ -1,26 +1,64 @@
-import { formatCurrency, getEstimateAddons, getPropertyTypeLabel, estimateInternalCosts } from '../../utils/estimatePackageUtils';
+import { Fragment } from 'react';
+import { formatCurrency, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import EstimateServicesTable from './EstimateServicesTable';
-import EstimateInternalSummary from './EstimateInternalSummary';
+import EstimateDocumentHeader from './EstimateDocumentHeader';
+import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
 
 /**
  * Everything a saved estimate holds, shown inside the row it belongs to. Clicking an Estimate ID in
- * the Admin, Ops Manager, FP or Manager list expands this instead of opening a modal: the property
- * it was written for, the customer, the package, every service with the figures it was priced from,
- * and what it costs XLAND.
+ * the Admin, Ops Manager, FP or Manager list expands this instead of opening a modal.
  *
- * It is read-only. The figures come from the snapshot saved with each service, so the panel reports
- * what the estimate was costed at; re-pricing belongs to the edit flow.
+ * It is laid out as the document itself: the letterhead with BILL TO facing it, the property the
+ * estimate was written for, its services, what it comes to, and the terms. The PDF and the email
+ * print the same sections in the same order, so nothing read here is a surprise to the customer.
  *
- * `internal` gates the cost columns and the Internal Cost & Profit Summary. Only these four portals
- * pass it, which is why Coordinator, Supervisor and Executive keep their customer-safe tables.
+ * It is read-only, and it states the customer's price alone -- no vendor cost, XLAND cost or
+ * margin. Those figures belong to the payments dashboard's Cost & Margin panel, which is gated on
+ * `canViewEstimateMargins`; an estimate screen shows what the customer is quoted.
  */
-const Field = ({ label, children, wide = false }) => (
-  <div className={wide ? 'col-span-2' : undefined}>
-    <p className="text-xs text-gray-500">{label}</p>
-    <p className="font-medium text-sm text-gray-800">{children || '-'}</p>
-  </div>
-);
+/**
+ * A section's fields as a ruled table: the label in a cream cell, its value in the white cell
+ * beside it, two pairs to a line. The same table the PDF draws, so the block lines up with the
+ * services table under it instead of floating as a grid of label-over-value pairs, each finding
+ * its own baseline. `wide` rows -- an address -- take a line of their own. Empty fields are
+ * dropped before anything is placed, so the rest close up.
+ */
+const labelCell = 'w-[16%] bg-warm-section border border-warm-border px-2.5 py-1.5 align-top text-[10px] font-semibold uppercase tracking-wide text-warm-muted';
+const valueCell = 'border border-warm-border px-2.5 py-1.5 align-top text-[13px] font-semibold text-warm-text break-words';
+const DetailTable = ({ fields, wide = [] }) => {
+  const present = fields.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const wideRows = wide.filter(([, value]) => value !== undefined && value !== null && value !== '');
+  if (!present.length && !wideRows.length) return null;
+  const lines = [];
+  for (let index = 0; index < present.length; index += 2) lines.push(present.slice(index, index + 2));
+  return (
+    <div className="overflow-hidden rounded-lg border border-warm-border">
+      <table className="w-full table-fixed border-collapse">
+        <tbody>
+          {lines.map((line, index) => (
+            <tr key={index}>
+              {line.map(([label, value]) => (
+                <Fragment key={label}>
+                  <th scope="row" className={`${labelCell} text-left`}>{label}</th>
+                  <td className={valueCell}>{value}</td>
+                </Fragment>
+              ))}
+              {/* An odd last pair leaves no half-empty cell behind: the line is closed off plainly */}
+              {line.length === 1 && <td className={valueCell} colSpan={2} />}
+            </tr>
+          ))}
+          {wideRows.map(([label, value]) => (
+            <tr key={label}>
+              <th scope="row" className={`${labelCell} text-left`}>{label}</th>
+              <td className={valueCell} colSpan={3}>{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 const Section = ({ title, children }) => (
   <div className="border-t border-gray-100 pt-4">
     <p className="text-sm font-semibold text-gray-700 mb-3">{title}</p>
@@ -52,10 +90,9 @@ const blockEntries = (estimate) => {
   return keys.map(key => [names[key] || `Block ${key}`, units[key] ?? 0]);
 };
 
-export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', internal = true }) {
+export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', status = null }) {
   if (!estimate) return null;
   const services = getEstimateAddons(estimate);
-  const costs = internal ? estimateInternalCosts(estimate, services) : null;
   const packageName = estimate.package_name || estimate.packageName;
   const packageServices = parseList(estimate.package_services ?? estimate.packageServices);
   const blocks = blockEntries(estimate);
@@ -67,21 +104,28 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
 
   return (
     <div className="space-y-4 bg-slate-50/60 px-4 py-4 sm:px-6">
+      {/* Who the estimate is from and who it is for, as the printed document opens */}
+      <div className="rounded-lg border border-gray-100 bg-white px-4 pt-3">
+        <EstimateDocumentHeader estimate={estimate} decode={decode} status={status} />
+      </div>
+
       <Section title="Property Details">
-        <div className="bg-white p-4 rounded-lg border border-gray-100 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {(estimate.property_code || estimate.propertyCode) && <Field label="Property ID">{estimate.property_code || estimate.propertyCode}</Field>}
-          <Field label="Property Name">{decode(estimate.property_name || estimate.propertyName || estimate.communityName)}</Field>
-          <Field label="Property Type">{getPropertyTypeLabel(propertyType)}</Field>
-          <Field label="Zone">{estimate.zone}</Field>
-          <Field label="City">{estimate.city}</Field>
-          {estimate.division && <Field label="Division">{estimate.division}</Field>}
-          {(estimate.tower_name || estimate.towerName) && <Field label="Tower/Building Name">{decode(estimate.tower_name || estimate.towerName)}</Field>}
-          {(estimate.block_number || estimate.blockNumber) && <Field label="Block Number">{estimate.block_number || estimate.blockNumber}</Field>}
-          {unitNumber && <Field label={unitLabel}>{unitNumber}</Field>}
-          {(estimate.number_of_blocks || estimate.numberOfBlocks) && <Field label="Number of Blocks">{estimate.number_of_blocks || estimate.numberOfBlocks}</Field>}
-          {(estimate.total_units || estimate.totalUnits) && <Field label="Number of Units">{estimate.total_units || estimate.totalUnits}</Field>}
-          <Field label="Address" wide>{decode(estimate.address || estimate.property_address || estimate.propertyAddress)}</Field>
-        </div>
+        <DetailTable
+          fields={[
+            ['Name', decode(estimate.property_name || estimate.propertyName || estimate.communityName)],
+            ['Type', getPropertyTypeLabel(propertyType)],
+            ['Property ID', estimate.property_code || estimate.propertyCode],
+            ['Zone', estimate.zone],
+            ['Division', estimate.division],
+            ['City', estimate.city],
+            ['Tower / Building', decode(estimate.tower_name || estimate.towerName)],
+            ['Block Number', estimate.block_number || estimate.blockNumber],
+            [unitLabel, unitNumber],
+            ['No. of Blocks', estimate.number_of_blocks || estimate.numberOfBlocks],
+            ['No. of Units', estimate.total_units || estimate.totalUnits]
+          ]}
+          wide={[['Address', decode(estimate.address || estimate.property_address || estimate.propertyAddress)]]}
+        />
         {/* A gated community's blocks, with the units in each, as the property was entered */}
         {blocks.length > 0 && (
           <div className="mt-3 bg-white p-4 rounded-lg border border-gray-100">
@@ -97,9 +141,6 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
           </div>
         )}
       </Section>
-
-      {/* The customer is named in the row itself -- who they are and how to reach them -- so the
-          panel does not repeat it and spends the space on the property and its services. */}
 
       {packageName && (
         <Section title="AMC Package">
@@ -124,20 +165,14 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
 
       {services.length > 0 && (
         <Section title="Services">
-          <EstimateServicesTable rows={services} decode={decode} internal={internal} />
+          <EstimateServicesTable rows={services} decode={decode} />
         </Section>
       )}
 
-      {internal && <EstimateInternalSummary costs={costs} />}
-
-      <Section title="Price Summary">
-        <div className="bg-white p-4 rounded-lg border border-gray-100 space-y-2">
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Sub Total</span><span className="text-gray-800">{money(estimate.subtotal ?? estimate.subTotal)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({estimate.discount_percent || estimate.discountPercent || 0}%)</span><span className="text-red-500">-{money(estimate.discount_amount ?? estimate.discountAmount ?? estimate.discount)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({estimate.gst_percent || estimate.gstPercent || 0}%)</span><span className="text-gray-800">{money(estimate.gst_amount ?? estimate.gstAmount ?? estimate.tax)}</span></div>
-          <div className="flex justify-between border-t border-gray-100 pt-2"><span className="font-semibold text-gray-800">Total</span><span className="font-bold text-gray-900">{money(estimate.total_amount ?? estimate.totalAmount ?? estimate.total ?? estimate.totalPrice)}</span></div>
-        </div>
-      </Section>
+      {/* The card carries its own Price Summary caption, so the section is not headed again */}
+      <div className="border-t border-gray-100 pt-4">
+        <EstimatePriceSummary estimate={estimate} />
+      </div>
 
       {(estimate.description || estimate.notes) && (
         <Section title="Description / Notes">

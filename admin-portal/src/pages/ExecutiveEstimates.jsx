@@ -10,6 +10,8 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
+import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
+import EstimatePriceSummary from '../components/estimates/EstimatePriceSummary';
 import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport, FREQUENCY_COUNT_MAP
@@ -1565,20 +1567,18 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div><p className="text-xs text-gray-500">Estimate ID</p><p className="font-medium text-sm">{viewEstimate.estimate_id}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' : 
-                    viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
-                    
-                    viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-                  }`}>{getStatusLabel(viewEstimate.status)}</span>
-                </div>
-                <div><p className="text-xs text-gray-500">Type</p><p className="font-medium text-sm capitalize">{viewEstimate.estimate_type?.replace('_', ' ')}</p></div>
-                <div><p className="text-xs text-gray-500">Created</p><p className="font-medium text-sm">{formatDateIST(viewEstimate.created_at)}</p></div>
-              </div>
+              {/* The letterhead the document opens with: XLAND INFRA and how to reach it, BILL TO
+                  facing it, and the strip naming the estimate. The customer is named there, so
+                  there is no Customer Details section below. */}
+              <EstimateDocumentHeader
+                estimate={viewEstimate}
+                decode={decodeHtml}
+                status={<span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  viewEstimate.status === 'approved' ? 'bg-green-100 text-green-700' :
+                  viewEstimate.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                  viewEstimate.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                }`}>{getStatusLabel(viewEstimate.status)}</span>}
+              />
 
               {/* Property Details */}
               <div className="border-t border-gray-100 pt-4">
@@ -1683,16 +1683,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
 
-              {/* Customer Details */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Customer Details</p>
-                <div className="bg-blue-50 p-4 rounded-lg grid grid-cols-2 gap-3">
-                  <div><p className="text-xs text-gray-500">Contact Name</p><p className="font-medium text-sm">{viewEstimate.client_name || viewEstimate.customer_name || '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Phone</p><p className="font-medium text-sm">{viewEstimate.client_phone || '-'}</p></div>
-                  <div className="col-span-2"><p className="text-xs text-gray-500">Email</p><p className="font-medium text-sm">{viewEstimate.client_email || '-'}</p></div>
-                </div>
-              </div>
-
               {/* Package */}
               {viewEstimate.package_name && (() => {
                 const pkgFromList = amcPackages.find(p => p.id == viewEstimate.package_id || p.name === viewEstimate.package_name);
@@ -1758,26 +1748,10 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               )}
 
-              {/* Billing Duration */}
+              {/* Price Summary. Billing is stated in the header strip and the card carries its
+                  own caption, so neither is repeated here. */}
               <div className="border-t border-gray-100 pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Billing</span>
-                  <span className="font-medium capitalize">{viewEstimate.billing_duration ? viewEstimate.billing_duration.replace('-', ' ') : 'Yearly'}</span>
-                </div>
-              </div>
-
-              {/* Price Summary */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Price Summary</p>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(viewEstimate.subtotal)}</span></div>
-                  {viewEstimate.discount_amount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount ({viewEstimate.discount_percent || 0}%)</span><span>-{formatCurrency(viewEstimate.discount_amount)}</span></div>}
-                  <div className="flex justify-between text-sm"><span className="text-gray-500">GST ({viewEstimate.gst_percent || 0}%)</span><span>{formatCurrency(viewEstimate.gst_amount || 0)}</span></div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <p className="text-lg font-semibold">Total</p>
-                    <p className="text-2xl font-bold text-indigo-600">{formatCurrency(viewEstimate.total_amount)}</p>
-                  </div>
-                </div>
+                <EstimatePriceSummary estimate={viewEstimate} />
               </div>
 
               {/* Description / Notes - After Price Summary */}

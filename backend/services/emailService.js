@@ -1,7 +1,23 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
 const { customerEstimateData } = require('../utils/estimateData');
+const { estimateTermsLines } = require('../utils/estimateTerms');
+const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
 const { pool } = require('../config/database');
+
+// The brand mark and the three contact icons, sent with the message and referenced by Content-ID.
+// Hotlinking them puts the letterhead behind the "display images" prompt every mail client shows
+// by default, and an inline SVG -- which is what the portal renders -- is stripped by Gmail and
+// not drawn at all by Outlook, so they travel as small PNGs.
+const LOGO_ICON_PATH = path.join(__dirname, '../assets/logo-contract.png');
+const ESTIMATE_LOGO_CID = 'xland-logo';
+// The portal's warm palette (`admin-portal/tailwind.config.js`), which the estimate is drawn in
+const WARM = { section: '#FFF9EE', accentSoft: '#FEF3E2', border: '#EADFCF', accent: '#D4A574', text: '#1F2937', muted: '#6B7280' };
+const CONTACT_ICON_CID = { phone: 'xland-icon-phone', email: 'xland-icon-email', website: 'xland-icon-website' };
+const CONTACT_ICON_ATTACHMENTS = Object.entries(CONTACT_ICON_CID).map(([kind, cid]) => ({
+  filename: `${kind}.png`, path: path.join(__dirname, `../assets/icons/${kind}.png`), cid
+}));
 
 /**
  * Decode HTML entities (e.g., &amp; -> &, &#x2F; -> /)
@@ -909,16 +925,43 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   }
   if (!Array.isArray(servicesList)) servicesList = [];
 
-  // Format services list with descriptions
-  const servicesHtml = servicesList.map(s => `
-    <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${emailText(s.name || s.service || 'Service')}</strong>
-        ${s.frequencyType ? `<br><span style="font-size: 12px; color: #6b7280;">${s.frequencyType} - ${s.frequencyCount ?? 1} visits</span>` : ''}
-        ${s.description ? `<br><span style="font-size: 12px; color: #6b7280;">${emailText(s.description)}</span>` : ''}
+  /**
+   * A service as the estimate states it: what it is, what it covers, how often, how many visits
+   * and what it costs. The same columns the PDF prints, so the email and its attachment agree.
+   * A package's own services are covered by the package price, so their figure reads as a dash.
+   */
+  const serviceRowsHtml = (list, { priced = true } = {}) => list.map((item, index) => {
+    const name = emailText(item.name || item.service || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service');
+    const category = item.category ? emailText(item.category) : '';
+    const details = item.description ? emailText(item.description) : '';
+    const frequency = emailText(String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''));
+    const visits = item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1;
+    const price = Number(item.price || item.totalPrice || item.calculatedPrice || item.services?.[0]?.price || 0);
+    const cell = `padding: 7px 8px; border-bottom: 1px solid ${WARM.border}; font-size: 12px; color: ${WARM.text}; vertical-align: top;`;
+    return `
+    <tr${index % 2 ? '' : ' style="background: #FFFCF6;"'}>
+      <td style="${cell} width: 22px; color: #6b7280;">${index + 1}</td>
+      <td style="${cell}">
+        <strong style="color: #111827;">${name}</strong>
+        ${category ? `<br><span style="font-size: 11px; color: #6b7280;">${category}</span>` : ''}
+        ${details ? `<br><span style="font-size: 11px; color: #6b7280;">${details}</span>` : ''}
       </td>
-    </tr>
-  `).join('');
+      <td style="${cell} width: 80px;">${frequency}</td>
+      <td style="${cell} width: 46px; text-align: center;">${visits}</td>
+      <td style="${cell} width: 88px; text-align: right; white-space: nowrap;">${priced ? `Rs. ${money(price)}` : '&ndash;'}</td>
+    </tr>`;
+  }).join('');
+
+  // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
+  const SERVICE_HEAD = `
+    <tr>
+      ${['#', 'Service', 'Frequency', 'Visits', 'Price (Rs.)'].map((label, index) => `
+        <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
+          font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
+          text-align: ${index === 3 ? 'center' : index === 4 ? 'right' : 'left'};">${label}</th>`).join('')}
+    </tr>`;
+
+  const servicesHtml = serviceRowsHtml(servicesList, { priced: false });
 
   // Ensure addons is an array
   let addonsList = addons;
@@ -931,30 +974,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   }
   if (!Array.isArray(addonsList)) addonsList = [];
 
-  // Format addons list with descriptions - handle all possible field names
-  const addonsHtml = addonsList.map(a => {
-    // Get addon name - try all possible field names
-    const addonName = emailText(a.name || a.service_name || a.serviceName || a.services?.[0]?.name || 'Service');
-    // Get frequency - try frequency_type, frequencyType, frequency
-    const freqType = a.frequency_type || a.frequencyType || a.frequency || '';
-    // Get visits/count - try frequency_count, frequencyCount, visits, quantity
-    const freqCount = a.frequency_count ?? a.frequencyCount ?? a.visits ?? a.quantity ?? 1;
-    // Get price - try price, totalPrice, calculatedPrice
-    const addonPrice = Number(a.price || a.totalPrice || a.calculatedPrice || a.services?.[0]?.price || 0);
-    // Get description
-    const desc = a.description ? emailText(a.description) : '';
-    
-    return `
-    <tr>
-      <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
-        <strong>${addonName}</strong>
-        ${a.category ? `<br><span style="font-size: 11px; color: #6b7280;">${emailText(a.category)}</span>` : ''}
-        ${freqType ? `<br><span style="font-size: 12px; color: #6b7280;">${freqType} - ${freqCount} visits</span>` : ''}
-        ${desc ? `<br><span style="font-size: 12px; color: #6b7280;">${desc}</span>` : ''}
-      </td>
-    </tr>
-  `;
-  }).join('');
+  const addonsHtml = serviceRowsHtml(addonsList);
 
   // Calculate expiry date (1 month from now)
   const expiryDate = validUntil ? new Date(validUntil) : new Date();
@@ -966,46 +986,56 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     return labels[type] || type || '-';
   };
 
-  // Build property details HTML based on property type
-  // Order: Property Type ? Address ? City ? Zone ? Division (logical flow)
-  let propertyDetailsHtml = `
-    <tr><td style="${LABEL_CELL}">Property Type:</td><td style="${VALUE_CELL}">${getPropertyTypeLabel(propertyType)}</td></tr>
-    ${address ? `<tr><td style="${LABEL_CELL}">Address:</td><td style="${VALUE_CELL}">${address}</td></tr>` : ''}
-    ${city ? `<tr><td style="${LABEL_CELL}">City:</td><td style="${VALUE_CELL}">${city}</td></tr>` : ''}
-    ${zone ? `<tr><td style="${LABEL_CELL}">Zone:</td><td style="${VALUE_CELL}">${zone}</td></tr>` : ''}
-    ${division ? `<tr><td style="${LABEL_CELL}">Division:</td><td style="${VALUE_CELL}">${division}</td></tr>` : ''}
-  `;
+  /**
+   * A section's fields as a ruled table: the label in a cream cell, its value in the white cell
+   * beside it, two pairs to a line. The same table both PDFs draw, so the block lines up with the
+   * services table under it rather than reading as a loose list. `wide` rows -- an address, a
+   * list of blocks -- take a line of their own, and empty fields are dropped so the rest close up.
+   */
+  const detailTable = (fields, wide = []) => {
+    const present = fields.filter(([, value]) => value !== undefined && value !== null && value !== '');
+    const wideRows = wide.filter(([, value]) => value !== undefined && value !== null && value !== '');
+    if (!present.length && !wideRows.length) return '';
+    const label = `width: 16%; background: ${WARM.section}; border: 1px solid ${WARM.border}; padding: 6px 9px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: ${WARM.muted}; vertical-align: top;`;
+    const value = `border: 1px solid ${WARM.border}; padding: 6px 9px; font-size: 12px; font-weight: 600; color: ${WARM.text}; vertical-align: top; word-break: break-word;`;
+    const lines = [];
+    for (let index = 0; index < present.length; index += 2) lines.push(present.slice(index, index + 2));
+    return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+      ${lines.map(line => `
+      <tr>
+        ${line.map(([name, text]) => `<td style="${label}">${emailText(name)}</td><td style="${value}">${emailText(text)}</td>`).join('')}
+        ${line.length === 1 ? `<td style="${value}" colspan="2">&nbsp;</td>` : ''}
+      </tr>`).join('')}
+      ${wideRows.map(([name, text]) => `
+      <tr>
+        <td style="${label}">${emailText(name)}</td>
+        <td style="${value}" colspan="3">${emailText(text)}</td>
+      </tr>`).join('')}
+    </table>`;
+  };
 
-  // GC-specific fields
-  if (['GC', 'gated_community', 'Gated Community'].includes(propertyType)) {
-    propertyDetailsHtml += `
-      ${numberOfBlocks ? `<tr><td style="${LABEL_CELL}">Number of Blocks:</td><td style="${VALUE_CELL}">${numberOfBlocks}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="${LABEL_CELL}">Total Units:</td><td style="${VALUE_CELL}">${totalUnits}</td></tr>` : ''}
-    `;
-    // Add block details if available
-    if (blockNames && Object.keys(blockNames).length > 0) {
-      const blockDetailsList = Object.entries(blockNames).map(([key, name]) => 
-        `${name || 'Block ' + key}: ${unitsPerBlock?.[key] || 0} units`
-      ).join(', ');
-      propertyDetailsHtml += `<tr><td style="${LABEL_CELL}">Block Details:</td><td style="${VALUE_CELL}">${blockDetailsList}</td></tr>`;
-    }
-  }
+  const blockDetails = blockNames && Object.keys(blockNames).length
+    ? Object.entries(blockNames).map(([key, name]) => `${name || 'Block ' + key}: ${unitsPerBlock?.[key] || 0} units`).join(', ')
+    : '';
+  const isGatedCommunity = ['GC', 'gated_community', 'Gated Community'].includes(propertyType);
+  const isApartment = ['APT', 'Apt', 'apartment', 'Apartment'].includes(propertyType);
+  const isVillaOrPlot = ['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(propertyType);
 
-  // Apartment-specific fields
-  if (['APT', 'Apt', 'apartment', 'Apartment'].includes(propertyType)) {
-    propertyDetailsHtml += `
-      ${towerName ? `<tr><td style="${LABEL_CELL}">Tower/Building:</td><td style="${VALUE_CELL}">${towerName}</td></tr>` : ''}
-      ${blockNumber ? `<tr><td style="${LABEL_CELL}">Block Number:</td><td style="${VALUE_CELL}">${blockNumber}</td></tr>` : ''}
-      ${totalUnits ? `<tr><td style="${LABEL_CELL}">Number of Units:</td><td style="${VALUE_CELL}">${totalUnits}</td></tr>` : ''}
-    `;
-  }
-
-  // Villa/Plot-specific fields
-  if (['VILLA', 'Villa', 'villa', 'PLOT', 'Plot', 'plot'].includes(propertyType)) {
-    propertyDetailsHtml += `
-      ${villaPlotNumber ? `<tr><td style="${LABEL_CELL}">Villa/Plot Number:</td><td style="${VALUE_CELL}">${villaPlotNumber}</td></tr>` : ''}
-    `;
-  }
+  const propertyDetailsHtml = detailTable([
+    ['Name', propertyName],
+    ['Type', getPropertyTypeLabel(propertyType)],
+    ['Property ID', estimate.propertyCode],
+    ['Zone', zone],
+    ['Division', division],
+    ['City', city],
+    ...(isGatedCommunity ? [['No. of Blocks', numberOfBlocks], ['Total Units', totalUnits]] : []),
+    ...(isApartment ? [['Tower / Building', towerName], ['Block Number', blockNumber], ['No. of Units', totalUnits]] : []),
+    ...(isVillaOrPlot ? [['Villa / Plot Number', villaPlotNumber]] : [])
+  ], [
+    ['Address', address],
+    ...(isGatedCommunity ? [['Block Details', blockDetails]] : [])
+  ]);
 
   // Build Work Order section HTML (only for work order estimates) - Compact 4-column layout with equal spacing
   let workOrderHtml = '';
@@ -1053,7 +1083,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       packageName, packagePrice: estimate.packagePrice, amcPackageDescription, 
       services: servicesList, addons: addonsList, subtotal, discount, discountAmount: estimate.discountAmount,
       tax, gstPercent: estimate.gstPercent, total, description, createdAt: estimate.createdAt,
-      // Terms & Conditions the creator chose to include; the email body itself does not repeat them
+      billingDuration: estimate.billingDuration,
+      // Terms & Conditions the creator chose to include. The email body lists them too, through the
+      // same helper, so the message and its attachment cannot state different terms.
       includeTerms: estimate.includeTerms, termsConditions: estimate.termsConditions,
       // Work Order fields
       isWorkOrderEstimate, workOrderId, workOrderCategory, workOrderSubcategory,
@@ -1070,16 +1102,43 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     ? `Work Order Estimate ${estimateId} (${workOrderId}) - Action Required`
     : `Estimate ${estimateId} - Action Required`;
 
+  // The clauses the estimate carries, read through the same helper as the PDF and the portal
+  const termsLines = estimateTermsLines({ includeTerms: estimate.includeTerms, termsConditions: estimate.termsConditions });
+
+  const metaField = (label, value, color = '#111827') => `
+    <td width="25%" style="padding: 0 10px 0 0; vertical-align: top;">
+      <span style="font-size: 9px; letter-spacing: 0.9px; text-transform: uppercase; color: #6b7280; font-weight: 600;">${label}</span><br>
+      <span style="font-size: 12px; font-weight: 600; color: ${color};">${value}</span>
+    </td>`;
+  const billRow = (label, value) => (value === undefined || value === null || value === '' ? '' : `
+    <tr>
+      <td style="padding: 1px 8px 1px 0; font-size: 10px; letter-spacing: 0.3px; text-transform: uppercase; color: #6b7280; font-weight: 600; vertical-align: top; white-space: nowrap;">${label}</td>
+      <td style="padding: 1px 0; font-size: 12px; color: #374151; vertical-align: top; word-break: break-word;">${emailText(value)}</td>
+    </tr>`);
+  const summaryLine = (label, value, color = WARM.text) => `
+    <tr>
+      <td style="padding: 6px 12px; font-size: 12px; color: ${WARM.muted}; border-bottom: 1px solid ${WARM.border};">${label}</td>
+      <td style="padding: 6px 12px; font-size: 12px; font-weight: 600; color: ${color}; text-align: right; border-bottom: 1px solid ${WARM.border}; white-space: nowrap;">${value}</td>
+    </tr>`;
+  const sectionHeading = label => `<p style="margin: 22px 0 8px 0; color: ${WARM.text}; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px;">${label}</p>`;
+  const servicesTable = (rows, heading) => `
+    ${sectionHeading(heading)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+      ${SERVICE_HEAD}${rows}
+    </table>`;
+
   const mailOptions = {
-    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    from: `"${COMPANY.legalName}" <${process.env.EMAIL_USER}>`,
     to: customerEmail,
     subject: emailSubject,
     headers: getDefaultHeaders(),
-    attachments: pdfBuffer ? [{
-      filename: `Estimate_${estimateId}.pdf`,
-      content: pdfBuffer,
-      contentType: 'application/pdf'
-    }] : [],
+    // The logo travels with the message rather than being hotlinked: an <img> pointing at the
+    // website is blocked by default in Outlook and Gmail, which left the letterhead headless.
+    attachments: [
+      { filename: 'xland-logo.png', path: LOGO_ICON_PATH, cid: ESTIMATE_LOGO_CID },
+      ...CONTACT_ICON_ATTACHMENTS,
+      ...(pdfBuffer ? [{ filename: `Estimate_${estimateId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }] : [])
+    ],
     html: `
       <!DOCTYPE html>
       <html>
@@ -1088,98 +1147,136 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="max-width: 640px; margin: 0 auto; padding: 20px;">
           <!-- Thin Gold Bar Header -->
           <div style="background: #C9A227; height: 6px; border-radius: 12px 12px 0 0;"></div>
-          
+
           <!-- Content -->
-          <div style="background: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">Hello ${customerName || 'Valued Customer'},</h2>
-            
-            <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0;">
-              Thank you for your interest in our services. Please find attached the detailed estimate for your property.
+          <div style="background: #ffffff; padding: 26px 28px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+            <!-- Letterhead: the company on the left, BILL TO facing it on the right -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <!-- The company block is one centred stack: the logo and the name on the first
+                     line, and the tagline, address and contact lines centred on the whole lockup
+                     beneath them -- not under the name alone, which left them adrift right of the
+                     logo. Each row is its own centred table, because an email client cannot be
+                     relied on to centre anything but a table cell. -->
+                <td align="center" style="vertical-align: top; padding-right: 16px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                    <tr>
+                      <td style="vertical-align: middle; padding-right: 12px;">
+                        <img src="cid:${ESTIMATE_LOGO_CID}" alt="" width="50" height="50" style="display: block; width: 50px; height: 50px; object-fit: contain;">
+                      </td>
+                      <td style="vertical-align: middle;">
+                        <div style="font-size: 18px; font-weight: 700; letter-spacing: 2.4px; color: #1a1a1a; line-height: 1;">${COMPANY.name}</div>
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 5px auto 0;">
+                          <tr>
+                            <td style="width: 22px; height: 1px; background: #1a1a1a; font-size: 0; line-height: 0;">&nbsp;</td>
+                            <td style="padding: 0 7px;"><span style="color: #1a1a1a; font-size: 9px; letter-spacing: 3px; font-weight: 600;">${COMPANY.suffix}</span></td>
+                            <td style="width: 22px; height: 1px; background: #1a1a1a; font-size: 0; line-height: 0;">&nbsp;</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                  <div style="margin-top: 9px; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #6b7280; text-align: center;">${COMPANY.tagline}</div>
+                  <div style="margin-top: 7px; font-size: 11px; line-height: 1.7; color: #4b5563; text-align: center;">
+                    ${COMPANY.addressLines.join('<br>')}
+                  </div>
+                  ${COMPANY_CONTACT_LINES.map(([kind, value]) => `
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 2px auto 0;">
+                    <tr>
+                      <td style="padding: 0 6px 0 0; vertical-align: middle; line-height: 0;">
+                        <img src="cid:${CONTACT_ICON_CID[kind]}" alt="" width="11" height="11" style="display: block; width: 11px; height: 11px;">
+                      </td>
+                      <td style="font-size: 11px; color: #4b5563; vertical-align: middle;">${value}</td>
+                    </tr>
+                  </table>`).join('')}
+                </td>
+                <td width="240" style="vertical-align: top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid ${WARM.border}; border-radius: 8px; border-collapse: separate;">
+                    <tr>
+                      <td style="background: ${WARM.accentSoft}; border-bottom: 1px solid ${WARM.border}; padding: 6px 12px; font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: #8A6D12; border-radius: 8px 8px 0 0;">Bill To</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 12px;">
+                        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${emailText(customerName) || '-'}</div>
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="table-layout: auto;">
+                          ${billRow('Phone', customerPhone)}
+                          ${billRow('Email', customerEmail)}
+                          ${billRow('Property', propertyName)}
+                          ${billRow('Prop ID', estimate.propertyCode)}
+                          ${billRow('City', city)}
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- The strip. It does not announce the word ESTIMATE -- what the document is is not
+                 in doubt -- so its four fields share the width evenly. -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 18px; background: ${WARM.section}; border-top: 1px solid ${WARM.border}; border-bottom: 1px solid ${WARM.border};">
+              <tr>
+                <td style="padding: 9px 14px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout: fixed;">
+                    <tr>
+                      ${metaField('Estimate No.', estimateId)}
+                      ${metaField('Date', new Date(estimate.createdAt || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }))}
+                      ${metaField('Valid Until', expiryDate.toLocaleDateString('en-IN'), '#b91c1c')}
+                      ${metaField('Billing', String(estimate.billingDuration || 'Yearly').replace('-', ' ').replace(/^./, character => character.toUpperCase()))}
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <h2 style="color: #1f2937; margin: 22px 0 6px 0; font-size: 17px;">Hello ${emailText(customerName) || 'Valued Customer'},</h2>
+            <p style="color: #4b5563; line-height: 1.7; margin: 0; font-size: 13px;">
+              Thank you for your interest in our services. Your estimate is summarised below, with the
+              full breakdown in the attached PDF.
             </p>
-            
-            <!-- Estimate Info & Customer Details -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${LABELLED_TABLE}">
-                <tr>
-                  <td style="${LABEL_CELL}">Estimate ID:</td>
-                  <td style="${VALUE_CELL} font-weight: 600;">${estimateId}</td>
-                </tr>
-                <tr>
-                  <td style="${LABEL_CELL}">Valid Until:</td>
-                  <td style="${VALUE_CELL} color: #dc2626; font-weight: 600;">${expiryDate.toLocaleDateString('en-IN')}</td>
-                </tr>
-                <tr>
-                  <td style="${LABEL_CELL}">Customer Name:</td>
-                  <td style="${VALUE_CELL} font-weight: 600;">${customerName || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="${LABEL_CELL}">Email:</td>
-                  <td style="${VALUE_CELL}">${customerEmail || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="${LABEL_CELL}">Phone:</td>
-                  <td style="${VALUE_CELL}">${customerPhone || '-'}</td>
-                </tr>
-              </table>
-            </div>
-            
+
             <!-- Property Details -->
-            <div style="margin-bottom: 20px;">
-              <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Property Details</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${LABELLED_TABLE}">
-                <tr><td style="${LABEL_CELL}">Name:</td><td style="${VALUE_CELL}">${propertyName || '-'}</td></tr>
-                ${propertyDetailsHtml}
-              </table>
-            </div>
-            
+            ${sectionHeading('Property Details')}
+            ${propertyDetailsHtml}
+
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
-            ${servicesList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">Services</h3><table style="width: 100%; border-collapse: collapse;">${servicesHtml}</table></div>` : ''}
+            ${servicesList.length ? servicesTable(servicesHtml, 'AMC Package &mdash; Services Included') : ''}
             <!-- They are simply services, however they were added, so the heading does not vary -->
-            ${addonsList.length ? `<div style="margin-bottom: 20px;"><h3 style="font-size: 14px;">Services</h3><table style="width: 100%; border-collapse: collapse;">${addonsHtml}</table><p style="text-align: right; font-weight: 600;">Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}</p></div>` : ''}
-            
-            <!-- Price Summary -->
-            <div style="margin-bottom: 20px;">
-              <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Price Summary</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td width="60%" style="padding: 6px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${money(subtotal)}</td>
-                </tr>
-                ${discount > 0 ? `<tr>
-                  <td width="60%" style="padding: 6px 0; color: #059669; font-size: 14px;">Discount (${money(discount)}%)</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #059669; font-weight: 500;">-Rs. ${money(estimate.discountAmount)}</td>
-                </tr>` : ''}
-                <tr>
-                  <td width="60%" style="padding: 6px 0; color: #6b7280; font-size: 14px;">GST (${money(estimate.gstPercent)}%)</td>
-                  <td width="40%" style="padding: 6px 0; text-align: right; color: #1f2937; font-weight: 500;">Rs. ${money(tax)}</td>
-                </tr>
-                <tr>
-                  <td colspan="2" style="padding: 6px 0;"><hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;"></td>
-                </tr>
-                <tr>
-                  <td width="60%" style="padding: 8px 0; color: #1f2937; font-size: 15px; font-weight: 700;">Grand Total</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-size: 16px; font-weight: 700;">Rs. ${money(total)}</td>
-                </tr>
-              </table>
-            </div>
-            
-            <!-- PDF Notice -->
-            <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
-              <p style="color: #065f46; margin: 0; font-size: 14px;">
-                <strong>📎 Detailed estimate attached as PDF</strong><br>
-                <span style="font-size: 12px; color: #047857;">Please find the complete breakdown of AMC package services and pricing in the attached PDF document.</span>
-              </p>
-            </div>
-            
+            ${addonsList.length ? servicesTable(addonsHtml, 'Services') + `
+            <p style="margin: 8px 0 0 0; text-align: right; font-size: 12px; font-weight: 700; color: ${WARM.text};">
+              Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}
+            </p>` : ''}
+
+            <!-- Price Summary, against the right edge as it is on the PDF -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 18px;">
+              <tr>
+                <td align="right">
+                  <table role="presentation" width="280" cellpadding="0" cellspacing="0" style="border: 1px solid ${WARM.border}; border-collapse: separate; border-radius: 8px;">
+                    <tr>
+                      <td colspan="2" style="background: ${WARM.section}; border-bottom: 1px solid ${WARM.border}; padding: 6px 12px; font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: ${WARM.muted}; border-radius: 8px 8px 0 0;">Price Summary</td>
+                    </tr>
+                    ${summaryLine('Subtotal', `Rs. ${money(subtotal)}`)}
+                    ${discount > 0 ? summaryLine(`Discount (${money(discount)}%)`, `- Rs. ${money(estimate.discountAmount)}`, '#047857') : ''}
+                    ${summaryLine(`GST (${money(estimate.gstPercent)}%)`, `Rs. ${money(tax)}`)}
+                    <tr>
+                      <td style="background: ${WARM.accent}; padding: 10px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: ${WARM.text}; border-radius: 0 0 0 8px;">Total</td>
+                      <td style="background: ${WARM.accent}; padding: 10px 12px; font-size: 16px; font-weight: 700; color: ${WARM.text}; text-align: right; white-space: nowrap; border-radius: 0 0 8px 0;">Rs. ${money(total)}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
             <!-- Action Buttons. Stacked in a fixed-width table so both read as one control set: as
                  inline-block links they sized themselves to their own text, so on a phone they wrapped
                  to different widths and "Approve Estimate" broke across two lines. -->
-            <div style="margin: 30px 0;">
-              <p style="color: #374151; font-weight: 600; margin: 0 0 16px 0; font-size: 16px; text-align: center;">Please review and take action:</p>
+            <div style="margin: 28px 0 0;">
+              <p style="color: #374151; font-weight: 600; margin: 0 0 16px 0; font-size: 15px; text-align: center;">Please review and take action:</p>
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
                 <tr>
                   <td style="padding-bottom: 12px;">
@@ -1193,22 +1290,39 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                 </tr>
               </table>
             </div>
-            
-            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-top: 20px;">
-              <p style="color: #92400e; margin: 0; font-size: 14px;">
+
+            <!-- PDF Notice -->
+            <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 13px 15px; margin-top: 22px; text-align: center;">
+              <p style="color: #065f46; margin: 0; font-size: 13px;">
+                <strong>📎 Estimate_${estimateId}.pdf attached</strong><br>
+                <span style="font-size: 12px; color: #047857;">The complete breakdown of package services, pricing and terms.</span>
+              </p>
+            </div>
+
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 13px 15px; margin-top: 12px;">
+              <p style="color: #92400e; margin: 0; font-size: 13px;">
                 <strong>⚠️ Important:</strong> This estimate will automatically expire on <strong>${expiryDate.toLocaleDateString('en-IN')}</strong> if no action is taken.
               </p>
             </div>
-            
-            <p style="color: #4b5563; line-height: 1.6; margin: 25px 0 0 0; font-size: 14px;">
-              If you have any questions about this estimate, please don't hesitate to contact us at <a href="mailto:info@xlandinfra.com" style="color: #1e40af;">info@xlandinfra.com</a>.
+
+            ${termsLines.length ? `${sectionHeading('Terms &amp; Conditions')}
+            <ol style="margin: 0; padding-left: 20px; font-size: 11px; line-height: 1.75; color: #4b5563;">
+              ${termsLines.map(line => `<li style="margin-bottom: 3px;">${emailText(line)}</li>`).join('')}
+            </ol>` : ''}
+
+            <p style="color: #4b5563; line-height: 1.7; margin: 22px 0 0 0; font-size: 13px;">
+              Any questions? Write to <a href="mailto:${COMPANY.email}" style="color: #1e40af;">${COMPANY.email}</a>
+              or call ${COMPANY.phone}.
             </p>
           </div>
-          
-          <!-- Footer -->
-          <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.</p>
-            <p style="margin: 8px 0 0 0;">This is an automated email. Please do not reply directly.</p>
+
+          <!-- Footer: the company and how to reach it, and nothing else. No automated-mail
+               disclaimer: this message asks the customer to approve or reject, so telling them
+               not to reply to it contradicts what it is for. -->
+          <div style="text-align: center; padding: 18px 20px; color: #9ca3af; font-size: 11px; line-height: 1.7;">
+            <p style="margin: 0; color: #1a1a1a; font-weight: 700; letter-spacing: 1.6px;">${COMPANY.legalName}</p>
+            <p style="margin: 6px 0 0 0;">${COMPANY.addressLines.join(', ')}</p>
+            <p style="margin: 6px 0 0 0;">© ${new Date().getFullYear()} ${COMPANY.legalName}. All rights reserved.</p>
           </div>
         </div>
       </body>

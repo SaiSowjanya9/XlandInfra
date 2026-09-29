@@ -48,13 +48,10 @@ Every create-estimate form opens with the shared `components/estimates/EstimateS
 - **The payments dashboard carries a Cost & Margin panel**, above Quick Actions: Vendor Cost, XLAND Cost, Customer Price and Margin % across the **active property-based** estimates, with a row per estimate beneath. A direct estimate has no property to measure against and an archived or rejected one is not work we expect to bill, so neither is counted. `GET /api/payments/property-estimate-margins` aggregates it server-side from the pricing snapshot saved with each service (`backend/utils/estimateMargins.js`, tested), and an FP-scoped user sees only their own. **Admin, Operations Manager and Franchise Partner only** — `canViewEstimateMargins`, not `canViewPayments`, because a Manager, Supervisor, Executive or Coordinator may view payments and still has no business with vendor cost or margin. Those four get 403, verified by role; the panel is also not rendered or even requested for them, so hiding it is not the only thing stopping them. **The headline totals count only estimates that carry costs**: an estimate of hand-typed services has a price and no cost, so including it would report a margin approaching 100% for work with no cost evidence. Those are counted as `uncostedCount`, named in the panel and still listed.
 - **The services table is drawn in the cream skin, not green.** Its header, footer, row numbers and method badges are warm tints (`bg-warm-section`, `bg-warm-accent-soft`, `border-warm-border`) and its figures read in `text-warm-text`, with the margin picked out in `text-warm-accent-hover` — red only when it has gone negative. The same goes for a selected service in `AMCPackage.jsx`. **Status tints stay as they are** (Approved green, Sent blue and so on): they are how a state is read at a glance. Solid calls to action also stay green, per the warm UI rules in AGENTS.md.
 - **The estimate's services are listed by `components/estimates/EstimateServicesTable.jsx`**, one component for every screen that lists them. Columns: `#`, Service, Method, Input / Details, Frequency, Visits / Year, Customer Price, with the Total Services Price footer. Method and the measured amount come from `getServiceMethodLabel` / `getServiceInput` in `estimatePackageUtils.js` (tested in `estimateServiceColumns.test.js`); a hand-entered row has no configured method, so it shows a dash and its `Qty n`. Input / Details carries the amount measured at the property (`4 Lift`, `15,000 Sq Ft`) and **never the rate beside it** — a rate is a vendor cost. The caller keeps its own heading and wrapper and passes its own `decode`.
-- **Internally, Input / Details is two lines**: the measured amount, and under it the rate it was priced at — `4 Lift` over `₹1,800 / Lift / Visit`, `15,000 Sq Ft` over `₹0.80 / Sq Ft / Visit`, `₹18,000 / Month` for monthly manpower. A Capacity Slab names the slab that decided the price instead (`Slab: 101 - 200 KVA`). That rate is the configured per-unit one from the snapshot, never the per-visit total, and it comes from `getServiceRate` (tested per method). **It is a vendor figure, so the customer-safe table renders the amount alone.**
-- **`internal` adds Vendor Cost, XLAND Cost and Margin % to that table, and the category under the service name.** It is passed by Admin, Ops Manager, FP and Manager only. **Coordinator, Supervisor and Executive never pass it** — their tables state the customer's price alone, and they keep their view modals. A hand-entered row has no vendor behind it, so its cost cells read as a dash rather than zero: `getServiceVendorCost` and friends return `null`, which is not the same as costing nothing.
-- **In Admin, Ops Manager, FP and Manager the view modal is gone.** Clicking an **Estimate ID** expands `components/estimates/EstimateDetailPanel.jsx` inside the row — the property it was written for (including a gated community's blocks and their unit counts), the package, the services table with costs, the Internal Cost & Profit Summary, the price summary, notes and terms — in both the active and the archived lists. The eye action was removed with the modal; one row is open at a time. FP keeps the `?viewEstimate=<id>` parameter as the source of truth, so an existing link still opens that estimate, expanded rather than as a modal.
-- **The customer is named in the row, not in the panel**: the Client cell carries contact name, phone and email (and the property code where there is one), which is what the space freed by the eye button pays for. The panel therefore has no Customer Details section — repeating it there would state the same three fields twice.
-- **`components/estimates/EstimateInternalSummary.jsx` is the Internal Cost & Profit Summary**, under its own heading and marked "(internal only)". It states exactly four figures: **Total Vendor Cost, XLAND Cost, Customer Price, Gross Margin %**. **XLAND Cost is the markup in rupees** — `sellingPrice − actualCost`, the figure the service form's preview has always meant by it (₹4,000 of vendor cost at 30% earns ₹1,200 and the customer pays ₹5,200) — and **not** the `operating_cost` field, a separate overhead the service form hardcodes to 0, which had this card reading ₹0 beside a real margin. So the figures add up: vendor cost plus XLAND cost (plus any operating cost) is the customer price, and the margin is XLAND cost over that price. The same figure under the same name appears in the internal services table's `XLAND Cost (₹)` column (`getServiceXlandCost`, null for a hand-entered row so it reads as a dash), in the AMC package form's Internal figures, and on the payments dashboard. Total Actual Cost, Est. Selling Price and Gross Profit were dropped as restatements of those — the mockup's `(A)` / `(B)` lettering went with them. `estimateInternalCosts` still returns `actualCost`, `sellingPrice` and `profit`, because the margin is derived from them. Figures come from `estimateInternalCosts` (tested in `estimateInternalCosts.test.js`), which reads the pricing snapshot saved with each service — so a panel reports what the estimate was **costed at**, not what today's catalog would say. The selling price is the estimate's own subtotal where it has one, since that is the figure the customer was quoted, package included.
-- The panel is **read-only**. The reference mockup shows a frequency dropdown, an editable XLAND cost and a per-row ⋮ menu; re-pricing belongs to the edit flow, which is validated server-side, so none of those are here. It also shows a `SER-001` service code, which the catalog deliberately has no field for.
-- Customer-facing documents are untouched by all of the above. The PDF and email tables keep their own customer-safe layout, with no vendor cost, margin or markup.
+- The service's **category reads under its name** in that table, which is where the PDF and the email set it too.
+- **No estimate screen states a cost or a margin, in any portal.** The table's `internal` mode — Vendor Cost, XLAND Cost, Margin %, and the vendor rate under the measured amount — is gone, and `EstimateInternalSummary.jsx` (the Internal Cost & Profit Summary) was deleted with it. An estimate screen shows the customer's price and nothing else, so what a colleague reads is what the customer receives. What the work costs XLAND is answered by the **payments dashboard's Cost & Margin panel**, which is gated on `canViewEstimateMargins` and computed server-side from the pricing snapshots. `getServiceVendorCost`, `getServiceXlandCost`, `getServiceMarginPercent`, `getServiceRate` and `estimateInternalCosts` remain in `estimatePackageUtils.js` with their tests, but nothing in the UI calls them — do not wire them back into an estimate view.
+- **In Admin, Ops Manager, FP and Manager the view modal is gone.** Clicking an **Estimate ID** expands `components/estimates/EstimateDetailPanel.jsx` inside the row — the letterhead, the property it was written for (including a gated community's blocks and their unit counts), the package, the services table, the price summary, notes and terms — in both the active and the archived lists. The eye action was removed with the modal; one row is open at a time. FP keeps the `?viewEstimate=<id>` parameter as the source of truth, so an existing link still opens that estimate, expanded rather than as a modal.
+- The panel is **read-only**. Re-pricing belongs to the edit flow, which is validated server-side.
 - Add-on dropdowns: show only the add-on name; do **not** show the price.
 - **The AMC package dropdown shows the package name alone**, in every portal and in both the create form and the edit modal — no `- ₹60,000` suffix, whether it comes from `formatCurrency(pkg.price)`, `getPackagePrice` or `getNormalizedPackagePrice`. The selected package's cost is read from the Price Summary and the package card, which is where a figure belongs; repeating it inside the closed select also truncated the name it was meant to qualify.
 - Selected add-ons table columns: **Service**, **Frequency**, **No. of Visits**, **Action**. Remove the **Price** column.
@@ -120,8 +117,10 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
 ## PDF and Email
 
 - Frequency column: type only. Strip any `Nx ` prefix if present.
-- Visits column: count only.
-- Email format: `Monthly - 12 visits`.
+- Visits column: count only. The email lists services in the same columned table as the PDF, so
+  `Monthly - 12 visits` as a single inline string no longer appears there.
+- The email body **lists the Terms & Conditions** as well as attaching the PDF, through the same
+  `estimateTermsLines` helper, so a message and its attachment cannot state different terms.
 
 ## Terms & Conditions
 
@@ -146,17 +145,94 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
   them; `managerServiceCatalog.test.js` now asserts the columns are written and that terms posted
   by a Manager are ignored.
 
-## View Modal and PDF Layout Order
+## The Estimate Document — one layout, four surfaces
 
-1. Estimate Details (ID, Type, Created Date)
-2. Property Details (with type-specific fields for GC, APT, VILLA, FLAT, PLOT)
-3. Customer Details
-4. AMC Package (price and description only; no package name)
-5. Package Services table: `#`, Service, Description, Frequency, Visits
-6. Add-on Services table: `#`, Service, Description, Frequency, Visits + Total Add-ons Price
-7. Price Summary (Subtotal, Discount, GST, Total)
-8. Description / Notes (after Price Summary)
-9. Created By info
+The **view modal, the expanded detail panel, the PDF download, the emailed PDF and the email body**
+are the same document. A change to one belongs in all of them; a section added to only one is a
+bug, because a colleague reading the estimate on screen is reading what the customer receives.
+
+**Order, top to bottom:**
+
+1. **Letterhead.** A gold rule across the head of the page, then two facing blocks: on the left the
+   company, on the right a **BILL TO** card — the customer's name, phone, email, and the property,
+   property code and city the estimate was written for.
+   The company block is **one centred stack**: the logo and `XLAND INFRA` share the first line, and
+   the tagline, address and contact lines are centred **on the whole lockup** beneath them — every
+   line measured and placed by hand in the PDFs, and one centred table per line in the email, since
+   no mail client centres anything reliably but a table cell. They are **not** left-aligned under
+   the name, which left them hanging to the right of the logo with the space beside it wasted.
+   `PVT LTD` is **near-black, with near-black rules, centred on the name above it** — measured
+   against that name's own width rather than aligned to its left edge, and not set in gold: the
+   gold on this page is the top rule and the logo.
+2. **The strip**, ruled top and bottom on a pale band: Estimate No., Date, Type and Billing (the
+   email replaces Type with Valid Until), **sharing the width in four equal columns**, with the
+   status chip at the right on screen. It does **not** announce the word ESTIMATE — what the
+   document is is not in doubt, and the label only crowded four fields into the left half of a
+   full-width bar. Nothing below restates any of these.
+3. Property Details — **a ruled table, not a field grid**: the label in a cream cell, its value in
+   the white cell beside it, **two pairs to a line**, with type-specific fields for GC, APT, VILLA,
+   FLAT and PLOT, and the address (and a gated community's block list) on a line of their own.
+   Empty fields are dropped before anything is placed, so the rest close up and an odd last pair
+   closes its line with a plain cell rather than a half-empty one. The previous layout floated
+   label-over-value pairs across three columns with no rules: each value found its own baseline,
+   a missing Division left a hole in mid-air, and the block read as crooked beside the ruled
+   tables under it. `detailTable` in `pdfService.js` and `emailService.js`, the same code inline
+   in `pdfExport.js`, and `DetailTable` in `EstimateDetailPanel.jsx`.
+4. AMC Package — price and description only; no package name (see AMC Package Display above).
+5. `AMC PACKAGE - SERVICES INCLUDED`: `#`, Service (category beneath), Description, Frequency,
+   Visits, Qty, Price. A package's services are covered by the package price, so **Price reads as a
+   dash**, never as zero.
+6. `SERVICES`: the same columns, priced, with the **Total Services Price** line under it.
+7. **Price Summary**, in a card against the **right** edge: Subtotal, Discount (only when one was
+   given), GST, and the Total on a black band in gold-on-white. Not a full-width list.
+8. Notes / Description.
+9. Terms & Conditions, last, and only when the estimate carries them (see above).
+10. Footer: the legal name, email and phone, centred — **and nothing else**. No
+    "computer-generated document" note, no "do not reply to this automated email", no watermark
+    of any kind. An estimate asks the customer to approve or reject it, so a disclaimer telling
+    them it is machine-made or not to be replied to contradicts what the document is for. Do not
+    reintroduce one. (Invoices and receipts keep their own notes; this rule is the estimate's.)
+
+- **There is no Customer Details section.** The customer is in BILL TO at the head of the document,
+  and in the Client cell of the list row; a third copy states the same three fields again.
+- **Billing is stated once**, in the strip. The separate "Billing:" line above the services and the
+  Billing row in the modals were removed as restatements of it.
+- **The company block is not typed anywhere.** `backend/utils/companyInfo.js` and its twin
+  `admin-portal/src/utils/companyInfo.js` hold the name, suffix, tagline, address lines, phone,
+  email and website; `backend/utils/companyInfo.test.js` compares the two field by field, so
+  changing one without the other fails the tests rather than the customer's copy.
+- **The document is drawn in the portal's warm palette, not slate blue** — and that applies to the
+  PDFs and the email as much as to the screen. Table headers and the Price Summary caption are
+  `warm.section` `#FFF9EE` with `warm.muted` labels and `warm.border` `#EADFCF` rules; rows
+  alternate white and `#FFFCF6`; BILL TO's cap is `warm.accent-soft` `#FEF3E2`; headings and
+  figures are `warm.text` `#1F2937`. **The Total sits on the tan accent `#D4A574` in dark text** —
+  never white on tan, which does not meet contrast, and no longer the black-and-gold band it was.
+  The palette is duplicated as `WARM` in `pdfExport.js`, `pdfService.js` and `emailService.js`
+  because none of the three can read a Tailwind config; keep the three in step. Only the estimate
+  is warm — the package export and the invoice keep their slate and navy.
+- **A table header is uppercase and takes its column's alignment.** jspdf-autotable applies
+  `columnStyles` to the body only, so the estimate table passes a `didParseCell` hook to give each
+  header the alignment its column already has; otherwise a centred `SERVICE` sits over a
+  left-aligned column.
+- **The contact lines carry icons, not letters** — a handset, an envelope and a globe in the tan
+  accent, never `T` / `E` / `W`, which read as the initials of nothing. The kind is named by
+  `COMPANY_CONTACT_LINES` (`phone`, `email`, `website`) and each surface draws it its own way:
+  lucide `Phone` / `Mail` / `Globe` on screen, `drawContactIcon` from rectangles, lines and
+  ellipses in both PDFs — Helvetica has no such glyph and a symbol font is not worth embedding for
+  3mm of line art — and, in the email, the PNGs in `backend/assets/icons/`, attached and referenced
+  by Content-ID because Gmail strips an inline SVG and Outlook never drew one.
+- **The logo is the brand mark alone** (`backend/assets/logo-contract.png`, mirrored into
+  `admin-portal/public/logo-icon.png` and, base64-encoded for jsPDF, into `utils/logoIconBase64.js`),
+  because every layout sets the company name itself beside it. It is scaled to 314px: the 1.2MB
+  original would be embedded in every emailed PDF. **The email attaches it and references it by
+  Content-ID** — an `<img>` pointing at the website sits behind the "display images" prompt that
+  Outlook and Gmail show by default, which left the letterhead headless.
+- Implemented by `drawEstimateLetterhead` in `admin-portal/src/utils/pdfExport.js` (jsPDF, mm) and
+  in `backend/services/pdfService.js` (PDFKit, points), by the letterhead table in
+  `sendEstimateEmail`, and on screen by `components/estimates/EstimateDocumentHeader.jsx` with
+  `EstimatePriceSummary.jsx`. The centred black brand strip (`drawPDFHeader`) is **not** used by an
+  estimate any more — it leaves nowhere for the two facing blocks — but the package export and the
+  invoice still use it.
 
 ## Backend Requirements
 
