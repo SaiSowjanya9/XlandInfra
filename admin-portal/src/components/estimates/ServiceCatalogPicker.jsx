@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
-import CapacitySlabList from './CapacitySlabList';
+import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
@@ -317,7 +317,16 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               <div className="grid gap-4 sm:grid-cols-2">
                 <ManpowerFields service={service} inputs={inputs} onChange={setInput} theme={theme} />
                 {/* The figure the service is priced from, so the dialog opens on it */}
-                {input && <label className={fieldLabel}>{input[1]} ({service.unit}) *<input autoFocus aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? 0 : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
+                {/* Capacity Slab prices from a table, so the bands are the choices: picking one
+                    sets the capacity to its lower bound and the quote follows. Every other method
+                    measures something at the property, which is typed. */}
+                {input && service.pricing_method === 'capacity_slab'
+                  ? <label className={fieldLabel}>Slab *
+                    <CapacitySlabSelect slabs={service.capacity_slabs} unit={service.unit} capacity={inputs.capacity}
+                      onChange={value => setInput('capacity', value)} ariaLabel={`${service.service_name} slab`}
+                      className={`${inputClass} mt-2`} />
+                  </label>
+                  : input && <label className={fieldLabel}>{input[1]} ({service.unit}) *<input autoFocus aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 <label className={fieldLabel}>Frequency<select disabled={!service.allow_frequency_override || !overrideFrequency || saving} value={inputs.frequency} onChange={event => {
                   const frequency = event.target.value;
                   setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));

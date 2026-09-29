@@ -47,7 +47,7 @@ import { applyPackageMarkup, packageTotals, quotePackageRow, rowInput } from '..
 import { PRICING_METHODS, methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
 import CustomServiceDialog from './CustomServiceDialog';
-import CapacitySlabList from './CapacitySlabList';
+import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { exportPackageToPDF } from '../../utils/pdfExport';
 import { Home, Building, TreePine, Map, Layers as LayersIcon } from 'lucide-react';
 
@@ -878,6 +878,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div>
                           {(() => {
                             const input = rowInput(row);
+                            // Capacity Slab prices from a table, so the row offers its bands rather
+                            // than asking for a capacity to be looked up against them
+                            if (row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length) {
+                              return <CapacitySlabSelect slabs={row.capacitySlabs} unit={row.unit} capacity={row.inputValue}
+                                onChange={value => handleUpdateServiceRow(index, 'inputValue', value)}
+                                ariaLabel={`${row.service || 'Service'} slab`}
+                                className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400" />;
+                            }
                             return input ? (
                               <input
                                 type="number" min={input.min} step={input.step}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
-import CapacitySlabList from './CapacitySlabList';
+import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { TermsConditionsField, EstimateTermsSection } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
@@ -89,7 +89,12 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
       <p className="mt-4 inline-block rounded bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700">{methodLabel(service.pricing_method)}</p>
       <div className="mt-3 grid gap-4 sm:grid-cols-3">
         <ManpowerFields service={service} inputs={inputs} onChange={updateInput} />
-        {field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={isVisitManpower(service) ? service.minimum_manpower : service.pricing_method === 'capacity_slab' ? service.capacity_slabs[0].capacityFrom : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
+        {/* Capacity Slab prices from a table, so the bands are the choices rather than a capacity */}
+        {field && service.pricing_method === 'capacity_slab'
+          ? <Field label="Slab *"><CapacitySlabSelect slabs={service.capacity_slabs} unit={service.unit}
+            capacity={inputs.capacity} onChange={value => updateInput('capacity', value)}
+            ariaLabel={`${service.service_name} slab`} className={inputClass} /></Field>
+          : field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={isVisitManpower(service) ? service.minimum_manpower : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
         <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override || !overrideFrequency} onChange={event => {
           const frequency = event.target.value;
           setQuote(null);
