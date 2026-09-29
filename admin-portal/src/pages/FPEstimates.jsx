@@ -27,7 +27,7 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
-import CapacitySlabList from '../components/estimates/CapacitySlabList';
+import CapacitySlabList, { CapacitySlabSelect } from '../components/estimates/CapacitySlabList';
 import { applyPackageMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
@@ -3622,6 +3622,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div>
                             {(() => {
                               const input = rowInput(row);
+                              // Capacity Slab prices from a table, so the row offers its bands
+                              if (row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length) {
+                                return <CapacitySlabSelect slabs={row.capacitySlabs} unit={row.unit} capacity={row.inputValue}
+                                  onChange={value => handleUpdateServiceRow(index, 'inputValue', value)}
+                                  ariaLabel={`${row.service || 'Service'} slab`}
+                                  className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />;
+                              }
                               return input ? (
                                 <input
                                   type="number" min={input.min} step={input.step}

@@ -17,6 +17,38 @@ const money = value => `₹${Number(value || 0).toLocaleString('en-IN', { maximu
 export const slabRangeLabel = (slab, unit) =>
   `${slab.capacityFrom}${slab.capacityTo == null || slab.capacityTo === '' ? ' and above' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`;
 
+// A named slab is called by its name, with its range beside it; an unnamed one is its range
+export const slabOptionLabel = (slab, unit) => {
+  const name = String(slab?.name || '').trim();
+  return name ? `${name} (${slabRangeLabel(slab, unit)})` : slabRangeLabel(slab, unit);
+};
+
+/**
+ * Choosing a slab rather than typing a capacity. The slabs are the choices, so wherever a Capacity
+ * Slab service is priced the bands themselves are offered and the capacity follows from the one
+ * picked -- its lower bound, which is what everything downstream prices from.
+ *
+ * A slab with no lower bound entered yet is not offered: it cannot price anything.
+ */
+export function CapacitySlabSelect({ slabs = [], unit = '', capacity, onChange, className = '', id, ariaLabel = 'Slab' }) {
+  const usable = (Array.isArray(slabs) ? slabs : []).filter(slab => String(slab?.capacityFrom ?? '').trim() !== '');
+  const current = findCapacitySlab(usable, capacity);
+  const keyOf = slab => String(slab.id ?? slab.capacityFrom);
+  return (
+    <select
+      id={id} aria-label={ariaLabel} className={className}
+      value={current ? keyOf(current) : ''}
+      onChange={event => {
+        const chosen = usable.find(slab => keyOf(slab) === event.target.value);
+        onChange(chosen ? String(chosen.capacityFrom) : '');
+      }}
+    >
+      <option value="">Select a slab</option>
+      {usable.map(slab => <option key={keyOf(slab)} value={keyOf(slab)}>{slabOptionLabel(slab, unit)}</option>)}
+    </select>
+  );
+}
+
 export default function CapacitySlabList({ service, capacity, internal = false, className = '', title = 'Capacity slabs' }) {
   const slabs = Array.isArray(service?.capacity_slabs) ? service.capacity_slabs : [];
   if (service?.pricing_method !== 'capacity_slab' || !slabs.length) return null;
