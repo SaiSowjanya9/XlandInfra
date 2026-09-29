@@ -24,8 +24,23 @@ test('the whole set is bucketed by month, and a quiet month is still a bucket', 
   assert.equal(buckets[2].vendorCost, 128000);
   assert.equal(buckets[2].operatingCost, 5000);
   assert.equal(buckets[2].customerPrice, 190300);
-  assert.equal(buckets[2].profit, 57300);
+  assert.equal(buckets[2].xlandCost, 57300);
   assert.equal(buckets[2].marginPercent, 30.11);
+});
+
+test('XLAND cost is the markup in rupees, and the stack comes to the customer price', () => {
+  // ₹4,000 of vendor cost marked up 30% earns ₹1,200 and the customer pays ₹5,200
+  const marked = [{ estimateId: 'EST-M', createdAt: '2026-09-09', vendorCost: 4000, operatingCost: 0, actualCost: 4000, customerPrice: 5200 }];
+  const summary = estimateMarginSummary(marked);
+  assert.equal(summary.xlandCost, 1200);
+  assert.equal(summary.vendorCost + summary.xlandCost, summary.customerPrice, 'the two shares are the whole price');
+  // 30% markup on cost is a 23.08% margin on price -- the two are not the same number
+  assert.equal(summary.marginPercent, 23.08);
+
+  const [bucket] = estimateMarginBuckets(marked, { from: '2026-09-09', to: '2026-09-09' }, now);
+  assert.equal(bucket.xlandCost, 1200);
+  assert.equal(bucket.vendorCost + bucket.operatingCost + bucket.xlandCost, bucket.customerPrice);
+  assert.equal(bucket.marginPercent, 23.08);
 });
 
 test('an estimate with no cost behind it is counted but never averaged in', () => {

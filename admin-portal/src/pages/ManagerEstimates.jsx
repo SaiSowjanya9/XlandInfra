@@ -2227,10 +2227,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       {/* Summary */}
                       <div className="border-t border-gray-200 pt-4 space-y-3">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Package</span>
-                          <span className="font-medium text-gray-800 truncate ml-2">{amcForm.packageName || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
                           <span className="text-gray-500">Services</span>
                           <span className="font-medium text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
                         </div>

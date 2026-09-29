@@ -270,6 +270,21 @@ export const getServiceActualCost = (service) => {
   const operating = getServiceOperatingCost(service);
   return vendor == null && operating == null ? null : (vendor || 0) + (operating || 0);
 };
+/**
+ * What XLAND makes on the service: the markup in rupees, which is what the service form's preview
+ * has always called XLAND Cost -- ₹4,000 of vendor cost at 30% earns ₹1,200 and the customer pays
+ * ₹5,200. It is derived from the price and the cost, never stored, and it is not
+ * `getServiceOperatingCost`: that is a separate overhead the service form hardcodes to 0, which is
+ * what had this figure reading as nothing beside a real margin.
+ *
+ * A hand-entered row has no vendor behind it, so there is no margin to state and this is null --
+ * a dash, not a zero, the same rule the other cost cells follow.
+ */
+export const getServiceXlandCost = (service) => {
+  const actual = getServiceActualCost(service);
+  const price = getAddonPrice(service);
+  return actual == null || price == null ? null : round2(price - actual);
+};
 export const getServiceMarginPercent = (service) => {
   const margin = figure(service?.marginPercentage, snapshotOf(service).marginPercentage);
   if (margin != null) return margin;
@@ -295,9 +310,13 @@ export const estimateInternalCosts = (estimate, rows) => {
   const packagePrice = figure(estimate?.package_price, estimate?.packagePrice, estimate?.packageRate) || 0;
   const subtotal = figure(estimate?.subtotal, estimate?.subTotal);
   const sellingPrice = round2(subtotal != null && subtotal > 0 ? subtotal : servicesPrice + packagePrice);
-  const profit = round2(sellingPrice - actualCost);
-  return { vendorCost, operatingCost, actualCost, servicesPrice, packagePrice, sellingPrice, profit,
-    marginPercent: sellingPrice ? round2(profit / sellingPrice * 100) : null };
+  // What XLAND makes on top of the cost -- the markup in rupees, the figure the service form calls
+  // XLAND Cost. It is the profit under the name the rest of the pricing UI uses, so vendor cost
+  // plus XLAND cost (plus any operating cost) comes to exactly the selling price.
+  const xlandCost = round2(sellingPrice - actualCost);
+  return { vendorCost, operatingCost, actualCost, servicesPrice, packagePrice, sellingPrice,
+    xlandCost, profit: xlandCost,
+    marginPercent: sellingPrice ? round2(xlandCost / sellingPrice * 100) : null };
 };
 
 /**

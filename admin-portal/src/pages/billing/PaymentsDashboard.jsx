@@ -999,7 +999,10 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
                 ['Vendor Cost', formatCurrency(marginSummary.vendorCost), 'text-gray-900'],
-                ['XLAND Cost', formatCurrency(marginSummary.operatingCost), 'text-gray-900'],
+                // The markup in rupees -- ₹4,000 of vendor cost at 30% earns ₹1,200 -- not the
+                // `operating_cost` field, which is a separate overhead no property-based estimate
+                // carries and which had this card reading ₹0 beside a margin of 28%
+                ['XLAND Cost', formatCurrency(marginSummary.xlandCost), 'text-gray-900'],
                 ['Customer Price', formatCurrency(marginSummary.customerPrice), 'text-gray-900'],
                 ['Margin %', marginSummary.marginPercent == null ? '—' : `${marginSummary.marginPercent}%`,
                   marginSummary.profit >= 0 ? 'text-emerald-600' : 'text-red-600']
@@ -1011,9 +1014,10 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               ))}
             </div>
 
-            {/* Cost against price over time, with the margin those two make on its own axis. A
-                table of estimates could say what one of them made and never whether the margin is
-                improving, which is the question this panel exists to answer. */}
+            {/* What the customer pays, split into what it costs and what we make, over time, with
+                the margin those two come to on its own axis. A table of estimates could say what
+                one of them made and never whether the margin is improving, which is the question
+                this panel exists to answer. */}
             {marginTrend.length > 0 ? (
               <div className="mt-5 h-64 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1028,13 +1032,19 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltipContent formatValue={marginTrendValue} footer={bucket => (
                       bucket.estimateCount
-                        ? `${bucket.estimateCount} ${bucket.estimateCount === 1 ? 'estimate' : 'estimates'}${bucket.costedCount < bucket.estimateCount ? `, ${bucket.estimateCount - bucket.costedCount} uncosted` : ''}`
+                        ? `Customer price ${formatCurrency(bucket.customerPrice)} · ${bucket.estimateCount} ${bucket.estimateCount === 1 ? 'estimate' : 'estimates'}${bucket.costedCount < bucket.estimateCount ? `, ${bucket.estimateCount - bucket.costedCount} uncosted` : ''}`
                         : 'No estimates raised'
                     )} />} />
                     <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                    <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" stackId="cost" fill="#93C5FD" radius={[0, 0, 0, 0]} />
-                    <Bar yAxisId="money" dataKey="operatingCost" name="XLAND Cost" stackId="cost" fill="#FCD34D" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#34D399" radius={[4, 4, 0, 0]} />
+                    {/* One bar per period: the vendor's share and ours, stacked, so the column is
+                        the customer price and how it divides is the margin made visible */}
+                    <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" stackId="price" fill="#93C5FD" />
+                    {/* A property-based estimate carries no operating cost today, so this segment
+                        is drawn only where one exists rather than sitting in the legend at zero */}
+                    {marginTrend.some(bucket => bucket.operatingCost > 0) && (
+                      <Bar yAxisId="money" dataKey="operatingCost" name="Operating Cost" stackId="price" fill="#FCD34D" />
+                    )}
+                    <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" stackId="price" fill="#34D399" radius={[4, 4, 0, 0]} />
                     <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#6366F1"
                       strokeWidth={2} dot={{ r: 3, fill: '#6366F1' }} connectNulls />
                   </ComposedChart>

@@ -79,9 +79,17 @@ export const quotePackageRow = async (row, { apiPath, propertyType, propertyType
   if (quote.requiresCustomQuote) return { error: `${row.service} needs a custom quote at this capacity.` };
   return {
     priced: {
-      price: quote.totalPrice, vendorCost: quote.vendorCost, operatingCost: quote.operatingCost,
+      // **A package is priced from what the vendor charges, not from what the service sells for.**
+      // The quote returns both -- `vendorCost` is the vendor rate across the visits, `totalPrice`
+      // is that with the service's own markup on it -- and a package takes the former: it sets its
+      // own margin through its Markup (%), so taking the marked-up price would charge a markup on
+      // a markup. A row therefore opens on the vendor cost and the package's markup is what turns
+      // it into the customer price.
+      price: quote.vendorCost, vendorCost: quote.vendorCost, operatingCost: quote.operatingCost,
       vendorRatePerVisit: quote.vendorRatePerVisit, markupPercentage: quote.inputs?.markup_percentage,
-      marginPercentage: quote.marginPercentage, frequencyType: quote.frequency, frequencyCount: quote.visits
+      // The quote's own margin describes its customer price, which is not the price this row
+      // carries, so storing it would state a margin the package does not have
+      marginPercentage: undefined, frequencyType: quote.frequency, frequencyCount: quote.visits
     }
   };
 };
@@ -91,19 +99,15 @@ const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100
 /**
  * The package's own markup, added **on top of** the price a row already carries:
  *
- *   price = quoted price × (1 + markup / 100)
+ *   price = row price × (1 + markup / 100)
  *
- * So a markup can only raise a price, never lower it. Applying it to cost instead would replace each
- * service's own markup, and entering a figure below what the service is configured at then dropped
- * the price -- a service at 30% quoted at 1,560 fell to 1,236 when 3% was typed, which reads as a
- * bug however the arithmetic is defended. The service keeps its own margin; the package markup is
- * the package's margin on top of it.
+ * so a markup can only raise a price, never lower it. Every row's price is now what the vendor
+ * charges -- a configured one from `quote.vendorCost`, a hand-typed one from what was entered --
+ * so the markup is XLAND's margin on the package, exactly as a service's own markup is its margin
+ * on the service. It is no longer a markup charged on top of another markup.
  *
- * A row with nothing quoted -- one typed in by hand, which carries a vendor price and no quote -- is
- * marked up from its cost, since that is the only figure it has.
- *
- * Left blank, each row keeps the price it already has. A price typed over the quote is never
- * recalculated: that is what typing over it means.
+ * Left blank, each row keeps the price it already has. A price typed over is never recalculated:
+ * that is what typing over it means.
  */
 export const hasMarkup = (markup) => markup !== '' && markup !== null && markup !== undefined && Number.isFinite(Number(markup));
 
@@ -123,6 +127,12 @@ export const applyPackageMarkup = (rows = [], markup) =>
 /**
  * What the package costs and sells for: the sum of its priced rows. A row typed by hand carries no
  * price, so it adds nothing here -- it is part of the package, but it is not what sets its price.
+ *
+ * `xlandCost` is what XLAND makes on top of what the vendor charges -- the markup in rupees, the
+ * same figure the service form's preview calls XLAND Cost: ₹4,000 of vendor cost at 30% earns
+ * ₹1,200 and the customer pays ₹5,200. It is derived, never entered, and it is the profit under
+ * the name the rest of the pricing UI uses, so vendor cost plus XLAND cost (plus any operating
+ * cost) comes to exactly the package price.
  */
 export const packageTotals = (rows = [], markup) => {
   const withMarkup = hasMarkup(markup) ? applyPackageMarkup(rows, markup) : rows;
@@ -132,8 +142,8 @@ export const packageTotals = (rows = [], markup) => {
   const vendorCost = sum('vendorCost');
   const operatingCost = sum('operatingCost');
   const actualCost = round2(vendorCost + operatingCost);
-  const profit = round2(price - actualCost);
-  return { price, vendorCost, operatingCost, actualCost, profit,
-    marginPercent: price ? round2(profit / price * 100) : null,
+  const xlandCost = round2(price - actualCost);
+  return { price, vendorCost, operatingCost, actualCost, xlandCost, profit: xlandCost,
+    marginPercent: price ? round2(xlandCost / price * 100) : null,
     pricedCount: priced.length };
 };

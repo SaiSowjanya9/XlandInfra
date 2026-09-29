@@ -27,8 +27,8 @@ import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
-import CapacitySlabList, { CapacitySlabSelect } from '../components/estimates/CapacitySlabList';
-import { applyPackageMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
+import { CapacitySlabSelect } from '../components/estimates/CapacitySlabList';
+import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
@@ -3727,21 +3727,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       A row added with <span className="font-medium">Add Row</span> states what the vendor charges, which counts towards the vendor cost below. Every row's Price may be typed over: a configured one opens on its quote, and a figure entered by hand stands until the field is cleared.
                     </p>
                   )}
-                  {/* Capacity Slab prices from a table rather than a rate, so every slab of every such row is
-                      listed here with the band its typed capacity lands in marked. Internal: this screen
-                      configures the package, so it states the vendor rate beside the customer price. */}
-                  {amcForm.serviceRows.filter(row => row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length).map((row, index) => (
-                    <CapacitySlabList
-                      key={`${row.catalogServiceId}-${index}`}
-                      className="mt-4"
-                      title={`${row.service} — capacity slabs`}
-                      capacity={row.inputValue}
-                      internal
-                      service={{ pricing_method: 'capacity_slab', unit: row.unit, capacity_slabs: row.capacitySlabs,
-                        default_markup_percentage: row.defaultMarkupPercentage, default_frequency: row.frequencyType,
-                        default_visits_per_year: row.defaultVisitsPerYear ?? row.frequencyCount }}
-                    />
-                  ))}
+                  {/* No slab table under the rows. A Capacity Slab row offers its bands in the
+                      Input column and pricing the chosen one is the whole of the job here -- the
+                      full table belongs to the service's own configuration, not to a package. */}
                 </div>
 
               </div>
@@ -3753,73 +3741,93 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             <div className="w-full">
                     <div className="bg-warm-section rounded-xl p-6 border border-warm-border h-full">
                       <h3 className="text-warm-muted text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
-                      <div className="grid gap-6 lg:grid-cols-3">
-                      
-                      {/* The price is what the services add up to, so it is shown rather than typed */}
-                      <div>
-                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Price (₹)</label>
-                        <div className="rounded-[10px] border border-warm-border bg-white px-4 py-3">
-                          <p className="text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</p>
-                          <p className="mt-1 text-[11px] text-warm-muted">{totals.pricedCount ? `From ${totals.pricedCount} configured service${totals.pricedCount === 1 ? '' : 's'}` : 'Add a configured service and its amount'}</p>
+                      {/* What is decided on the left, what it comes to on the right. The two were
+                          interleaved -- price, markup, period, then the totals again -- so the
+                          figures were read before the fields that set them, and the panel repeated
+                          the same amount in two places a column apart. */}
+                      <div className="grid gap-6 lg:grid-cols-2">
+
+                      {/* The two figures that decide the price, in the order they are answered */}
+                      <div className="space-y-4">
+                        {/* Every row is priced at what the vendor charges, so this is XLAND's margin
+                            on the package -- the same relationship a service's own markup has to its
+                            vendor rate. Blank leaves the package at cost, which is why it says so. */}
+                        <div>
+                          <label className="block text-xs font-medium text-warm-muted mb-1.5" htmlFor="fp-package-markup">Markup (%) <span className="font-normal text-warm-muted/70">on the vendor cost</span></label>
+                          <input
+                            id="fp-package-markup" type="number" min="0" max="1000" step="0.01"
+                            value={amcForm.markupPercentage ?? ''}
+                            onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
+                            placeholder="None"
+                            className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                          />
                         </div>
-                      </div>
-                      
-                      {/* The package's own markup, added on top of what each row already comes to,
-                          so it can only raise a price. Applying it to cost would replace each
-                          service's own markup and a smaller figure would drop the price. */}
-                      <div>
-                        <label className="block text-xs font-medium text-warm-muted mb-1.5" htmlFor="fp-package-markup">Markup (%) <span className="font-normal text-warm-muted/70">on top of each price</span></label>
-                        <input
-                          id="fp-package-markup" type="number" min="0" max="1000" step="0.01"
-                          value={amcForm.markupPercentage ?? ''}
-                          onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
-                          placeholder="None"
-                          className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
-                        />
+
+                        {/* Service Period */}
+                        <div>
+                          <label className="block text-xs font-medium text-warm-muted mb-1.5">Service Period</label>
+                          <div className="relative">
+                            <select
+                              value={amcForm.billingDuration}
+                              onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent appearance-none"
+                            >
+                              {BILLING_DURATIONS.map(duration => (
+                                <option key={duration.value} value={duration.value}>{duration.label}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Service Period */}
-                      <div>
-                        <label className="block text-xs font-medium text-warm-muted mb-1.5">Service Period</label>
-                        <div className="relative">
-                          <select
-                            value={amcForm.billingDuration}
-                            onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent appearance-none"
-                          >
-                            {BILLING_DURATIONS.map(duration => (
-                              <option key={duration.value} value={duration.value}>{duration.label}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
-                        </div>
-                      </div>
-                      
-                      {/* Summary */}
-                      <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-warm-muted">Package</span>
-                          <span className="font-medium text-warm-text truncate ml-2">{amcForm.packageName || '-'}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-warm-muted">Services</span>
-                          <span className="font-medium text-warm-text">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-warm-border">
-                          <span className="text-sm font-semibold text-warm-text">Total Rate</span>
-                          <span className="text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</span>
+                      {/* What it comes to: one card on the right, stating the price once. The
+                          package's own name was a line of it and is gone -- the field that sets it
+                          is directly above this panel, so repeating it here said nothing. */}
+                      <div className="rounded-[10px] border border-warm-border bg-white px-4 py-4 lg:justify-self-end lg:w-full lg:max-w-sm">
+                        <p className="text-xs font-medium text-warm-muted">Price (₹)</p>
+                        <p className="mt-1 text-2xl font-bold text-warm-text">{formatCurrency(totals.price)}</p>
+                        {/* A row is priced at the vendor's rate, so with no markup the package is
+                            sold at cost -- said plainly rather than left to be worked out */}
+                        <p className="mt-1 text-[11px] text-warm-muted">{totals.pricedCount
+                          ? `From ${totals.pricedCount} configured service${totals.pricedCount === 1 ? '' : 's'}, priced at vendor cost${hasMarkup(amcForm.markupPercentage) ? ` plus ${Number(amcForm.markupPercentage)}% markup` : ' — add a markup to earn on it'}`
+                          : 'Add a configured service and its amount'}</p>
+                        <div className="mt-3 space-y-2 border-t border-warm-border pt-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-warm-muted">Services</span>
+                            <span className="font-medium text-warm-text tabular-nums">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-warm-text">Total Rate</span>
+                            <span className="text-xl font-bold text-warm-text tabular-nums">{formatCurrency(totals.price)}</span>
+                          </div>
                         </div>
                       </div>
 
                       {/* What the package costs XLAND. Internal to this screen, like the service
                           form's pricing preview, and never part of what a customer is shown. */}
-                      <div className="lg:col-span-3 border-t border-warm-border pt-4">
+                      <div className="lg:col-span-2 border-t border-warm-border pt-4">
                         <p className="text-warm-muted text-[11px] uppercase tracking-wider font-semibold">Internal <span className="font-normal normal-case tracking-normal text-warm-muted/70">(not shown to customers)</span></p>
-                        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="flex justify-between"><dt className="text-warm-muted">Annual Vendor Cost</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.vendorCost)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">XLAND Operating Cost</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.operatingCost)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">Customer Price</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.price)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">Margin</dt><dd className={`font-semibold tabular-nums ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
+                        {/* Each figure is a cell with its label above it: as a row of label-value
+                            pairs one figure ran straight into the next label -- "₹1,200 XLAND Cost
+                            ₹360 Customer Price" -- and which number belonged to which word was a
+                            guess. The reading order is the arithmetic: cost, plus margin, is price. */}
+                        <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {[
+                            ['Annual Vendor Cost', formatCurrency(totals.vendorCost), 'text-warm-text'],
+                            // The markup in rupees, as on the service form: vendor cost plus this
+                            // is the customer price. It used to show `operatingCost`, an overhead
+                            // no configured service carries, so it sat at ₹0 beside a real margin.
+                            ['XLAND Cost', formatCurrency(totals.xlandCost), 'text-warm-text'],
+                            ['Customer Price', formatCurrency(totals.price), 'text-warm-text'],
+                            ['Margin', totals.marginPercent == null ? '—' : `${totals.marginPercent}%`,
+                              totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600']
+                          ].map(([label, value, tone]) => (
+                            <div key={label} className="min-w-0 rounded-[10px] border border-warm-border bg-white px-3 py-2.5">
+                              <dt className="truncate text-[11px] text-warm-muted" title={label}>{label}</dt>
+                              <dd className={`mt-1 truncate text-sm font-bold tabular-nums ${tone}`} title={value}>{value}</dd>
+                            </div>
+                          ))}
                         </dl>
                       </div>
                       </div>
