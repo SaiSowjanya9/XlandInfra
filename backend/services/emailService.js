@@ -1171,13 +1171,23 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                       <td style="vertical-align: middle; padding-right: 12px;">
                         <img src="cid:${ESTIMATE_LOGO_CID}" alt="" width="50" height="50" style="display: block; width: 50px; height: 50px; object-fit: contain;">
                       </td>
-                      <td style="vertical-align: middle;">
+                      <!-- The name is nudged down so it reads centred on the mark: with the block
+                           exactly centred, the ruled suffix pulls the midpoint down and the name
+                           itself -- the part the eye pairs with the logo -- rides high. -->
+                      <td style="vertical-align: middle; padding-top: 7px;">
                         <div style="font-size: 18px; font-weight: 700; letter-spacing: 2.4px; color: #1a1a1a; line-height: 1;">${COMPANY.name}</div>
-                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 5px auto 0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 6px auto 0;">
                           <tr>
-                            <td style="width: 22px; height: 1px; background: #1a1a1a; font-size: 0; line-height: 0;">&nbsp;</td>
+                            <!-- The rule is a 1px div inside the cell, not a background on it: a
+                                 coloured cell stretches to the row's height, which is set by the
+                                 PVT LTD text beside it, and printed as a black block. -->
+                            <td width="22" style="vertical-align: middle;">
+                              <div style="height: 1px; background: #1a1a1a; font-size: 1px; line-height: 1px;">&#8203;</div>
+                            </td>
                             <td style="padding: 0 7px;"><span style="color: #1a1a1a; font-size: 9px; letter-spacing: 3px; font-weight: 600;">${COMPANY.suffix}</span></td>
-                            <td style="width: 22px; height: 1px; background: #1a1a1a; font-size: 0; line-height: 0;">&nbsp;</td>
+                            <td width="22" style="vertical-align: middle;">
+                              <div style="height: 1px; background: #1a1a1a; font-size: 1px; line-height: 1px;">&#8203;</div>
+                            </td>
                           </tr>
                         </table>
                       </td>

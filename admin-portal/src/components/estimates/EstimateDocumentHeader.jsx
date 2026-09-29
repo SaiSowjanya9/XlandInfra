@@ -60,7 +60,10 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
         <div className="flex min-w-0 flex-col items-center text-center">
           <div className="flex items-center gap-3">
             <img src={COMPANY_LOGO_ICON} alt="" className="h-12 w-12 shrink-0 object-contain" />
-            <div>
+            {/* Nudged down so the name reads centred on the mark: centred exactly, the ruled suffix
+                drags the block's midpoint down and the name -- the part the eye pairs with the logo
+                -- rides high above it. */}
+            <div className="pt-[7px]">
               <p className="text-[17px] font-bold leading-none tracking-[0.13em] text-gray-900">{COMPANY.name}</p>
               <div className="mt-1 flex items-center justify-center gap-1.5">
                 <span className="h-px w-6 bg-gray-900/50" />

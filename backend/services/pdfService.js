@@ -88,8 +88,10 @@ const drawPDFHeader = (doc, margin) => {
   const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
   const textX = lockupX + logoSize + logoGap;
   // Centred on the logo's midline, so it holds whether the text block is the taller of the two
+  // The name line is centred on the logo, not the block: the suffix is light and drags a
+  // block-centred midpoint down, which leaves the name riding high above the mark.
   const suffixDrop = 2;
-  const blockTop = logoY + logoSize / 2 - (titleHeight + suffixDrop + suffixHeight) / 2;
+  const blockTop = logoY + logoSize / 2 - titleHeight / 2;
 
   // Logo - small size
   try {
@@ -217,17 +219,18 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 2).fill(gold);
   }
 
-  // The name and its ruled suffix are one block, centred on the logo's own height rather than
-  // pinned near its top -- the two sat level with the logo's upper half, which read as though the
-  // name were floating off it.
+  // **The name line is centred on the logo, not the block.** Centring the whole block -- name plus
+  // ruled suffix -- puts its midpoint on the logo's midline, and since the suffix is a light line of
+  // 5.5pt text it drags that midpoint down, leaving the name itself riding high above the mark. The
+  // name is what the eye pairs with the logo, so its own centre sits on the logo's centre and the
+  // suffix hangs beneath.
   const textX = logoX + logoSize + logoGap;
   doc.fontSize(14).font('Helvetica-Bold');
   const titleHeight = doc.currentLineHeight();
   doc.fontSize(5.5).font('Helvetica');
   const suffixHeight = doc.currentLineHeight();
   const suffixDrop = 5;                                   // name baseline to the rule
-  const blockHeight = titleHeight + suffixDrop + suffixHeight;
-  const blockTop = logoY + Math.max(0, (logoSize - blockHeight) / 2);
+  const blockTop = logoY + logoSize / 2 - titleHeight / 2;
 
   doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a1a1a')
      .text(COMPANY.name, textX, blockTop, { characterSpacing: 1.2, lineBreak: false });
