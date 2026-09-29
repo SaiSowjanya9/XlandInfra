@@ -40,7 +40,9 @@ export function CapacitySlabSelect({ slabs = [], unit = '', capacity, onChange, 
       value={current ? keyOf(current) : ''}
       onChange={event => {
         const chosen = usable.find(slab => keyOf(slab) === event.target.value);
-        onChange(chosen ? String(chosen.capacityFrom) : '');
+        // The slab itself is passed on as well: a slab carries its own frequency and visit count, and
+        // a caller that keeps a schedule of its own has to follow it or the quote is refused
+        onChange(chosen ? String(chosen.capacityFrom) : '', chosen);
       }}
     >
       <option value="">Select a slab</option>

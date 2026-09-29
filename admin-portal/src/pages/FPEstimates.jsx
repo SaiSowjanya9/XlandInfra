@@ -106,7 +106,7 @@ const handleDateInput = (value, setter) => {
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'grid-cols-[minmax(8rem,1.8fr)_minmax(6.5rem,1.4fr)_6.5rem_6rem_9.5rem_3.5rem_6rem_2.5rem]';
+const PACKAGE_ROW_GRID = 'grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_3.5rem_6.5rem_2.5rem]';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -3131,13 +3131,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       const isEditing = !!editingAmcPackage;
       const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, applicablePropertyTypes: r.applicablePropertyTypes, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, markup_percentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage), billing_duration: amcForm.billingDuration }) });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, applicablePropertyTypes: r.applicablePropertyTypes, allowFrequencyOverride: r.allowFrequencyOverride, defaultFrequency: r.defaultFrequency, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, markup_percentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage), billing_duration: amcForm.billingDuration }) });
       const result = await res.json();
       if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/fp/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  // A slab carries its own frequency and visit count, so choosing one takes them with it. Leaving
+  // the row on a different frequency has the quote refused -- "Frequency override is disabled for
+  // this service" -- and the row stays unpriced.
+  const handleChooseSlab = (index, capacity, slab) => {
+    setAmcForm(prev => ({
+      ...prev,
+      serviceRows: prev.serviceRows.map((row, i) => (i === index ? {
+        ...row, inputValue: capacity,
+        ...(slab ? {
+          frequencyType: slab.defaultFrequency ?? row.defaultFrequency ?? row.frequencyType,
+          frequencyCount: slab.defaultVisitsPerYear ?? row.defaultVisitsPerYear ?? row.frequencyCount
+        } : {})
+      } : row))
+    }));
+  };
   const handleAddServiceRow = () => setCustomRowOpen(true);
   // Add Row opens the same dialog an estimate's hand-entered service uses, because a row has no
   // room for what one needs: a category, a quantity, a schedule and what the vendor charges. The
@@ -3551,7 +3566,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 {/* Service Configuration. Every column a configured service needs to be priced: what
                     it is, how it is priced, the amount it is priced on, its schedule and its price. */}
                 <div className="overflow-x-auto">
-                  <div className="min-w-[50rem]">
+                  <div className="min-w-[54rem]">
                     <h3 className="text-sm font-semibold text-warm-text mb-4">Service Configuration</h3>
                     
                     {/* Table Header */}
@@ -3602,7 +3617,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               what its Input asks for. */}
                           <div className={row.catalogServiceId ? undefined : 'relative'}>
                             {row.catalogServiceId
-                              ? <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{methodLabel(row.pricingMethod)}</span>
+                              ? <span className="block text-xs text-warm-muted">{methodLabel(row.pricingMethod)}</span>
                               : <>
                                 <select
                                   value={row.pricingMethod || ''}
@@ -3625,7 +3640,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               // Capacity Slab prices from a table, so the row offers its bands
                               if (row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length) {
                                 return <CapacitySlabSelect slabs={row.capacitySlabs} unit={row.unit} capacity={row.inputValue}
-                                  onChange={value => handleUpdateServiceRow(index, 'inputValue', value)}
+                                  onChange={(value, slab) => handleChooseSlab(index, value, slab)}
                                   ariaLabel={`${row.service || 'Service'} slab`}
                                   className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent" />;
                               }
@@ -3645,8 +3660,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           
                           {/* Frequency Type */}
                           <div className="relative">
+                            {/* A service that forbids a frequency change has its quote refused when
+                                the row carries a different one, so the row cannot create that conflict */}
                             <select
                               value={row.frequencyType}
+                              disabled={row.catalogServiceId && row.allowFrequencyOverride === false}
+                              title={row.catalogServiceId && row.allowFrequencyOverride === false ? 'This service sets its own frequency' : undefined}
                               onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
                               className="w-full pl-2 pr-7 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent bg-white appearance-none"
                             >
@@ -3681,7 +3700,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               placeholder={row.catalogServiceId ? 'Quoted' : '0'}
                               aria-label={`${row.service || 'Service'} price`}
                               title={row.priceOverridden ? 'Typed over the quote' : undefined}
-                              className={`w-full px-2 py-2 text-right border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-warm-border'}`}
+                              className={`w-full px-2 py-2 text-right border rounded-[10px] text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-warm-border'}`}
                             />
                           </div>
                           

@@ -78,7 +78,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(8rem,1.8fr)_minmax(6.5rem,1.4fr)_6.5rem_6rem_9.5rem_3.5rem_6rem_2.5rem]';
+const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_3.5rem_6.5rem_2.5rem]';
 
 const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
@@ -191,6 +191,22 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [pricingKey, selectedPropertyTypes, catalogPath, selectedFp?.id, token]);
 
+  // A slab carries its own frequency and visit count, so choosing one takes them with it. Leaving
+  // the row on a different frequency has the quote refused -- "Frequency override is disabled for
+  // this service" -- and the row stays unpriced.
+  const handleChooseSlab = (index, capacity, slab) => {
+    setAmcForm(prev => ({
+      ...prev,
+      serviceRows: prev.serviceRows.map((row, i) => (i === index ? {
+        ...row, inputValue: capacity,
+        ...(slab ? {
+          frequencyType: slab.defaultFrequency ?? row.defaultFrequency ?? row.frequencyType,
+          frequencyCount: slab.defaultVisitsPerYear ?? row.defaultVisitsPerYear ?? row.frequencyCount
+        } : {})
+      } : row))
+    }));
+  };
+
   // Service row handlers
   const handleAddServiceRow = () => setCustomRowOpen(true);
   // Add Row opens the same dialog an estimate's hand-entered service uses, because a row has no
@@ -302,6 +318,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             vendorRequired: row.vendorRequired,
             ...(row.catalogServiceId ? {
               catalogServiceId: row.catalogServiceId, unit: row.unit, applicablePropertyTypes: row.applicablePropertyTypes,
+              allowFrequencyOverride: row.allowFrequencyOverride, defaultFrequency: row.defaultFrequency,
               capacitySlabs: row.capacitySlabs, defaultMarkupPercentage: row.defaultMarkupPercentage,
               defaultVisitsPerYear: row.defaultVisitsPerYear,
               operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
@@ -370,6 +387,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         // Reopening a Capacity Slab row brings its table back with it
         capacitySlabs: row.capacitySlabs || row.capacity_slabs,
         applicablePropertyTypes: row.applicablePropertyTypes || row.applicable_property_types,
+        allowFrequencyOverride: row.allowFrequencyOverride, defaultFrequency: row.defaultFrequency,
         defaultMarkupPercentage: row.defaultMarkupPercentage, defaultVisitsPerYear: row.defaultVisitsPerYear,
         inputValue: row.inputValue ?? row.input_value ?? '',
         price: row.price, vendorCost: row.vendorCost, operatingCost: row.operatingCost,
@@ -807,7 +825,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               {/* Service Configuration. Every column a configured service needs to be priced: what it
                   is, how it is priced, the amount it is priced on, its schedule and what it comes to. */}
               <div className="overflow-x-auto">
-                <div className="min-w-[50rem]">
+                <div className="min-w-[54rem]">
                   <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
                   
                   {/* Table Header. Method and Input are separate columns -- one states how the
@@ -858,7 +876,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             its Input asks for. */}
                         <div className={row.catalogServiceId ? 'py-2' : 'relative'}>
                           {row.catalogServiceId
-                            ? <span className="inline-block rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{methodLabel(row.pricingMethod)}</span>
+                            ? <span className="block text-xs text-gray-600">{methodLabel(row.pricingMethod)}</span>
                             : <>
                               <select
                                 value={row.pricingMethod || ''}
@@ -882,7 +900,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             // than asking for a capacity to be looked up against them
                             if (row.pricingMethod === 'capacity_slab' && row.capacitySlabs?.length) {
                               return <CapacitySlabSelect slabs={row.capacitySlabs} unit={row.unit} capacity={row.inputValue}
-                                onChange={value => handleUpdateServiceRow(index, 'inputValue', value)}
+                                onChange={(value, slab) => handleChooseSlab(index, value, slab)}
                                 ariaLabel={`${row.service || 'Service'} slab`}
                                 className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400" />;
                             }
@@ -902,8 +920,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         
                         {/* Frequency Type - First to trigger auto-calculation */}
                         <div className="relative">
+                          {/* A service that forbids a frequency change has its quote refused when the
+                              row carries a different one, so the row is not allowed to create that
+                              conflict: the service's own schedule stands, and a slab's stands over it. */}
                           <select
                             value={row.frequencyType}
+                            disabled={row.catalogServiceId && row.allowFrequencyOverride === false}
+                            title={row.catalogServiceId && row.allowFrequencyOverride === false ? 'This service sets its own frequency' : undefined}
                             onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
                             className="w-full pl-2 pr-7 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
                           >
@@ -939,7 +962,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             placeholder={row.catalogServiceId ? 'Quoted' : '0'}
                             aria-label={`${row.service || 'Service'} price`}
                             title={row.priceOverridden ? 'Typed over the quote' : undefined}
-                            className={`w-full px-2 py-2 text-right border rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-gray-300'}`}
+                            className={`w-full px-2 py-2 text-right border rounded-lg text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 ${row.priceOverridden ? 'border-amber-300 bg-amber-50/50' : 'border-gray-300'}`}
                           />
                         </div>
                         
