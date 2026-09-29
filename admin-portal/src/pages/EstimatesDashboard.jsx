@@ -693,7 +693,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                 className="text-[10px] font-medium flex items-center gap-0.5 cursor-pointer hover:gap-1 transition-all"
                 style={{ color: card.borderColor }}
               >
-                View All â†’
+                {/* The arrow had been saved as its UTF-8 bytes read as Latin-1, so every card
+                    read "View All â†'" on screen. It is a character, not an encoding. */}
+                View All →
               </div>
             </div>
           );
