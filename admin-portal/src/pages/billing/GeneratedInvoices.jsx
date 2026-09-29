@@ -1601,7 +1601,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                       )}
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">GST ({(selectedInvoice.taxPercentage || 18).toFixed(2)}%):</span>
+                        <span className="text-gray-600">GST ({(parseFloat(selectedInvoice.taxPercentage) || 0).toFixed(2)}%):</span>
                         <span className="text-gray-800">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                       </div>
                       

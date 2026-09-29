@@ -291,7 +291,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         qty: parseFloat(item.qty || item.quantity || 1),
         rate: parseFloat(item.rate || item.unitPrice || item.price || 0),
         discount: parseFloat(item.discount || 0),
-        taxPercent: parseFloat(item.taxPercent || item.gstPercent || 18),
+        taxPercent: parseFloat(item.taxPercent ?? item.gstPercent) || 0,
         amount: 0
       }));
       

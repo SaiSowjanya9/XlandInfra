@@ -2896,7 +2896,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               </div>
               
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">GST ({gstRate || '18'}%)</span>
+                <span className="text-gray-600">GST ({gstRate || 0}%)</span>
                 <span className="font-medium text-gray-800">₹{calculateGST().toLocaleString()}</span>
               </div>
               
@@ -4167,7 +4167,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     <span className="text-red-500">- ₹{getDiscountAmount().toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>GST ({gstRate || '18'}%)</span>
+                    <span>GST ({gstRate || 0}%)</span>
                     <span>₹{calculateGST().toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-base font-bold border-t pt-2">

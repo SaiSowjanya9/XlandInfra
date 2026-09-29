@@ -2667,7 +2667,7 @@ const sendInvoiceEmail = async (invoice) => {
                   <td width="40%" style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">-${formatCurrency(discountAmount)}</td>
                 </tr>` : ''}
                 <tr>
-                  <td width="60%" style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${taxPercentage || 18}%)</td>
+                  <td width="60%" style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${parseFloat(taxPercentage) || 0}%)</td>
                   <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">${formatCurrency(taxAmount)}</td>
                 </tr>
                 <tr>

@@ -51,7 +51,6 @@ const decodeHtml = (html) => {
   return decoded;
 };
 
-const GST_RATE = 0.18;
 
 // Detect iOS devices (iPhone, iPad, iPod)
 const isIOS = () => {
@@ -1599,7 +1598,7 @@ export const exportInvoiceToPDF = (invoice) => {
     sy += 7;
     
     doc.setTextColor(...secondaryText);
-    doc.text('GST (' + (invoice.taxPercentage || 18).toFixed(2) + '%):', labelX, sy);
+    doc.text('GST (' + (parseFloat(invoice.taxPercentage) || 0).toFixed(2) + '%):', labelX, sy);
     doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
     sy += 8;
