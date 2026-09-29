@@ -152,6 +152,18 @@ nothing here may be applied globally.
   breakpoint below that, and a 130px chart beside a legend is what squeezed the labels in the first
   place. Where a label must keep a fixed column so bars line up, it wraps inside that column.
 
+## Collection Trend
+
+- **It is a charted trend, not a row of bare `div`s.** The bars had no axis, no gridline and no
+  figure on them, so a tall blue bar beside a short green one said only "more than" — by how much
+  was unanswerable without hovering, and an "All Time" range of two months looked like two random
+  blocks. It is a recharts `ComposedChart` now: invoiced and collected side by side per period,
+  against a money axis in `₹K`/`₹L`, with a grid and the shared hover card. The period buckets
+  still come from `utils/collectionTrend.js` — by day up to a month, by month beyond it.
+- **A figure is drawn over a bar only where the range is short enough** (eight buckets or fewer).
+  Thirty days of labelled bars is an unreadable smear; the hover answers the rest. The plot scrolls
+  sideways at ~44px a bucket rather than compressing a month into a 300px card.
+
 ## Chart Hover
 
 - **Every bar, column and segment states its figure when it is pointed at.** Use
@@ -187,13 +199,16 @@ nothing here may be applied globally.
   estimate over the property; a long id keeps its tail (`EST-…24188`), which is what distinguishes
   one from another. The plot scrolls sideways at ~190px a group rather than squeezing three
   labelled bars into nothing. Do not reinstate the per-estimate table.
-- **Nothing is labelled where something else is already drawn.** Three collisions, three rules: bar
-  figures are **compact** (`₹1.5L`, not `₹1,50,300`), because an exact figure is wider than the
-  40px bar it labels and runs into its neighbour — the exact figures are in the hover and the cards
-  above. The margin's label is drawn **below** its dot, since above the dot is where the middle
-  bar's own figure already is, and it sits on a chip with its own background so that where it does
-  cross a bar it still reads; only a margin under 12% is drawn above, where below would be the
-  axis. And the legend is the panel's own, above the plot — see the Chart Legends rules.
+- **Nothing is labelled where something else is already drawn.** Bar figures are **compact**
+  (`₹1.5L`, not `₹1,50,300`), because an exact figure is wider than the 40px bar it labels and runs
+  into its neighbour — the exact figures are in the hover and in the cards above. **The margin is
+  not labelled on its line at all**: the dot for an estimate sits at whatever height the percentage
+  puts it, which for the middle bar of the group is repeatedly where that bar's own figure already
+  is. Above it collided, below it landed on the bar, and a chip with a background only made an
+  unreadable overlap a legible one. The figure is stated **under the axis** instead, on a third
+  line of the tick beneath the estimate and its property, where nothing else is drawn; the line and
+  the right-hand axis carry the shape. The legend is likewise the panel's own, above the plot —
+  see the Chart Legends rules.
 - **A calendar picks the timeline** (`DateRangeFilter`, the same control the other dashboards use)
   and everything in the panel follows it: the four summary cards are the range's totals, not the
   whole history, and the chart plots the estimates the range left. `utils/estimateMarginTrend.js`
