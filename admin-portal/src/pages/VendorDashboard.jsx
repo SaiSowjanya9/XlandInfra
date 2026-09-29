@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList, RefreshCw, ArrowRight, Star } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { ChartTooltipContent } from '../components/common/ChartTooltip';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { WORK_ORDER_STATUS_COLORS } from '../utils/chartColors';
 
@@ -207,6 +208,8 @@ const VendorDashboard = ({ user }) => {
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
+                {/* Without this the segments answered nothing at all when pointed at */}
+                {pieData.length > 0 && <Tooltip content={<ChartTooltipContent valueLabel="Work orders" />} />}
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center">

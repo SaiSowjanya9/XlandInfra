@@ -18,7 +18,7 @@
  * bucket. A date-only string is therefore built as a local date; anything with a time in it is left
  * to the usual parser.
  */
-const asLocalDate = (value) => {
+export const asLocalDate = (value) => {
   if (value instanceof Date) return value;
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? '').trim());
   return dateOnly
@@ -40,6 +40,30 @@ export const RANGE_STARTS = {
   year: (now) => new Date(now.getFullYear(), 0, 1)
 };
 
+/**
+ * The axis between two dates: a bucket per day where the span is a month or less, per month beyond
+ * it, so a year is twelve columns rather than three hundred and sixty-five. Every bucket in the
+ * span is emitted, empty ones included -- a gap is a gap, not missing data.
+ *
+ * Shared with the estimate margin trend, so the two charts bucket and label time identically.
+ */
+export const bucketScale = (start, end) => {
+  const byDay = (end - start) / 86400000 <= 31;
+  const keyOf = byDay ? dayKey : monthKey;
+  const labelOf = date => (byDay
+    ? date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+    : date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }));
+  const keys = [];
+  let cursor = byDay ? new Date(start) : startOfMonth(start);
+  while (cursor <= end) {
+    keys.push({ key: keyOf(cursor), label: labelOf(cursor) });
+    cursor = byDay
+      ? new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+      : startOfMonth(cursor, 1);
+  }
+  return { byDay, keyOf, keys };
+};
+
 export const collectionTrendBuckets = ({ invoices = [], payments = [] } = {}, range = 'all', now = new Date()) => {
   const entries = [
     ...invoices.map(item => ({ at: asLocalDate(item.date), amount: Number(item.amount) || 0, field: 'invoiceAmount' })),
@@ -55,20 +79,8 @@ export const collectionTrendBuckets = ({ invoices = [], payments = [] } = {}, ra
   const end = new Date(Math.max(now.getTime(), ...entries.map(item => item.at.getTime())));
   if (end < start) return [];
 
-  const byDay = (end - start) / 86400000 <= 31;
-  const keyOf = byDay ? dayKey : monthKey;
-  const labelOf = date => (byDay
-    ? date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-    : date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }));
-
-  const buckets = new Map();
-  let cursor = byDay ? new Date(start) : startOfMonth(start);
-  while (cursor <= end) {
-    buckets.set(keyOf(cursor), { key: keyOf(cursor), label: labelOf(cursor), invoiceAmount: 0, collectedAmount: 0 });
-    cursor = byDay
-      ? new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
-      : startOfMonth(cursor, 1);
-  }
+  const { keyOf, keys } = bucketScale(start, end);
+  const buckets = new Map(keys.map(bucket => [bucket.key, { ...bucket, invoiceAmount: 0, collectedAmount: 0 }]));
   for (const entry of entries) {
     const bucket = buckets.get(keyOf(entry.at));
     if (bucket) bucket[entry.field] += entry.amount;

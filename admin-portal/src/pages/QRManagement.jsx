@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { safeStorage, getAuthToken } from '../utils/safeStorage';
+import useChartTooltip from '../components/common/ChartTooltip';
 import {
   QrCode, Download, Copy, ExternalLink, Edit3, Trash2, Plus,
   BarChart3, Users, Activity, Globe, Smartphone, Monitor, Tablet,
@@ -979,6 +980,7 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
 };
 
 const SimpleTrendChart = ({ data }) => {
+  const chart = useChartTooltip();
   if (!data || data.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400">
@@ -992,21 +994,26 @@ const SimpleTrendChart = ({ data }) => {
 
   return (
     <div className="h-full flex items-end gap-1">
+      {/* The column carries the hover, so a day with almost no scans is still easy to point at */}
       {data.map((item, idx) => (
         <div
           key={idx}
-          className="flex-1 flex flex-col items-center gap-1"
+          className="flex-1 flex flex-col items-center gap-1 cursor-pointer"
+          {...chart.hover({
+            title: new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+            rows: [{ label: 'Scans', value: (item.scans || 0).toLocaleString('en-IN'), color: '#6366F1' }]
+          })}
         >
           <div
             className="w-full bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg transition-all hover:from-indigo-400 hover:to-indigo-300"
             style={{ height: `${Math.max((item.scans / maxScans) * 100, 5)}%` }}
-            title={`${item.scans} scans`}
           ></div>
           <span className="text-[10px] text-gray-500 truncate w-full text-center">
             {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
           </span>
         </div>
       ))}
+      {chart.node}
     </div>
   );
 };

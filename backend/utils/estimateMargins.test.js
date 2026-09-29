@@ -9,7 +9,7 @@ const { estimateMargin, estimateMarginTotals } = require('./estimateMargins');
 
 const priced = {
   estimate_id: 'EST-1', client_name: 'Sai', property_name: 'Sunrise', property_type: 'GC',
-  status: 'sent', subtotal: 198000, package_price: 0,
+  status: 'sent', subtotal: 198000, package_price: 0, created_at: '2026-09-09 10:15:00',
   addons_data: JSON.stringify([
     { name: 'Lift', totalPrice: 108000, pricingSnapshot: { vendorCost: 86400, operatingCost: 0 } },
     { name: 'Pest', totalPrice: 90000, pricingSnapshot: { vendorCost: 72000, operatingCost: 3000 } }
@@ -19,7 +19,7 @@ const priced = {
 test('an estimate reports the cost, price and margin its services were saved with', () => {
   assert.deepEqual(estimateMargin(priced), {
     estimateId: 'EST-1', clientName: 'Sai', propertyName: 'Sunrise', propertyCode: undefined,
-    propertyType: 'GC', status: 'sent', fpName: null, serviceCount: 2,
+    propertyType: 'GC', status: 'sent', createdAt: '2026-09-09 10:15:00', fpName: null, serviceCount: 2,
     vendorCost: 158400, operatingCost: 3000, actualCost: 161400,
     customerPrice: 198000, profit: 36600, marginPercent: 18.48
   });
@@ -31,6 +31,10 @@ test('an estimate reports the cost, price and margin its services were saved wit
   });
   assert.equal(fromObject.customerPrice, 100000);
   assert.equal(fromObject.vendorCost, 30000);
+
+  // The dashboard plots these over time, so the date travels with the row -- and its absence is
+  // null rather than undefined, which `new Date()` would read as the epoch
+  assert.equal(fromObject.createdAt, null);
 
   // Nothing priced: zeroes and no margin rather than NaN
   const empty = estimateMargin({ estimate_id: 'EST-3', addons_data: null });

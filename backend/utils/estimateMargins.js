@@ -43,6 +43,9 @@ const estimateMargin = (estimate) => {
     estimateId: estimate.estimate_id, clientName: estimate.client_name,
     propertyName: estimate.property_name, propertyCode: estimate.property_code,
     propertyType: estimate.property_type, status: estimate.status,
+    // When the estimate was raised. The dashboard plots these figures over time and lets a
+    // calendar narrow the range, so without a date every estimate would land in the same bucket.
+    createdAt: estimate.created_at ?? null,
     fpName: estimate.fp_name || null, serviceCount: rows.length,
     vendorCost, operatingCost, actualCost, customerPrice, profit,
     marginPercent: customerPrice ? round2(profit / customerPrice * 100) : null
