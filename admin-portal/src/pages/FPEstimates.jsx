@@ -1426,9 +1426,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
         );
         return (
-        <div className="flex flex-col xl:flex-row gap-6">
-          {/* Left column - main form */}
-          <div className="flex-1 min-w-0 space-y-4">
+        <div className="flex flex-col gap-6">
+          {/* Main form */}
+          <div className="min-w-0 space-y-4">
             {/* Property header - details auto-populate from Property ID. Same 24px padding as the
                 cards below it, so every field in this column starts on one line */}
             <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
@@ -1786,8 +1786,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               terms={termsConditions} onTermsChange={setTermsConditions} />
           </div>
 
-          {/* Right column - pricing & package summary */}
-          <div className="w-full xl:w-80 shrink-0 space-y-4">
+          {/* Pricing and the package's own details run along the bottom, full width -- a side
+              rail squeezed the form and made the page taller than it needed to be */}
+          <div className={`grid grid-cols-1 gap-4 items-start ${selectedPkg ? 'xl:grid-cols-2' : ''}`}>
             <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
               <h3 className="text-sm font-semibold text-warm-text mb-4">Pricing Summary</h3>
               <div className="space-y-3 text-sm">
@@ -1829,11 +1830,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button onClick={handleBackFromEstimate} className="flex-1 px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
-              <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`flex-1 px-4 py-2.5 rounded-[10px] text-sm font-medium text-white transition-colors ${savingEstimate ? 'bg-warm-border cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
-            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <button onClick={handleBackFromEstimate} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
+            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-[10px] text-sm font-medium text-white transition-colors ${savingEstimate ? 'bg-warm-border cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
           </div>
         </div>
         );
