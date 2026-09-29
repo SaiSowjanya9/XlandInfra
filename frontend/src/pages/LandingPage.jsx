@@ -284,8 +284,8 @@ function LandingPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white mb-1">Head Office</h3>
-                    <p className="text-dark-300">123 Business Park, Tower A</p>
-                    <p className="text-dark-300">Hyderabad, Telangana 500081</p>
+                    <p className="text-dark-300">D.No. 7-333/A/1, NRI Hospital Road</p>
+                    <p className="text-dark-300">Mangalagiri, Guntur, 522503</p>
                   </div>
                 </div>
               </div>
@@ -459,7 +459,7 @@ function LandingPage() {
               <ul className="space-y-2 text-sm text-dark-400">
                 <li>+91 8500 010 111</li>
                 <li>info@xlandinfra.com</li>
-                <li>D.No. 7-333/A/1, Nri Hospital Road, Mangalagiri, Guntur, 522503</li>
+                <li>D.No. 7-333/A/1, NRI Hospital Road, Mangalagiri, Guntur, 522503</li>
               </ul>
             </div>
           </div>

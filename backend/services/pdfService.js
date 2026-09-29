@@ -1305,16 +1305,21 @@ const generateReceiptPDF = async (payment) => {
          .text('Thank you,', margin, yPos);
       yPos += 18;
       doc.fillColor(darkGray).fontSize(11).font('Helvetica-Bold')
-         .text('XLAND INFRA PM SERVICES PVT LTD', margin, yPos);
+         .text(COMPANY.legalName, margin, yPos);
 
       // ========== COMPANY FOOTER ==========
+      // From `companyInfo.js`, like every other customer-facing document. What stood here was a
+      // Gachibowli, Hyderabad address the company does not trade from and a GST number --
+      // 36AADCX1234A1Z5 -- that is plainly a placeholder. A made-up tax number on an invoice is
+      // worse than none, so it is gone rather than guessed at; put the real one here when it is
+      // known, and take it from `companyInfo.js` so it cannot drift again.
       yPos = 750;
       doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(margin, yPos).lineTo(545, yPos).stroke();
       yPos += 15;
       doc.fillColor('#9ca3af').fontSize(8).font('Helvetica')
-         .text('Gachibowli, Hyderabad, Telangana - 500032 | GST: 36AADCX1234A1Z5', margin, yPos, { align: 'center' });
+         .text(COMPANY.addressLines.join(', '), margin, yPos, { align: 'center' });
       yPos += 12;
-      doc.text('support@xlandinfra.com | www.xlandinfra.com', margin, yPos, { align: 'center' });
+      doc.text(`${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`, margin, yPos, { align: 'center' });
 
       doc.end();
     } catch (error) {

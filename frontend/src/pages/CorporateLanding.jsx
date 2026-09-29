@@ -1137,7 +1137,7 @@ function CorporateLanding() {
                   </div>
                   <div>
                     <h4 className="text-white font-semibold mb-1">Office</h4>
-                    <p className="text-gray-400">D.No. 7-333/A/1, Nri Hospital Road</p>
+                    <p className="text-gray-400">D.No. 7-333/A/1, NRI Hospital Road</p>
                     <p className="text-gray-400">Mangalagiri, Guntur, 522503</p>
                   </div>
                 </div>
@@ -1363,7 +1363,7 @@ function CorporateLanding() {
                 <li className="flex items-start space-x-3">
                   <MapPin className="w-4 h-4 text-gold-400 mt-1 flex-shrink-0" />
                   <p className="text-gray-400 text-sm">
-                    D.No. 7-333/A/1, Nri Hospital Road<br />
+                    D.No. 7-333/A/1, NRI Hospital Road<br />
                     Mangalagiri, Guntur, 522503
                   </p>
                 </li>

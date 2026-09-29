@@ -13,6 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { estimateMarginTotals } = require('../utils/estimateMargins');
+const { COMPANY } = require('../utils/companyInfo');
 const { ROLES } = require('../config/roles');
 
 // Payment Security Middleware
@@ -1653,7 +1654,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                 
                 <div class="footer">
                   <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
-                  <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+                  <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">${COMPANY.legalName} - ${COMPANY.tagline}</p>
                 </div>
               </div>
             </body>
@@ -2167,7 +2168,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
             
             <div class="footer">
               <p style="margin: 0; color: #6b7280; font-size: 14px;">Thank you for your business!</p>
-              <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">XLand Infra - Property Management Services</p>
+              <p style="margin: 5px 0 0; color: #9ca3af; font-size: 12px;">${COMPANY.legalName} - ${COMPANY.tagline}</p>
             </div>
           </div>
         </body>
