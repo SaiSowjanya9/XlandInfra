@@ -123,11 +123,7 @@ const drawPDFHeader = (doc, margin) => {
   // Black header background
   doc.setFillColor(26, 26, 26);
   doc.rect(0, 0, pageWidth, headerHeight, 'F');
-  
-  // Gold bar at bottom
-  doc.setFillColor(201, 162, 39);
-  doc.rect(0, headerHeight, pageWidth, 2, 'F');
-  
+
   // The whole lockup -- logo, company name and the PVT LTD rule under it -- is measured first and
   // then centred on the page, rather than being pinned to the left margin. PVT LTD is centred on
   // the name above it instead of starting at the same X, which left it hanging to one side, and the
@@ -245,14 +241,10 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const gold = [201, 162, 39];
   const labelGray = [107, 114, 128];
 
-  // Gold rule across the head of the page
-  doc.setFillColor(...gold);
-  doc.rect(0, 0, pageWidth, 2.5, 'F');
-
-  // --- Left: the company, as one centred stack ---
-  // The logo and the name share the first line; the tagline, address and contact lines are then
-  // centred on the whole lockup rather than under the name alone, which left them adrift to the
-  // right of the logo. Everything is measured first so the block can be centred on itself.
+  // --- Left: the company, running down one edge ---
+  // The logo sits at the page margin with the name beside it; the tagline, address and contact
+  // lines then start on that same edge, directly under the logo. Centring them under the whole
+  // lockup pushed the details left of the mark that introduces them.
   const logoSize = 16;
   const logoY = 8;
   const logoGap = 4;
@@ -268,14 +260,9 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   doc.setFontSize(14);
   // getTextWidth ignores charSpace, so the spacing has to be added back by hand
   const nameWidth = doc.getTextWidth(COMPANY.name) + nameSpacing * COMPANY.name.length;
-  const headRowWidth = logoSize + logoGap + nameWidth;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
   const taglineText = String(COMPANY.tagline).toUpperCase();
-  const taglineWidth = doc.getTextWidth(taglineText) + 0.3 * taglineText.length;
-  doc.setFontSize(7.5);
-  const addressWidths = COMPANY.addressLines.map(line => doc.getTextWidth(line));
 
   // The phone, the email and the website sit on **one line** beneath the address, each behind its
   // own icon. Stacked, the three of them made the letterhead a column six lines deep for what is
@@ -285,19 +272,11 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const contactItems = COMPANY_CONTACT_LINES.map(([kind, value]) => ({
     kind, value: String(value), width: iconSize + iconTextGap + doc.getTextWidth(String(value))
   }));
-  const contactWidth = contactItems.reduce((total, item) => total + item.width, 0)
-    + contactGap * (contactItems.length - 1);
-  doc.setFontSize(7.5);
 
-  // Every line of the block starts on one vertical edge. Centring each on its own width instead
-  // left the text ragged on both sides.
-  const detailWidth = Math.max(taglineWidth, ...addressWidths, contactWidth);
-  const blockWidth = Math.max(headRowWidth, detailWidth);
-  const blockX = margin;
-  const centred = width => blockX + (blockWidth - width) / 2;
-  const textLeft = centred(detailWidth);
+  // Every line of the block starts on the page's left edge, under the logo itself.
+  const textLeft = margin;
 
-  const logoX = centred(headRowWidth);
+  const logoX = margin;
   try {
     doc.addImage(XLAND_LOGO_ICON, 'PNG', logoX, logoY, logoSize, logoSize);
   } catch (e) {
