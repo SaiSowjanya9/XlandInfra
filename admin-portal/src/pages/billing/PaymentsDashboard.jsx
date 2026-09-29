@@ -20,9 +20,14 @@ import {
   Wallet,
   Users,
 } from 'lucide-react';
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
+import useChartTooltip, { ChartTooltipContent } from '../../components/common/ChartTooltip';
 import { collectionTrendBuckets } from '../../utils/collectionTrend';
+import { estimateMarginBuckets, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 
@@ -78,15 +83,32 @@ const formatCurrencyShort = (amount) => {
   return '₹' + new Intl.NumberFormat('en-IN').format(num);
 };
 
-// Donut Chart Component
-const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
+// For a chart axis, where ₹1,50,300 is too wide to repeat down the side of a 260px plot
+const formatCurrencyCompact = (amount) => {
+  const num = parseFloat(amount) || 0;
+  const scale = Math.abs(num);
+  if (scale >= 1e7) return `₹${(num / 1e7).toFixed(scale >= 1e8 ? 0 : 1)}Cr`;
+  if (scale >= 1e5) return `₹${(num / 1e5).toFixed(scale >= 1e6 ? 0 : 1)}L`;
+  if (scale >= 1000) return `₹${Math.round(num / 1000)}K`;
+  return `₹${Math.round(num)}`;
+};
+
+// The margin trend mixes money with a percentage, so each series is formatted as what it is
+const marginTrendValue = (value, entry) => (entry?.dataKey === 'marginPercent'
+  ? (value == null ? '—' : `${value}%`)
+  : formatCurrency(value));
+
+// Donut Chart Component. Hovering a segment names it and states its figure: the legend beside the
+// chart lists every slice, but which arc is which is only answerable by pointing at one.
+const DonutSegments = ({ data, total, size, valueLabel, formatValue }) => {
+  const chart = useChartTooltip();
   const strokeWidth = size > 140 ? 24 : 20;
   const radius = size / 2 - strokeWidth / 2 - 5;
   const circumference = 2 * Math.PI * radius;
   let currentOffset = 0;
 
   return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+    <>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {/* Background circle */}
         <circle
@@ -115,68 +137,41 @@ const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
               strokeDasharray={`${strokeLength} ${circumference - strokeLength}`}
               strokeDashoffset={-offset}
               transform={`rotate(-90 ${size / 2} ${size / 2})`}
-              style={{ transition: 'stroke-dasharray 0.3s ease' }}
+              style={{ transition: 'stroke-dasharray 0.3s ease', cursor: item.value > 0 ? 'pointer' : 'default' }}
+              {...chart.hover(item.value > 0 ? {
+                title: item.label,
+                rows: [{ label: valueLabel, value: formatValue(item.value), color: item.color }],
+                footer: `${percentage.toFixed(1)}% of total`
+              } : null)}
             />
           );
         })}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm sm:text-base font-bold text-gray-900 tabular-nums">{formatCurrencyShort(total)}</span>
-        <span className="text-[10px] sm:text-xs text-gray-500">{centerLabel}</span>
-      </div>
-    </div>
+      {chart.node}
+    </>
   );
 };
+
+const DonutChart = ({ data, total, centerLabel, size = 130 }) => (
+  <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+    <DonutSegments data={data} total={total} size={size} valueLabel="Amount" formatValue={formatCurrencyShort} />
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+      <span className="text-sm sm:text-base font-bold text-gray-900 tabular-nums">{formatCurrencyShort(total)}</span>
+      <span className="text-[10px] sm:text-xs text-gray-500">{centerLabel}</span>
+    </div>
+  </div>
+);
 
 // Simple Donut for Invoice Status (with count instead of currency)
-const DonutChartCount = ({ data, total, size = 130 }) => {
-  const strokeWidth = size > 140 ? 24 : 20;
-  const radius = size / 2 - strokeWidth / 2 - 5;
-  const circumference = 2 * Math.PI * radius;
-  let currentOffset = 0;
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#E5E7EB"
-          strokeWidth={strokeWidth}
-        />
-        {data.map((item, index) => {
-          const percentage = total > 0 ? (item.value / total) * 100 : 0;
-          const strokeLength = (percentage / 100) * circumference;
-          const offset = currentOffset;
-          currentOffset += strokeLength;
-
-          return (
-            <circle
-              key={index}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={item.color}
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${strokeLength} ${circumference - strokeLength}`}
-              strokeDashoffset={-offset}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-              style={{ transition: 'stroke-dasharray 0.3s ease' }}
-            />
-          );
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg sm:text-xl font-bold text-gray-900 tabular-nums">{total}</span>
-        <span className="text-[10px] sm:text-xs text-gray-500">Total</span>
-      </div>
+const DonutChartCount = ({ data, total, size = 130 }) => (
+  <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+    <DonutSegments data={data} total={total} size={size} valueLabel="Invoices" formatValue={value => `${value}`} />
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+      <span className="text-lg sm:text-xl font-bold text-gray-900 tabular-nums">{total}</span>
+      <span className="text-[10px] sm:text-xs text-gray-500">Total</span>
     </div>
-  );
-};
+  </div>
+);
 
 const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
@@ -209,6 +204,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   // What the live property-based estimates cost and make. Null until it loads, so the panel appears
   // with its figures rather than as a row of zeroes.
   const [estimateMargins, setEstimateMargins] = useState(null);
+  // The timeline the cost & margin trend is drawn over; blank ends mean all of it
+  const [marginRange, setMarginRange] = useState({ from: '', to: '' });
   // The invoices and payments the Collection Trend is drawn from, and the range it is drawn over.
   // "All Time" is the dropdown's own default, and now means it.
   const [trendSource, setTrendSource] = useState({ invoices: [], payments: [] });
@@ -231,6 +228,19 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   // Bucketed by the range the dropdown asks for -- by day over a month or less, by month beyond
   // that. Tested in utils/collectionTrend.test.js, date-only parsing included.
   const collectionTrend = useMemo(() => collectionTrendBuckets(trendSource, trendRange), [trendSource, trendRange]);
+
+  // The calendar over the estimate margin trend. Empty means every active property-based estimate;
+  // the range only narrows what the server already scoped, so nothing else can enter the panel.
+  const marginRows = useMemo(() => estimatesInRange(estimateMargins?.estimates || [], marginRange),
+    [estimateMargins, marginRange]);
+  const marginSummary = useMemo(() => estimateMarginSummary(marginRows), [marginRows]);
+  const marginTrend = useMemo(() => estimateMarginBuckets(marginRows, marginRange), [marginRows, marginRange]);
+
+  // Hover readouts, one per chart card: a bar or a slice is a figure, and pointing at it is how the
+  // reader is told which. Declared here so they run before the loading return, as hooks must.
+  const trendChart = useChartTooltip();
+  const agingChart = useChartTooltip();
+  const customerChart = useChartTooltip();
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -525,6 +535,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
   const maxAgingValue = Math.max(...dashboardData.outstandingByAging.map(b => b.amount), 1);
   const maxCustomerValue = Math.max(...dashboardData.topCustomers.map(c => c.amount), 1);
+  // What a hovered bar is a share of. The donuts have their own total already.
+  const agingTotal = dashboardData.outstandingByAging.reduce((sum, bucket) => sum + (Number(bucket.amount) || 0), 0);
+  const customerCollectedTotal = dashboardData.topCustomers.reduce((sum, customer) => sum + (Number(customer.amount) || 0), 0);
 
   if (loading) {
     return (
@@ -759,8 +772,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <div className="h-36 sm:h-40 flex items-end gap-0.5 sm:gap-1 overflow-x-auto">
+              {/* Hovering the column, not one bar, so both figures for that date are read
+                  together -- and an empty bucket still answers, with zeroes */}
               {collectionTrend.map((day, idx) => (
-                <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1">
+                <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1 cursor-pointer"
+                  {...trendChart.hover({ title: day.label, rows: [
+                    { label: 'Invoice Amount', value: formatCurrencyShort(day.invoiceAmount), color: '#BFDBFE' },
+                    { label: 'Collected Amount', value: formatCurrencyShort(day.collectedAmount), color: '#4ADE80' }
+                  ] })}>
                   <div className="w-full flex gap-0.5 items-end h-28 sm:h-32">
                     <div 
                       className="flex-1 bg-blue-200 rounded-t"
@@ -771,7 +790,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       style={{ height: `${(day.collectedAmount / maxTrendValue) * 100}%`, minHeight: day.collectedAmount > 0 ? '4px' : '0' }}
                     ></div>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center" title={day.label}>{day.label.split(' ')[0]}</span>
+                  {/* The hover card names the bucket now, so the axis label keeps no `title` of
+                      its own -- two tooltips for one bar read as a glitch */}
+                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center">{day.label.split(' ')[0]}</span>
                 </div>
               ))}
               {/* A range with nothing in it says so, rather than drawing an empty frame that reads
@@ -782,6 +803,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 </p>
               )}
             </div>
+            {trendChart.node}
           </div>
 
           {/* Payments by Mode */}
@@ -853,7 +875,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             </div>
             <div className="space-y-3">
               {dashboardData.outstandingByAging.map((bucket, idx) => (
-                <div key={idx}>
+                <div key={idx} className="cursor-pointer" {...agingChart.hover({
+                  title: bucket.label,
+                  rows: [{ label: 'Outstanding', value: formatCurrency(bucket.amount), color: bucket.color }],
+                  footer: agingTotal > 0 ? `${((bucket.amount / agingTotal) * 100).toFixed(1)}% of outstanding` : undefined
+                })}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-600">{bucket.label}</span>
                     <span className="text-xs font-medium text-gray-900">{formatCurrencyShort(bucket.amount)}</span>
@@ -871,6 +897,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 </div>
               ))}
             </div>
+            {agingChart.node}
           </div>
 
           {/* Top 5 Customers by Collection */}
@@ -891,7 +918,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             </div>
             <div className="space-y-3">
               {dashboardData.topCustomers.length > 0 ? dashboardData.topCustomers.map((customer, idx) => (
-                <div key={idx}>
+                <div key={idx} className="cursor-pointer" {...customerChart.hover({
+                  title: customer.name,
+                  rows: [{ label: 'Collected', value: formatCurrency(customer.amount), color: '#22C55E' }],
+                  footer: customerCollectedTotal > 0 ? `${((customer.amount / customerCollectedTotal) * 100).toFixed(1)}% of the top 5` : undefined
+                })}>
                   <div className="flex items-center justify-between mb-1 gap-2">
                     <span className="text-xs sm:text-sm text-gray-700 truncate flex-1 min-w-0">{customer.name}</span>
                     <span className="text-xs sm:text-sm font-medium text-gray-900 flex-shrink-0">{formatCurrencyShort(customer.amount)}</span>
@@ -907,6 +938,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <p className="text-sm text-gray-500 text-center py-4">No data available</p>
               )}
             </div>
+            {customerChart.node}
           </div>
 
           {/* Invoices by Payment Status */}
@@ -942,20 +974,35 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             cost and margin belong to this screen and never to a customer document. */}
         {canSeeEstimateMargins && estimateMargins && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mt-4 sm:mt-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                 Property-Based Estimates — Cost &amp; Margin
                 <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
               </h3>
+              {/* The calendar narrows the trend to a timeline. It filters the estimates the server
+                  already decided are active and property-based -- nothing else enters this panel. */}
+              <DateRangeFilter
+                startDate={marginRange.from}
+                endDate={marginRange.to}
+                onDateChange={(from, to) => setMarginRange({ from, to })}
+              />
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              {marginSummary.estimateCount === 0
+                ? 'No active property-based estimates in this range'
+                : `${marginSummary.estimateCount} active ${marginSummary.estimateCount === 1 ? 'estimate' : 'estimates'} raised in this range` +
+                  (marginSummary.uncostedCount > 0
+                    ? ` · ${marginSummary.uncostedCount} with no vendor cost behind ${marginSummary.uncostedCount === 1 ? 'it is' : 'them are'} left out of the figures`
+                    : '')}
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
-                ['Vendor Cost', formatCurrency(estimateMargins.vendorCost), 'text-gray-900'],
-                ['XLAND Cost', formatCurrency(estimateMargins.operatingCost), 'text-gray-900'],
-                ['Customer Price', formatCurrency(estimateMargins.customerPrice), 'text-gray-900'],
-                ['Margin %', estimateMargins.marginPercent == null ? '—' : `${estimateMargins.marginPercent}%`,
-                  estimateMargins.profit >= 0 ? 'text-emerald-600' : 'text-red-600']
+                ['Vendor Cost', formatCurrency(marginSummary.vendorCost), 'text-gray-900'],
+                ['XLAND Cost', formatCurrency(marginSummary.operatingCost), 'text-gray-900'],
+                ['Customer Price', formatCurrency(marginSummary.customerPrice), 'text-gray-900'],
+                ['Margin %', marginSummary.marginPercent == null ? '—' : `${marginSummary.marginPercent}%`,
+                  marginSummary.profit >= 0 ? 'text-emerald-600' : 'text-red-600']
               ].map(([label, value, tone]) => (
                 <div key={label} className="rounded-xl border border-gray-200 bg-slate-50 px-4 py-3">
                   <p className="text-[11px] text-gray-500">{label}</p>
@@ -964,42 +1011,41 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               ))}
             </div>
 
-            {/* Estimate by estimate, so a thin margin can be traced to the one causing it */}
-            {estimateMargins.estimates.length > 0 && (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[40rem] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wider text-gray-500">
-                      <th className="py-2 pr-3 font-semibold">Estimate</th>
-                      <th className="py-2 pr-3 font-semibold">Property</th>
-                      <th className="py-2 pr-3 text-right font-semibold">Vendor Cost</th>
-                      <th className="py-2 pr-3 text-right font-semibold">XLAND Cost</th>
-                      <th className="py-2 pr-3 text-right font-semibold">Customer Price</th>
-                      <th className="py-2 text-right font-semibold">Margin %</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {estimateMargins.estimates.map(row => (
-                      <tr key={row.estimateId}>
-                        <td className="py-2 pr-3 font-mono text-xs text-gray-700">{row.estimateId}</td>
-                        <td className="py-2 pr-3 text-gray-700">
-                          {row.propertyName || row.clientName || '-'}
-                          {row.propertyCode && <span className="block text-xs text-gray-400">{row.propertyCode}</span>}
-                        </td>
-                        <td className="py-2 pr-3 text-right text-gray-700">{formatCurrency(row.vendorCost)}</td>
-                        <td className="py-2 pr-3 text-right text-gray-700">{formatCurrency(row.operatingCost)}</td>
-                        <td className="py-2 pr-3 text-right font-medium text-gray-900">{formatCurrency(row.customerPrice)}</td>
-                        <td className={`py-2 text-right font-semibold ${row.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {row.marginPercent == null ? '—' : `${row.marginPercent}%`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Cost against price over time, with the margin those two make on its own axis. A
+                table of estimates could say what one of them made and never whether the margin is
+                improving, which is the question this panel exists to answer. */}
+            {marginTrend.length > 0 ? (
+              <div className="mt-5 h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={marginTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#E2E8F0' }} interval="preserveStartEnd" />
+                    <YAxis yAxisId="money" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
+                      tickFormatter={value => formatCurrencyCompact(value)} />
+                    {/* Margin is a percentage and belongs on its own axis, or a 28% line would sit
+                        flat on the floor beside figures in lakhs */}
+                    <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
+                      tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltipContent formatValue={marginTrendValue} footer={bucket => (
+                      bucket.estimateCount
+                        ? `${bucket.estimateCount} ${bucket.estimateCount === 1 ? 'estimate' : 'estimates'}${bucket.costedCount < bucket.estimateCount ? `, ${bucket.estimateCount - bucket.costedCount} uncosted` : ''}`
+                        : 'No estimates raised'
+                    )} />} />
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                    <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" stackId="cost" fill="#93C5FD" radius={[0, 0, 0, 0]} />
+                    <Bar yAxisId="money" dataKey="operatingCost" name="XLAND Cost" stackId="cost" fill="#FCD34D" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#34D399" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#6366F1"
+                      strokeWidth={2} dot={{ r: 3, fill: '#6366F1' }} connectNulls />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
-            )}
-            {estimateMargins.estimateCount === 0 && (
-              <p className="mt-4 text-sm text-gray-500">No active property-based estimates yet.</p>
+            ) : (
+              <p className="mt-5 text-sm text-gray-500">
+                {estimateMargins.estimateCount === 0
+                  ? 'No active property-based estimates yet.'
+                  : 'No property-based estimates were raised in this range.'}
+              </p>
             )}
           </div>
         )}

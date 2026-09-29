@@ -7,6 +7,7 @@ import {
   Activity, Users, Globe, Smartphone, Monitor, Tablet, Clock,
   TrendingUp, TrendingDown, MapPin, Calendar, Zap
 } from 'lucide-react';
+import useChartTooltip from './common/ChartTooltip';
 
 // XLAND INFRA Color Palette
 const COLORS = {
@@ -195,6 +196,7 @@ export const DeviceChart = ({ data }) => {
 
 // Geographic Distribution Chart
 export const GeoChart = ({ data }) => {
+  const chart = useChartTooltip();
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
     return data.slice(0, 8).map(item => ({
@@ -227,10 +229,16 @@ export const GeoChart = ({ data }) => {
 
   const maxCount = Math.max(...chartData.map(d => d.count), 1);
 
+  const totalScans = chartData.reduce((sum, item) => sum + item.count, 0);
+
   return (
     <div className="space-y-3">
       {chartData.map((item, index) => (
-        <div key={index} className="group">
+        <div key={index} className="group cursor-pointer" {...chart.hover({
+          title: `${getCountryFlag(item.code)} ${item.country}`,
+          rows: [{ label: 'Scans', value: item.count.toLocaleString('en-IN'), color: '#F59E0B' }],
+          footer: totalScans > 0 ? `${((item.count / totalScans) * 100).toFixed(1)}% of these scans` : undefined
+        })}>
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="text-lg">{getCountryFlag(item.code)}</span>
@@ -246,6 +254,7 @@ export const GeoChart = ({ data }) => {
           </div>
         </div>
       ))}
+      {chart.node}
     </div>
   );
 };

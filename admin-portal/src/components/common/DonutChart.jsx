@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useChartTooltip from './ChartTooltip';
 
 /**
  * Pure SVG Donut Chart Component with Hover Tooltip
@@ -7,15 +8,24 @@ import React, { useState } from 'react';
  * @param {number} strokeWidth - Width of the donut ring (default: 20)
  * @param {string|number} centerValue - Value to show in center
  * @param {string} centerLabel - Label below the center value (default: 'Total')
+ * @param {string} valueLabel - What the figure is, in the tooltip (default: 'Count')
+ * @param {Function} formatValue - Formats that figure; counts are shown as they are
+ *
+ * The tooltip is drawn through `useChartTooltip`, which renders it into the body. It used to be an
+ * absolutely positioned card 60px above the chart, which put it outside the `overflow-hidden` cards
+ * on the Work Orders and Schedules dashboards -- hovering a segment there displayed nothing at all.
  */
 const DonutChart = ({ 
   data = [], 
   size = 144, 
   strokeWidth = 20, 
   centerValue = 0, 
-  centerLabel = 'Total' 
+  centerLabel = 'Total',
+  valueLabel = 'Count',
+  formatValue = value => `${value}`
 }) => {
   const [hoveredSegment, setHoveredSegment] = useState(null);
+  const chart = useChartTooltip();
   
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -54,27 +64,35 @@ const DonutChart = ({
           stroke="#E5E7EB"
           strokeWidth={strokeWidth}
         />
-        {/* Colored segments */}
-        {segments.map((seg, idx) => (
-          <circle
-            key={idx}
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={hoveredSegment === idx ? strokeWidth + 4 : strokeWidth}
-            strokeDasharray={`${seg.length} ${circumference}`}
-            strokeDashoffset={-seg.offset}
-            transform={`rotate(-90 ${center} ${center})`}
-            style={{ 
-              transition: 'stroke-dasharray 0.3s ease, stroke-width 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={() => setHoveredSegment(idx)}
-            onMouseLeave={() => setHoveredSegment(null)}
-          />
-        ))}
+        {/* Colored segments. The segment thickens under the pointer and the tooltip names it. */}
+        {segments.map((seg, idx) => {
+          const readout = chart.hover({
+            title: seg.name,
+            rows: [{ label: valueLabel, value: formatValue(seg.value), color: seg.color }],
+            footer: `${seg.percentage}% of total`
+          });
+          return (
+            <circle
+              key={idx}
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="none"
+              stroke={seg.color}
+              strokeWidth={hoveredSegment === idx ? strokeWidth + 4 : strokeWidth}
+              strokeDasharray={`${seg.length} ${circumference}`}
+              strokeDashoffset={-seg.offset}
+              transform={`rotate(-90 ${center} ${center})`}
+              style={{ 
+                transition: 'stroke-dasharray 0.3s ease, stroke-width 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseMove={readout.onMouseMove}
+              onMouseEnter={event => { setHoveredSegment(idx); readout.onMouseEnter(event); }}
+              onMouseLeave={event => { setHoveredSegment(null); readout.onMouseLeave(event); }}
+            />
+          );
+        })}
         {/* Center text */}
         <text 
           x={center} 
@@ -97,21 +115,7 @@ const DonutChart = ({
           {centerLabel}
         </text>
       </svg>
-      {/* Tooltip */}
-      {hoveredSegment !== null && segments[hoveredSegment] && (
-        <div 
-          className="absolute left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap pointer-events-none"
-          style={{ top: '-60px' }}
-        >
-          <p className="font-semibold text-gray-900 text-sm mb-1">{segments[hoveredSegment].name}</p>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: segments[hoveredSegment].color, minWidth: '12px', minHeight: '12px' }}></span>
-            <span className="text-gray-600">Count:</span>
-            <span className="font-bold text-gray-900">{segments[hoveredSegment].value}</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">{segments[hoveredSegment].percentage}% of total</p>
-        </div>
-      )}
+      {chart.node}
     </div>
   );
 };

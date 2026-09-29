@@ -41,6 +41,7 @@ import {
   Area
 } from 'recharts';
 import DonutChart from './common/DonutChart';
+import useChartTooltip from './common/ChartTooltip';
 import { getAuthToken } from '../utils/safeStorage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -78,6 +79,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   const [trendPeriod, setTrendPeriod] = useState('all');
   const [trendGranularity, setTrendGranularity] = useState('monthly');
   const [completionTimeFilter, setCompletionTimeFilter] = useState('all');
+  // Hover readouts for the bars. These cards clip their corners with `overflow-hidden`, so a
+  // tooltip drawn inside them was cut off; these are rendered into the body instead.
+  const propertyTypeChart = useChartTooltip();
+  const completionChart = useChartTooltip();
   const [categoryTrendFilter, setCategoryTrendFilter] = useState('all');
   const [categoryTrendGranularity, setCategoryTrendGranularity] = useState('monthly');
   const token = getAuthToken();
@@ -1059,7 +1064,11 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 const total = propertyTypeData.reduce((sum, d) => sum + d.value, 0);
                 const maxValue = propertyTypeData[0]?.value || 1;
                 return propertyTypeData.slice(0, 5).map((item, index) => (
-                  <div key={index} className="space-y-1 group relative cursor-pointer">
+                  <div key={index} className="space-y-1 cursor-pointer" {...propertyTypeChart.hover({
+                    title: item.name,
+                    rows: [{ label: 'Work orders', value: item.value, color: item.color }],
+                    footer: `${total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total`
+                  })}>
                     <div className="flex justify-between items-center gap-2 text-xs">
                       <span className="text-gray-600 truncate flex-1 min-w-0">{item.name}</span>
                       <span className="font-medium text-gray-900 flex-shrink-0">{item.value}</span>
@@ -1073,16 +1082,6 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         }}
                       ></div>
                     </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                      <p className="font-semibold text-gray-900 text-sm mb-1">{item.name}</p>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
-                        <span className="text-gray-600">Count:</span>
-                        <span className="font-bold text-gray-900">{item.value} work orders</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">{total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}% of total</p>
-                    </div>
                   </div>
                 ));
               })()
@@ -1092,6 +1091,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             )}
           </div>
+          {propertyTypeChart.node}
         </div>
       </div>
 
@@ -1204,7 +1204,10 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <div className="text-xs font-medium text-gray-700 mb-3">By Priority (Days)</div>
               <div className="space-y-3">
                 {completionData.byPriority.map((item, index) => (
-                  <div key={index} className="space-y-1 group relative cursor-pointer">
+                  <div key={index} className="space-y-1 cursor-pointer" {...completionChart.hover({
+                    title: `${item.name} Priority`,
+                    rows: [{ label: 'Avg completion', value: `${item.days} days`, color: item.color }]
+                  })}>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">{item.name}</span>
                       <span className="font-medium text-gray-900">{item.days} Days</span>
@@ -1218,17 +1221,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         }}
                       ></div>
                     </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                      <p className="font-semibold text-gray-900 text-sm mb-1">{item.name} Priority</p>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color, minWidth: '12px', minHeight: '12px' }}></span>
-                        <span className="text-gray-600">Avg Completion:</span>
-                        <span className="font-bold text-gray-900">{item.days} days</span>
-                      </div>
-                    </div>
                   </div>
                 ))}
+                {completionChart.node}
               </div>
             </div>
             

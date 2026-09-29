@@ -20,7 +20,8 @@ import {
   Building2,
   RefreshCw
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { ChartTooltipContent } from '../components/common/ChartTooltip';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -220,6 +221,8 @@ const CustomerDashboard = ({ user }) => {
                     <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
+                {/* Without this the segments answered nothing at all when pointed at */}
+                {pieData.length > 0 && <Tooltip content={<ChartTooltipContent valueLabel="Work orders" />} />}
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
