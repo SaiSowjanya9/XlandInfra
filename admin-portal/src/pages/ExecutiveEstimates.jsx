@@ -804,7 +804,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">* Currency: INR (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
+        <p className="text-xs text-gray-500">* Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory | Direct estimates are saved to Archive section</p>
         <div className="flex gap-3">
           <button onClick={handleBackFromEstimate} className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">Back</button>
           {showSaveButton && <button onClick={handleSaveEstimate} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save</button>}
