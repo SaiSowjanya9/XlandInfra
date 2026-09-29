@@ -548,7 +548,7 @@ const generatePDF = (data, type, filename) => {
 
       // The customer is named in BILL TO at the head of the page, so there is no Customer Details
       // section here: it would state the same three fields twice.
-      y += 10;
+      y += 7;
     }
 
     // ===== WORK ORDER DETAILS (only for work order estimates) - Compact 4-column layout =====
@@ -656,9 +656,9 @@ const generatePDF = (data, type, filename) => {
     // warm rules, figures in warm text. A package export keeps the slate header it had.
     const serviceTableStyles = priced ? {
       margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 2.5, lineColor: warmBorder, lineWidth: 0.2, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
+      styles: { fontSize: 7, cellPadding: 2, lineColor: warmBorder, lineWidth: 0.2, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
       headStyles: { fillColor: warmSection, textColor: warmMuted, fontStyle: 'bold', fontSize: 6.5, lineColor: warmBorder },
-      bodyStyles: { textColor: warmText, lineColor: warmBorder, minCellHeight: 8 },
+      bodyStyles: { textColor: warmText, lineColor: warmBorder, minCellHeight: 6.5 },
       columnStyles: serviceColumnStyles,
       alternateRowStyles: { fillColor: [255, 252, 246] },
       rowPageBreak: 'avoid',
@@ -719,7 +719,7 @@ const generatePDF = (data, type, filename) => {
         ...serviceTableStyles
       });
 
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 6;
     }
 
     // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
@@ -737,7 +737,7 @@ const generatePDF = (data, type, filename) => {
         ...serviceTableStyles
       });
 
-      y = doc.lastAutoTable.finalY + 8;
+      y = doc.lastAutoTable.finalY + 6;
     }
 
     if (!isWorkOrder && data.addons?.length) {
@@ -747,7 +747,7 @@ const generatePDF = (data, type, filename) => {
       doc.setTextColor(...heading);
       doc.text('Total Services Price', margin, y);
       doc.text(formatCurrency(data.addonsTotal ?? data.addons.reduce((sum, addon) => sum + getAddonPrice(addon), 0)), pageWidth - margin, y, { align: 'right' });
-      y += 10;
+      y += 8;
     }
 
     // ===== PRICE SUMMARY (Plain, right-aligned) =====
@@ -795,7 +795,7 @@ const generatePDF = (data, type, filename) => {
 
     // Break only if the block will not actually fit above the footer: a fixed 50mm guard pushed a
     // 35mm summary onto a page of its own with a third of the previous page still empty
-    if (y + sumHeight > pageHeight - 20) {
+    if (y + sumHeight > pageHeight - 16) {
       doc.addPage();
       y = 20;
     }
