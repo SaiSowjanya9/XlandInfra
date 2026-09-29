@@ -598,7 +598,7 @@ function CustomerHome() {
                 </li>
                 <li className="flex items-start space-x-3 text-stone-400 text-sm">
                   <MapPin className="w-4 h-4 mt-0.5" style={{ color: '#D8B25C' }} />
-                  <span>D.No. 7-333/A/1, Nri Hospital Road<br/>Mangalagiri, Guntur, 522503</span>
+                  <span>D.No. 7-333/A/1, NRI Hospital Road<br/>Mangalagiri, Guntur, 522503</span>
                 </li>
               </ul>
             </div>

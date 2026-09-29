@@ -4,6 +4,7 @@
  */
 
 const { pool } = require('../config/database');
+const { COMPANY } = require('../utils/companyInfo');
 const { generateInvoicePDF } = require('./pdfService');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
@@ -915,13 +916,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                             <tr>
                               <td style="padding: 16px 18px; vertical-align: top;">
                                 <span style="color: #1e40af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">From</span>
-                                <h3 style="color: #1e3a5f; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">XLAND INFRA PVT LTD</h3>
+                                <h3 style="color: #1e3a5f; margin: 8px 0 4px; font-size: 15px; font-weight: bold;">${COMPANY.legalName}</h3>
                                 <p style="color: #475569; margin: 0; font-size: 12px; line-height: 1.8;">
-                                  Property Management Services<br>
-                                  D.No. 7-333/A/1, Nri Hospital Road<br>
-                                  Mangalagiri, Guntur, 522503<br>
-                                  <strong>Email:</strong> <a href="mailto:info@xlandinfra.com" style="color: #2563eb; text-decoration: none;">info@xlandinfra.com</a><br>
-                                  <strong>Phone:</strong> +91 8500 010 111
+                                  ${COMPANY.tagline}<br>
+                                  ${COMPANY.addressLines.join('<br>')}<br>
+                                  <strong>Email:</strong> <a href="mailto:${COMPANY.email}" style="color: #2563eb; text-decoration: none;">${COMPANY.email}</a><br>
+                                  <strong>Phone:</strong> ${COMPANY.phone}
                                 </p>
                               </td>
                             </tr>
@@ -1140,11 +1140,11 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center">
-                          <h3 style="color: #d4a853; margin: 0 0 4px; font-size: 16px; font-weight: bold; letter-spacing: 1px;">XLAND INFRA PVT LTD</h3>
+                          <h3 style="color: #d4a853; margin: 0 0 4px; font-size: 16px; font-weight: bold; letter-spacing: 1px;">${COMPANY.legalName}</h3>
                           <p style="color: #9ca3af; margin: 0 0 12px; font-size: 11px;">Your Trusted Property Management Partner</p>
                           <p style="color: #6b7280; margin: 0; font-size: 11px; line-height: 1.6;">
-                            D.No. 7-333/A/1, Nri Hospital Road, Mangalagiri, Guntur - 522503<br>
-                            Phone: +91 8500 010 111 | Email: info@xlandinfra.com
+                            ${COMPANY.addressLines.join(', ')}<br>
+                            Phone: ${COMPANY.phone} | Email: ${COMPANY.email}
                           </p>
                           <hr style="border: none; border-top: 1px solid #374151; margin: 15px 0;">
                           <p style="color: #6b7280; margin: 0; font-size: 10px;">
