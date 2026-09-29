@@ -961,7 +961,10 @@ const initOnboardingTables = async () => {
         session_duration INT DEFAULT 0,
         INDEX idx_scan_qr (qr_id),
         INDEX idx_scan_date (scanned_at),
-        INDEX idx_scan_device (device_type)
+        INDEX idx_scan_device (device_type),
+        -- Every scan asks whether this visitor has been seen before, and every unique-visitor
+        -- figure is a COUNT(DISTINCT visitor_id); without this both scan the table
+        INDEX idx_scan_visitor (qr_id, visitor_id)
       )
     `);
 

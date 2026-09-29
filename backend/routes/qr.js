@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticate } = require('../middleware/auth');
 // Rate limiting for scan endpoint
 const rateLimit = require('express-rate-limit');
+// Scan row construction and trend bucketing, with their own tests
+const { SCAN_INSERT_SQL, buildScanParams, normalizeGeoLocation, scanWindow, fillScanSeries } = require('../utils/qrScan');
 
 // Database pool will be passed from server.js
 let pool;
@@ -69,7 +71,9 @@ const generateSessionId = () => `sess_${uuidv4()}`;
 const generateVisitorId = () => `vis_${crypto.randomBytes(16).toString('hex')}`;
 
 // Hash IP for privacy
-const hashIP = (ip) => crypto.createHash('sha256').update(ip + process.env.IP_SALT || 'xland-salt').digest('hex').substring(0, 32);
+// The salt is chosen before concatenating: `ip + process.env.IP_SALT || 'xland-salt'` parses as
+// `(ip + undefined) || 'xland-salt'`, which salted every hash with the string "undefined" instead.
+const hashIP = (ip) => crypto.createHash('sha256').update(`${ip}${process.env.IP_SALT || 'xland-salt'}`).digest('hex').substring(0, 32);
 
 // Generate device fingerprint from request headers
 // This uniquely identifies a device/browser combination
@@ -231,8 +235,9 @@ const isBot = (ua) => {
     // Tools and libraries
     /curl/i, /wget/i, /python/i, /java\//i, /httpclient/i, /libwww/i,
     /headless/i, /phantom/i, /selenium/i, /puppeteer/i, /playwright/i,
-    // Preview generators
-    /preview/i, /thumb/i, /snap/i, /embed/i,
+    // Preview generators. Narrow on purpose: /snap/i discarded every scan made from Snapchat's
+    // in-app browser, and /preview/i, /thumb/i and /embed/i match nothing a person browses with.
+    /snapshot/i, /thumbnail/i, /link-?preview/i,
     // Monitoring and uptime
     /pingdom/i, /uptimerobot/i, /statuscake/i, /newrelic/i, /datadog/i,
     // Other
@@ -292,15 +297,18 @@ const isPrivateIP = (ip) => {
   return privateRanges.some(range => range.test(ip));
 };
 
-// Get geo location from IP with multiple fallback services
+// Get geo location from IP with multiple fallback services.
+// Every branch returns the full set of geographic keys through normalizeGeoLocation, because the
+// scan INSERT binds all of them: a service that answers without coordinates used to make the insert
+// throw on `undefined` and the scan was lost. An unlocated scan says so with NULLs rather than
+// claiming a city.
+const UNKNOWN_LOCATION = normalizeGeoLocation({});
+
 const getGeoLocation = async (ip) => {
-  // Default to India if IP lookup fails
-  const defaultGeo = { country: 'India', countryCode: 'IN', state: 'Unknown', city: 'Unknown' };
-  
-  // Skip lookup for private IPs
+  // Skip lookup for private IPs: a LAN address has no location to report
   if (isPrivateIP(ip) || ip === 'unknown') {
     console.log(`[GeoIP] Skipping private IP: ${ip}`);
-    return defaultGeo;
+    return UNKNOWN_LOCATION;
   }
   
   // Try multiple services in order of reliability
@@ -310,26 +318,24 @@ const getGeoLocation = async (ip) => {
       const res = await fetch(`https://ipwho.is/${ip}`);
       const data = await res.json();
       if (data.success) {
-        return {
-          country: data.country || 'Unknown',
-          countryCode: data.country_code || 'XX',
-          state: data.region || 'Unknown',
-          city: data.city || 'Unknown'
-        };
+        return normalizeGeoLocation({
+          country: data.country,
+          countryCode: data.country_code,
+          state: data.region,
+          city: data.city,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          timezone: data.timezone
+        });
       }
       throw new Error('ipwho.is failed');
     },
     // Service 2: ip-api.com (free, 45 requests/min)
     async () => {
-      const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`);
+      const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone`);
       const data = await res.json();
       if (data.status === 'success') {
-        return {
-          country: data.country || 'Unknown',
-          countryCode: data.countryCode || 'XX',
-          state: data.regionName || 'Unknown',
-          city: data.city || 'Unknown'
-        };
+        return normalizeGeoLocation(data);
       }
       throw new Error('ip-api.com failed');
     },
@@ -338,12 +344,15 @@ const getGeoLocation = async (ip) => {
       const res = await fetch(`https://ipapi.co/${ip}/json/`);
       const data = await res.json();
       if (!data.error) {
-        return {
-          country: data.country_name || 'Unknown',
-          countryCode: data.country_code || 'XX',
-          state: data.region || 'Unknown',
-          city: data.city || 'Unknown'
-        };
+        return normalizeGeoLocation({
+          country: data.country_name,
+          countryCode: data.country_code,
+          state: data.region,
+          city: data.city,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          timezone: data.timezone
+        });
       }
       throw new Error('ipapi.co failed');
     }
@@ -360,8 +369,8 @@ const getGeoLocation = async (ip) => {
     }
   }
   
-  console.log(`[GeoIP] All services failed for ${ip}, using default`);
-  return defaultGeo;
+  console.log(`[GeoIP] All services failed for ${ip}; the scan is recorded without a location`);
+  return UNKNOWN_LOCATION;
 };
 
 // ============================================
@@ -448,11 +457,17 @@ router.get('/r/:slug', scanRateLimiter, async (req, res) => {
         return res.redirect(302, qr.current_url); // Still redirect but don't log
       }
       
-      // Update rate limit
+      // Update rate limit. The window has to roll, or the row keeps its original window_start
+      // for ever: the SELECT above then never matches it again and the counter grows unbounded,
+      // which is a limiter that both never fires and cannot be reasoned about.
       await pool.execute(
         `INSERT INTO qr_rate_limits (ip_address, qr_id, request_count, window_start)
          VALUES (?, ?, 1, NOW())
-         ON DUPLICATE KEY UPDATE request_count = request_count + 1`,
+         ON DUPLICATE KEY UPDATE
+           is_blocked = IF(window_start > DATE_SUB(NOW(), INTERVAL 1 MINUTE), is_blocked, FALSE),
+           blocked_until = IF(window_start > DATE_SUB(NOW(), INTERVAL 1 MINUTE), blocked_until, NULL),
+           request_count = IF(window_start > DATE_SUB(NOW(), INTERVAL 1 MINUTE), request_count + 1, 1),
+           window_start = IF(window_start > DATE_SUB(NOW(), INTERVAL 1 MINUTE), window_start, NOW())`,
         [ip, qr.id]
       );
     } catch (e) {}
@@ -491,27 +506,28 @@ router.get('/r/:slug', scanRateLimiter, async (req, res) => {
     const redirectLatency = Date.now() - startTime;
     
     try {
-      console.log(`[QR Scan] Logging scan for QR ID: ${qr.id}, Slug: ${slug}`);
-      await pool.execute(
-        `INSERT INTO qr_scans (
-          qr_id, scan_id, visitor_id, session_id, ip_address, ip_hash,
-          is_unique_user, is_repeat_scan, user_agent, device_type, device_brand, device_model,
-          os_name, os_version, browser_name, browser_version,
-          country, country_code, state, city, latitude, longitude, timezone,
-          referrer_url, referrer_domain, language, redirect_url, redirect_success, redirect_latency_ms
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          qr.id, scanId, visitorId, sessionId, ip, ipHash,
-          isUniqueUser, isRepeatScan, userAgent.substring(0, 500), uaData.device, uaData.deviceBrand, uaData.deviceModel,
-          uaData.osName, uaData.osVersion, uaData.browserName, uaData.browserVersion,
-          geoData.country, geoData.countryCode, geoData.state, geoData.city, geoData.latitude, geoData.longitude, geoData.timezone,
-          req.headers.referer || null, req.headers.referer ? new URL(req.headers.referer).hostname : null,
-          req.headers['accept-language']?.split(',')[0] || null,
-          qr.current_url, true, redirectLatency
-        ]
-      );
+      await pool.execute(SCAN_INSERT_SQL, buildScanParams({
+        qrId: qr.id,
+        scanId,
+        visitorId,
+        sessionId,
+        ip,
+        ipHash,
+        isUniqueUser,
+        isRepeatScan,
+        userAgent,
+        ua: uaData,
+        geo: geoData,
+        referrer: req.headers.referer,
+        language: req.headers['accept-language']?.split(',')[0],
+        redirectUrl: qr.current_url,
+        latencyMs: redirectLatency
+      }));
       
-      // Update daily analytics
+      // Mirror the scan into the daily roll-up. Nothing reads this to draw a figure -- every number
+      // the dashboard shows is counted from qr_scans -- it is retention, so a purge of raw scans
+      // still leaves a history behind. qr_reset_analytics.sql rebuilds it from qr_scans, so the two
+      // can always be made to agree.
       await pool.execute(
         `INSERT INTO qr_analytics_daily (qr_id, date, total_scans, unique_users, repeat_users, mobile_scans, tablet_scans, desktop_scans)
          VALUES (?, CURDATE(), 1, ?, ?, ?, ?, ?)
@@ -537,25 +553,11 @@ router.get('/r/:slug', scanRateLimiter, async (req, res) => {
         ]
       );
       
-      // Update hourly analytics
-      await pool.execute(
-        `INSERT INTO qr_analytics_hourly (qr_id, hour_timestamp, total_scans, unique_users)
-         VALUES (?, DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00'), 1, ?)
-         ON DUPLICATE KEY UPDATE total_scans = total_scans + 1, unique_users = unique_users + ?`,
-        [qr.id, isUniqueUser ? 1 : 0, isUniqueUser ? 1 : 0]
-      );
-      
-      // Update active session
-      await pool.execute(
-        `INSERT INTO qr_active_sessions (qr_id, session_id, visitor_id, ip_address, device_type, browser, os, country, city)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE last_activity = NOW(), is_active = 1`,
-        [qr.id, sessionId, visitorId, ip, uaData.device, uaData.browserName, uaData.osName, geoData.country, geoData.city]
-      );
-      
-    console.log(`[QR Scan] Successfully logged scan for QR ID: ${qr.id}, Unique: ${isUniqueUser}, Device: ${uaData.device}`);
+      console.log(`[QR Scan] Recorded scan for ${slug} (QR ${qr.id}) - ${uaData.device}, new visitor: ${isUniqueUser}`);
     } catch (e) {
-      console.error('[QR Scan] Error logging scan:', e.message);
+      // The visitor is still redirected below, but a scan that is not written is a scan the dashboard
+      // will never show, so say so loudly enough to be found in the log.
+      console.error(`[QR Scan] FAILED to record scan for ${slug} (QR ${qr.id}): ${e.message}`, e.code || '');
     }
     
     // Set cookies for visitor tracking with security options
@@ -578,6 +580,40 @@ router.get('/r/:slug', scanRateLimiter, async (req, res) => {
 });
 
 // ============================================
+// COUNTING SCANS
+// ============================================
+
+/**
+ * `qr_scans` is the only thing any figure is counted from.
+ *
+ * The flags written with each row (`is_unique_user`, `is_repeat_scan`) and the roll-up tables are
+ * not read here: a flag is decided once, by whichever request happened to be first, and cannot be
+ * corrected afterwards, while COUNT(DISTINCT visitor) can always be recomputed and always agrees
+ * with the rows on the table. "Unique users" counted as `COUNT(*) WHERE is_unique_user` also silently
+ * became "first scans", which is a different number as soon as two requests race.
+ *
+ * A visitor is a device fingerprint. A row that predates fingerprinting has none, so it stands for
+ * one visitor of its own rather than being lumped in with every other unidentified row.
+ */
+const VISITOR = "COALESCE(s.visitor_id, CONCAT('scan:', s.id))";
+// Mobile and tablet. A printed QR is scanned with a phone camera; a desktop hit on the same short
+// link came from somewhere else, so the two are reported separately rather than being called "real".
+const HANDHELD = "s.device_type IN ('mobile', 'tablet')";
+
+// MySQL returns DECIMAL (and so mysql2 returns a string) for SUM; COUNT is BIGINT and comes back as a
+// number. Counts are built with COUNT(CASE ...) for that reason, and forced through here regardless,
+// so the API never emits "12" where the client will compare it with a number.
+const toInt = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+const intFields = (row, fields) => {
+  const out = { ...row };
+  for (const field of fields) out[field] = toInt(row?.[field]);
+  return out;
+};
+
+// ============================================
 // QR MANAGEMENT ENDPOINTS (Admin)
 // ============================================
 
@@ -585,15 +621,22 @@ router.get('/r/:slug', scanRateLimiter, async (req, res) => {
 router.get('/codes', authenticate, adminOnly, async (req, res) => {
   try {
     const [qrCodes] = await pool.execute(`
-      SELECT q.*, 
-        (SELECT COUNT(*) FROM qr_scans WHERE qr_id = q.id) as total_scans,
-        (SELECT COUNT(*) FROM qr_scans WHERE qr_id = q.id AND is_unique_user = TRUE) as unique_users,
-        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_users
+      SELECT q.*,
+        COUNT(s.id) as total_scans,
+        COUNT(DISTINCT ${VISITOR}) as unique_visitors,
+        COUNT(CASE WHEN ${HANDHELD} THEN 1 END) as handheld_scans,
+        COUNT(CASE WHEN s.scanned_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) THEN 1 END) as scans_last_5_min,
+        MAX(s.scanned_at) as last_scan_at
       FROM qr_codes q
+      LEFT JOIN qr_scans s ON s.qr_id = q.id
+      GROUP BY q.id
       ORDER BY q.created_at DESC
     `);
     
-    res.json({ success: true, data: qrCodes });
+    res.json({
+      success: true,
+      data: qrCodes.map(qr => intFields(qr, ['total_scans', 'unique_visitors', 'handheld_scans', 'scans_last_5_min']))
+    });
   } catch (error) {
     console.error('Error fetching QR codes:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -732,52 +775,90 @@ router.delete('/codes/:id', authenticate, adminOnly, async (req, res) => {
 // Get analytics overview for all QR codes
 router.get('/analytics/overview', authenticate, adminOnly, async (req, res) => {
   try {
-    // Total stats - includes verified_scans (mobile/tablet only - real QR users)
+    // How many QR codes there are, from the table that holds them. This was
+    // COUNT(DISTINCT qr_id) FROM qr_scans, which is how many codes have ever been scanned -- a
+    // brand new code, or one nobody has scanned, was missing from the count of codes that exist.
+    const [[codes]] = await pool.execute(`
+      SELECT
+        COUNT(*) as total_qr_codes,
+        COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_qr_codes
+      FROM qr_codes
+    `);
+    
+    // All-time scan totals
     const [[totals]] = await pool.execute(`
-      SELECT 
-        COUNT(DISTINCT qr_id) as total_qr_codes,
+      SELECT
         COUNT(*) as total_scans,
-        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
-        SUM(CASE WHEN is_repeat_scan = TRUE THEN 1 ELSE 0 END) as repeat_scans,
-        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_scans,
-        SUM(CASE WHEN device_type IN ('mobile', 'tablet') AND is_unique_user = TRUE THEN 1 ELSE 0 END) as verified_unique_users
-      FROM qr_scans
+        COUNT(DISTINCT ${VISITOR}) as unique_visitors,
+        COUNT(CASE WHEN ${HANDHELD} THEN 1 END) as handheld_scans,
+        COUNT(DISTINCT CASE WHEN ${HANDHELD} THEN ${VISITOR} END) as handheld_visitors,
+        MAX(s.scanned_at) as last_scan_at
+      FROM qr_scans s
     `);
     
-    // Today's stats
+    // Visitors who came back. This is a count of visitors with more than one scan, not of the scans
+    // that were repeats: 1 visitor scanning 40 times is 1 returning visitor, and the old
+    // SUM(is_repeat_scan) reported 39 of them.
+    const [[repeat]] = await pool.execute(`
+      SELECT COUNT(*) as repeat_visitors FROM (
+        SELECT ${VISITOR} as visitor FROM qr_scans s GROUP BY visitor HAVING COUNT(*) > 1
+      ) v
+    `);
+    
+    // Today, by the calendar rather than by a rolling 24 hours
     const [[today]] = await pool.execute(`
-      SELECT 
+      SELECT
         COUNT(*) as scans_today,
-        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_today,
-        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_today
-      FROM qr_scans
-      WHERE DATE(scanned_at) = CURDATE()
+        COUNT(DISTINCT ${VISITOR}) as visitors_today
+      FROM qr_scans s
+      WHERE s.scanned_at >= CURDATE() AND s.scanned_at < CURDATE() + INTERVAL 1 DAY
     `);
     
-    // Active users now
-    const [[active]] = await pool.execute(`
-      SELECT COUNT(*) as active_now
-      FROM qr_active_sessions
-      WHERE is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+    // Visitors whose *first ever* scan was today. That is what "new" means; it is counted from the
+    // rows rather than read from the is_unique_user flag, which only ever described one row.
+    const [[newToday]] = await pool.execute(`
+      SELECT COUNT(*) as new_visitors_today FROM (
+        SELECT ${VISITOR} as visitor, MIN(s.scanned_at) as first_scan
+        FROM qr_scans s GROUP BY visitor
+      ) v
+      WHERE v.first_scan >= CURDATE() AND v.first_scan < CURDATE() + INTERVAL 1 DAY
     `);
     
-    // Per QR breakdown
+    // The last five minutes, counted from the scans themselves. qr_active_sessions only ever moved
+    // when a scan arrived -- no browser reports back afterwards -- so "active users" was already
+    // "scanned within five minutes" wearing a name it could not live up to.
+    const [[recent]] = await pool.execute(`
+      SELECT
+        COUNT(*) as scans_last_5_min,
+        COUNT(DISTINCT ${VISITOR}) as visitors_last_5_min
+      FROM qr_scans s
+      WHERE s.scanned_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+    `);
+    
+    // Per QR breakdown, from qr_codes outwards so a code with no scans still appears, with a zero
     const [perQR] = await pool.execute(`
       SELECT 
-        q.id, q.qr_id, q.slug, q.label,
+        q.id, q.qr_id, q.slug, q.label, q.is_active,
         COUNT(s.id) as total_scans,
-        SUM(CASE WHEN s.is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
-        (SELECT COUNT(*) FROM qr_active_sessions WHERE qr_id = q.id AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)) as active_now
+        COUNT(DISTINCT ${VISITOR}) as unique_visitors,
+        COUNT(CASE WHEN ${HANDHELD} THEN 1 END) as handheld_scans,
+        COUNT(CASE WHEN s.scanned_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) THEN 1 END) as scans_last_5_min,
+        MAX(s.scanned_at) as last_scan_at
       FROM qr_codes q
       LEFT JOIN qr_scans s ON q.id = s.qr_id
       GROUP BY q.id
+      ORDER BY total_scans DESC, q.created_at DESC
     `);
     
     res.json({
       success: true,
       data: {
-        totals: { ...totals, ...today, active_now: active.active_now },
-        per_qr: perQR
+        totals: intFields({ ...codes, ...totals, ...repeat, ...today, ...newToday, ...recent }, [
+          'total_qr_codes', 'active_qr_codes', 'total_scans', 'unique_visitors', 'handheld_scans',
+          'handheld_visitors', 'repeat_visitors', 'scans_today', 'visitors_today',
+          'new_visitors_today', 'scans_last_5_min', 'visitors_last_5_min'
+        ]),
+        per_qr: perQR.map(qr => intFields(qr, ['total_scans', 'unique_visitors', 'handheld_scans', 'scans_last_5_min']))
       }
     });
   } catch (error) {
@@ -790,7 +871,6 @@ router.get('/analytics/overview', authenticate, adminOnly, async (req, res) => {
 router.get('/analytics/:qrId', authenticate, adminOnly, async (req, res) => {
   try {
     const { qrId } = req.params;
-    const { period = '7d' } = req.query;
     
     // Get QR
     const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE id = ? OR slug = ?', [qrId, qrId]);
@@ -798,127 +878,113 @@ router.get('/analytics/:qrId', authenticate, adminOnly, async (req, res) => {
       return res.status(404).json({ success: false, message: 'QR code not found' });
     }
     
-    // Calculate date range
-    let daysBack = 7;
-    if (period === '24h') daysBack = 1;
-    else if (period === '7d') daysBack = 7;
-    else if (period === '30d') daysBack = 30;
-    else if (period === '90d') daysBack = 90;
+    // The window, and the buckets the trend is drawn in, decided in one place (utils/qrScan.js) and
+    // bound as a timestamp. Whole days, so the first bucket is not a part-day the reader compares
+    // with six full ones, and every query below uses this same boundary -- the cards, the trend, the
+    // breakdowns and the scan list all describe exactly the same set of scans.
+    const window = scanWindow(req.query.period);
+    const since = window.start;
     
-    // Total stats for period - includes verified_scans (mobile/tablet only)
     const [[stats]] = await pool.execute(`
       SELECT 
         COUNT(*) as total_scans,
-        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users,
-        SUM(CASE WHEN is_repeat_scan = TRUE THEN 1 ELSE 0 END) as repeat_users,
-        SUM(CASE WHEN device_type IN ('mobile', 'tablet') THEN 1 ELSE 0 END) as verified_scans,
-        SUM(CASE WHEN device_type IN ('mobile', 'tablet') AND is_unique_user = TRUE THEN 1 ELSE 0 END) as verified_unique,
-        AVG(session_duration) as avg_session_duration
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-    `, [qr.id, daysBack]);
+        COUNT(DISTINCT ${VISITOR}) as unique_visitors,
+        COUNT(CASE WHEN ${HANDHELD} THEN 1 END) as handheld_scans,
+        COUNT(DISTINCT CASE WHEN ${HANDHELD} THEN ${VISITOR} END) as handheld_visitors,
+        COUNT(CASE WHEN s.scanned_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) THEN 1 END) as scans_last_5_min,
+        MAX(s.scanned_at) as last_scan_at
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+    `, [qr.id, since]);
     
-    // Daily breakdown
-    const [dailyStats] = await pool.execute(`
-      SELECT 
-        DATE(scanned_at) as date,
+    // Visitors who scanned this code more than once inside the window
+    const [[repeat]] = await pool.execute(`
+      SELECT COUNT(*) as repeat_visitors FROM (
+        SELECT ${VISITOR} as visitor
+        FROM qr_scans s
+        WHERE s.qr_id = ? AND s.scanned_at >= ?
+        GROUP BY visitor HAVING COUNT(*) > 1
+      ) v
+    `, [qr.id, since]);
+    
+    // Trend. SQL groups, JS fills the empty buckets: a series that omits the days nothing happened
+    // on draws two scans a fortnight apart as neighbours.
+    const bucketExpr = window.granularity === 'hour'
+      ? "DATE_FORMAT(s.scanned_at, '%Y-%m-%d %H:00:00')"
+      : "DATE_FORMAT(s.scanned_at, '%Y-%m-%d')";
+    const [trendRows] = await pool.execute(`
+      SELECT ${bucketExpr} as bucket,
         COUNT(*) as scans,
-        SUM(CASE WHEN is_unique_user = TRUE THEN 1 ELSE 0 END) as unique_users
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY DATE(scanned_at)
-      ORDER BY date ASC
-    `, [qr.id, daysBack]);
+        COUNT(DISTINCT ${VISITOR}) as visitors
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      GROUP BY bucket
+      ORDER BY bucket ASC
+    `, [qr.id, since]);
     
     // Device breakdown
     const [deviceStats] = await pool.execute(`
-      SELECT device_type, COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY device_type
-    `, [qr.id, daysBack]);
+      SELECT s.device_type, COUNT(*) as count
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      GROUP BY s.device_type
+      ORDER BY count DESC
+    `, [qr.id, since]);
     
     // Browser breakdown
     const [browserStats] = await pool.execute(`
-      SELECT browser_name, COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY browser_name
+      SELECT s.browser_name, COUNT(*) as count
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      GROUP BY s.browser_name
       ORDER BY count DESC
       LIMIT 5
-    `, [qr.id, daysBack]);
+    `, [qr.id, since]);
     
     // OS breakdown
     const [osStats] = await pool.execute(`
-      SELECT os_name, COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY os_name
+      SELECT s.os_name, COUNT(*) as count
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      GROUP BY s.os_name
       ORDER BY count DESC
       LIMIT 5
-    `, [qr.id, daysBack]);
+    `, [qr.id, since]);
     
-    // Geographic breakdown
-    const [geoStats] = await pool.execute(`
-      SELECT country, country_code, COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY country, country_code
+    // Where the scans came from, to the city. A country list on its own says "India" on every row
+    // for a business that operates in one country, which tells the reader nothing they did not know.
+    const [locationStats] = await pool.execute(`
+      SELECT s.city, s.state, s.country, s.country_code, COUNT(*) as count
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      GROUP BY s.city, s.state, s.country, s.country_code
       ORDER BY count DESC
       LIMIT 10
-    `, [qr.id, daysBack]);
+    `, [qr.id, since]);
     
-    // City breakdown
-    const [cityStats] = await pool.execute(`
-      SELECT city, state, country, COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY city, state, country
-      ORDER BY count DESC
-      LIMIT 10
-    `, [qr.id, daysBack]);
-    
-    // Hourly breakdown (for heatmap)
-    const [hourlyStats] = await pool.execute(`
-      SELECT 
-        DAYOFWEEK(scanned_at) as day_of_week,
-        HOUR(scanned_at) as hour,
-        COUNT(*) as count
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY DAYOFWEEK(scanned_at), HOUR(scanned_at)
-    `, [qr.id, daysBack]);
-    
-    // Recent scans
+    // The most recent scans *within the window*, so the list cannot contradict the cards above it
     const [recentScans] = await pool.execute(`
-      SELECT scan_id, device_type, browser_name, os_name, country, city, scanned_at
-      FROM qr_scans
-      WHERE qr_id = ?
-      ORDER BY scanned_at DESC
+      SELECT s.scan_id, s.device_type, s.browser_name, s.os_name, s.country, s.state, s.city, s.scanned_at
+      FROM qr_scans s
+      WHERE s.qr_id = ? AND s.scanned_at >= ?
+      ORDER BY s.scanned_at DESC
       LIMIT 20
-    `, [qr.id]);
-    
-    // Active users now
-    const [[activeNow]] = await pool.execute(`
-      SELECT COUNT(*) as count
-      FROM qr_active_sessions
-      WHERE qr_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-    `, [qr.id]);
+    `, [qr.id, since]);
     
     res.json({
       success: true,
       data: {
         qr,
-        stats,
-        daily: dailyStats,
-        devices: deviceStats,
-        browsers: browserStats,
-        operating_systems: osStats,
-        geography: geoStats,
-        cities: cityStats,
-        hourly_heatmap: hourlyStats,
-        recent_scans: recentScans,
-        active_now: activeNow.count
+        period: { key: window.key, granularity: window.granularity, start: window.start.toISOString(), end: window.end.toISOString() },
+        stats: intFields({ ...stats, ...repeat }, [
+          'total_scans', 'unique_visitors', 'handheld_scans', 'handheld_visitors', 'scans_last_5_min', 'repeat_visitors'
+        ]),
+        trend: fillScanSeries(trendRows, window),
+        devices: deviceStats.map(row => intFields(row, ['count'])),
+        browsers: browserStats.map(row => intFields(row, ['count'])),
+        operating_systems: osStats.map(row => intFields(row, ['count'])),
+        locations: locationStats.map(row => intFields(row, ['count'])),
+        recent_scans: recentScans
       }
     });
   } catch (error) {
@@ -927,48 +993,14 @@ router.get('/analytics/:qrId', authenticate, adminOnly, async (req, res) => {
   }
 });
 
-// Get real-time active users
-router.get('/analytics/:qrId/realtime', authenticate, adminOnly, async (req, res) => {
-  try {
-    const { qrId } = req.params;
-    
-    const [[qr]] = await pool.execute('SELECT id FROM qr_codes WHERE id = ? OR slug = ?', [qrId, qrId]);
-    if (!qr) {
-      return res.status(404).json({ success: false, message: 'QR code not found' });
-    }
-    
-    const [activeSessions] = await pool.execute(`
-      SELECT session_id, device_type, browser, os, country, city, latitude, longitude, started_at, last_activity
-      FROM qr_active_sessions
-      WHERE qr_id = ? AND is_active = 1 AND last_activity > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-      ORDER BY last_activity DESC
-    `, [qr.id]);
-    
-    // Last hour stats
-    const [hourlyTrend] = await pool.execute(`
-      SELECT 
-        DATE_FORMAT(scanned_at, '%H:%i') as time,
-        COUNT(*) as scans
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-      GROUP BY DATE_FORMAT(scanned_at, '%Y-%m-%d %H:%i')
-      ORDER BY scanned_at ASC
-    `, [qr.id]);
-    
-    res.json({
-      success: true,
-      data: {
-        active_count: activeSessions.length,
-        sessions: activeSessions,
-        hourly_trend: hourlyTrend
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// Export scans. One row per scan, so the reader can count them again themselves and arrive at the
+// figures the dashboard shows -- which is the point of an export.
+const EXPORT_COLUMNS = [
+  'scan_id', 'scanned_at', 'visitor_id', 'device_type', 'device_brand', 'device_model',
+  'os_name', 'os_version', 'browser_name', 'browser_version',
+  'city', 'state', 'country', 'country_code'
+];
 
-// Export analytics data
 router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) => {
   try {
     const { qrId } = req.params;
@@ -979,27 +1011,26 @@ router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) 
       return res.status(404).json({ success: false, message: 'QR code not found' });
     }
     
-    let daysBack = 30;
-    if (period === '7d') daysBack = 7;
-    else if (period === '90d') daysBack = 90;
-    else if (period === 'all') daysBack = 3650;
+    // `all` means every scan there is, rather than ten years of them
+    const all = period === 'all';
+    const since = all ? null : scanWindow(period === '30d' ? '30d' : period).start;
     
-    const [scans] = await pool.execute(`
-      SELECT 
-        scan_id, device_type, device_brand, device_model, os_name, os_version,
-        browser_name, browser_version, country, country_code, state, city,
-        scanned_at, session_duration, is_unique_user, is_repeat_scan
-      FROM qr_scans
-      WHERE qr_id = ? AND scanned_at > DATE_SUB(NOW(), INTERVAL ? DAY)
-      ORDER BY scanned_at DESC
-    `, [qr.id, daysBack]);
+    const [scans] = await pool.execute(
+      `SELECT ${EXPORT_COLUMNS.join(', ')}
+       FROM qr_scans
+       WHERE qr_id = ?${all ? '' : ' AND scanned_at >= ?'}
+       ORDER BY scanned_at DESC`,
+      all ? [qr.id] : [qr.id, since]
+    );
     
     if (format === 'csv') {
-      const headers = Object.keys(scans[0] || {}).join(',');
-      const rows = scans.map(row => Object.values(row).map(v => `"${v || ''}"`).join(',')).join('\n');
+      // A fixed header, so an empty export still names its columns, and doubled quotes, so a value
+      // containing one does not shift every later column by a field.
+      const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const rows = scans.map(row => EXPORT_COLUMNS.map(column => cell(row[column])).join(','));
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename=qr-analytics-${qr.slug}-${period}.csv`);
-      res.send(`${headers}\n${rows}`);
+      res.setHeader('Content-Disposition', `attachment; filename=qr-scans-${qr.slug}-${period}.csv`);
+      res.send([EXPORT_COLUMNS.join(','), ...rows].join('\n'));
     } else {
       res.json({ success: true, qr, period, total_records: scans.length, data: scans });
     }
@@ -1008,134 +1039,27 @@ router.get('/analytics/:qrId/export', authenticate, adminOnly, async (req, res) 
   }
 });
 
-// Page visit tracking (for printed QR codes that go directly to pages)
-router.post('/track-visit', authenticate, async (req, res) => {
-  try {
-    const { page, source, timezone, language, screenWidth, screenHeight } = req.body;
-    const userAgent = req.headers['user-agent'] || '';
-    const ip = getClientIP(req);
-    const ipHash = hashIP(ip);
-    const deviceFingerprint = generateDeviceFingerprint(req);
-    
-    // Skip bots
-    if (isBot(userAgent)) {
-      return res.json({ success: true, tracked: false });
-    }
-    
-    // Check for rapid duplicate (same device within 30 seconds)
-    // Map page names to QR slugs
-    let slug = 'main'; // Default to main website
-    if (page === 'customer' || page === 'login' || page === 'portal' || page === 'dashboard') {
-      slug = 'customer';
-    } else if (page === 'main' || page === 'website' || page === 'home') {
-      slug = 'main';
-    }
-    
-    console.log(`[QR Track] Page: ${page}, Slug: ${slug}`);
-    
-    if (isDuplicateScan(deviceFingerprint, ipHash, slug)) {
-      console.log(`[QR Track] Rapid re-visit blocked: ${slug} from same device within 30s`);
-      return res.json({ success: true, tracked: false, reason: 'duplicate' });
-    }
-    
-    // Find QR code by slug
-    const [[qr]] = await pool.execute('SELECT * FROM qr_codes WHERE slug = ?', [slug]);
-    
-    if (!qr) {
-      return res.json({ success: true, tracked: false, reason: 'QR not found' });
-    }
-    
-    // Check if this is a unique user based on device fingerprint (not just IP)
-    const [[existingUser]] = await pool.execute(
-      'SELECT id FROM qr_scans WHERE qr_id = ? AND visitor_id = ?',
-      [qr.id, deviceFingerprint]
-    );
-    const isUniqueUser = !existingUser; // First time = unique
-    const isRepeatScan = !!existingUser; // Has scanned before = repeat
-    
-    console.log(`[QR Track] Device fingerprint: ${deviceFingerprint.substring(0, 8)}..., Unique: ${isUniqueUser}`);
-    
-    const uaData = parseUserAgent(userAgent);
-    const scanId = generateScanId();
-    const visitorId = deviceFingerprint; // Use device fingerprint as visitor ID
-    const sessionId = req.cookies?.qr_session || generateSessionId();
-    
-    // Get geo data using multiple fallback services
-    const geoData = await getGeoLocation(ip);
-    
-    // Log the visit as a scan
-    await pool.execute(
-      `INSERT INTO qr_scans (
-        qr_id, scan_id, visitor_id, session_id, ip_address, ip_hash,
-        is_unique_user, is_repeat_scan, user_agent, device_type, device_brand, device_model,
-        os_name, os_version, browser_name, browser_version,
-        country, country_code, state, city, timezone, language,
-        redirect_url, redirect_success, redirect_latency_ms
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        qr.id, scanId, visitorId, sessionId, ip, ipHash,
-        isUniqueUser, isRepeatScan, userAgent.substring(0, 500), uaData.device, uaData.deviceBrand, uaData.deviceModel,
-        uaData.osName, uaData.osVersion, uaData.browserName, uaData.browserVersion,
-        geoData.country, geoData.countryCode, geoData.state, geoData.city, timezone || null, language || null,
-        qr.current_url, true, 0
-      ]
-    );
-    
-    // Update daily analytics - total_scans always +1, unique_users only if new user
-    await pool.execute(
-      `INSERT INTO qr_analytics_daily (qr_id, date, total_scans, unique_users, repeat_users, mobile_scans, tablet_scans, desktop_scans)
-       VALUES (?, CURDATE(), 1, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-         total_scans = total_scans + 1,
-         unique_users = unique_users + ?,
-         repeat_users = repeat_users + ?,
-         mobile_scans = mobile_scans + ?,
-         tablet_scans = tablet_scans + ?,
-         desktop_scans = desktop_scans + ?`,
-      [
-        qr.id,
-        isUniqueUser ? 1 : 0,
-        isRepeatScan ? 1 : 0,
-        uaData.device === 'mobile' ? 1 : 0,
-        uaData.device === 'tablet' ? 1 : 0,
-        uaData.device === 'desktop' ? 1 : 0,
-        isUniqueUser ? 1 : 0,
-        isRepeatScan ? 1 : 0,
-        uaData.device === 'mobile' ? 1 : 0,
-        uaData.device === 'tablet' ? 1 : 0,
-        uaData.device === 'desktop' ? 1 : 0
-      ]
-    );
-    
-    console.log(`[QR Track] Page visit tracked for ${slug} - ${geoData.city}, ${geoData.state}, ${geoData.country}`);
-    
-    res.json({ success: true, tracked: true, location: geoData });
-  } catch (error) {
-    console.error('Track visit error:', error);
-    res.json({ success: true, tracked: false });
-  }
-});
+// A scan is a scan of a QR code: a request to /api/qr/r/:slug, which only a scanned code produces.
+//
+// There was a POST /track-visit here that wrote a row into qr_scans for anybody who opened the
+// website, and the two were then added together and reported as "Total Scans". That is the data
+// `backend/database/cleanup_fake_qr_scans.sql` was written to purge -- "only real QR scans will be
+// tracked going forward" -- and it also counted staff browsing the site. It had been dead since the
+// security audit put `authenticate` in front of it, because the public site calls it with no token:
+// every visit answered 401 and the endpoint tracked nothing at all. It is gone, along with its
+// caller in frontend/src/App.jsx.
 
-// Clean up old sessions
+// Prune expired rate-limit windows, and the session rows left by the retired session tracking
 router.post('/maintenance/cleanup-sessions', authenticate, adminOnly, async (req, res) => {
   try {
-    // Mark inactive sessions
-    await pool.execute(`
-      UPDATE qr_active_sessions 
-      SET is_active = 0 
-      WHERE last_activity < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-    `);
-    
-    // Delete old sessions
-    await pool.execute(`
-      DELETE FROM qr_active_sessions 
-      WHERE last_activity < DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    `);
-    
-    // Clean up old rate limits
     await pool.execute(`
       DELETE FROM qr_rate_limits 
       WHERE window_start < DATE_SUB(NOW(), INTERVAL 1 HOUR)
+    `);
+    
+    await pool.execute(`
+      DELETE FROM qr_active_sessions 
+      WHERE last_activity < DATE_SUB(NOW(), INTERVAL 24 HOUR)
     `);
     
     res.json({ success: true, message: 'Cleanup completed' });

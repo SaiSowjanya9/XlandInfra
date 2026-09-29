@@ -20,13 +20,17 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   }, 'test-action-token');
   assert.equal(result.success, true);
   assert.match(mail.html, /Tank &lt;Cleaning&gt;/);
-  assert.match(mail.html, /Half-Yearly - 2 visits/);
+  assert.match(mail.html, /Half-Yearly[\s\S]{0,240}>\s*2\s*</, 'frequency and its visit count have columns of their own');
   assert.match(mail.html, /10 KL/);
   assert.match(mail.html, /11,700.25/);
   assert.match(mail.html, /GST \(0%\)/);
   assert.doesNotMatch(mail.html, /<script>|9123.45|876.54|vendorCost|pricingSnapshot|operating_cost/);
-  assert.equal(mail.attachments.length, 1);
-  assert.equal(mail.attachments[0].content.subarray(0, 4).toString(), '%PDF');
+  // The letterhead's mark and its three contact icons are attached and referenced by Content-ID:
+  // hotlinking them puts the header behind the "display images" prompt, and Gmail strips an SVG.
+  assert.deepEqual(mail.attachments.filter(item => item.cid).map(item => item.cid),
+    ['xland-logo', 'xland-icon-phone', 'xland-icon-email', 'xland-icon-website']);
+  const attachedPdf = mail.attachments.find(item => String(item.filename).endsWith('.pdf'));
+  assert.equal(attachedPdf.content.subarray(0, 4).toString(), '%PDF');
   const pdfText = texts.join('\n');
   assert.match(pdfText, /10 KL/);
   assert.match(pdfText, /11,700.25/);
@@ -40,13 +44,15 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   }
   // The category belongs with the service name, not in the Description column. In the email it
   // follows the name immediately; in the PDF the Service cell is drawn with both.
-  assert.match(mail.html, /<strong>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
+  assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
   assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
   // Every field of the service has its own column in the attachment, quantity included. The price
   // column says "Rs." like every figure under it: PDFKit's built-in Helvetica has no rupee glyph,
   // so a ₹ in the heading printed as a stray mark.
+  // Compared without case: a column heading is drawn in caps on the cream header bar
+  const headings = texts.map(text => text.toUpperCase());
   for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Qty', 'Price (Rs.)']) {
-    assert.ok(texts.includes(heading), `pdf column: ${heading}`);
+    assert.ok(headings.includes(heading.toUpperCase()), `pdf column: ${heading}`);
   }
   assert.ok(texts.includes('Rs. 11,700.25'), 'the service price is on its own row');
   // A capacity-priced service has no quantity of its own, and says so rather than showing 1
@@ -78,11 +84,11 @@ test('manpower email and PDF show the selected range, personnel and overtime wit
     assert.ok(mail.html.includes(text), text);
     assert.ok(pdfText.includes(text), text);
   }
-  assert.match(mail.html, /Monthly - 12 visits/);
+  assert.match(mail.html, /Monthly[\s\S]{0,240}>\s*12\s*</, 'frequency and its visit count have columns of their own');
   assert.doesNotMatch(mail.html + pdfText, /12,240|3,672|rate_per_person|overtime_rate_per_hour|vendorCost|profit/);
 });
 
-test('terms reach the attached PDF only when the estimate carries them, and never the email body', async t => {
+test('terms reach the email and the attached PDF only when the estimate carries them', async t => {
   const { DEFAULT_ESTIMATE_TERMS } = require('../utils/estimateTerms');
   const originalText = PDFDocument.prototype.text;
   t.after(() => { PDFDocument.prototype.text = originalText; });
@@ -97,8 +103,10 @@ test('terms reach the attached PDF only when the estimate carries them, and neve
   const included = await send({ include_terms: 1 });
   assert.match(included.pdfText, /TERMS & CONDITIONS/);
   for (const clause of DEFAULT_ESTIMATE_TERMS) assert.ok(included.pdfText.includes(clause), clause);
-  // The customer reads the terms in the attachment; the email body stays short
-  assert.doesNotMatch(included.html, /TERMS & CONDITIONS|valid for 30 days/);
+  // The customer reads the same terms wherever they open the estimate. They were once in the
+  // attachment alone, to keep the message short; the message now carries the whole document.
+  assert.match(included.html, /Terms &amp; Conditions|TERMS &amp; CONDITIONS/i);
+  for (const clause of DEFAULT_ESTIMATE_TERMS) assert.ok(included.html.includes(clause), `email: ${clause}`);
 
   const custom = await send({ includeTerms: true, termsConditions: 'Only clause.\nSecond clause.' });
   assert.match(custom.pdfText, /1\. Only clause\./);
@@ -109,6 +117,7 @@ test('terms reach the attached PDF only when the estimate carries them, and neve
   for (const estimate of [{ include_terms: 0, terms_conditions: 'Not chosen.' }, {}]) {
     const excluded = await send(estimate);
     assert.doesNotMatch(excluded.pdfText, /TERMS & CONDITIONS|Not chosen\./);
+    assert.doesNotMatch(excluded.html, /Terms &amp; Conditions|Not chosen\./i);
   }
 });
 
