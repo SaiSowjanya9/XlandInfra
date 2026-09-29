@@ -209,9 +209,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   // which is what replaced the view modal.
   const [expandedEstimateId, setExpandedEstimateId] = useState(null);
   const toggleExpandedEstimate = (id) => setExpandedEstimateId(current => (current === id ? null : id));
-  // Terms & Conditions: on by default for a new estimate, editable before saving
-  const [includeTerms, setIncludeTerms] = useState(newEstimateTerms().includeTerms);
-  const [termsConditions, setTermsConditions] = useState(newEstimateTerms().termsConditions);
+  // Terms & Conditions: the standard clauses. Editing them belongs to Admin, Operations Manager
+  // and FP, so a Manager estimate carries the default wording and the card is read-only
+  const { includeTerms, termsConditions } = newEstimateTerms();
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
   const [savingEstimate, setSavingEstimate] = useState(false);
@@ -1174,8 +1174,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-      <TermsConditionsField include={includeTerms} onIncludeChange={setIncludeTerms} terms={termsConditions} onTermsChange={setTermsConditions} />
+      {/* Terms & Conditions - the standard clauses, shown but not editable in this portal */}
+      <TermsConditionsField include={includeTerms} terms={termsConditions} editable={false} />
 
       {/* Footer Note & Buttons */}
       <div className="flex items-center justify-between">
@@ -2366,7 +2366,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-700"><EstimateInput type="radio" name="manager-estimate-mode" checked={createMode === 'package'} onChange={() => setCreateMode('package')} className="accent-blue-600" /><span>Package Estimate</span></label>
           <label className="flex cursor-pointer items-center gap-3 text-sm text-slate-700"><EstimateInput type="radio" name="manager-estimate-mode" checked={createMode === 'custom'} onChange={() => setCreateMode('custom')} className="accent-blue-600" /><span>Custom Estimate</span></label>
         </fieldset>
-        {createMode === 'custom' ? <CustomEstimateBuilder apiPath="/api/manager/service-catalog" showToast={showToast} onSuccess={() => { loadData(); navigate('/manager/estimates'); }} /> : renderCreateEstimate()}
+        {createMode === 'custom' ? <CustomEstimateBuilder apiPath="/api/manager/service-catalog" editableTerms={false} showToast={showToast} onSuccess={() => { loadData(); navigate('/manager/estimates'); }} /> : renderCreateEstimate()}
       </div>;
       case 'list': return renderAllEstimates();
       case 'amc': return renderAmcPackages();

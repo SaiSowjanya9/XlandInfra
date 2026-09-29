@@ -179,7 +179,7 @@ router.post('/custom-estimates', requireRole('admin'), async (req, res) => {
     const estimateId = `EST-${randomUUID()}`;
     const addons = buildCatalogAddons(rows, property);
     // Whether this estimate carries Terms & Conditions, and the text the creator saw
-    const estimateTerms = estimateTermsColumns(req.body);
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
     await db.pool.execute(
       `INSERT INTO estimates (estimate_id, title, property_id, franchise_partner_id, customer_name, customer_email, customer_phone,
         property_type, property_name, property_address, services, addons, subtotal, discount, tax, total, total_amount,

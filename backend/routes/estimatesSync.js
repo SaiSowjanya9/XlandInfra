@@ -199,7 +199,7 @@ router.post('/', authenticate, requireRole('admin'), require('./serviceCatalog')
     const pool = db.pool;
     const titleValue = customerName || propertyName || communityName || 'Direct Estimate';
     // Whether this estimate carries Terms & Conditions, and the text the creator saw
-    const estimateTerms = estimateTermsColumns(req.body);
+    const estimateTerms = estimateTermsColumns(req.body, req.user.role);
     
     // created_by is NOT NULL; record the authenticated admin instead of guessing a user
     const createdById = req.user.id;

@@ -12,7 +12,13 @@
  *
  * An estimate created before this feature has no recorded choice (include_terms IS NULL) and is
  * therefore treated as carrying no terms: it was never sent with any.
+ *
+ * Writing the clauses is an Admin, Operations Manager and Franchise Partner decision. Every other
+ * portal's estimate carries the default wording, so `estimateTermsColumns` takes the creator's
+ * role and ignores text that arrives from a role that may not author it.
  */
+
+const { ROLES } = require('../config/roles');
 
 const DEFAULT_ESTIMATE_TERMS = [
   'This estimate is valid for 30 days from the date of issue.',
@@ -48,8 +54,23 @@ const estimateTermsLines = row => {
   return includeTerms ? termsConditions.split('\n').map(line => line.trim()).filter(Boolean) : [];
 };
 
-/** What a create request should store, from whatever the form submitted. */
-const estimateTermsColumns = body => {
+/**
+ * Who may write an estimate's clauses. A Manager, Coordinator, Supervisor or Executive sends the
+ * standard terms as they are, so there is nothing for them to choose or edit.
+ */
+const TERMS_EDITOR_ROLES = [ROLES.ADMIN, ROLES.OPERATIONS_MANAGER, ROLES.FRANCHISE_PARTNER, ROLES.FRANCHISE];
+const canEditEstimateTerms = role => TERMS_EDITOR_ROLES.includes(String(role || '').toLowerCase());
+
+/**
+ * What a create request should store, from whatever the form submitted, for a creator in `role`.
+ *
+ * A role that may not author terms gets the default clauses whatever it sent: the create form
+ * shows them read-only, but the field being absent from a screen is not what stops a request from
+ * supplying its own text. It never yields "no terms" either - a portal that cannot choose is not
+ * a portal whose estimates go out bare.
+ */
+const estimateTermsColumns = (body, role) => {
+  if (!canEditEstimateTerms(role)) return { include_terms: 1, terms_conditions: DEFAULT_ESTIMATE_TERMS_TEXT };
   const include = includesTerms(first(body.includeTerms, body.include_terms));
   return { include_terms: include ? 1 : 0, terms_conditions: include ? String(first(body.termsConditions, body.terms_conditions) ?? '').trim() || DEFAULT_ESTIMATE_TERMS_TEXT : null };
 };
@@ -74,5 +95,6 @@ const ensureEstimateTermsColumns = async (pool, table = 'fp_estimates') => {
 
 module.exports = {
   DEFAULT_ESTIMATE_TERMS, DEFAULT_ESTIMATE_TERMS_TEXT,
-  resolveEstimateTerms, estimateTermsLines, estimateTermsColumns, ensureEstimateTermsColumns
+  resolveEstimateTerms, estimateTermsLines, estimateTermsColumns, ensureEstimateTermsColumns,
+  canEditEstimateTerms, TERMS_EDITOR_ROLES
 };
