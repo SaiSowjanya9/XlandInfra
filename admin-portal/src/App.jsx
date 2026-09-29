@@ -474,7 +474,8 @@ function App() {
                     <Route path="estimates/add-service" element={<FPEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/addons" element={<Navigate to="/fp/estimates/add-service" replace />} />
                     <Route path="estimates/archived" element={<FPEstimates user={user} defaultTab="archived" />} />
-                    <Route path="qr-management" element={<QRManagement />} />
+                    {/* No QR Management here: the QR codes are the company's, not a partner's, and the
+                        endpoints are admin-only, so an FP reached a page of 403s reading 0. */}
                     <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="fp" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="fp" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="fp" />} />

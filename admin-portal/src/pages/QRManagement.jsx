@@ -1,15 +1,32 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { safeStorage, getAuthToken } from '../utils/safeStorage';
 import useChartTooltip from '../components/common/ChartTooltip';
 import {
-  QrCode, Download, Copy, ExternalLink, Edit3, Trash2, Plus,
-  BarChart3, Users, Activity, Globe, Smartphone, Monitor, Tablet,
-  RefreshCw, Eye, EyeOff, Link2, Calendar, Clock, MapPin,
-  TrendingUp, ArrowUpRight, ArrowDownRight, ChevronDown, X,
-  Check, AlertCircle, Filter, Search, Settings, Share2
+  QrCode, Download, Copy, Edit3, Plus,
+  BarChart3, Users, Smartphone, Monitor, Tablet,
+  RefreshCw, Eye, EyeOff, Calendar, Clock, MapPin,
+  TrendingUp, X, Check, AlertCircle, Repeat
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+/**
+ * Every QR endpoint is behind `authenticate` + `adminOnly` (the security audit, commit 11da8865),
+ * and this page was still calling them with no Authorization header: all three answered
+ * "Access denied. No token provided." and every card fell back to 0. The page reported an empty QR
+ * system as though it were a quiet one.
+ */
+const qrFetch = (path, options = {}) => {
+  const token = getAuthToken();
+  return fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers
+    }
+  });
+};
 
 const QRManagement = () => {
   // Check if user is Operations Manager (view-only access)
@@ -21,6 +38,7 @@ const QRManagement = () => {
   const [analytics, setAnalytics] = useState(null);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -34,87 +52,99 @@ const QRManagement = () => {
     ? `http://localhost:5000/api/qr/r`
     : `https://admin.xlandinfra.com/api/qr/r`;
 
-  useEffect(() => {
-    fetchQRCodes();
-    fetchOverview();
-  }, []);
-
-  useEffect(() => {
-    if (selectedQR) {
-      fetchAnalytics(selectedQR.id);
-    }
-  }, [selectedQR, period]);
-
-  // Auto-refresh every 10 seconds for real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (selectedQR) {
-        fetchAnalytics(selectedQR.id, true);
-      }
-      fetchOverview(true);
-      fetchQRCodes(); // Also refresh QR list for scan counts
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [selectedQR]);
-
-  const fetchQRCodes = async () => {
+  const fetchQRCodes = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/qr/codes`);
+      const response = await qrFetch('/api/qr/codes');
       const result = await response.json();
       if (result.success) {
         setQrCodes(result.data);
-        if (!selectedQR && result.data.length > 0) {
-          setSelectedQR(result.data[0]);
-        }
+        setLoadError(null);
+        setSelectedQR(current => current || result.data[0] || null);
+      } else {
+        // Say which figures are missing rather than leaving a page of confident zeros
+        setLoadError(result.message || 'Could not load QR codes');
       }
     } catch (error) {
       console.error('Error fetching QR codes:', error);
+      setLoadError(error.message || 'Could not reach the server');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchOverview = async (silent = false) => {
+  const fetchOverview = useCallback(async (silent = false) => {
     try {
       if (!silent) setRefreshing(true);
-      const response = await fetch(`${API_BASE}/api/qr/analytics/overview`);
+      const response = await qrFetch('/api/qr/analytics/overview');
       const result = await response.json();
       if (result.success) {
         setOverview(result.data);
+        setLoadError(null);
+      } else {
+        setOverview(null);
+        setLoadError(result.message || 'Could not load scan totals');
       }
     } catch (error) {
       console.error('Error fetching overview:', error);
+      setOverview(null);
+      setLoadError(error.message || 'Could not reach the server');
     } finally {
       setRefreshing(false);
     }
-  };
+  }, []);
 
-  const fetchAnalytics = async (qrId, silent = false) => {
+  const fetchAnalytics = useCallback(async (qrId, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const response = await fetch(`${API_BASE}/api/qr/analytics/${qrId}?period=${period}`);
+      const response = await qrFetch(`/api/qr/analytics/${qrId}?period=${period}`);
       const result = await response.json();
       if (result.success) {
         setAnalytics(result.data);
+        setLoadError(null);
+      } else {
+        setAnalytics(null);
+        setLoadError(result.message || 'Could not load analytics');
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      setAnalytics(null);
+      setLoadError(error.message || 'Could not reach the server');
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    fetchQRCodes();
+    fetchOverview();
+  }, [fetchQRCodes, fetchOverview]);
+
+  useEffect(() => {
+    if (selectedQR) fetchAnalytics(selectedQR.id);
+  }, [selectedQR, fetchAnalytics]);
+
+  // Auto-refresh every 10 seconds, and only what is on screen: the analytics tab is the only place
+  // a single code's figures are shown, so there is nothing to keep fresh while it is closed.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (selectedQR && activeTab === 'analytics') fetchAnalytics(selectedQR.id, true);
+      if (activeTab !== 'analytics') fetchOverview(true);
+      fetchQRCodes();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedQR, activeTab, fetchAnalytics, fetchOverview, fetchQRCodes]);
 
   const handleCreateQR = async (formData) => {
     try {
-      const response = await fetch(`${API_BASE}/api/qr/codes`, {
+      const response = await qrFetch('/api/qr/codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       const result = await response.json();
       if (result.success) {
         showNotification('QR code created successfully', 'success');
         fetchQRCodes();
+        fetchOverview(true);
         setShowCreateModal(false);
       } else {
         showNotification(result.message || 'Failed to create QR code', 'error');
@@ -126,15 +156,15 @@ const QRManagement = () => {
 
   const handleUpdateQR = async (id, formData) => {
     try {
-      const response = await fetch(`${API_BASE}/api/qr/codes/${id}`, {
+      const response = await qrFetch(`/api/qr/codes/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       const result = await response.json();
       if (result.success) {
         showNotification('QR code updated successfully', 'success');
         fetchQRCodes();
+        fetchOverview(true);
         setShowEditModal(false);
         if (selectedQR?.id === id) {
           setSelectedQR(result.data);
@@ -243,7 +273,7 @@ const QRManagement = () => {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => fetchOverview()}
+                onClick={() => { fetchOverview(); fetchQRCodes(); if (selectedQR) fetchAnalytics(selectedQR.id); }}
                 className={`p-2.5 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-all ${refreshing ? 'animate-spin' : ''}`}
               >
                 <RefreshCw className="w-4 h-4 text-gray-500" />
@@ -279,46 +309,59 @@ const QRManagement = () => {
       </div>
 
       <div className="p-6">
+        {/* Whatever could not be loaded is named. A page of zeros is indistinguishable from a QR
+            system nobody has scanned, and that is exactly how a 401 went unnoticed. */}
+        {loadError && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-900">Scan figures could not be loaded, so none are shown below.</p>
+              <p className="mt-0.5 text-amber-800">{loadError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Stats Grid */}
+            {/* Stats Grid. Each card says what it counts: a label that does not match its query is
+                how "Verified Scans / Mobile only" came to include tablets, and how a count of first
+                scans came to be shown as a count of people. */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatCard
                 icon={QrCode}
-                label="Total QR Codes"
-                value={overview?.totals?.total_qr_codes || qrCodes.length}
-                subtext="Active codes"
+                label="QR Codes"
+                value={overview ? overview.totals.total_qr_codes : '--'}
+                subtext={overview ? `${overview.totals.active_qr_codes} active` : 'Not loaded'}
                 color="indigo"
               />
               <StatCard
                 icon={BarChart3}
                 label="Total Scans"
-                value={formatNumber(overview?.totals?.total_scans || 0)}
+                value={overview ? formatNumber(overview.totals.total_scans) : '--'}
                 subtext="All time"
                 color="blue"
               />
               <StatCard
                 icon={Smartphone}
-                label="Verified Scans"
-                value={formatNumber(overview?.totals?.verified_scans || 0)}
-                subtext="Mobile only (real users)"
+                label="Phone & Tablet"
+                value={overview ? formatNumber(overview.totals.handheld_scans) : '--'}
+                subtext="Of those scans"
                 color="emerald"
               />
               <StatCard
                 icon={Users}
-                label="Unique Users"
-                value={formatNumber(overview?.totals?.unique_users || 0)}
-                subtext="Distinct visitors"
+                label="Visitors"
+                value={overview ? formatNumber(overview.totals.unique_visitors) : '--'}
+                subtext="Distinct devices"
                 color="purple"
               />
               <StatCard
-                icon={Activity}
-                label="Active Now"
-                value={overview?.totals?.active_now || 0}
-                subtext="Real-time"
+                icon={Repeat}
+                label="Came Back"
+                value={overview ? formatNumber(overview.totals.repeat_visitors) : '--'}
+                subtext="Scanned more than once"
                 color="rose"
-                pulse
               />
             </div>
 
@@ -329,16 +372,28 @@ const QRManagement = () => {
                   <Calendar className="w-5 h-5 text-indigo-500" />
                   Today's Activity
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-                    <p className="text-3xl font-bold text-indigo-600">{overview?.totals?.scans_today || 0}</p>
-                    <p className="text-gray-500 text-sm mt-1">Scans Today</p>
+                    <p className="text-3xl font-bold text-indigo-600">{overview ? overview.totals.scans_today : '--'}</p>
+                    <p className="text-gray-500 text-sm mt-1">Scans</p>
                   </div>
                   <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                    <p className="text-3xl font-bold text-emerald-600">{overview?.totals?.unique_today || 0}</p>
-                    <p className="text-gray-500 text-sm mt-1">New Users</p>
+                    {/* Devices whose first ever scan was today, counted from the scans themselves */}
+                    <p className="text-3xl font-bold text-emerald-600">{overview ? overview.totals.new_visitors_today : '--'}</p>
+                    <p className="text-gray-500 text-sm mt-1">First-time visitors</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    <p className="text-3xl font-bold text-amber-600">{overview ? overview.totals.scans_last_5_min : '--'}</p>
+                    {/* Not "active users": nothing reports back after the redirect, so the only
+                        honest live figure is how recently a scan arrived. */}
+                    <p className="text-gray-500 text-sm mt-1">Scans in last 5 min</p>
                   </div>
                 </div>
+                {overview?.totals?.last_scan_at && (
+                  <p className="mt-4 text-xs text-gray-400">
+                    Last scan {formatDate(overview.totals.last_scan_at)} at {formatTime(overview.totals.last_scan_at)}
+                  </p>
+                )}
               </div>
 
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -360,11 +415,14 @@ const QRManagement = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-indigo-600">{formatNumber(qr.total_scans)}</p>
-                        <p className="text-gray-400 text-xs">{qr.active_now || 0} active</p>
+                        <p className="font-semibold text-indigo-600">{formatNumber(qr.total_scans)} scans</p>
+                        <p className="text-gray-400 text-xs">{formatNumber(qr.unique_visitors)} visitors</p>
                       </div>
                     </div>
                   ))}
+                  {!overview?.per_qr?.length && (
+                    <p className="py-6 text-center text-sm text-gray-400">No QR codes yet</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -436,50 +494,52 @@ const QRManagement = () => {
 
             {analytics && (
               <>
-                {/* Key Metrics */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Key Metrics. Four cards, four columns: a five-column grid holding four cards left
+                    a gap that read as a card still loading. */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
                     icon={BarChart3}
-                    label="Total Scans"
-                    value={formatNumber(analytics.stats?.total_scans || 0)}
+                    label="Scans"
+                    value={formatNumber(analytics.stats.total_scans)}
                     subtext={`Last ${period}`}
                     color="indigo"
                   />
                   <StatCard
                     icon={Users}
-                    label="Unique Users"
-                    value={formatNumber(analytics.stats?.unique_users || 0)}
-                    subtext="Distinct visitors"
+                    label="Visitors"
+                    value={formatNumber(analytics.stats.unique_visitors)}
+                    subtext="Distinct devices"
                     color="blue"
                   />
                   <StatCard
-                    icon={Activity}
-                    label="Active Now"
-                    value={analytics.active_now || 0}
-                    subtext="Real-time"
+                    icon={Smartphone}
+                    label="Phone & Tablet"
+                    value={formatNumber(analytics.stats.handheld_scans)}
+                    subtext="Of those scans"
                     color="emerald"
-                    pulse
                   />
                   <StatCard
-                    icon={Clock}
-                    label="Repeat Users"
-                    value={formatNumber(analytics.stats?.repeat_users || 0)}
-                    subtext="Return visitors"
+                    icon={Repeat}
+                    label="Came Back"
+                    value={formatNumber(analytics.stats.repeat_visitors)}
+                    subtext="Scanned more than once"
                     color="purple"
                   />
                 </div>
 
                 {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Daily Trend */}
+                  {/* Trend */}
                   <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                    <h3 className="text-lg font-semibold mb-1 flex items-center gap-2 text-gray-800">
                       <TrendingUp className="w-5 h-5 text-indigo-500" />
-                      Scan Trends
+                      Scan Trend
                     </h3>
-                    <div className="h-48">
-                      <SimpleTrendChart data={analytics.daily || []} />
-                    </div>
+                    <p className="mb-4 text-xs text-gray-400">
+                      {analytics.period?.granularity === 'hour' ? 'By hour, last 24 hours' : `By day, last ${period}`}
+                      {' · '}{formatNumber(analytics.stats.total_scans)} scans in the period
+                    </p>
+                    <ScanTrendChart series={analytics.trend || []} granularity={analytics.period?.granularity} />
                   </div>
 
                   {/* Device Breakdown */}
@@ -492,28 +552,29 @@ const QRManagement = () => {
                   </div>
                 </div>
 
-                {/* Geography & Browser */}
+                {/* Locations & Browser */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Geography */}
+                  {/* Where the scans came from. To the city: a country column reads "India" on every
+                      row for a business that works in one country. */}
                   <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
-                      <Globe className="w-5 h-5 text-indigo-500" />
+                      <MapPin className="w-5 h-5 text-indigo-500" />
                       Top Locations
                     </h3>
                     <div className="space-y-3">
-                      {(analytics.geography || []).slice(0, 5).map((geo, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">{getCountryFlag(geo.country_code)}</span>
-                            <span className="font-medium text-gray-800">{geo.country || 'Unknown'}</span>
+                      {(analytics.locations || []).slice(0, 5).map((place, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="text-lg">{getCountryFlag(place.country_code)}</span>
+                            <span className="min-w-0 font-medium text-gray-800">{formatPlace(place)}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-indigo-600 font-semibold">{geo.count}</span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-indigo-600 font-semibold">{place.count}</span>
                             <span className="text-gray-400 text-sm">scans</span>
                           </div>
                         </div>
                       ))}
-                      {(!analytics.geography || analytics.geography.length === 0) && (
+                      {!analytics.locations?.length && (
                         <p className="text-gray-400 text-center py-8">No location data yet</p>
                       )}
                     </div>
@@ -552,12 +613,16 @@ const QRManagement = () => {
                   </div>
                 </div>
 
-                {/* Recent Scans */}
+                {/* Recent Scans. Within the selected period, like everything above it: this list used
+                    to ignore the period, so "24h" could show a card reading 0 scans above ten of them. */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-800">
+                  <h3 className="text-lg font-semibold mb-1 flex items-center gap-2 text-gray-800">
                     <Clock className="w-5 h-5 text-indigo-500" />
                     Recent Scans
                   </h3>
+                  <p className="mb-4 text-xs text-gray-400">
+                    The latest {Math.min(analytics.recent_scans?.length || 0, 10)} of {formatNumber(analytics.stats.total_scans)} scans in the last {period}
+                  </p>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -586,15 +651,13 @@ const QRManagement = () => {
                             </td>
                             <td className="py-3 text-gray-700">{scan.browser_name || 'Unknown'}</td>
                             <td className="py-3 text-gray-700">{scan.os_name || 'Unknown'}</td>
-                            <td className="py-3 text-gray-700">
-                              {scan.city && scan.country ? `${scan.city}, ${scan.country}` : 'Unknown'}
-                            </td>
+                            <td className="py-3 text-gray-700">{formatPlace(scan)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     {(!analytics.recent_scans || analytics.recent_scans.length === 0) && (
-                      <p className="text-gray-400 text-center py-8">No scan data yet</p>
+                      <p className="text-gray-400 text-center py-8">No scans in the last {period}</p>
                     )}
                   </div>
                 </div>
@@ -624,7 +687,9 @@ const QRManagement = () => {
                     <th className="px-6 py-4 font-medium">QR Code</th>
                     <th className="px-6 py-4 font-medium">Redirect URL</th>
                     <th className="px-6 py-4 font-medium">Status</th>
-                    <th className="px-6 py-4 font-medium">Total Scans</th>
+                    <th className="px-6 py-4 font-medium">Scans</th>
+                    <th className="px-6 py-4 font-medium">Visitors</th>
+                    <th className="px-6 py-4 font-medium">Last scan</th>
                     <th className="px-6 py-4 font-medium">Created</th>
                     <th className="px-6 py-4 font-medium">Actions</th>
                   </tr>
@@ -668,7 +733,11 @@ const QRManagement = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-indigo-600 font-semibold">{formatNumber(qr.total_scans || 0)}</span>
+                        <span className="text-indigo-600 font-semibold">{formatNumber(qr.total_scans)}</span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{formatNumber(qr.unique_visitors)}</td>
+                      <td className="px-6 py-4 text-gray-500 text-sm">
+                        {qr.last_scan_at ? `${formatDate(qr.last_scan_at)} ${formatTime(qr.last_scan_at)}` : 'Never'}
                       </td>
                       <td className="px-6 py-4 text-gray-500 text-sm">
                         {formatDate(qr.created_at)}
@@ -743,7 +812,7 @@ const QRManagement = () => {
 
 // Sub-components
 
-const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo', pulse = false }) => {
+const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo' }) => {
   const colors = {
     amber: 'bg-amber-50 border-amber-200 text-amber-600',
     indigo: 'bg-indigo-50 border-indigo-200 text-indigo-600',
@@ -764,9 +833,6 @@ const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo', pulse =
 
   return (
     <div className={`${colors[color]} border rounded-2xl p-5 relative overflow-hidden shadow-sm`}>
-      {pulse && (
-        <div className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-      )}
       <div className="flex items-center gap-3 mb-3">
         <div className={`p-2 rounded-xl ${iconColors[color]}`}>
           <Icon className="w-5 h-5" />
@@ -807,8 +873,8 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload, i
       </div>
 
       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-        <span>{qr.total_scans || 0} scans</span>
-        <span>{qr.active_users || 0} active now</span>
+        <span>{(qr.total_scans || 0).toLocaleString('en-IN')} scans</span>
+        <span>{(qr.unique_visitors || 0).toLocaleString('en-IN')} visitors</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -979,40 +1045,59 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
   );
 };
 
-const SimpleTrendChart = ({ data }) => {
+/**
+ * The scan trend.
+ *
+ * Every bucket in the period is drawn, including the empty ones -- the server fills them -- so the
+ * gap between two scans is visible as the gap it is. A bucket with no scans is **no bar at all**:
+ * the old chart floored every bar at 5% of the plot, which drew a zero as a stub the same size as a
+ * real 1-scan day. The column carries the hover so an empty bucket still answers when pointed at,
+ * and the plot scrolls sideways rather than squeezing 90 days into a card (see the chart rules in
+ * AGENTS.md).
+ */
+const ScanTrendChart = ({ series, granularity = 'day' }) => {
   const chart = useChartTooltip();
-  if (!data || data.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        No data available
-      </div>
-    );
+  if (!series || series.length === 0) {
+    return <div className="h-48 flex items-center justify-center text-gray-400">No data available</div>;
   }
 
-  const maxScans = Math.max(...data.map(d => d.scans || 0), 1);
-  const barWidth = 100 / data.length;
+  const maxScans = Math.max(...series.map(d => d.scans), 1);
+  // Labels only where they can be read; the hover answers for the rest
+  const showLabels = series.length <= 10;
+  const label = (at) => granularity === 'hour'
+    ? new Date(at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    : new Date(at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
   return (
-    <div className="h-full flex items-end gap-1">
-      {/* The column carries the hover, so a day with almost no scans is still easy to point at */}
-      {data.map((item, idx) => (
-        <div
-          key={idx}
-          className="flex-1 flex flex-col items-center gap-1 cursor-pointer"
-          {...chart.hover({
-            title: new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-            rows: [{ label: 'Scans', value: (item.scans || 0).toLocaleString('en-IN'), color: '#6366F1' }]
-          })}
-        >
+    <div className="overflow-x-auto">
+      <div className="flex h-48 items-stretch gap-1" style={{ minWidth: `${series.length * 24}px` }}>
+        {series.map((item) => (
           <div
-            className="w-full bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg transition-all hover:from-indigo-400 hover:to-indigo-300"
-            style={{ height: `${Math.max((item.scans / maxScans) * 100, 5)}%` }}
-          ></div>
-          <span className="text-[10px] text-gray-500 truncate w-full text-center">
-            {new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-          </span>
-        </div>
-      ))}
+            key={item.bucket}
+            className="flex flex-1 cursor-pointer flex-col justify-end gap-1"
+            style={{ minWidth: '20px' }}
+            {...chart.hover({
+              title: granularity === 'hour'
+                ? new Date(item.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : new Date(item.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+              rows: [
+                { label: 'Scans', value: item.scans.toLocaleString('en-IN'), color: '#6366F1' },
+                { label: 'Visitors', value: item.visitors.toLocaleString('en-IN'), color: '#A5B4FC' }
+              ]
+            })}
+          >
+            <div className="flex flex-1 items-end">
+              <div
+                className="w-full rounded-t-lg bg-gradient-to-t from-indigo-500 to-indigo-400 transition-all hover:from-indigo-400 hover:to-indigo-300"
+                style={{ height: item.scans === 0 ? 0 : `${Math.max((item.scans / maxScans) * 100, 2)}%` }}
+              />
+            </div>
+            <span className="h-4 w-full truncate text-center text-[10px] text-gray-500">
+              {showLabels ? label(item.at) : ''}
+            </span>
+          </div>
+        ))}
+      </div>
       {chart.node}
     </div>
   );
@@ -1080,6 +1165,17 @@ const DeviceChart = ({ devices }) => {
       )}
     </div>
   );
+};
+
+/**
+ * Where a scan came from, as much of it as is known: "Hyderabad, Telangana", or the country alone
+ * when the lookup only got that far, or "Unknown". An unlocated scan is stored as NULL rather than
+ * as the string "Unknown", so a placeholder is never mistaken for a place.
+ */
+const formatPlace = (place) => {
+  const parts = [place?.city, place?.state].filter(part => part && part !== 'Unknown');
+  if (parts.length) return parts.join(', ');
+  return place?.country && place.country !== 'Unknown' ? place.country : 'Unknown';
 };
 
 const getCountryFlag = (countryCode) => {

@@ -7,6 +7,8 @@ const {
   normalizeGeoLocation,
   referrerDomain,
   buildScanParams,
+  parseUserAgent,
+  isBot,
   resolvePeriod,
   scanWindow,
   fillScanSeries
@@ -82,6 +84,88 @@ test('a referrer that will not parse is null rather than a thrown insert', () =>
   assert.equal(referrerDomain('https://www.google.com/search?q=xland'), 'www.google.com');
   assert.equal(referrerDomain('not a url'), null);
   assert.equal(referrerDomain(undefined), null);
+});
+
+// ============================================
+// What the scan was made with
+// ============================================
+
+const UA = {
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  androidPhone: 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+  androidTablet: 'Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  ipad: 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  samsung: 'Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0.0.0 Mobile Safari/537.36',
+  chromeIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0.0.0 Mobile/15E148 Safari/604.1',
+  edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+  snapchat: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Snapchat/12.80.0.40 (like Safari/604.1)',
+  googlebot: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
+};
+
+test('an iPhone scan is iOS, not macOS', () => {
+  // "CPU iPhone OS 17_0 like Mac OS X": a /mac os x/ test above the iOS one claimed every iPhone
+  // scan for macOS, so the OS panel disagreed with the device panel about the same scan
+  const iphone = parseUserAgent(UA.iphone);
+  assert.equal(iphone.device, 'mobile');
+  assert.equal(iphone.osName, 'iOS');
+  assert.equal(iphone.osVersion, '17.0');
+  assert.equal(iphone.browserName, 'Safari');
+
+  const ipad = parseUserAgent(UA.ipad);
+  assert.equal(ipad.device, 'tablet');
+  assert.equal(ipad.osName, 'iOS');
+
+  // A genuine Mac is still a Mac
+  const mac = parseUserAgent(UA.mac);
+  assert.equal(mac.device, 'desktop');
+  assert.equal(mac.osName, 'macOS');
+});
+
+test('an Android phone and an Android tablet are told apart', () => {
+  const phone = parseUserAgent(UA.androidPhone);
+  assert.equal(phone.device, 'mobile');
+  assert.equal(phone.osName, 'Android');
+  assert.equal(phone.osVersion, '14');
+  assert.equal(phone.deviceModel, 'SM-S911B');
+
+  // Android omits "Mobile" from a tablet's UA
+  assert.equal(parseUserAgent(UA.androidTablet).device, 'tablet');
+});
+
+test('Windows 11 is not reported as Windows 10', () => {
+  // Windows 11 sends "Windows NT 10.0" and cannot be distinguished, so no version is claimed
+  const windows = parseUserAgent(UA.windows);
+  assert.equal(windows.device, 'desktop');
+  assert.equal(windows.osName, 'Windows');
+  assert.equal(windows.osVersion, null);
+});
+
+test('a browser that also says "Chrome" or "Safari" is named correctly', () => {
+  assert.equal(parseUserAgent(UA.edge).browserName, 'Edge');
+  assert.equal(parseUserAgent(UA.samsung).browserName, 'Samsung Internet');
+  assert.equal(parseUserAgent(UA.chromeIos).browserName, 'Chrome');
+  assert.equal(parseUserAgent(UA.windows).browserName, 'Chrome');
+  assert.equal(parseUserAgent(UA.mac).browserName, 'Safari');
+});
+
+test('an unreadable user agent is unknown rather than a plausible guess', () => {
+  const nothing = parseUserAgent('');
+  assert.equal(nothing.device, 'unknown');
+  assert.equal(nothing.osName, null);
+  assert.equal(nothing.browserName, null);
+});
+
+test('a crawler is a bot and an in-app browser is not', () => {
+  assert.equal(isBot(UA.googlebot), true);
+  assert.equal(isBot('WhatsApp/2.2轮'), true);
+  assert.equal(isBot(''), true);
+  // Snapchat's in-app browser was discarded by a /snap/i pattern -- those were real scans
+  assert.equal(isBot(UA.snapchat), false);
+  for (const key of ['iphone', 'androidPhone', 'androidTablet', 'ipad', 'windows', 'mac', 'samsung', 'chromeIos', 'edge']) {
+    assert.equal(isBot(UA[key]), false, `${key} should not be treated as a bot`);
+  }
 });
 
 // ============================================
