@@ -171,38 +171,39 @@ nothing here may be applied globally.
 
 ## Property-Based Estimates — Cost & Margin
 
-- **The panel is a trend, not a table.** It listed one row per estimate, which could say what a
-  single estimate made and never whether the margin was improving. It is now a `ComposedChart`:
-  vendor cost and XLAND cost stacked as what an estimate costs, customer price beside it as what it
-  sells for, and the margin those two make as a line on its own right-hand axis — a percentage
-  plotted against figures in lakhs is otherwise flat on the floor. Do not reinstate the per-estimate
-  table here.
+- **The panel is a chart, not a table.** It listed one row per estimate, which states a margin one
+  line at a time and never puts the figures against each other. It is a `ComposedChart` of
+  **grouped bars, one group per estimate, oldest first**: Vendor Cost, XLAND Cost and Customer
+  Price side by side, each bar labelled with its own figure so the chart is read without hovering,
+  and the margin as a line across them on its own right-hand axis — a percentage plotted against
+  figures in lakhs is otherwise flat on the floor. **Total Actual Cost is deliberately absent**:
+  with no operating cost it is the vendor cost again under another name. The x-axis names the
+  estimate over the property; a long id keeps its tail (`EST-…24188`), which is what distinguishes
+  one from another. The plot scrolls sideways at ~210px a group rather than squeezing three
+  labelled bars into nothing. Do not reinstate the per-estimate table.
 - **A calendar picks the timeline** (`DateRangeFilter`, the same control the other dashboards use)
   and everything in the panel follows it: the four summary cards are the range's totals, not the
-  whole history. `utils/estimateMarginTrend.js` does the filtering, bucketing and adding up —
-  `estimatesInRange`, `estimateMarginSummary`, `estimateMarginBuckets` — and buckets by day up to a
-  month and by month beyond it through `bucketScale` in `collectionTrend.js`, so the two trends on
-  this dashboard divide time identically. Regression test:
+  whole history, and the chart plots the estimates the range left. `utils/estimateMarginTrend.js`
+  does the filtering, ordering and adding up — `estimatesInRange`, `estimateMarginSummary`,
+  `estimateMarginChartRows`. Regression test:
   `node --test admin-portal/src/utils/estimateMarginTrend.test.js`.
 - What enters the panel is still the server's decision: `GET /api/payments/property-estimate-margins`
   returns property-based estimates that are neither archived nor rejected, priced from the snapshot
   saved with each service, and now carries each estimate's `createdAt` so it can be plotted. The
   calendar only narrows that set — never widen it on the client.
-- **An estimate with no cost behind it is counted but never added up**, in a bucket exactly as in
-  the totals: one whose services were all typed by hand has a price and no cost, so including it
-  reports a margin approaching 100%. The line under the heading says how many were left out, and
-  the hover says so per bucket. A bucket with nothing costed has `marginPercent: null`, not 0 —
-  a quiet month is not a month where we earned nothing.
+- **An estimate with no cost behind it is plotted but never added up.** One whose services were all
+  typed by hand has a price and no cost, so a chart that hid it would hide real money while the
+  totals that included it would report a margin approaching 100%. So the bars show it — a customer
+  price, no vendor bar, and the whole of it apparently margin — and the totals leave it out. The
+  two are therefore counting different sets, which the line under the heading states outright.
 - **XLAND cost is the markup in rupees, not the `operating_cost` field.** ₹4,000 of vendor cost at
   30% earns ₹1,200 and the customer pays ₹5,200, which is what the service form's preview has
   always called XLAND's cost (`vendorCost × markup / 100`). This panel showed `operating_cost`
   instead — a separate overhead input that the service form hardcodes to 0 and no property-based
   estimate carries — so the card read ₹0 beside a margin of 28%, two figures that cannot both be
   true. It is derived, never entered: `xlandCost = customerPrice − vendorCost − operatingCost`,
-  which makes it the profit, so margin is `xlandCost / customerPrice` and the parts add up. The
-  chart therefore stacks the vendor's share and ours into one column **whose height is the
-  customer price**; the operating-cost segment is drawn only where one actually exists rather than
-  sitting in the legend at zero.
+  which makes it the profit, so margin is `xlandCost / customerPrice` and the parts add up: the
+  vendor bar plus the XLAND bar is the customer price bar beside them.
 - Markup and margin are different numbers and the UI must not conflate them: markup is charged on
   cost, margin is measured against price, so `margin% = markup / (100 + markup) × 100`. 30% markup
   is a 23.08% margin.

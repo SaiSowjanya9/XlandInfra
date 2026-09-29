@@ -21,13 +21,13 @@ import {
   Users,
 } from 'lucide-react';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  ComposedChart, Bar, Line, LabelList, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
 import useChartTooltip, { ChartTooltipContent } from '../../components/common/ChartTooltip';
 import { collectionTrendBuckets } from '../../utils/collectionTrend';
-import { estimateMarginBuckets, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
+import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 
@@ -93,10 +93,27 @@ const formatCurrencyCompact = (amount) => {
   return `₹${Math.round(num)}`;
 };
 
-// The margin trend mixes money with a percentage, so each series is formatted as what it is
+// The margin chart mixes money with a percentage, so each series is formatted as what it is
 const marginTrendValue = (value, entry) => (entry?.dataKey === 'marginPercent'
   ? (value == null ? '—' : `${value}%`)
   : formatCurrency(value));
+
+// An estimate id is long enough to overlap its neighbour, so the axis keeps its tail -- which is
+// what distinguishes one from another -- and names the property underneath it, as a reader
+// recognises an estimate by the property before the number.
+const shortEstimateId = (id = '') => (id.length > 13 ? `${id.slice(0, 4)}…${id.slice(-5)}` : id);
+const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
+  const row = rows[payload?.index] || {};
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{`${row.estimateId || ''}${row.property ? ` · ${row.property}` : ''}`}</title>
+      <text textAnchor="middle" dy={14} fontSize={11} fontWeight={600} fill="#334155">{shortEstimateId(row.estimateId || '')}</text>
+      {row.property && <text textAnchor="middle" dy={29} fontSize={10} fill="#94A3B8">
+        {row.property.length > 18 ? `${row.property.slice(0, 17)}…` : row.property}
+      </text>}
+    </g>
+  );
+};
 
 // Donut Chart Component. Hovering a segment names it and states its figure: the legend beside the
 // chart lists every slice, but which arc is which is only answerable by pointing at one.
@@ -234,7 +251,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const marginRows = useMemo(() => estimatesInRange(estimateMargins?.estimates || [], marginRange),
     [estimateMargins, marginRange]);
   const marginSummary = useMemo(() => estimateMarginSummary(marginRows), [marginRows]);
-  const marginTrend = useMemo(() => estimateMarginBuckets(marginRows, marginRange), [marginRows, marginRange]);
+  // One column group per estimate, oldest first. Every estimate in the range is plotted, including
+  // one with no cost behind it: a price with no margin is worth seeing.
+  const marginChart = useMemo(() => estimateMarginChartRows(marginRows), [marginRows]);
 
   // Hover readouts, one per chart card: a bar or a slice is a figure, and pointing at it is how the
   // reader is told which. Declared here so they run before the loading return, as hooks must.
@@ -975,10 +994,13 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         {canSeeEstimateMargins && estimateMargins && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mt-4 sm:mt-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                Property-Based Estimates — Cost &amp; Margin
-                <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
-              </h3>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                  Property-Based Estimates — Cost &amp; Margin
+                  <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
+                </h3>
+                <p className="text-xs text-gray-500">Cost vs. customer price by estimate, with margin %</p>
+              </div>
               {/* The calendar narrows the trend to a timeline. It filters the estimates the server
                   already decided are active and property-based -- nothing else enters this panel. */}
               <DateRangeFilter
@@ -987,12 +1009,15 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 onDateChange={(from, to) => setMarginRange({ from, to })}
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
+            {/* The totals leave out an estimate with no cost behind it, since a price with no cost
+                reports a margin approaching 100%. The chart still plots it, so the two are not
+                counting the same set and the difference is stated rather than left to be noticed. */}
+            <p className="mt-3 text-xs text-gray-500">
               {marginSummary.estimateCount === 0
                 ? 'No active property-based estimates in this range'
                 : `${marginSummary.estimateCount} active ${marginSummary.estimateCount === 1 ? 'estimate' : 'estimates'} raised in this range` +
                   (marginSummary.uncostedCount > 0
-                    ? ` · ${marginSummary.uncostedCount} with no vendor cost behind ${marginSummary.uncostedCount === 1 ? 'it is' : 'them are'} left out of the figures`
+                    ? ` · ${marginSummary.uncostedCount} with no vendor cost behind ${marginSummary.uncostedCount === 1 ? 'it is' : 'them are'} plotted but left out of the figures above`
                     : '')}
             </p>
 
@@ -1014,41 +1039,46 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               ))}
             </div>
 
-            {/* What the customer pays, split into what it costs and what we make, over time, with
-                the margin those two come to on its own axis. A table of estimates could say what
-                one of them made and never whether the margin is improving, which is the question
-                this panel exists to answer. */}
-            {marginTrend.length > 0 ? (
-              <div className="mt-5 h-64 sm:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={marginTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#E2E8F0' }} interval="preserveStartEnd" />
-                    <YAxis yAxisId="money" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
-                      tickFormatter={value => formatCurrencyCompact(value)} />
-                    {/* Margin is a percentage and belongs on its own axis, or a 28% line would sit
-                        flat on the floor beside figures in lakhs */}
-                    <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
-                      tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
-                    <Tooltip content={<ChartTooltipContent formatValue={marginTrendValue} footer={bucket => (
-                      bucket.estimateCount
-                        ? `Customer price ${formatCurrency(bucket.customerPrice)} · ${bucket.estimateCount} ${bucket.estimateCount === 1 ? 'estimate' : 'estimates'}${bucket.costedCount < bucket.estimateCount ? `, ${bucket.estimateCount - bucket.costedCount} uncosted` : ''}`
-                        : 'No estimates raised'
-                    )} />} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                    {/* One bar per period: the vendor's share and ours, stacked, so the column is
-                        the customer price and how it divides is the margin made visible */}
-                    <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" stackId="price" fill="#93C5FD" />
-                    {/* A property-based estimate carries no operating cost today, so this segment
-                        is drawn only where one exists rather than sitting in the legend at zero */}
-                    {marginTrend.some(bucket => bucket.operatingCost > 0) && (
-                      <Bar yAxisId="money" dataKey="operatingCost" name="Operating Cost" stackId="price" fill="#FCD34D" />
-                    )}
-                    <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" stackId="price" fill="#34D399" radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#6366F1"
-                      strokeWidth={2} dot={{ r: 3, fill: '#6366F1' }} connectNulls />
-                  </ComposedChart>
-                </ResponsiveContainer>
+            {/* One group of bars per estimate, oldest first: what the vendor charges, what XLAND
+                makes on top of it and what the customer pays, side by side, with the margin those
+                come to as a line across them on its own axis -- a percentage beside figures in
+                lakhs would otherwise lie flat on the floor. Each bar states its own figure, so the
+                chart is read without hovering. Total Actual Cost is deliberately absent: with no
+                operating cost it is the vendor cost again under another name.
+                The plot scrolls sideways rather than squeezing, since a group needs room for three
+                labelled bars; the card clips nothing, so the hover card is never cut off. */}
+            {marginChart.length > 0 ? (
+              <div className="mt-5 overflow-x-auto">
+                <div style={{ minWidth: Math.max(560, marginChart.length * 210) }} className="h-72 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={marginChart} margin={{ top: 24, right: 8, left: 0, bottom: 16 }} barGap={6}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="estimateId" tickLine={false} axisLine={{ stroke: '#E2E8F0' }}
+                        interval={0} height={44} tick={<EstimateAxisTick rows={marginChart} />} />
+                      <YAxis yAxisId="money" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
+                        tickFormatter={value => formatCurrencyCompact(value)} />
+                      <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
+                        tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                      <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={marginTrendValue}
+                        footer={row => [row.property, row.propertyCode, row.createdAt && new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })].filter(Boolean).join(' · ')} />} />
+                      <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, paddingBottom: 12 }} />
+                      <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" fill="#A5B4FC" radius={[4, 4, 0, 0]} maxBarSize={44}>
+                        <LabelList dataKey="vendorCost" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      </Bar>
+                      <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" fill="#FCD34D" radius={[4, 4, 0, 0]} maxBarSize={44}>
+                        <LabelList dataKey="xlandCost" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      </Bar>
+                      <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#6EE7B7" radius={[4, 4, 0, 0]} maxBarSize={44}>
+                        <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyShort} style={{ fontSize: 10, fill: '#475569' }} />
+                      </Bar>
+                      <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#4F6BED"
+                        strokeWidth={2} dot={{ r: 4, fill: '#4F6BED' }} activeDot={{ r: 5 }}>
+                        <LabelList dataKey="marginPercent" position="top" offset={10}
+                          formatter={value => `${value}%`} style={{ fontSize: 10, fontWeight: 600, fill: '#4F6BED' }} />
+                      </Line>
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : (
               <p className="mt-5 text-sm text-gray-500">
