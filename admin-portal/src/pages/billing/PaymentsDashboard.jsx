@@ -106,40 +106,30 @@ const marginTrendValue = (value, entry) => (entry?.dataKey === 'marginPercent'
 // recognises an estimate by the property before the number.
 const shortEstimateId = (id = '') => (id.length > 13 ? `${id.slice(0, 4)}…${id.slice(-5)}` : id);
 
-/**
- * The margin's own label.
- *
- * A bar's figure is always drawn above the bar, and the line's dot for the same estimate sits at
- * whatever height the percentage puts it -- which, for the middle bar of the group, is repeatedly
- * the same place. So the label is drawn **below** the dot rather than above it: under a dot at 28%
- * is the body of a bar, not another number, and under a dot at 100% is empty plot rather than the
- * legend. Only a margin low enough for "below" to mean the axis itself is drawn above instead.
- *
- * The chip carries its own background, so where it does cross a bar it is still read as a figure.
- */
-const MarginLabel = ({ x, y, value }) => {
-  if (value == null || x == null || y == null) return null;
-  const text = `${value}%`;
-  const width = text.length * 6.2 + 12;
-  const below = Number(value) >= 12;
-  return (
-    <g transform={`translate(${x}, ${y + (below ? 18 : -16)})`}>
-      <rect x={-width / 2} y={-9} width={width} height={18} rx={9} fill="#EEF2FF" stroke="#C7D2FE" />
-      <text textAnchor="middle" dy={4} fontSize={10} fontWeight={600} fill="#4F6BED">{text}</text>
-    </g>
-  );
-};
-
 // The legend is the panel's own, above the plot, not recharts'. Its `payload` and `height` props
 // were ignored here: the legend kept the order the shapes happen to be painted in -- Customer
 // Price first, Margin % in the middle of the costs -- and floated over the plot, where a 100%
 // margin point ran straight through it. Ours states the series in the order the reader meets them.
+const COLLECTION_TREND_SERIES = [
+  { label: 'Invoice Amount', color: '#93C5FD' },
+  { label: 'Collected Amount', color: '#4ADE80' }
+];
 const MARGIN_CHART_SERIES = [
   { label: 'Vendor Cost', color: '#A5B4FC' },
   { label: 'XLAND Cost', color: '#FCD34D' },
   { label: 'Customer Price', color: '#6EE7B7' },
   { label: 'Margin %', color: '#4F6BED', line: true }
 ];
+/**
+ * The estimate, its property, and the margin it made.
+ *
+ * The margin used to be labelled on the line itself, which cannot be made to work: the dot for an
+ * estimate sits at whatever height the percentage puts it, and above a dot is exactly where the
+ * middle bar's own figure already is -- so the two were printed over each other, and moving the
+ * label below only put it on the bar instead. Under the axis it is beside the estimate it belongs
+ * to, always legible, and can collide with nothing. The line and its right-hand axis still show
+ * the shape; this states the figure.
+ */
 const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
   const row = rows[payload?.index] || {};
   return (
@@ -148,6 +138,9 @@ const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
       <text textAnchor="middle" dy={14} fontSize={11} fontWeight={600} fill="#334155">{shortEstimateId(row.estimateId || '')}</text>
       {row.property && <text textAnchor="middle" dy={29} fontSize={10} fill="#94A3B8">
         {row.property.length > 18 ? `${row.property.slice(0, 17)}…` : row.property}
+      </text>}
+      {row.marginPercent != null && <text textAnchor="middle" dy={45} fontSize={10} fontWeight={600} fill="#4F6BED">
+        {`${row.marginPercent}% margin`}
       </text>}
     </g>
   );
@@ -293,9 +286,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   // one with no cost behind it: a price with no margin is worth seeing.
   const marginChart = useMemo(() => estimateMarginChartRows(marginRows), [marginRows]);
 
-  // Hover readouts, one per chart card: a bar or a slice is a figure, and pointing at it is how the
-  // reader is told which. Declared here so they run before the loading return, as hooks must.
-  const trendChart = useChartTooltip();
+  // Hover readouts for the two charts still drawn by hand -- the aging buckets and the customer
+  // bars. A bar is a figure, and pointing at it is how the reader is told which. Declared here so
+  // they run before the loading return, as hooks must.
   const agingChart = useChartTooltip();
   const customerChart = useChartTooltip();
 
@@ -585,11 +578,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     navigate(`${basePath}/billing/payments${filter ? `?status=${filter}` : ''}`);
   };
 
-  const maxTrendValue = Math.max(
-    ...collectionTrend.map(d => Math.max(d.invoiceAmount, d.collectedAmount)),
-    1
-  );
-
   const maxAgingValue = Math.max(...dashboardData.outstandingByAging.map(b => b.amount), 1);
   const maxCustomerValue = Math.max(...dashboardData.topCustomers.map(c => c.amount), 1);
   // What a hovered bar is a share of. The donuts have their own total already.
@@ -818,49 +806,44 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1 bg-blue-500 rounded"></div>
-                <span className="text-gray-600">Invoice Amount</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-1 bg-green-500 rounded"></div>
-                <span className="text-gray-600">Collected Amount</span>
-              </div>
-            </div>
-            <div className="h-36 sm:h-40 flex items-end gap-0.5 sm:gap-1 overflow-x-auto">
-              {/* Hovering the column, not one bar, so both figures for that date are read
-                  together -- and an empty bucket still answers, with zeroes */}
-              {collectionTrend.map((day, idx) => (
-                <div key={idx} className="flex-1 min-w-[16px] flex flex-col items-center gap-1 cursor-pointer"
-                  {...trendChart.hover({ title: day.label, rows: [
-                    { label: 'Invoice Amount', value: formatCurrencyShort(day.invoiceAmount), color: '#BFDBFE' },
-                    { label: 'Collected Amount', value: formatCurrencyShort(day.collectedAmount), color: '#4ADE80' }
-                  ] })}>
-                  <div className="w-full flex gap-0.5 items-end h-28 sm:h-32">
-                    <div 
-                      className="flex-1 bg-blue-200 rounded-t"
-                      style={{ height: `${(day.invoiceAmount / maxTrendValue) * 100}%`, minHeight: day.invoiceAmount > 0 ? '4px' : '0' }}
-                    ></div>
-                    <div 
-                      className="flex-1 bg-green-400 rounded-t"
-                      style={{ height: `${(day.collectedAmount / maxTrendValue) * 100}%`, minHeight: day.collectedAmount > 0 ? '4px' : '0' }}
-                    ></div>
-                  </div>
-                  {/* The hover card names the bucket now, so the axis label keeps no `title` of
-                      its own -- two tooltips for one bar read as a glitch */}
-                  <span className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center">{day.label.split(' ')[0]}</span>
+            <ChartLegend layout="row" size="xs" items={COLLECTION_TREND_SERIES} />
+            {/* Drawn by the chart library rather than by hand: the bars had no axis, no gridline
+                and no figure on them, so a tall blue bar beside a short green one said only
+                "more than" -- how much more was unanswerable without hovering. The invoiced and
+                the collected bar stand side by side per period, against a money axis. */}
+            {collectionTrend.some(day => day.invoiceAmount > 0 || day.collectedAmount > 0) ? (
+              <div className="mt-3 overflow-x-auto">
+                <div style={{ minWidth: Math.max(280, collectionTrend.length * 44) }} className="h-44 sm:h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={collectionTrend} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}
+                      barGap={2} barCategoryGap="20%">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: '#E2E8F0' }} interval="preserveStartEnd"
+                        tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                      <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} tickLine={false} axisLine={false} width={52}
+                        tickFormatter={value => formatCurrencyCompact(value)} />
+                      <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={formatCurrency} />} />
+                      {/* A figure over every bar is unreadable across thirty days, so they appear
+                          only where the range is short enough for them to stand apart */}
+                      <Bar dataKey="invoiceAmount" name="Invoice Amount" fill="#93C5FD" radius={[3, 3, 0, 0]} maxBarSize={28}>
+                        {collectionTrend.length <= 8 && <LabelList dataKey="invoiceAmount" position="top"
+                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 9, fill: '#64748B' }} />}
+                      </Bar>
+                      <Bar dataKey="collectedAmount" name="Collected Amount" fill="#4ADE80" radius={[3, 3, 0, 0]} maxBarSize={28}>
+                        {collectionTrend.length <= 8 && <LabelList dataKey="collectedAmount" position="top"
+                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 9, fill: '#64748B' }} />}
+                      </Bar>
+                    </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-              {/* A range with nothing in it says so, rather than drawing an empty frame that reads
-                  as a broken chart */}
-              {!collectionTrend.some(day => day.invoiceAmount > 0 || day.collectedAmount > 0) && (
-                <p className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                  No invoices or collections in this range
-                </p>
-              )}
-            </div>
-            {trendChart.node}
+              </div>
+            ) : (
+              /* A range with nothing in it says so, rather than drawing an empty frame that reads
+                 as a broken chart */
+              <p className="mt-3 flex h-44 sm:h-48 w-full items-center justify-center text-xs text-gray-400">
+                No invoices or collections in this range
+              </p>
+            )}
           </div>
 
           {/* Payments by Mode */}
@@ -1093,7 +1076,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       barGap={2} barCategoryGap="22%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="estimateId" tickLine={false} axisLine={{ stroke: '#E2E8F0' }}
-                        interval={0} height={44} tick={<EstimateAxisTick rows={marginChart} />} />
+                        interval={0} height={58} tick={<EstimateAxisTick rows={marginChart} />} />
                       <YAxis yAxisId="money" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
                         tickFormatter={value => formatCurrencyCompact(value)} />
                       <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
@@ -1112,10 +1095,10 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#6EE7B7" radius={[4, 4, 0, 0]} maxBarSize={40}>
                         <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 10, fill: '#475569' }} />
                       </Bar>
+                      {/* The line is the shape of the margin across the estimates; the figure for
+                          each one is under the axis, where nothing else is drawn */}
                       <Line yAxisId="margin" type="monotone" dataKey="marginPercent" name="Margin %" stroke="#4F6BED"
-                        strokeWidth={2} dot={{ r: 4, fill: '#4F6BED' }} activeDot={{ r: 5 }}>
-                        <LabelList dataKey="marginPercent" content={<MarginLabel />} />
-                      </Line>
+                        strokeWidth={2} dot={{ r: 4, fill: '#4F6BED' }} activeDot={{ r: 5 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
