@@ -3764,16 +3764,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                       </div>
                       
-                      {/* The package's markup, as the service form asks for a service's: the
-                          customer price is what the work costs plus the markup on it. Blank leaves
-                          each row on the price it already has. */}
+                      {/* The package's own markup, added on top of what each row already comes to,
+                          so it can only raise a price. Applying it to cost would replace each
+                          service's own markup and a smaller figure would drop the price. */}
                       <div>
-                        <label className="block text-xs font-medium text-warm-muted mb-1.5" htmlFor="fp-package-markup">Markup (%)</label>
+                        <label className="block text-xs font-medium text-warm-muted mb-1.5" htmlFor="fp-package-markup">Markup (%) <span className="font-normal text-warm-muted/70">on top of each price</span></label>
                         <input
                           id="fp-package-markup" type="number" min="0" max="1000" step="0.01"
                           value={amcForm.markupPercentage ?? ''}
                           onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
-                          placeholder="Each service's own"
+                          placeholder="None"
                           className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                         />
                       </div>
@@ -3816,10 +3816,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="lg:col-span-3 border-t border-warm-border pt-4">
                         <p className="text-warm-muted text-[11px] uppercase tracking-wider font-semibold">Internal <span className="font-normal normal-case tracking-normal text-warm-muted/70">(not shown to customers)</span></p>
                         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="flex justify-between"><dt className="text-warm-muted">Annual Vendor Cost</dt><dd className="text-warm-text">{formatCurrency(totals.vendorCost)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">XLAND Operating Cost</dt><dd className="text-warm-text">{formatCurrency(totals.operatingCost)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">Customer Price</dt><dd className="text-warm-text">{formatCurrency(totals.price)}</dd></div>
-                          <div className="flex justify-between"><dt className="text-warm-muted">Margin</dt><dd className={`font-semibold ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">Annual Vendor Cost</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.vendorCost)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">XLAND Operating Cost</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.operatingCost)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">Customer Price</dt><dd className="font-semibold tabular-nums text-warm-accent-hover">{formatCurrency(totals.price)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-warm-muted">Margin</dt><dd className={`font-semibold tabular-nums ${totals.profit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{totals.marginPercent == null ? '—' : `${totals.marginPercent}%`}</dd></div>
                         </dl>
                       </div>
                       </div>

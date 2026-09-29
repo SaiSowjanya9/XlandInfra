@@ -5272,6 +5272,13 @@ const transformPackage = (pkg) => ({
   rate: parseFloat(pkg.base_price || pkg.price) || 0,
   services: pkg.services ? (typeof pkg.services === 'string' ? JSON.parse(pkg.services) : pkg.services) : [],
   serviceRows: pkg.service_rows ? (typeof pkg.service_rows === 'string' ? JSON.parse(pkg.service_rows) : pkg.service_rows) : [],
+  // The markup the package was priced with, so reopening one does not fall back to each service's
+  // own quote. Blank rather than zero: no markup and a markup of nothing are different answers.
+  markupPercentage: (() => {
+    const stored = typeof pkg.services === 'string' ? (() => { try { return JSON.parse(pkg.services); } catch { return null; } })() : pkg.services;
+    const markup = stored && !Array.isArray(stored) ? stored.markup_percentage : null;
+    return markup === undefined || markup === null ? '' : markup;
+  })(),
   durationMonths: pkg.duration_months || 12,
   billingCycle: pkg.billing_duration || 'Annual',
   createdAt: pkg.created_at,
@@ -5314,6 +5321,8 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
       name, description, services, price, billing_duration
     } = req.body;
     const packageTypes = packagePropertyTypes(req.body);
+    // The package's own markup, kept so a reopened package prices as it was saved
+    const markupPercentage = req.body.markup_percentage ?? req.body.markupPercentage ?? null;
 
     const packageCode = `FP${req.fpId}-AMC-${Date.now()}`;
 
@@ -5335,6 +5344,7 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
           property_type: packageTypes[0], 
           property_types: packageTypes,
           billing_duration,
+          markup_percentage: markupPercentage,
           serviceRows: services || [] 
         })
       ]
@@ -5361,6 +5371,9 @@ router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
     const { id } = req.params;
     const { name, description, services, price, billing_duration } = req.body;
     const packageTypes = packagePropertyTypes(req.body);
+    // The package's own markup, kept so a reopened package prices as it was saved rather than
+    // falling back to each service's own quote
+    const markupPercentage = req.body.markup_percentage ?? req.body.markupPercentage ?? null;
 
     const [result] = await pool.execute(
       `UPDATE fp_amc_packages 
@@ -5369,7 +5382,7 @@ router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
        WHERE id = ? AND franchise_partner_id = ?`,
       [
         name, description || '',
-        price || 0, JSON.stringify({ property_type: packageTypes[0], property_types: packageTypes, billing_duration, serviceRows: services || [] }),
+        price || 0, JSON.stringify({ property_type: packageTypes[0], property_types: packageTypes, billing_duration, markup_percentage: markupPercentage, serviceRows: services || [] }),
         id, req.fpId
       ]
     );

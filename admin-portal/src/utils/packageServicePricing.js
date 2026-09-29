@@ -89,21 +89,32 @@ export const quotePackageRow = async (row, { apiPath, propertyType, propertyType
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 /**
- * The package's own markup, applied the way the service form applies a service's: the customer
- * price is what the work costs plus the markup on it.
+ * The package's own markup, added **on top of** the price a row already carries:
  *
- *   price = (vendor cost + XLAND operating cost) × (1 + markup / 100)
+ *   price = quoted price × (1 + markup / 100)
  *
- * Left blank, each row keeps the price it already has -- a configured row keeps the quote made with
- * its own service's markup, and a hand-typed one keeps whatever was entered. A price typed over the
- * quote is never recalculated: that is what typing over it means.
+ * So a markup can only raise a price, never lower it. Applying it to cost instead would replace each
+ * service's own markup, and entering a figure below what the service is configured at then dropped
+ * the price -- a service at 30% quoted at 1,560 fell to 1,236 when 3% was typed, which reads as a
+ * bug however the arithmetic is defended. The service keeps its own margin; the package markup is
+ * the package's margin on top of it.
+ *
+ * A row with nothing quoted -- one typed in by hand, which carries a vendor price and no quote -- is
+ * marked up from its cost, since that is the only figure it has.
+ *
+ * Left blank, each row keeps the price it already has. A price typed over the quote is never
+ * recalculated: that is what typing over it means.
  */
 export const hasMarkup = (markup) => markup !== '' && markup !== null && markup !== undefined && Number.isFinite(Number(markup));
 
 export const rowPriceWithMarkup = (row, markup) => {
   if (!hasMarkup(markup) || row?.priceOverridden) return row?.price;
+  const factor = 1 + Number(markup) / 100;
+  const quoted = Number(row?.price);
+  if (Number.isFinite(quoted) && quoted > 0) return round2(quoted * factor);
+  // Nothing quoted: a hand-typed row has only what the vendor charges to work from
   const cost = (Number(row?.vendorCost) || 0) + (Number(row?.operatingCost) || 0);
-  return cost ? round2(cost * (1 + Number(markup) / 100)) : row?.price;
+  return cost ? round2(cost * factor) : row?.price;
 };
 
 export const applyPackageMarkup = (rows = [], markup) =>

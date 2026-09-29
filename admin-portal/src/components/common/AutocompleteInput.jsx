@@ -264,7 +264,7 @@ const AutocompleteInput = ({
       )}
 
       {/* Dropdown */}
-      {isOpen && filteredOptions.length > 0 && (
+      {isOpen && (filteredOptions.length > 0 || offerCustom) && (
         <div
           ref={dropdownRef}
           className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto ${skin.border}`}

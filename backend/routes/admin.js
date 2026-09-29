@@ -3424,6 +3424,8 @@ const transformPackage = (pkg) => {
   let serviceRows = [];
   let propertyType = pkg.property_type || 'GC';
   let billingDuration = pkg.billing_duration || 'yearly';
+  // Blank rather than zero: no markup and a markup of nothing are different answers
+  let markupPercentage = '';
   
   // Parse the services field - it contains JSON with serviceRows nested inside
   if (pkg.services) {
@@ -3437,6 +3439,7 @@ const transformPackage = (pkg) => {
         // Also extract property_type and billing_duration if present
         if (parsed.property_type) propertyType = parsed.property_type;
         if (parsed.billing_duration) billingDuration = parsed.billing_duration;
+        if (parsed.markup_percentage !== undefined && parsed.markup_percentage !== null) markupPercentage = parsed.markup_percentage;
       } 
       // Or it might be a direct array of services
       else if (Array.isArray(parsed)) {
@@ -3470,6 +3473,7 @@ const transformPackage = (pkg) => {
     durationMonths: pkg.duration_months || 12,
     billingCycle: normalizedBilling,
     billingDuration: normalizedBilling, // Frontend uses this field
+    markupPercentage,
     termsConditions: pkg.terms_conditions || '',
     franchisePartnerId: pkg.franchise_partner_id,
     fpCode: pkg.fp_code,
@@ -3525,6 +3529,9 @@ router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => 
 router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
   try {
     const { fpId, packageName, serviceRows, services, rate, billingDuration, description } = req.body;
+    // The package's own markup, kept so a reopened package prices as it was saved rather than
+    // falling back to each service's quote. Accepted under either spelling the forms send.
+    const markupPercentage = req.body.markupPercentage ?? req.body.markup_percentage ?? null;
     const packageTypes = packagePropertyTypes(req.body);
     
     if (!fpId) {
@@ -3552,6 +3559,7 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
           property_type: packageTypes[0], 
           property_types: packageTypes,
           billing_duration: billingDuration || 'yearly',
+          markup_percentage: markupPercentage,
           serviceRows: serviceRows || [] 
         })
       ]
@@ -3574,6 +3582,7 @@ router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const { packageName, serviceRows, rate, billingDuration, description } = req.body;
+    const markupPercentage = req.body.markupPercentage ?? req.body.markup_percentage ?? null;
     const packageTypes = packagePropertyTypes(req.body);
     
     const [result] = await pool.execute(
@@ -3589,6 +3598,7 @@ router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
           property_type: packageTypes[0], 
           property_types: packageTypes,
           billing_duration: billingDuration || 'yearly',
+          markup_percentage: markupPercentage,
           serviceRows: serviceRows || [] 
         }),
         id
