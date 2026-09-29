@@ -1157,7 +1157,7 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
     // Calculate amounts
     const sub = subtotalValidation.sanitizedAmount;
     const discPct = parseFloat(discountPercentage) || 0;
-    const taxPct = parseFloat(taxPercentage) || 18;
+    const taxPct = parseFloat(taxPercentage) || 0;
     const discountAmount = sub * (discPct / 100);
     const taxableAmount = sub - discountAmount;
     const taxAmount = taxableAmount * (taxPct / 100);
@@ -1256,7 +1256,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
     // Calculate amounts
     const subtotal = parseFloat(estimate.total) || parseFloat(estimate.subtotal) || 0;
     const discPct = parseFloat(discountPercent) || 0;
-    const taxPct = parseFloat(gstPercent) || 18;
+    const taxPct = parseFloat(gstPercent) || 0;
     const discountAmount = subtotal * (discPct / 100);
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = taxableAmount * (taxPct / 100);
@@ -1440,7 +1440,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
     // Calculate amounts
     const subtotal = validItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
     const discPct = parseFloat(discountPercent) || 0;
-    const taxPct = parseFloat(gstPercent) || 18;
+    const taxPct = parseFloat(gstPercent) || 0;
     const discountAmount = subtotal * (discPct / 100);
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = taxableAmount * (taxPct / 100);
@@ -2135,7 +2135,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                   </tr>
                   ` : ''}
                   <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${invoice.tax_percent || 18}%)</td>
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${parseFloat(invoice.tax_percent) || 0}%)</td>
                     <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.tax_amount)}</td>
                   </tr>
                   <tr style="border-top: 2px solid #C9A227;">

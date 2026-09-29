@@ -155,7 +155,7 @@ const priceCustomEstimate = async (body, role, authorizedProperty = null) => {
     property: { id: property.id, property_id: property.property_id, source_table: property.source_table || 'onboarded_properties', entry_type: property.entry_type, community_name: property.community_name, zone: property.zone, division: property.division, city: property.city, address: property.address,
       number_of_blocks: property.number_of_blocks, total_units: property.total_units, block_names: property.block_names, units_per_block: property.units_per_block,
       tower_name: property.tower_name, block_number: property.block_number, villa_plot_number: property.villa_plot_number, franchise_partner_id: property.franchise_partner_id, customer_name: property.customer_name || property.community_name, customer_email: property.customer_email, customer_phone: property.customer_phone },
-    rows, summary: calculateEstimateSummary(rows, body.discount_percentage ?? 0, body.gst_percentage ?? 18)
+    rows, summary: calculateEstimateSummary(rows, body.discount_percentage ?? 0, body.gst_percentage ?? 0)
   };
 };
 

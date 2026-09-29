@@ -9,6 +9,8 @@ const { generateInvoicePDF } = require('./pdfService');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
 // GST Rate (fixed at 18%)
+// Kept only as the statutory rate a screen may offer as a choice. It is NOT a fallback: a
+// document's GST is whatever was set on it, and nothing set means 0.
 const GST_RATE = 18;
 
 // Decode HTML entities (fix triple/double encoded ampersands etc.)
@@ -80,19 +82,25 @@ const generateInvoiceId = async (fpId = null) => {
 };
 
 /**
- * Calculate invoice amounts with GST
+ * Calculate invoice amounts.
+ *
+ * **The GST rate is the document's own, and it defaults to nothing.** This used to apply `GST_RATE`
+ * -- a hardcoded 18 -- whatever the estimate said, so an estimate quoted and approved at 0% GST was
+ * invoiced at 18%: the customer agreed to one figure and was billed another. The caller passes the
+ * rate the estimate carries, and a rate nobody set is 0, as it is on the estimate.
  */
-const calculateInvoiceAmounts = (subtotal, discountPercentage = 0) => {
+const calculateInvoiceAmounts = (subtotal, discountPercentage = 0, taxPercentage = 0) => {
+  const taxPercent = parseFloat(taxPercentage) || 0;
   const discountAmount = subtotal * (discountPercentage / 100);
   const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (GST_RATE / 100);
+  const taxAmount = taxableAmount * (taxPercent / 100);
   const totalAmount = taxableAmount + taxAmount;
-  
+
   return {
     subtotal: parseFloat(subtotal.toFixed(2)),
     discountPercentage: parseFloat(discountPercentage.toFixed(2)),
     discountAmount: parseFloat(discountAmount.toFixed(2)),
-    taxPercentage: GST_RATE,
+    taxPercentage: parseFloat(taxPercent.toFixed(2)),
     taxAmount: parseFloat(taxAmount.toFixed(2)),
     totalAmount: parseFloat(totalAmount.toFixed(2)),
     balanceAmount: parseFloat(totalAmount.toFixed(2))
@@ -346,14 +354,15 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
       items = regularItems;
     }
     
-    // Calculate amounts with 18% GST
+    // Calculate amounts at the rate the estimate itself carries -- GST included
     // For FP estimates: subtotal, discount_percent, total_amount
     // For regular estimates: subtotal, discount_percentage
     const subtotalValue = parseFloat(estimate.subtotal) || parseFloat(estimate.total) || parseFloat(estimate.total_amount) || 0;
     const discountValue = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount_percent) || parseFloat(estimate.discount) || 0;
-    const amounts = calculateInvoiceAmounts(subtotalValue, discountValue);
+    const gstValue = parseFloat(estimate.gst_percent) || parseFloat(estimate.gst_percentage) || parseFloat(estimate.tax_percentage) || 0;
+    const amounts = calculateInvoiceAmounts(subtotalValue, discountValue, gstValue);
     
-    console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, Total=${amounts.totalAmount}`);
+    console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, GST=${gstValue}%, Total=${amounts.totalAmount}`);
     
     // Prepare line items JSON - include all services and addons
     const lineItems = items.map(item => {
@@ -568,8 +577,8 @@ const generateInvoiceFromWorkOrder = async (workOrderId, completedBy = null) => 
       };
     }
     
-    // Calculate amounts with 18% GST
-    const amounts = calculateInvoiceAmounts(subtotal, 0);
+    // A work order carries no GST rate of its own, so the invoice is raised without one
+    const amounts = calculateInvoiceAmounts(subtotal, 0, parseFloat(workOrder.gst_percent) || 0);
     
     // Prepare line items
     const lineItems = [{
@@ -1067,7 +1076,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                         </tr>
                         ` : ''}
                         <tr>
-                          <td style="padding: 8px 16px; color: #475569; font-size: 13px;">GST (${invoice.tax_percentage || 18}%)</td>
+                          <td style="padding: 8px 16px; color: #475569; font-size: 13px;">GST (${parseFloat(invoice.tax_percentage) || 0}%)</td>
                           <td style="padding: 8px 16px; text-align: right; color: #1e293b; font-size: 13px;">${formatCurrency(invoice.tax_amount)}</td>
                         </tr>
                         <tr>
@@ -1187,7 +1196,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         discountAmount: invoice.discount_amount,
         discountPercentage: invoice.discount_percentage,
         taxAmount: invoice.tax_amount,
-        taxPercentage: invoice.tax_percentage || 18,
+        taxPercentage: parseFloat(invoice.tax_percentage) || 0,
         totalAmount: totalAmount,
         balanceAmount: invoice.balance_amount || totalAmount
       });

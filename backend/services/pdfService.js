@@ -718,7 +718,8 @@ const generateInvoicePDF = async (invoice) => {
       const safeDiscount = safeNum(discountAmount);
       const safeTax = safeNum(taxAmount);
       const safeTotal = safeNum(totalAmount);
-      const safeTaxPercent = safeNum(taxPercentage) || 18;
+      // A rate nobody set is 0, not 18: the figure printed must be the one the invoice carries
+      const safeTaxPercent = safeNum(taxPercentage);
 
       // Colors per design spec (Image 2)
       const headerBlack = '#151515';

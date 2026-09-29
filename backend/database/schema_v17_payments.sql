@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   discount_percentage DECIMAL(5, 2) DEFAULT 0.00,
   discount_amount DECIMAL(12, 2) DEFAULT 0.00,
-  tax_percentage DECIMAL(5, 2) DEFAULT 18.00,       -- GST default 18%
+  tax_percentage DECIMAL(5, 2) DEFAULT 0.00,        -- GST: whatever the estimate carried; nothing set means none
   tax_amount DECIMAL(12, 2) DEFAULT 0.00,
   total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   

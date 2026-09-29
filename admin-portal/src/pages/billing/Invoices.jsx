@@ -1972,7 +1972,7 @@ const InvoiceDetailPanel = ({
                   )}
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">GST ({(invoice.taxPercentage || 18).toFixed(2)}%):</span>
+                    <span className="text-gray-600">GST ({(parseFloat(invoice.taxPercentage) || 0).toFixed(2)}%):</span>
                     <span className="text-gray-800">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                   

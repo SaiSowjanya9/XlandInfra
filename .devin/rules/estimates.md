@@ -122,6 +122,25 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
 - The email body **lists the Terms & Conditions** as well as attaching the PDF, through the same
   `estimateTermsLines` helper, so a message and its attachment cannot state different terms.
 
+## GST and Discount
+
+- **GST defaults to nothing, everywhere.** Every create-estimate form starts the field empty with a
+  `0` placeholder, the estimate columns are `DECIMAL(5,2) DEFAULT 0.00`, and a blank field saves and
+  prints `GST (0%) → ₹0`. **Nothing may fill a blank rate with 18.** Three places used to: the admin
+  form's Price Summary *label* read `GST ({gstRate || '18'}%)` beside a ₹0 figure, the catalog quote
+  endpoint defaulted `gst_percentage ?? 18`, and `invoices.tax_percentage` was `DEFAULT 18.00`.
+- **The invoice charges the rate its estimate carried.** `calculateInvoiceAmounts(subtotal,
+  discountPercentage, taxPercentage)` takes the rate as an argument defaulting to 0, and
+  `generateInvoiceFromEstimate` passes `estimate.gst_percent`. It previously applied a hardcoded
+  `GST_RATE = 18` whatever the estimate said, so an estimate quoted, sent and **approved at 0% was
+  billed at 18%** — the customer agreed to one figure and was charged another. `GST_RATE` is still
+  exported as the statutory rate a screen may offer as a choice; it is not a fallback, and the test
+  asserts as much. Regression test: `node --test backend/services/invoiceAmounts.test.js`.
+- GST is charged on the subtotal **after** the discount, in every surface that computes it.
+- Existing invoices keep the `tax_percentage` they were raised with: it is what was charged and
+  possibly already paid, so `schema_v39_invoice_tax_default_zero.sql` moves the column default only
+  and rewrites no rows.
+
 ## Terms & Conditions
 
 - **Writing the clauses belongs to Admin, Operations Manager and FP; every other portal sends the

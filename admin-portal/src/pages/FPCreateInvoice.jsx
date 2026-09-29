@@ -259,7 +259,7 @@ const FPCreateInvoice = ({ user }) => {
         })),
         subtotal,
         discountPercentage: parseFloat(formData.discountPercentage) || 0,
-        taxPercentage: parseFloat(formData.taxPercentage) || 18,
+        taxPercentage: parseFloat(formData.taxPercentage) || 0,
         notes: formData.notes,
         termsAndConditions: formData.termsAndConditions
       };
