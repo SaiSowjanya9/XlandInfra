@@ -34,31 +34,35 @@ test('a row is quoted against a property type its own service covers', () => {
   assert.equal(quotePropertyType({}, []), '');
 });
 
-test('a package markup prices every row from what it costs, the way the service form does', () => {
-  const configured = { catalogServiceId: 1, price: 108000, vendorCost: 80000, operatingCost: 20000 };
+test('a package markup is added on top of what a row already comes to, so a price never falls', () => {
+  const configured = { catalogServiceId: 1, price: 1560, vendorCost: 1200, operatingCost: 0 };
   const typed = { service: 'By hand', vendorCost: 50000 };
 
-  // price = (vendor + operating) × (1 + markup/100)
-  assert.equal(rowPriceWithMarkup(configured, 25), 125000);
-  assert.equal(rowPriceWithMarkup(typed, 25), 62500);
-  // A blank markup leaves each row on the price it already had -- the quote, or what was typed
-  assert.equal(rowPriceWithMarkup(configured, ''), 108000);
-  assert.equal(rowPriceWithMarkup(configured, null), 108000);
-  // A price typed over the quote is never recalculated: that is what typing over it means
-  assert.equal(rowPriceWithMarkup({ ...configured, priceOverridden: true }, 25), 108000);
-  // A row with no cost behind it has nothing to mark up, so it keeps its own figure
-  assert.equal(rowPriceWithMarkup({ service: 'Typed price only', price: 4000 }, 25), 4000);
-  // Zero is a markup, not a blank: the price falls back to cost
-  assert.equal(rowPriceWithMarkup(configured, 0), 100000);
+  // The quote stands and the markup is the package's own margin on top of it
+  assert.equal(rowPriceWithMarkup(configured, 3), 1606.8);
+  assert.equal(rowPriceWithMarkup(configured, 25), 1950);
+  // The service is configured at 30%, so 3% used to drop 1,560 to 1,236 -- it cannot now
+  assert.ok(rowPriceWithMarkup(configured, 3) > configured.price, 'a markup only ever raises a price');
 
-  assert.deepEqual(applyPackageMarkup([configured, typed], 25).map(row => row.price), [125000, 62500]);
+  // A hand-typed row has no quote, so its vendor price is what gets marked up
+  assert.equal(rowPriceWithMarkup(typed, 25), 62500);
+
+  // A blank markup leaves each row on the price it already had
+  assert.equal(rowPriceWithMarkup(configured, ''), 1560);
+  assert.equal(rowPriceWithMarkup(configured, null), 1560);
+  // Zero is a markup, not a blank, and adds nothing
+  assert.equal(rowPriceWithMarkup(configured, 0), 1560);
+  // A price typed over the quote is never recalculated: that is what typing over it means
+  assert.equal(rowPriceWithMarkup({ ...configured, priceOverridden: true }, 25), 1560);
+  // Nothing quoted and no cost either: there is nothing to mark up
+  assert.equal(rowPriceWithMarkup({ service: 'Empty' }, 25), undefined);
+
+  assert.deepEqual(applyPackageMarkup([configured, typed], 25).map(row => row.price), [1950, 62500]);
 
   const totals = packageTotals([configured, typed], 25);
-  assert.equal(totals.customerPrice ?? totals.price, 187500);
-  assert.equal(totals.vendorCost, 130000);
-  assert.equal(totals.actualCost, 150000);
-  assert.equal(totals.profit, 37500);
-  assert.equal(totals.marginPercent, 20, 'a 25% markup is a 20% margin');
+  assert.equal(totals.customerPrice ?? totals.price, 64450);
+  assert.equal(totals.vendorCost, 51200);
+  assert.equal(totals.profit, 13250);
 });
 
 test('the package price is what its priced services add up to', () => {
