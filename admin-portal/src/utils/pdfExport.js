@@ -261,7 +261,8 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const ruleLength = 5;
   const ruleGap = 1.6;
   const iconSize = 2.6;
-  const iconGap = 4.4;
+  const iconTextGap = 1.1;                                // icon to its own value
+  const contactGap = 3.9;                                 // one contact to the next along the line
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
@@ -274,18 +275,27 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const taglineText = String(COMPANY.tagline).toUpperCase();
   const taglineWidth = doc.getTextWidth(taglineText) + 0.3 * taglineText.length;
   doc.setFontSize(7.5);
-  const detailWidths = [taglineWidth, ...COMPANY.addressLines.map(line => doc.getTextWidth(line)),
-    ...COMPANY_CONTACT_LINES.map(([, value]) => doc.getTextWidth(String(value)))];
+  const addressWidths = COMPANY.addressLines.map(line => doc.getTextWidth(line));
 
-  // Every line of the block starts on one vertical edge, with the icons in a column of their own
-  // hanging to the left of it. Centring each line on its own width instead left the text ragged
-  // on both sides and put the three icons at three different x positions.
-  const detailWidth = iconGap + Math.max(...detailWidths);
+  // The phone, the email and the website sit on **one line** beneath the address, each behind its
+  // own icon. Stacked, the three of them made the letterhead a column six lines deep for what is
+  // one thought -- how to reach us. A point smaller than the address, because three of them on a
+  // line have to clear the BILL TO card facing them.
+  doc.setFontSize(7);
+  const contactItems = COMPANY_CONTACT_LINES.map(([kind, value]) => ({
+    kind, value: String(value), width: iconSize + iconTextGap + doc.getTextWidth(String(value))
+  }));
+  const contactWidth = contactItems.reduce((total, item) => total + item.width, 0)
+    + contactGap * (contactItems.length - 1);
+  doc.setFontSize(7.5);
+
+  // Every line of the block starts on one vertical edge. Centring each on its own width instead
+  // left the text ragged on both sides.
+  const detailWidth = Math.max(taglineWidth, ...addressWidths, contactWidth);
   const blockWidth = Math.max(headRowWidth, detailWidth);
   const blockX = margin;
   const centred = width => blockX + (blockWidth - width) / 2;
-  const iconX = centred(detailWidth);
-  const textLeft = iconX + iconGap;
+  const textLeft = centred(detailWidth);
 
   const logoX = centred(headRowWidth);
   try {
@@ -337,13 +347,17 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     doc.text(line, textLeft, lineY);
     lineY += 3.6;
   });
-  COMPANY_CONTACT_LINES.forEach(([kind, value]) => {
+  // The one contact line, directly under the address
+  doc.setFontSize(7);
+  let contactX = textLeft;
+  contactItems.forEach(item => {
     // The icon sits on the line's x-height rather than its baseline, or it floats above the text
-    drawContactIcon(doc, kind, iconX, lineY - 2.3, iconSize);
+    drawContactIcon(doc, item.kind, contactX, lineY - 2.1, iconSize);
     doc.setTextColor(75, 85, 99);
-    doc.text(String(value), textLeft, lineY);
-    lineY += 3.8;
+    doc.text(item.value, contactX + iconSize + iconTextGap, lineY);
+    contactX += item.width + contactGap;
   });
+  lineY += 3.8;
   const companyBottom = lineY;
 
   // --- Right: BILL TO ---

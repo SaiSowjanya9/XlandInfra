@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import { Globe, Mail, Phone } from 'lucide-react';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 
@@ -72,25 +71,25 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
               </div>
             </div>
           </div>
-          {/* Every line starts on one vertical edge, with the icons in a column of their own to
-              the left of it: an inline grid, so the block still centres on the lockup while its
-              text reads down a straight edge instead of each line centring on its own width. */}
-          <div className="mt-2 inline-grid grid-cols-[0.75rem_auto] items-center gap-x-1.5 gap-y-0.5 text-left">
-            <p className="col-start-2 text-[9px] uppercase tracking-wider text-gray-500">{COMPANY.tagline}</p>
+          {/* Every line starts on one vertical edge, and the phone, email and website share a
+              single line beneath the address, each behind its own icon. Stacked, the three of them
+              made the block six lines deep for what is one thought — how to reach us. */}
+          <div className="mt-2 inline-block space-y-0.5 text-left">
+            <p className="text-[9px] uppercase tracking-wider text-gray-500">{COMPANY.tagline}</p>
             {COMPANY.addressLines.map(line => (
-              <p key={line} className="col-start-2 text-[11px] leading-relaxed text-gray-600">{line}</p>
+              <p key={line} className="text-[11px] leading-relaxed text-gray-600">{line}</p>
             ))}
-            {COMPANY_CONTACT_LINES.map(([kind, value]) => {
-              const Icon = CONTACT_ICONS[kind];
-              return (
-                <Fragment key={kind}>
-                  <span className="col-start-1 flex justify-center">
-                    {Icon && <Icon className="h-3 w-3 text-[#C9A227]" strokeWidth={2} />}
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-0.5 text-[11px] leading-relaxed text-gray-600">
+              {COMPANY_CONTACT_LINES.map(([kind, value]) => {
+                const Icon = CONTACT_ICONS[kind];
+                return (
+                  <span key={kind} className="inline-flex items-center gap-1">
+                    {Icon && <Icon className="h-3 w-3 shrink-0 text-[#C9A227]" strokeWidth={2} />}
+                    {value}
                   </span>
-                  <p className="col-start-2 text-[11px] leading-relaxed text-gray-600">{value}</p>
-                </Fragment>
-              );
-            })}
+                );
+              })}
+            </p>
           </div>
         </div>
 

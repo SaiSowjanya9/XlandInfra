@@ -202,7 +202,8 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
   const ruleLength = 12;
   const ruleGap = 4;
   const iconSize = 7;
-  const iconGap = 12;
+  const iconTextGap = 3;                                  // icon to its own value
+  const contactGap = 11;                                  // one contact to the next along the line
 
   doc.fontSize(14).font('Helvetica-Bold');
   const nameWidth = doc.widthOfString(COMPANY.name, { characterSpacing: 1.2 });
@@ -212,17 +213,25 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
   doc.fontSize(6.5).font('Helvetica');
   const taglineWidth = doc.widthOfString(taglineText, { characterSpacing: 0.7 });
   doc.fontSize(7.5);
-  const detailWidths = [taglineWidth, ...COMPANY.addressLines.map(line => doc.widthOfString(line)),
-    ...COMPANY_CONTACT_LINES.map(([, value]) => doc.widthOfString(String(value)))];
+  const addressWidths = COMPANY.addressLines.map(line => doc.widthOfString(line));
 
-  // Every line of the block starts on one vertical edge, with the icons in a column of their own
-  // hanging to the left of it. Centring each line on its own width instead left the text ragged
-  // on both sides and put the three icons at three different x positions.
-  const detailWidth = iconGap + Math.max(...detailWidths);
+  // The phone, the email and the website sit on **one line** beneath the address, each behind its
+  // own icon. Stacked, the three of them made the letterhead a column six lines deep for what is
+  // one thought -- how to reach us. A point smaller than the address, because three of them on a
+  // line have to clear the BILL TO card facing them.
+  doc.fontSize(7);
+  const contactItems = COMPANY_CONTACT_LINES.map(([kind, value]) => ({
+    kind, value: String(value), width: iconSize + iconTextGap + doc.widthOfString(String(value))
+  }));
+  const contactWidth = contactItems.reduce((total, item) => total + item.width, 0)
+    + contactGap * (contactItems.length - 1);
+
+  // Every line of the block starts on one vertical edge. Centring each on its own width instead
+  // left the text ragged on both sides.
+  const detailWidth = Math.max(taglineWidth, ...addressWidths, contactWidth);
   const blockWidth = Math.max(headRowWidth, detailWidth);
   const centred = width => margin + (blockWidth - width) / 2;
-  const iconX = centred(detailWidth);
-  const textLeft = iconX + iconGap;
+  const textLeft = centred(detailWidth);
 
   const logoX = centred(headRowWidth);
   try {
@@ -268,13 +277,17 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
     doc.fillColor('#4b5563').text(line, textLeft, lineY, { lineBreak: false });
     lineY += 10;
   });
-  COMPANY_CONTACT_LINES.forEach(([kind, value]) => {
+
+  // The one contact line, directly under the address
+  doc.fontSize(7);
+  let contactX = textLeft;
+  contactItems.forEach(item => {
     // The icon sits on the line's x-height rather than its baseline, or it floats above the text
-    drawContactIcon(doc, kind, iconX, lineY + 0.5, iconSize);
-    doc.fillColor('#4b5563').text(String(value), textLeft, lineY, { lineBreak: false });
-    lineY += 11;
+    drawContactIcon(doc, item.kind, contactX, lineY + 0.5, iconSize);
+    doc.fillColor('#4b5563').text(item.value, contactX + iconSize + iconTextGap, lineY, { lineBreak: false });
+    contactX += item.width + contactGap;
   });
-  const companyBottom = lineY;
+  const companyBottom = lineY + 11;
 
   // --- Right: the party the document is addressed to ---
   const boxWidth = 200;
