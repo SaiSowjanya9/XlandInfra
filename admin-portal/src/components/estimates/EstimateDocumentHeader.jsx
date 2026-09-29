@@ -50,13 +50,10 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
 
   return (
     <div>
-      <div className="h-[3px] rounded-sm bg-gradient-to-r from-[#C9A227] via-[#E6C766] to-[#C9A227]" />
-
       <div className="flex flex-col gap-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-        {/* The company block is one centred stack: the logo and the name sit on the first line,
-            and the tagline, address and contact lines centre on the whole lockup beneath them --
-            not under the name alone, which left them hanging to the right of the logo. */}
-        <div className="flex min-w-0 flex-col items-center text-center">
+        {/* The company block runs down the page's left edge: the logo and the name on the first
+            line, and the tagline, address and contact lines directly under the logo. */}
+        <div className="flex min-w-0 flex-col items-start text-left">
           <div className="flex items-center gap-3">
             <img src={COMPANY_LOGO_ICON} alt="" className="h-12 w-12 shrink-0 object-contain" />
             {/* Nudged down so the name reads centred on the mark: centred exactly, the ruled suffix

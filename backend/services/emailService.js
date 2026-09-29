@@ -1160,22 +1160,18 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       </head>
       <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6;">
         <div style="max-width: 640px; margin: 0 auto; padding: 20px;">
-          <!-- Thin Gold Bar Header -->
-          <div style="background: #C9A227; height: 6px; border-radius: 12px 12px 0 0;"></div>
-
           <!-- Content -->
-          <div style="background: #ffffff; padding: 26px 28px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="background: #ffffff; padding: 26px 28px 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
 
             <!-- Letterhead: the company on the left, BILL TO facing it on the right -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <!-- The company block is one centred stack: the logo and the name on the first
-                     line, and the tagline, address and contact lines centred on the whole lockup
-                     beneath them -- not under the name alone, which left them adrift right of the
-                     logo. Each row is its own centred table, because an email client cannot be
-                     relied on to centre anything but a table cell. -->
-                <td align="center" style="vertical-align: top; padding-right: 16px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <!-- The company block runs down the page's left edge: the logo and the name on the
+                     first line, and the tagline, address and contact lines directly under the
+                     logo. Each row is its own table, because an email client cannot be relied on
+                     to position anything but a table cell. -->
+                <td align="left" style="vertical-align: top; padding-right: 16px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0;">
                     <tr>
                       <td style="vertical-align: middle; padding-right: 12px;">
                         <img src="cid:${ESTIMATE_LOGO_CID}" alt="" width="50" height="50" style="display: block; width: 50px; height: 50px; object-fit: contain;">
@@ -1202,11 +1198,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                       </td>
                     </tr>
                   </table>
-                  <!-- Every line starts on one vertical edge, with the icons in a column of their
-                       own to the left of it. One table for the lot, centred as a block, rather
-                       than a centred table per line, which put the three icons at three different
+                  <!-- Every line starts on the page's left edge, under the logo itself. One table
+                       for the lot rather than a table per line, which put the icons at different
                        positions and left the text ragged on both sides. -->
-                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 9px auto 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 9px 0 0;">
                     <tr>
                       <td style="font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #6b7280; padding-bottom: 5px;">${COMPANY.tagline}</td>
                     </tr>
