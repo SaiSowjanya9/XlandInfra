@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, X, Check } from 'lucide-react';
+import { ChevronDown, X, Check, Loader2, Plus } from 'lucide-react';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 
 /**
@@ -23,6 +23,12 @@ import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
  * - maxResults: Maximum number of results to show (default: 10)
  * - showAllOnOpen: Opening the list with the arrow or on focus shows every option, like a plain
  *   select; typing then filters as usual (default: false)
+ * - onCreateOption: async (name) => option | void. Given, a value that is not in the list yet is
+ *   offered as a "Save" row at the top of the dropdown, with the same tick Enter commits. That is
+ *   what puts a typed value in the list itself rather than only in this one field.
+ * - onDeleteOption: async (option) => void. Given, every option marked `removable` carries a cross
+ *   -- which is how a name typed by mistake leaves the list again. Only the caller knows which
+ *   options may go, so nothing is assumed here.
  * - theme: 'warm' renders the beige estimate skin; anything else keeps the original slate/blue one
  */
 const AutocompleteInput = ({
@@ -42,6 +48,8 @@ const AutocompleteInput = ({
   renderOption,
   maxResults = 10,
   showAllOnOpen = false,
+  onCreateOption,
+  onDeleteOption,
   id,
   theme,
 }) => {
@@ -53,6 +61,10 @@ const AutocompleteInput = ({
   const [browsing, setBrowsing] = useState(false);
   const [inputValue, setInputValue] = useState(value || '');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  // While the caller's save runs, and the value of the option its delete is running for
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [actionError, setActionError] = useState('');
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
@@ -106,6 +118,56 @@ const AutocompleteInput = ({
 
   const filteredOptions = getFilteredOptions();
 
+  // The typed value is offered for saving only while it is genuinely new: the whole list is
+  // checked, not the filtered slice, so a name the filter happened to hide is never added twice.
+  const sameText = (first, second) => String(first ?? '').trim().toLowerCase() === String(second ?? '').trim().toLowerCase();
+  const offerCustom = Boolean(onCreateOption) && !disabled && inputValue.trim() !== '' &&
+    !normalizedOptions.some(option => sameText(option.label, inputValue));
+
+  // Saving takes the typed value into the list itself. What comes back is selected, so the field
+  // ends up holding exactly what was saved -- with the caller's own spelling if it adjusted it.
+  const busy = saving || deleting !== null;
+  const handleCreate = async () => {
+    const name = inputValue.trim();
+    if (!name || busy) return;
+    setSaving(true);
+    setActionError('');
+    try {
+      const created = await onCreateOption(name);
+      const label = (typeof created === 'string' ? created : created?.label ?? created?.name) || name;
+      setInputValue(label);
+      onChange?.(label);
+      onSelect?.({ ...(typeof created === 'object' && created ? created : {}), label, value: label });
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    } catch (error) {
+      setActionError(error?.message || 'Could not save that value.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // The cross is for a value typed by mistake, so a deleted option that is still in the box leaves
+  // it empty rather than naming something the list no longer offers.
+  const handleDelete = async (event, option) => {
+    event.stopPropagation();
+    if (busy) return;
+    setDeleting(option.value);
+    setActionError('');
+    try {
+      await onDeleteOption(option);
+      if (sameText(option.value, value) || sameText(option.label, inputValue)) {
+        setInputValue('');
+        onChange?.('');
+      }
+      inputRef.current?.focus();
+    } catch (error) {
+      setActionError(error?.message || 'Could not delete that value.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -124,6 +186,7 @@ const AutocompleteInput = ({
     setIsOpen(true);
     setBrowsing(false);
     setHighlightedIndex(-1);
+    setActionError('');
     if (allowCustom) {
       onChange?.(newValue);
     }
@@ -152,6 +215,7 @@ const AutocompleteInput = ({
     if (!isOpen && e.key === 'Enter') {
       if (!allowCustom || !inputValue) return;
       e.preventDefault();
+      if (offerCustom) return void handleCreate();
       onChange?.(inputValue);
       return;
     }
@@ -177,9 +241,10 @@ const AutocompleteInput = ({
         }
         // Nothing is highlighted until the arrows are used, so Enter takes the word as typed --
         // unless the list holds that exact word, in which case it is the same choice either way
-        const exact = filteredOptions.find(option =>
-          String(option.label).trim().toLowerCase() === inputValue.trim().toLowerCase());
+        const exact = filteredOptions.find(option => sameText(option.label, inputValue));
         if (exact) handleSelect(exact);
+        // With somewhere to save it, Enter saves rather than only filling the field in
+        else if (offerCustom) handleCreate();
         else if (allowCustom && inputValue) { onChange?.(inputValue); setIsOpen(false); }
         break;
       }
@@ -259,39 +324,77 @@ const AutocompleteInput = ({
         </div>
       </div>
 
-      {error && (
-        <p className="mt-1 text-xs text-red-500">{error}</p>
+      {(error || actionError) && (
+        <p className="mt-1 text-xs text-red-500">{error || actionError}</p>
       )}
 
       {/* Dropdown */}
       {isOpen && (filteredOptions.length > 0 || offerCustom) && (
         <div
-          ref={dropdownRef}
           className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto ${skin.border}`}
         >
-          {filteredOptions.map((option, index) => (
-            <div
-              key={option.value}
-              onClick={() => handleSelect(option)}
-              className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between
-                ${index === highlightedIndex || option.value === value ? skin.optionActive : skin.optionHover}
-              `}
+          {/* Save row: the typed value joins the list itself, so it is there the next time too */}
+          {offerCustom && (
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={busy}
+              className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between gap-2 border-b
+                ${skin.borderSoft} ${skin.optionHover} disabled:opacity-60`}
             >
-              {renderOption ? (
-                renderOption(option)
-              ) : (
-                <span>{option.label}</span>
-              )}
-              {option.value === value && (
-                <Check className={`w-4 h-4 ${skin.tileActiveText}`} />
-              )}
-            </div>
-          ))}
+              <span className="flex min-w-0 items-center gap-2">
+                <Plus className={`w-3.5 h-3.5 shrink-0 ${skin.tileActiveText}`} />
+                <span className="truncate">Save "<strong>{inputValue.trim()}</strong>"</span>
+              </span>
+              {saving
+                ? <Loader2 className={`w-4 h-4 shrink-0 animate-spin ${skin.tileActiveText}`} />
+                : <Check className={`w-4 h-4 shrink-0 ${skin.tileActiveText}`} />}
+            </button>
+          )}
+          {/* Highlighting is indexed against this list, so it stays the arrow keys' own element */}
+          <div ref={dropdownRef}>
+            {filteredOptions.map((option, index) => (
+              <div
+                key={option.value}
+                onClick={() => handleSelect(option)}
+                className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between gap-2
+                  ${index === highlightedIndex || option.value === value ? skin.optionActive : skin.optionHover}
+                `}
+              >
+                {renderOption ? (
+                  renderOption(option)
+                ) : (
+                  <span className="min-w-0 break-words">{option.label}</span>
+                )}
+                <span className="flex shrink-0 items-center gap-1">
+                  {option.value === value && (
+                    <Check className={`w-4 h-4 ${skin.tileActiveText}`} />
+                  )}
+                  {/* Only what the caller says may go carries a cross: a built-in value, or one
+                      something already uses, cannot be taken out of the list */}
+                  {onDeleteOption && option.removable && (
+                    <button
+                      type="button"
+                      onClick={event => handleDelete(event, option)}
+                      disabled={busy}
+                      aria-label={`Delete ${option.label}`}
+                      title={`Delete ${option.label}`}
+                      className={`rounded p-1 ${skin.faint} ${skin.iconMuted} disabled:opacity-60`}
+                    >
+                      {deleting === option.value
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <X className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* No results message */}
-      {isOpen && inputValue && filteredOptions.length === 0 && (
+      {/* No results message. With a save row on offer the dropdown above is already showing it. */}
+      {isOpen && inputValue && filteredOptions.length === 0 && !offerCustom && (
         <div className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg ${skin.border}`}>
           <div className={`px-3 py-2 text-sm ${skin.muted}`}>
             {allowCustom ? (

@@ -15,7 +15,21 @@ const services = [
 ];
 const inserts = [];
 const updates = [];
+// Categories saved from the Category box. 'Rope Access' is also carried by a saved service below,
+// which is what makes it undeletable.
+const categoryRows = [{ id: 1, scope_id: 8, name: 'Rope Access' }];
+let nextCategoryId = 2;
 const pool = { execute: async (sql, params = []) => {
+  if (sql.startsWith('INSERT INTO service_categories')) {
+    categoryRows.push({ id: nextCategoryId, scope_id: params[0], name: params[1] });
+    return [{ insertId: nextCategoryId++ }];
+  }
+  if (sql.startsWith('DELETE FROM service_categories')) {
+    categoryRows.splice(categoryRows.findIndex(row => row.id === Number(params[0])), 1);
+    return [{ affectedRows: 1 }];
+  }
+  if (sql.includes('FROM service_categories WHERE id = ?')) return [categoryRows.filter(row => row.id === Number(params[0]))];
+  if (sql.includes('FROM service_categories')) return [categoryRows.filter(row => row.scope_id === 0 || row.scope_id === Number(params[0]))];
   if (sql.startsWith('INSERT INTO service_catalog')) {
     if (params[0] === 'Duplicate') throw Object.assign(new Error('Duplicate entry'), { code: 'ER_DUP_ENTRY' });
     inserts.push(params);
@@ -84,6 +98,22 @@ test('FPs configure services in their own scope only, and estimates are re-price
   assert.ok(suggestions.includes('Building Exterior'), 'a category typed on a hand-entered service comes back');
   assert.ok(suggestions.includes('Rope Access'), 'a category typed on a saved service comes back as a suggestion');
   assert.equal(new Set(suggestions.map(name => name.toLowerCase())).size, suggestions.length, 'suggestions are de-duplicated');
+  // A category typed into the box and saved with the tick joins the same dropdown at once, and the
+  // cross takes it out again while nothing uses it. Staff quote from the catalog but do not author it.
+  assert.equal((await request('/catalog/categories')).canManage, true);
+  assert.equal((await request('/catalog/categories', 'GET', null, 'employee')).canManage, false);
+  assert.equal((await request('/catalog/categories', 'POST', { name: 'Slab 2' }, 'employee')).status, 403);
+  const addedCategory = await request('/catalog/categories', 'POST', { name: '  Slab 2 ' });
+  assert.equal(addedCategory.status, 201);
+  assert.equal(addedCategory.data.name, 'Slab 2');
+  assert.equal(categoryRows.at(-1).scope_id, 8, 'the category is stored against the signed-in FP, never global');
+  assert.equal((await request('/catalog/categories')).data.find(category => category.name === 'Slab 2')?.removable, true);
+  assert.equal((await request(`/catalog/categories/${addedCategory.data.id}`, 'DELETE', null, 'employee')).status, 403);
+  assert.equal((await request(`/catalog/categories/${addedCategory.data.id}`, 'DELETE')).status, 200);
+  assert.equal((await request('/catalog/categories')).data.some(category => category.name === 'Slab 2'), false);
+  // A category a saved service already carries stays in the list without a cross, and refuses to go
+  assert.equal((await request('/catalog/categories')).data.find(category => category.name === 'Rope Access').removable, false);
+  assert.equal((await request('/catalog/categories/1', 'DELETE')).status, 409);
   // FPs author their own services; staff and other scopes cannot
   const created = await request('/catalog', 'POST', baseConfig);
   assert.equal(created.status, 201);

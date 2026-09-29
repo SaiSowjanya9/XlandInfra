@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
-import { getAuthToken } from '../../utils/safeStorage';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 import { customServiceValues } from './CustomServicesTable';
 import AutocompleteInput from '../common/AutocompleteInput';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import useServiceCategories from '../../hooks/useServiceCategories';
 
 // A service typed in by hand is entered here rather than in the table row, because a row has no
 // space for what one needs: a category, a quantity and whether the job needs a vendor as well as
@@ -30,9 +28,10 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
   const skin = estimateSkin(theme ?? pageTheme);
   const [values, setValues] = useState(() => customServiceValues(editing));
   const [problem, setProblem] = useState('');
-  const [categories, setCategories] = useState([]);
   const nameRef = useRef(null);
-  const token = getAuthToken();
+  // Category suggestions are the service catalog's own, so a category used on a configured service
+  // and one typed here are offered from the same list -- and saved into the same list
+  const { categories, canManage, createCategory, deleteCategory } = useServiceCategories({ apiPath, fpId, enabled: open });
 
   // Reopening starts from the row being edited, or from the defaults for a new one
   useEffect(() => {
@@ -40,25 +39,6 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
     setValues(customServiceValues(editing));
     setProblem('');
   }, [open, editing]);
-
-  // Category suggestions are the service catalog's own, so a category used on a configured service
-  // and one typed here are offered from the same list
-  useEffect(() => {
-    if (!open) return;
-    const controller = new AbortController();
-    fetch(`${API_BASE}${apiPath}/categories?${new URLSearchParams({ fpId: fpId || 'all' })}`, {
-      headers: { Authorization: `Bearer ${token}` }, signal: controller.signal
-    }).then(response => response.json())
-      // The endpoint answers with { name } objects, so the names are taken out here
-      .then(result => {
-        if (!result?.success || !Array.isArray(result.data)) return;
-        setCategories([...new Set(result.data
-          .map(item => (typeof item === 'string' ? item : item?.name))
-          .filter(name => typeof name === 'string' && name.trim()))]);
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, [open, apiPath, fpId, token]);
 
   // Escape dismisses, as it does on the configured-service dialog
   useEffect(() => {
@@ -70,10 +50,15 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
 
   useEffect(() => { if (open) nameRef.current?.focus(); }, [open]);
 
-  // A category typed here is offered for the rest of the session straight away; it comes back from
-  // the server once the estimate is saved, because the estimate itself is where it is stored
-  const categoryOptions = useMemo(
-    () => [...new Set([values.category, ...categories].filter(Boolean))], [values.category, categories]);
+  const categoryOptions = useMemo(() => {
+    const options = categories.map(category => ({ label: category.name, value: category.name, id: category.id, removable: category.removable }));
+    const typed = String(values.category || '').trim();
+    // Where the tick can save it, a typed category stays out of the list until it is saved -- an
+    // option matching what was typed is exactly what hides the save row. Without the tick (FP
+    // staff, Operations Manager) it is still offered for the rest of the session, as before.
+    if (canManage || !typed || options.some(option => option.label.toLowerCase() === typed.toLowerCase())) return options;
+    return [{ label: typed, value: typed }, ...options];
+  }, [values.category, categories, canManage]);
 
   const setField = (field, value) => {
     setProblem('');
@@ -124,11 +109,14 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
                 rows={2} maxLength={255} placeholder="What this service covers" className={`${field} resize-y`} />
             </label>
 
-            {/* Type a category that is not listed and it is saved with the estimate, which is what
-                puts it in this list next time */}
+            {/* Type a category that is not listed and the tick saves it into this same list, so it
+                is offered next time without waiting for the estimate to be saved; the cross beside
+                one nothing uses yet takes a misspelling out again */}
             <div>
               <AutocompleteInput label="Category" value={values.category} onChange={value => setField('category', value)}
                 options={categoryOptions} placeholder="Type or select category..." allowCustom showAllOnOpen
+                onCreateOption={canManage ? createCategory : undefined}
+                onDeleteOption={canManage ? deleteCategory : undefined}
                 inputClassName="text-sm" theme={theme ?? pageTheme} />
             </div>
 

@@ -120,6 +120,7 @@ const initOnboardingTables = async () => {
     const conn = await pool.getConnection();
     
     await conn.execute(require('fs').readFileSync(require('path').join(__dirname, '../database/migrations/schema_v32_service_catalog.sql'), 'utf8'));
+    await conn.execute(require('fs').readFileSync(require('path').join(__dirname, '../database/migrations/schema_v38_service_categories.sql'), 'utf8'));
 
     // Create onboarded_properties table
     await conn.execute(`

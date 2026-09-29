@@ -6,7 +6,7 @@ const { validateService, calculateServiceQuote, calculateEstimateSummary, normal
 const { randomUUID } = require('crypto');
 const { normalizeEstimateService } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
-const { categoryOptions } = require('../utils/serviceCategories');
+const { categoryOptions, addCategory, removeCategory } = require('../utils/serviceCategories');
 const router = express.Router();
 
 const parseService = row => ({
@@ -75,9 +75,26 @@ router.delete('/:id', requireRole('admin'), async (req, res) => {
   } catch (error) { handleError(res, error); }
 });
 
-// Suggestions for the category field, including custom categories already saved on services
+// Suggestions for the category field, including custom categories already saved on services.
+// `canManage` is what puts the save tick and the delete cross on the box: the Operations Manager
+// reads this catalog but does not author it.
 router.get('/categories', async (req, res) => {
-  try { res.json({ success: true, data: await categoryOptions(db.pool, scopeId(req.query.fpId)) }); }
+  try {
+    res.json({ success: true, data: await categoryOptions(db.pool, scopeId(req.query.fpId)), canManage: req.user.role === 'admin' });
+  } catch (error) { handleError(res, error); }
+});
+
+// A category typed into the box and saved with the tick, stored before any service carries it.
+// It belongs to whichever FP scope the form is working in, exactly as a service does.
+router.post('/categories', requireRole('admin'), async (req, res) => {
+  try { res.status(201).json({ success: true, data: await addCategory(db.pool, scopeId(req.body.fpId), req.body.name, req.user.id) }); }
+  catch (error) { handleError(res, error); }
+});
+
+// The cross beside a category that was added here and is not yet used anywhere. The admin governs
+// every scope, so the check is made against the whole catalog rather than one FP's slice.
+router.delete('/categories/:id', requireRole('admin'), async (req, res) => {
+  try { res.json({ success: true, data: await removeCategory(db.pool, 0, req.params.id) }); }
   catch (error) { handleError(res, error); }
 });
 
