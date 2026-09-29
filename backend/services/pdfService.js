@@ -187,11 +187,17 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
   doc.fontSize(6.5).font('Helvetica');
   const taglineWidth = doc.widthOfString(taglineText, { characterSpacing: 0.7 });
   doc.fontSize(7.5);
-  const addressWidths = COMPANY.addressLines.map(line => doc.widthOfString(line));
-  const contactWidths = COMPANY_CONTACT_LINES.map(([, value]) => iconGap + doc.widthOfString(String(value)));
+  const detailWidths = [taglineWidth, ...COMPANY.addressLines.map(line => doc.widthOfString(line)),
+    ...COMPANY_CONTACT_LINES.map(([, value]) => doc.widthOfString(String(value)))];
 
-  const blockWidth = Math.max(headRowWidth, taglineWidth, ...addressWidths, ...contactWidths);
+  // Every line of the block starts on one vertical edge, with the icons in a column of their own
+  // hanging to the left of it. Centring each line on its own width instead left the text ragged
+  // on both sides and put the three icons at three different x positions.
+  const detailWidth = iconGap + Math.max(...detailWidths);
+  const blockWidth = Math.max(headRowWidth, detailWidth);
   const centred = width => margin + (blockWidth - width) / 2;
+  const iconX = centred(detailWidth);
+  const textLeft = iconX + iconGap;
 
   const logoX = centred(headRowWidth);
   try {
@@ -217,19 +223,18 @@ const drawEstimateLetterhead = (doc, margin, estimate) => {
   doc.moveTo(suffixX + lockupWidth - ruleLength, ruleY).lineTo(suffixX + lockupWidth, ruleY).stroke();
 
   doc.fontSize(6.5).font('Helvetica').fillColor(labelGray)
-     .text(taglineText, centred(taglineWidth), logoY + logoSize + 6, { characterSpacing: 0.7, lineBreak: false });
+     .text(taglineText, textLeft, logoY + logoSize + 6, { characterSpacing: 0.7, lineBreak: false });
 
   let lineY = logoY + logoSize + 18;
   doc.fontSize(7.5);
-  COMPANY.addressLines.forEach((line, index) => {
-    doc.fillColor('#4b5563').text(line, centred(addressWidths[index]), lineY, { lineBreak: false });
+  COMPANY.addressLines.forEach(line => {
+    doc.fillColor('#4b5563').text(line, textLeft, lineY, { lineBreak: false });
     lineY += 10;
   });
-  COMPANY_CONTACT_LINES.forEach(([kind, value], index) => {
-    const lineX = centred(contactWidths[index]);
+  COMPANY_CONTACT_LINES.forEach(([kind, value]) => {
     // The icon sits on the line's x-height rather than its baseline, or it floats above the text
-    drawContactIcon(doc, kind, lineX, lineY + 0.5, iconSize);
-    doc.fillColor('#4b5563').text(String(value), lineX + iconGap, lineY, { lineBreak: false });
+    drawContactIcon(doc, kind, iconX, lineY + 0.5, iconSize);
+    doc.fillColor('#4b5563').text(String(value), textLeft, lineY, { lineBreak: false });
     lineY += 11;
   });
   const companyBottom = lineY;
