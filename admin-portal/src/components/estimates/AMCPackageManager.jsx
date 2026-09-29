@@ -157,9 +157,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const totals = packageTotals(amcForm.serviceRows, amcForm.markupPercentage);
   const pricedRows = applyPackageMarkup(amcForm.serviceRows, amcForm.markupPercentage);
   const getPrice = () => totals.price;
-  // The quote is validated against the types a service allows; no method prices differently by type,
-  // so the first selected type is enough to price with.
-  const pricingPropertyType = selectedPropertyTypes[0] || '';
+  // Each row is quoted against a type its own service covers -- see quotePropertyType -- because the
+  // quote refuses one it does not, which left a row unpriced before any type was ticked.
   const catalogPath = selectedFp?.id && selectedFp.id !== 'all' ? '/api/admin/service-catalog' : '/api/admin/service-catalog';
   const [pricingError, setPricingError] = useState('');
 
@@ -172,7 +171,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     const timer = setTimeout(async () => {
       let failure = '';
       const priced = await Promise.all(amcForm.serviceRows.map(async row => {
-        const result = await quotePackageRow(row, { apiPath: catalogPath, propertyType: pricingPropertyType, fpId: selectedFp?.id, token, signal: controller.signal })
+        const result = await quotePackageRow(row, { apiPath: catalogPath, propertyTypes: selectedPropertyTypes, fpId: selectedFp?.id, token, signal: controller.signal })
           .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
         if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
         // A price typed over the quote stands: the quote still refreshes the costs behind it
@@ -190,7 +189,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       });
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [pricingKey, pricingPropertyType, catalogPath, selectedFp?.id, token]);
+  }, [pricingKey, selectedPropertyTypes, catalogPath, selectedFp?.id, token]);
 
   // Service row handlers
   const handleAddServiceRow = () => setCustomRowOpen(true);
@@ -302,7 +301,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             price: row.price, priceOverridden: row.priceOverridden, vendorCost: row.vendorCost,
             vendorRequired: row.vendorRequired,
             ...(row.catalogServiceId ? {
-              catalogServiceId: row.catalogServiceId, unit: row.unit,
+              catalogServiceId: row.catalogServiceId, unit: row.unit, applicablePropertyTypes: row.applicablePropertyTypes,
               capacitySlabs: row.capacitySlabs, defaultMarkupPercentage: row.defaultMarkupPercentage,
               defaultVisitsPerYear: row.defaultVisitsPerYear,
               operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
@@ -370,6 +369,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         unit: row.unit || '', category: decodeHtml(row.category) || '',
         // Reopening a Capacity Slab row brings its table back with it
         capacitySlabs: row.capacitySlabs || row.capacity_slabs,
+        applicablePropertyTypes: row.applicablePropertyTypes || row.applicable_property_types,
         defaultMarkupPercentage: row.defaultMarkupPercentage, defaultVisitsPerYear: row.defaultVisitsPerYear,
         inputValue: row.inputValue ?? row.input_value ?? '',
         price: row.price, vendorCost: row.vendorCost, operatingCost: row.operatingCost,

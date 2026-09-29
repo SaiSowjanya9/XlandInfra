@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { METHOD_INPUTS, applyPackageMarkup, packageTotals, rowInput, rowPriceWithMarkup } from './packageServicePricing.js';
+import { METHOD_INPUTS, applyPackageMarkup, packageTotals, quotePropertyType, rowInput, rowPriceWithMarkup } from './packageServicePricing.js';
 
 /**
  * An AMC package is priced by its services rather than by a figure typed into it, so these are the
@@ -17,6 +17,21 @@ test('a row asks for the amount its pricing method measures', () => {
   // Fixed Price measures nothing, and a hand-typed row has no method at all
   assert.equal(rowInput({ pricingMethod: 'fixed_price', unit: 'Visit' }), null);
   assert.equal(rowInput({ service: 'Typed by hand' }), null);
+});
+
+test('a row is quoted against a property type its own service covers', () => {
+  // The quote answers 400 for a type the service does not cover, so a row sent the package's first
+  // type was left unpriced whenever no type was ticked or the first one did not match: typing an
+  // amount produced no price and said nothing.
+  const gcOnly = { applicablePropertyTypes: ['GC', 'APT'] };
+
+  assert.equal(quotePropertyType(gcOnly, []), 'GC', 'no type ticked yet: the service decides');
+  assert.equal(quotePropertyType(gcOnly, ['APT', 'GC']), 'APT', 'a ticked type the service covers wins');
+  assert.equal(quotePropertyType(gcOnly, ['PLOT', 'APT']), 'APT', 'a ticked type it does not cover is skipped');
+  assert.equal(quotePropertyType(gcOnly, ['PLOT']), 'GC', 'nothing in common: still priced from the service');
+  // A row from an older package carries no list, so any ticked type is used as before
+  assert.equal(quotePropertyType({}, ['VILLA']), 'VILLA');
+  assert.equal(quotePropertyType({}, []), '');
 });
 
 test('a package markup prices every row from what it costs, the way the service form does', () => {
