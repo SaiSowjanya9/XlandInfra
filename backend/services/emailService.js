@@ -938,8 +938,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
     const visits = item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1;
     const price = Number(item.price || item.totalPrice || item.calculatedPrice || item.services?.[0]?.price || 0);
     const cell = `padding: 7px 8px; border-bottom: 1px solid ${WARM.border}; font-size: 12px; color: ${WARM.text}; vertical-align: top;`;
+    // The cream belongs to the column header alone. Rows are white and told apart by the rule
+    // between them: banding them as well made the table the loudest thing in the message.
     return `
-    <tr${index % 2 ? '' : ' style="background: #FFFCF6;"'}>
+    <tr>
       <td style="${cell} width: 22px; color: #6b7280;">${index + 1}</td>
       <td style="${cell}">
         <strong style="color: #111827;">${name}</strong>
