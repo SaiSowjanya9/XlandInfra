@@ -154,10 +154,12 @@ const drawPDFHeader = (doc, margin) => {
   const lockupX = Math.max(margin, (pageWidth - lockupWidth) / 2);
   const textCenterX = lockupX + logoSize + logoGap + textWidth / 2;
   // Centred on the logo's midline, so it holds whether the text block is the taller of the two
+  // The name line is centred on the logo, not the block: the suffix is light and drags a
+  // block-centred midpoint down, which leaves the name riding high above the mark.
   const titleHeight = mm(10);
   const suffixHeight = mm(4);
   const suffixDrop = mm(2);
-  const blockTop = logoY + logoSize / 2 - (titleHeight + suffixDrop + suffixHeight) / 2;
+  const blockTop = logoY + logoSize / 2 - titleHeight / 2;
 
   try {
     doc.addImage(XLAND_LOGO_ICON, 'PNG', lockupX, logoY, logoSize, logoSize);
@@ -293,16 +295,16 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 1, 1, 'F');
   }
 
-  // The name and its ruled suffix are one block, centred on the logo's own height rather than
-  // pinned near its top -- the two sat level with the logo's upper half, which read as though the
-  // name were floating off it. Point sizes are converted to mm, the unit this document is in.
+  // **The name line is centred on the logo, not the block.** Centring the whole block -- name plus
+  // ruled suffix -- puts its midpoint on the logo's midline, and since the suffix is a light line of
+  // 5.5pt text it drags that midpoint down, leaving the name itself riding high above the mark. The
+  // name is what the eye pairs with the logo, so its own centre sits on the logo's centre and the
+  // suffix hangs beneath. Point sizes are converted to mm, the unit this document is in.
   const textX = logoX + logoSize + logoGap;
   const mm = points => points * 0.3528;
   const titleHeight = mm(14);
-  const suffixHeight = mm(5.5);
   const suffixDrop = mm(5);                               // name baseline down to the rule
-  const blockHeight = titleHeight + suffixDrop + suffixHeight;
-  const blockTop = logoY + Math.max(0, (logoSize - blockHeight) / 2);
+  const blockTop = logoY + logoSize / 2 - titleHeight / 2;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
