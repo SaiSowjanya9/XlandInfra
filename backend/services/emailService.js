@@ -1180,19 +1180,28 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                       </td>
                     </tr>
                   </table>
-                  <div style="margin-top: 9px; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #6b7280; text-align: center;">${COMPANY.tagline}</div>
-                  <div style="margin-top: 7px; font-size: 11px; line-height: 1.7; color: #4b5563; text-align: center;">
-                    ${COMPANY.addressLines.join('<br>')}
-                  </div>
-                  ${COMPANY_CONTACT_LINES.map(([kind, value]) => `
-                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 2px auto 0;">
+                  <!-- Every line starts on one vertical edge, with the icons in a column of their
+                       own to the left of it. One table for the lot, centred as a block, rather
+                       than a centred table per line, which put the three icons at three different
+                       positions and left the text ragged on both sides. -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 9px auto 0;">
                     <tr>
-                      <td style="padding: 0 6px 0 0; vertical-align: middle; line-height: 0;">
+                      <td style="width: 17px;"></td>
+                      <td style="font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: #6b7280; padding-bottom: 5px;">${COMPANY.tagline}</td>
+                    </tr>
+                    ${COMPANY.addressLines.map(line => `
+                    <tr>
+                      <td></td>
+                      <td style="font-size: 11px; line-height: 1.7; color: #4b5563;">${line}</td>
+                    </tr>`).join('')}
+                    ${COMPANY_CONTACT_LINES.map(([kind, value]) => `
+                    <tr>
+                      <td style="padding: 1px 6px 1px 0; vertical-align: middle; line-height: 0;">
                         <img src="cid:${CONTACT_ICON_CID[kind]}" alt="" width="11" height="11" style="display: block; width: 11px; height: 11px;">
                       </td>
-                      <td style="font-size: 11px; color: #4b5563; vertical-align: middle;">${value}</td>
-                    </tr>
-                  </table>`).join('')}
+                      <td style="font-size: 11px; line-height: 1.7; color: #4b5563; vertical-align: middle;">${value}</td>
+                    </tr>`).join('')}
+                  </table>
                 </td>
                 <td width="240" style="vertical-align: top;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid ${WARM.border}; border-radius: 8px; border-collapse: separate;">

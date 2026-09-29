@@ -266,12 +266,18 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const taglineText = String(COMPANY.tagline).toUpperCase();
   const taglineWidth = doc.getTextWidth(taglineText) + 0.3 * taglineText.length;
   doc.setFontSize(7.5);
-  const addressWidths = COMPANY.addressLines.map(line => doc.getTextWidth(line));
-  const contactWidths = COMPANY_CONTACT_LINES.map(([, value]) => iconSize + iconGap - 1.8 + doc.getTextWidth(String(value)));
+  const detailWidths = [taglineWidth, ...COMPANY.addressLines.map(line => doc.getTextWidth(line)),
+    ...COMPANY_CONTACT_LINES.map(([, value]) => doc.getTextWidth(String(value)))];
 
-  const blockWidth = Math.max(headRowWidth, taglineWidth, ...addressWidths, ...contactWidths);
+  // Every line of the block starts on one vertical edge, with the icons in a column of their own
+  // hanging to the left of it. Centring each line on its own width instead left the text ragged
+  // on both sides and put the three icons at three different x positions.
+  const detailWidth = iconGap + Math.max(...detailWidths);
+  const blockWidth = Math.max(headRowWidth, detailWidth);
   const blockX = margin;
   const centred = width => blockX + (blockWidth - width) / 2;
+  const iconX = centred(detailWidth);
+  const textLeft = iconX + iconGap;
 
   const logoX = centred(headRowWidth);
   try {
@@ -303,21 +309,20 @@ const drawEstimateLetterhead = (doc, margin, data) => {
 
   doc.setFontSize(6.5);
   doc.setTextColor(...labelGray);
-  doc.text(taglineText, centred(taglineWidth), logoY + logoSize + 2.5, { charSpace: 0.3 });
+  doc.text(taglineText, textLeft, logoY + logoSize + 2.5, { charSpace: 0.3 });
 
   let lineY = logoY + logoSize + 7;
   doc.setFontSize(7.5);
   doc.setTextColor(75, 85, 99);
-  COMPANY.addressLines.forEach((line, index) => {
-    doc.text(line, centred(addressWidths[index]), lineY);
+  COMPANY.addressLines.forEach(line => {
+    doc.text(line, textLeft, lineY);
     lineY += 3.6;
   });
-  COMPANY_CONTACT_LINES.forEach(([kind, value], index) => {
-    const lineX = centred(contactWidths[index]);
+  COMPANY_CONTACT_LINES.forEach(([kind, value]) => {
     // The icon sits on the line's x-height rather than its baseline, or it floats above the text
-    drawContactIcon(doc, kind, lineX, lineY - 2.3, iconSize);
+    drawContactIcon(doc, kind, iconX, lineY - 2.3, iconSize);
     doc.setTextColor(75, 85, 99);
-    doc.text(String(value), lineX + iconGap, lineY);
+    doc.text(String(value), textLeft, lineY);
     lineY += 3.8;
   });
   const companyBottom = lineY;
