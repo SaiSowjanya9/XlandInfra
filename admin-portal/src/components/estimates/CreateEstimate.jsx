@@ -1680,11 +1680,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
         </div>
       )}
 
-      {/* Property-based Estimate Form - Two Column Layout */}
+      {/* Property-based Estimate Form - single column, pricing along the bottom */}
       {estimateType === 'property' && (
-        <div className="flex flex-col xl:flex-row gap-6">
-          {/* Left Column - Main Form */}
-          <div className="flex-1 min-w-0 space-y-4">
+        <div className="flex flex-col gap-6">
+          {/* Main Form */}
+          <div className="min-w-0 space-y-4">
             {/* Property Info Card - Compact horizontal layout (Image 1 style) */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -2865,10 +2865,11 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
             terms={termsConditions} onTermsChange={setTermsConditions} />
         </div>
         
-        {/* Right Sidebar - Pricing Summary (Image 1 style) */}
-        <div className="w-full xl:w-80 space-y-4 flex-shrink-0">
+        {/* Bottom - Pricing Summary and Package Details, full width rather than a side rail
+            that squeezed the form and made the page taller than it needed to be */}
+        <div className={`grid grid-cols-1 gap-4 items-start ${selectedPackage ? 'xl:grid-cols-2' : ''}`}>
           {/* Pricing Summary Card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
               Pricing Summary
               <Info className="w-4 h-4 text-gray-400" />
