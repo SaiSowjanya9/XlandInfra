@@ -765,7 +765,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // service carries a category, a quantity and a vendor answer as well as its name, schedule and
   // price, and OK adds all of it as one row. Editing a row reopens the same dialog.
   const renderCustomServices = () => estimateStructure === 'custom'
-    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm"
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm" internal
         extraRows={catalogAddons} renderExtraActions={catalogRowActions}
         onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
         addControl={renderCatalogPicker({ variant: 'menu', extraItems: [

@@ -39,14 +39,15 @@ const serviceColumns = (decode, internal) => {
       ? <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{getServiceMethodLabel(row)}</span>
       : <span className="text-xs text-gray-400">-</span>) };
   const input = { label: 'Input / Details', head: 'col-span-2', cell: 'col-span-2 min-w-0',
-    // What was measured at the property -- 4 Lift, 15,000 Sq Ft. Prices never appear here: a ₹
-    // rate is a cost and stays out of the field. A capacity slab's band names the bracket the
-    // input fell in, which is not a cost, so it can stay.
+    // What was measured at the property -- 4 Lift, 15,000 Sq Ft. The subline is screen-only
+    // (print:hidden keeps a browser print clean): a slab band names the bracket the input fell in
+    // for everyone, while a ₹ rate is the vendor's price and shows to internal viewers only.
     render: row => {
       const sub = getServiceRate(row);
+      const showSub = sub && (!sub.includes('₹') || internal);
       return <>
         <p className="text-xs text-gray-700 break-words">{getServiceInput(row) || '-'}</p>
-        {sub && !sub.includes('₹') && <p className="text-[10px] text-gray-500">{sub}</p>}
+        {showSub && <p className="text-[10px] text-gray-500 print:hidden">{sub}</p>}
       </>;
     } };
   const frequency = { label: 'Frequency', head: 'col-span-2 text-center', cell: 'col-span-2 text-center',

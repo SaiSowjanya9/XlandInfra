@@ -5,9 +5,10 @@
  * estimate reports what it was actually costed at rather than what today's catalog would say. This
  * mirrors `estimateInternalCosts` in the admin portal, which reads the same fields on the client.
  *
- * A service typed by hand has no vendor behind it, so it contributes a customer price and no cost --
- * the margin of an estimate made entirely of typed rows is therefore 100%, which is true of what we
- * know about it rather than of the work.
+ * A service typed by hand with no vendor cost behind it contributes a customer price and no cost --
+ * the margin of an estimate made entirely of uncosted typed rows is therefore 100%, which is true
+ * of what we know about it rather than of the work. A typed row that does carry a vendor cost is
+ * counted with the costed ones.
  */
 
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;

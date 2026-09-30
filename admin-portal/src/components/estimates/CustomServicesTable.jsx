@@ -3,12 +3,16 @@ import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import { getServiceMarginPercent, getServiceVendorCost, getServiceXlandCost } from '../../utils/estimatePackageUtils';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
-// services: there is no configured rate behind them, so the customer price is entered directly and
-// no vendor cost, method or margin is shown. Rows are added on request rather than the table always
-// trailing a blank one, and a row can be edited in place or removed.
+// services: there is no configured rate behind them, so the price is entered directly rather than
+// quoted. A row can still carry what the vendor charges and the markup it was priced at, and where
+// it does the internal cost columns show them. Rows are added on request rather than the table
+// always trailing a blank one, and a row can be edited in place or removed.
 const currency = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const costOr = value => value == null ? '—' : currency(value);
+const marginOr = value => value == null ? '—' : `${value}%`;
 const BLANK = { name: '', description: '', frequency_type: 'Monthly', frequency_count: 12, price: '' };
 // Every frequency carries its own annual visit count, so Visits / Year is read-only once one is
 // picked -- a schedule and a visit count that disagree is not a thing an estimate should be able to
@@ -35,12 +39,19 @@ export const buildCustomService = (values, addonId) => {
   // carries it -- skip_vendor_assignment -- so one flag means the same thing on every row.
   const quantity = Number(values.quantity);
   const category = String(values.category || '').trim();
+  // What the vendor charges and the markup the price was set at -- optional, but where they are
+  // given the row prices like a catalog service: the internal cost columns and the margins panel
+  // read these same two fields off it.
+  const vendorCost = values.vendorCost === '' || values.vendorCost == null ? null : Number(values.vendorCost);
+  const markup = values.markupPercentage === '' || values.markupPercentage == null ? null : Number(values.markupPercentage);
   return {
     addonId: addonId || `CUSTOM-${Date.now()}${Math.floor(Math.random() * 1000)}`, customService: true,
     name, service_name: name, description,
     frequency_type: values.frequency_type, frequency_count: visits,
     ...(Number.isFinite(quantity) && quantity > 0 ? { quantity } : {}),
     ...(category ? { category } : {}),
+    ...(Number.isFinite(vendorCost) && vendorCost >= 0 ? { vendorCost } : {}),
+    ...(Number.isFinite(markup) && markup >= 0 ? { markup_percentage: markup } : {}),
     skip_vendor_assignment: values.vendorRequired === false,
     totalPrice: price, price,
     services: [{ name, description, frequencyType: values.frequency_type, frequency: visits, price: visits ? price / visits : price }]
@@ -54,6 +65,8 @@ export const customServiceValues = row => ({
   frequency_type: row?.frequency_type || 'Monthly',
   frequency_count: row?.frequency_count ?? 12,
   price: row ? String(row.totalPrice ?? row.price ?? '') : '',
+  vendorCost: row?.vendorCost ?? '',
+  markupPercentage: row?.markup_percentage ?? '',
   vendorRequired: row ? row.skip_vendor_assignment !== true : true
 });
 
@@ -85,8 +98,12 @@ const complaint = values => {
 // and a vendor answer there is more of it than a table row can hold, so it is entered in a dialog
 // and this table only lists it. Without the prop the row is still edited in place, which is what
 // the portals that add a blank row straight from the button rely on.
+//
+// `internal` adds the Vendor Cost, XLAND Cost and Margin % columns ahead of the price -- the same
+// figures the catalog's service table shows the roles that may see costs. It is passed only by
+// those portals; everywhere else the table stays customer-priced.
 export default function CustomServicesTable({ rows = [], onChange, title = 'Custom Services', addControl = null,
-  extraRows = [], renderExtraActions = null, onEditRow = null, theme }) {
+  extraRows = [], renderExtraActions = null, onEditRow = null, internal = false, theme }) {
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);
@@ -101,7 +118,10 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
     const row = rows[index];
     setProblem('');
     setEdit({ index, values: { name: row.name, description: row.description, frequency_type: row.frequency_type,
-      frequency_count: row.frequency_count, price: isBlank(row) ? '' : (row.totalPrice ?? row.price) } });
+      frequency_count: row.frequency_count, price: isBlank(row) ? '' : (row.totalPrice ?? row.price),
+      // Carried through an in-place edit so a costed row stays costed even though the cells are
+      // not editable here -- the dialog is where they are set.
+      vendorCost: row.vendorCost ?? '', markupPercentage: row.markup_percentage ?? '' } });
   };
   // A row arrives blank from the Custom option, so it opens for typing without another click.
   // Where the caller edits in its own dialog no blank row is ever appended, so this stands down.
@@ -160,21 +180,26 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           table keeps a minimum width and scrolls inside this wrapper, so a narrow form column
           makes the row scroll rather than pushing two headings into each other. */}
       <div className="overflow-x-auto">
-      <table className="w-full table-fixed min-w-[820px]">
+      <table className={`w-full table-fixed ${internal ? 'min-w-[1080px]' : 'min-w-[820px]'}`}>
         <thead>
           <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
-            <th className="w-[5%] whitespace-nowrap px-3 py-2.5 text-center">#</th>
-            <th className="w-[20%] whitespace-nowrap px-3 py-2.5 text-left">Service</th>
-            <th className="w-[24%] whitespace-nowrap px-3 py-2.5 text-left">Description</th>
-            <th className="w-[14%] whitespace-nowrap px-3 py-2.5 text-left">Frequency</th>
-            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center" title="Visits per year">Visits</th>
-            <th className="w-[15%] whitespace-nowrap px-3 py-2.5 text-right" title="Customer price in rupees">Price (₹)</th>
-            <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center">Action</th>
+            <th className={`${internal ? 'w-[4%]' : 'w-[5%]'} whitespace-nowrap px-3 py-2.5 text-center`}>#</th>
+            <th className={`${internal ? 'w-[14%]' : 'w-[20%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Service</th>
+            <th className={`${internal ? 'w-[15%]' : 'w-[24%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
+            <th className={`${internal ? 'w-[11%]' : 'w-[14%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
+            <th className={`${internal ? 'w-[8%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
+            {internal && <>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right" title="What the vendor charges for this service">Vendor Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
+              <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center" title="XLAND cost as a share of the customer price">Margin %</th>
+            </>}
+            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-right`} title="Customer price in rupees">Price (₹)</th>
+            <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center`}>Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
           {!rows.length && !extraRows.length && (
-            <tr><td colSpan={7} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
+            <tr><td colSpan={internal ? 10 : 7} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
               No services yet. Use Add Service to add one.
             </td></tr>
           )}
@@ -208,6 +233,9 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                   onChange={event => setEditField('frequency_count', event.target.value)} aria-label="Visits per year"
                   className={`${numberClass} text-center ${isCustomFrequency(edit.values.frequency_type) ? '' : `cursor-not-allowed hover:border-transparent ${skin.muted}`}`} />
               </td>
+              {/* The cost cells keep their places in an internal table; an in-place edit never
+                  changes them -- the dialog is where cost and markup are set */}
+              {internal && <><td /><td /><td /></>}
               <td className="px-3 py-2.5">
                 <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
                   placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
@@ -238,6 +266,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
+              {internal && <>
+                <td className={`${cell} text-right`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-right`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center`}>{marginOr(getServiceMarginPercent(row))}</td>
+              </>}
               <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5">
@@ -258,6 +291,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
+              {internal && <>
+                <td className={`${cell} text-right`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-right`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center`}>{marginOr(getServiceMarginPercent(row))}</td>
+              </>}
               <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               <td className="px-3 py-2.5">{renderExtraActions?.(row)}</td>
             </tr>
@@ -265,7 +303,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className={`border-t ${skin.panelFoot}`}>
-            <td colSpan={5} className={`px-3 py-2.5 text-right text-sm font-semibold ${skin.text}`}>Total Services</td>
+            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-right text-sm font-semibold ${skin.text}`}>Total Services</td>
             <td className={`px-3 py-2.5 text-right text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td />
           </tr>

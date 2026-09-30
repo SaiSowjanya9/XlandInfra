@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeEstimateData, normalizeEstimateService, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices } = require('./estimateData');
+const { normalizeEstimateData, normalizeEstimateService, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, normalizeManualService } = require('./estimateData');
 
 const addon = {
   catalogServiceId: 3, name: 'Generator Maintenance', description: 'Inspect and service generator', totalPrice: 11960.25,
@@ -187,4 +187,31 @@ test('manpower snapshots retain role, range and hours without disclosing rates o
   assert.equal(customer.addons[0].frequencyCount, 12);
   assert.doesNotMatch(JSON.stringify(customer), /rate_per_person|overtime_rate_per_hour|vendorCost|operating_cost|876.54|profit/);
   assert.equal(normalizeEstimateService(row).details, row.details);
+});
+
+test('a hand-entered service keeps an entered vendor cost and markup, bounded like its price', () => {
+  // Vendor cost and markup are the same two figures a catalog service's snapshot holds, so a
+  // costed typed row prices like any other service on the internal screens and the margins panel
+  const row = normalizeManualService({ name: 'Tank Cleaning', description: '2 tanks', price: 5200,
+    vendorCost: 4000, markup_percentage: 30, frequency_type: 'Quarterly', frequency_count: 4 });
+  assert.equal(row.customService, true);
+  assert.equal(row.vendorCost, 4000);
+  assert.equal(row.markup_percentage, 30);
+
+  // Optional both ways: absent and blank store nothing, and the camelCase spellings the dialog
+  // sends are accepted too
+  const uncosted = normalizeManualService({ name: 'A', price: 100 });
+  assert.equal('vendorCost' in uncosted, false);
+  assert.equal('markup_percentage' in uncosted, false);
+  const camel = normalizeManualService({ name: 'A', price: 110, vendorCost: 100, markupPercentage: 10 });
+  assert.equal(camel.markup_percentage, 10);
+
+  // Out of bounds is a 400 like every other field's, not a stored figure
+  for (const addon of [{ vendorCost: -5 }, { vendorCost: 1e9 }, { markup_percentage: 1200 }, { markup_percentage: -1 }]) {
+    assert.throws(() => normalizeManualService({ name: 'A', price: 100, ...addon }), error => error.status === 400);
+  }
+
+  // And none of it reaches the customer: delivery carries name, details and price, never the cost
+  const customer = customerEstimateData({ estimateType: 'custom', addons: [row], total: 5200 });
+  assert.doesNotMatch(JSON.stringify(customer), /vendorCost|markup_percentage|4000|30/);
 });
