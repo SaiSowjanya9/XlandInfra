@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { stripInternalServiceDetails } from '../utils/estimatePackageUtils';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -477,9 +478,9 @@ const FPInvoiceView = ({ user }) => {
                   <tr key={index} className="border-b border-gray-200">
                     <td className="py-3 px-4 text-gray-600">{index + 1}</td>
                     <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{decodeHtmlEntities(item.description)}</p>
+                      <p className="font-medium text-gray-900">{decodeHtmlEntities(stripInternalServiceDetails(item.description))}</p>
                       {item.details && (
-                        <p className="text-sm text-gray-500">{decodeHtmlEntities(item.details)}</p>
+                        <p className="text-sm text-gray-500">{decodeHtmlEntities(stripInternalServiceDetails(item.details))}</p>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center text-gray-600">{item.quantity || 1}</td>

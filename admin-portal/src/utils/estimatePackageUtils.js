@@ -139,13 +139,18 @@ const serviceMethod = (service) => service?.pricing_method || service?.pricingMe
 // no configured method behind it.
 export const getServiceMethodLabel = (service) => METHOD_LABELS[serviceMethod(service)] || '';
 
-// `Property Types` is catalog configuration -- which kinds of property a service is set up for --
-// not something a customer document states. It is stripped where a document is drawn rather than
-// where the estimate is saved, because estimates already stored carry the segment inside
-// `details` and `description`. Mirrors stripPropertyTypes in backend/utils/estimateData.js.
-const PROPERTY_TYPES_SEGMENT = /^Property Types\s*:/i;
-export const stripPropertyTypes = (text) => String(text ?? '').split('\n')
-  .map(line => line.split(' | ').filter(part => !PROPERTY_TYPES_SEGMENT.test(part.trim())).join(' | '))
+// Internal segments are catalog configuration -- which properties a service is set up for, which
+// capacity bracket its input fell into, what rate it was priced at. None of it belongs on a
+// customer document. It is stripped where a document is drawn rather than where the estimate is
+// saved, because estimates already stored carry these segments inside `details` and `description`.
+// Mirror: stripInternalServiceDetails in backend/utils/estimateData.js.
+const DOCUMENT_SEGMENT = /^Property Types\s*:|^Slab\s*:|^Rate\s*:/i;
+const RATE_SEGMENT = /₹[\d,]*(\.\d+)?\s*\//;  // a priced rate always reads "₹1,800 / Lift / Visit"
+export const stripInternalServiceDetails = (text) => String(text ?? '').split('\n')
+  .map(line => line.split(' | ').filter(part => {
+    const segment = part.trim();
+    return !DOCUMENT_SEGMENT.test(segment) && !RATE_SEGMENT.test(segment);
+  }).join(' | '))
   .join('\n');
 
 /**
@@ -259,9 +264,9 @@ export const getServiceDescription = (service) => {
  * what it was actually costed at rather than what today's catalog would say.
  *
  * These belong to the Admin, Ops Manager, FP and Manager screens only, under an Internal heading,
- * and must never reach a customer document. A hand-entered service has no vendor behind it, so its
- * vendor and XLAND costs are null rather than zero -- nothing was quoted, which is not the same as
- * costing nothing.
+ * and must never reach a customer document. A hand-entered service reports the vendor cost it was
+ * given -- where none was entered the figure is null rather than zero, because nothing was quoted,
+ * which is not the same as costing nothing.
  */
 const snapshotOf = (service) => service?.pricingSnapshot || {};
 const figure = (...values) => {
@@ -269,7 +274,7 @@ const figure = (...values) => {
   return found == null ? null : Number(found);
 };
 export const getServiceVendorCost = (service) =>
-  service?.customService ? null : figure(service?.vendorCost, snapshotOf(service).vendorCost);
+  figure(service?.vendorCost, service?.customService ? undefined : snapshotOf(service).vendorCost);
 export const getServiceOperatingCost = (service) =>
   service?.customService ? null : figure(service?.operatingCost, snapshotOf(service).operatingCost, snapshotOf(service).default_operating_cost);
 export const getServiceActualCost = (service) => {
@@ -286,7 +291,7 @@ export const getServiceActualCost = (service) => {
  * `getServiceOperatingCost`: that is a separate overhead the service form hardcodes to 0, which is
  * what had this figure reading as nothing beside a real margin.
  *
- * A hand-entered row has no vendor behind it, so there is no margin to state and this is null --
+ * A hand-entered row with no vendor cost behind it has no margin to state, so this is null --
  * a dash, not a zero, the same rule the other cost cells follow.
  */
 export const getServiceXlandCost = (service) => {

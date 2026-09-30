@@ -38,14 +38,18 @@ const customerServiceDetails = (text, category = '') => String(text ?? '').split
   .map(line => customerLine(line, String(category ?? '').trim()))
   .filter(line => line.trim()).join('\n');
 
-// `Property Types` is catalog configuration -- which kinds of property a service is set up for --
-// not something a customer document states. It is stripped where a document is drawn rather than
-// where the estimate is saved, because estimates already stored carry the segment inside
-// `details` and `description`. Mirrors stripPropertyTypes in
-// admin-portal/src/utils/estimatePackageUtils.js.
-const PROPERTY_TYPES_SEGMENT = /^Property Types\s*:/i;
-const stripPropertyTypes = text => String(text ?? '').split('\n')
-  .map(line => line.split(' | ').filter(part => !PROPERTY_TYPES_SEGMENT.test(part.trim())).join(' | '))
+// Internal segments are catalog configuration -- which properties a service is set up for, which
+// capacity bracket its input fell into, what rate it was priced at. None of it belongs on a
+// customer document. It is stripped where a document is drawn rather than where the estimate is
+// saved, because estimates already stored carry these segments inside `details` and `description`.
+// Mirror: admin-portal/src/utils/estimatePackageUtils.js.
+const DOCUMENT_SEGMENT = /^Property Types\s*:|^Slab\s*:|^Rate\s*:/i;
+const RATE_SEGMENT = /₹[\d,]*(\.\d+)?\s*\//;  // a priced rate always reads "₹1,800 / Lift / Visit"
+const stripInternalServiceDetails = text => String(text ?? '').split('\n')
+  .map(line => line.split(' | ').filter(part => {
+    const segment = part.trim();
+    return !DOCUMENT_SEGMENT.test(segment) && !RATE_SEGMENT.test(segment);
+  }).join(' | '))
   .join('\n');
 
 const normalizeEstimateService = value => {
@@ -215,11 +219,27 @@ const normalizeManualService = addon => {
   }
   const category = String(first(addon.category, '') ?? '').trim();
   if (category.length > 100) fail(`The category for ${name} must be 100 characters or fewer.`);
+  // A hand-entered service can carry what the vendor charges and the markup its price was set at --
+  // the same two figures a catalog service's pricing snapshot holds -- so the internal cost columns
+  // and the margins panel price it like any costed service. Both are optional, bounded like the
+  // price, and never printed on a customer document.
+  const rawVendorCost = first(addon.vendorCost, addon.vendor_cost);
+  const vendorCost = rawVendorCost === undefined || rawVendorCost === null || rawVendorCost === '' ? undefined : Number(rawVendorCost);
+  if (vendorCost !== undefined && (!Number.isFinite(vendorCost) || vendorCost < 0 || vendorCost > 99999999)) {
+    fail(`Enter a vendor cost for ${name} between 0 and 99,999,999.`);
+  }
+  const rawMarkup = first(addon.markup_percentage, addon.markupPercentage);
+  const markup = rawMarkup === undefined || rawMarkup === null || rawMarkup === '' ? undefined : Number(rawMarkup);
+  if (markup !== undefined && (!Number.isFinite(markup) || markup < 0 || markup > 1000)) {
+    fail(`Enter a markup for ${name} between 0 and 1000.`);
+  }
   return { addonId: String(addon.addonId || '').startsWith('CUSTOM-') ? addon.addonId : `CUSTOM-${name}`,
     customService: true, name, service_name: name, description,
     frequency_type: frequencyType, frequency_count: visits, totalPrice: price, price,
     ...(quantity === undefined ? {} : { quantity }),
     ...(category ? { category } : {}),
+    ...(vendorCost === undefined ? {} : { vendorCost }),
+    ...(markup === undefined ? {} : { markup_percentage: markup }),
     // Absent means a vendor is expected, which is what every estimate saved before this did
     skip_vendor_assignment: addon.skip_vendor_assignment === true,
     services: [{ name, description, frequencyType, frequency: visits, price: visits ? price / visits : price }] };
@@ -227,4 +247,4 @@ const normalizeManualService = addon => {
 
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, stripPropertyTypes, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, stripInternalServiceDetails, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };

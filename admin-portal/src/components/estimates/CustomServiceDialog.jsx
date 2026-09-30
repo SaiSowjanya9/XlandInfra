@@ -11,10 +11,15 @@ import useServiceCategories from '../../hooks/useServiceCategories';
 // space for what one needs: a category, a quantity and whether the job needs a vendor as well as
 // the name, description, schedule and price. OK adds it to the Custom Services table as one row.
 //
-// There is no configured rate behind it, so the customer price is entered directly -- no vendor
-// cost, markup or margin is asked for or shown.
+// Where the price is a customer's the vendor cost and markup are asked for too, and the price,
+// XLAND cost and margin derive from them by the same rule the service form prices a catalog
+// service: price = vendor cost + vendor cost x markup/100, margin = XLAND cost / price. Where the
+// field prices a vendor instead (a package's hand-typed row) there is no markup to charge, so
+// those fields stay out of the dialog.
 const FREQUENCY_CHOICES = [...FREQUENCY_OPTIONS, { value: 'Custom', label: 'Custom', defaultVisits: null }];
 const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === frequency)?.defaultVisits ?? 0;
+const round2 = value => Math.round((value + Number.EPSILON) * 100) / 100;
+const isFigure = value => value !== '' && value != null && Number.isFinite(Number(value)) && Number(value) >= 0;
 
 //  names the figure being entered. An estimate's custom service is sold to a customer,
 // so it asks for the customer price; a package's hand-typed row is bought from a vendor, so it asks
@@ -23,6 +28,9 @@ const visitsFor = frequency => FREQUENCY_OPTIONS.find(item => item.value === fre
 export default function CustomServiceDialog({ open, onClose, onSubmit, editing = null,
   apiPath = '/api/admin/service-catalog', fpId, theme,
   title, priceLabel = 'Customer Price', subtitle = 'Entered by hand, so the customer price is set here rather than calculated' }) {
+  // Vendor cost and markup only where the figure sold is a customer's. A package row's price IS
+  // what the vendor charges, so asking for a vendor cost beside it would price the row twice.
+  const withCosts = priceLabel === 'Customer Price';
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);
@@ -62,16 +70,40 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
 
   const setField = (field, value) => {
     setProblem('');
-    setValues(prev => ({ ...prev, [field]: value,
-      // The frequency states how many visits a year it means, so the count follows it. Custom is
-      // the exception: it has no count of its own, so the figure is typed.
-      ...(field === 'frequency_type' && !isCustomFrequency(value) ? { frequency_count: visitsFor(value) } : {}) }));
+    setValues(prev => {
+      const next = { ...prev, [field]: value,
+        // The frequency states how many visits a year it means, so the count follows it. Custom is
+        // the exception: it has no count of its own, so the figure is typed.
+        ...(field === 'frequency_type' && !isCustomFrequency(value) ? { frequency_count: visitsFor(value) } : {}) };
+      // Vendor cost and markup together set the customer price -- the same rule the service form
+      // prices a catalog service by. With a cost alone the price stays typed, and the margin that
+      // price makes is shown live below.
+      if (field === 'vendorCost' || field === 'markupPercentage') {
+        const cost = Number(next.vendorCost), markup = Number(next.markupPercentage);
+        if (isFigure(next.vendorCost) && isFigure(next.markupPercentage)) {
+          next.price = String(round2(cost * (1 + markup / 100)));
+        }
+      }
+      return next;
+    });
   };
+
+  // What the row costs and earns: XLAND cost is the price over the vendor cost, margin that figure
+  // as a share of the price -- both derived, never typed.
+  const costed = withCosts && isFigure(values.vendorCost);
+  const autoPriced = costed && isFigure(values.markupPercentage);
+  const priceFigure = Number(values.price);
+  const xlandCost = costed && Number.isFinite(priceFigure) ? round2(priceFigure - Number(values.vendorCost)) : null;
+  const marginPercent = costed && priceFigure > 0 ? round2((priceFigure - Number(values.vendorCost)) / priceFigure * 100) : null;
 
   if (!open) return null;
 
   const submit = () => {
     if (!String(values.name).trim()) return setProblem('Enter a service name.');
+    if (withCosts && values.vendorCost !== '' && !isFigure(values.vendorCost)) return setProblem('Enter a vendor cost of 0 or more, or leave it empty.');
+    if (withCosts && values.markupPercentage !== '' && (!Number.isFinite(Number(values.markupPercentage)) || Number(values.markupPercentage) < 0 || Number(values.markupPercentage) > 1000)) {
+      return setProblem('Enter a markup between 0 and 1000%.');
+    }
     const price = String(values.price ?? '').trim();
     if (price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) return setProblem(`Enter a ${priceLabel.toLowerCase()} for this service.`);
     const quantity = Number(values.quantity);
@@ -145,11 +177,45 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
                 className={isCustomFrequency(values.frequency_type) ? field : readOnlyField} />
             </label>
 
+            {withCosts && <>
+              <label className="block">
+                <span className={label}>Vendor Cost (₹)</span>
+                <input type="number" min="0" step="0.01" value={values.vendorCost}
+                  onChange={event => setField('vendorCost', event.target.value)} placeholder="What the vendor charges" className={field} />
+              </label>
+
+              <label className="block">
+                <span className={label}>Markup (%)</span>
+                <input type="number" min="0" max="1000" step="0.01" value={values.markupPercentage}
+                  onChange={event => setField('markupPercentage', event.target.value)} placeholder="Charged on the vendor cost" className={field} />
+              </label>
+            </>}
+
             <label className="block">
               <span className={label}>{priceLabel} (₹) <span className="text-red-500">*</span></span>
+              {/* Vendor cost and markup together set this; type over it only where no markup is
+                  being charged */}
               <input type="number" min="0" step="0.01" value={values.price}
-                onChange={event => setField('price', event.target.value)} placeholder="0" className={field} />
+                readOnly={autoPriced}
+                title={autoPriced ? 'Vendor cost plus markup' : undefined}
+                onChange={event => setField('price', event.target.value)} placeholder="0"
+                className={autoPriced ? readOnlyField : field} />
             </label>
+
+            {/* Derived, never typed: the markup in rupees and its share of the price -- the same
+                two readouts the service form shows a catalog service */}
+            {costed && <>
+              <label className="block">
+                <span className={label}>XLAND Cost (₹)</span>
+                <input readOnly value={xlandCost == null ? '—' : xlandCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  title="Customer price minus vendor cost" className={readOnlyField} />
+              </label>
+              <label className="block">
+                <span className={label}>Margin %</span>
+                <input readOnly value={marginPercent == null ? '—' : `${marginPercent}%`}
+                  title="XLAND cost as a share of the customer price" className={readOnlyField} />
+              </label>
+            </>}
 
             <div>
               <span className={label}>Vendor Required</span>

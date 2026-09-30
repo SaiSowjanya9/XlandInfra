@@ -31,6 +31,17 @@ test('a configured service reports what it cost, a hand-entered one has no vendo
   assert.equal(getServiceXlandCost(manualService), null);
   assert.equal(getServiceMarginPercent(manualService), null);
 
+  // A typed row CAN carry the vendor's cost and the markup it was priced at, and where it does the
+  // same figures a catalog service reports derive from them: ₹4,000 at 30% sells for ₹5,200, makes
+  // ₹1,200 and keeps a 23.08% margin
+  const costedManual = { customService: true, name: 'Priced by hand', totalPrice: 5200, frequency_count: 4,
+    vendorCost: 4000, markup_percentage: 30 };
+  assert.equal(getServiceVendorCost(costedManual), 4000);
+  assert.equal(getServiceOperatingCost(costedManual), null);
+  assert.equal(getServiceActualCost(costedManual), 4000);
+  assert.equal(getServiceXlandCost(costedManual), 1200);
+  assert.equal(getServiceMarginPercent(costedManual), 23.08);
+
   // An older row without an actual cost or margin still reports both, derived from what it has
   const older = { catalogServiceId: 9, totalPrice: 10000, pricingSnapshot: { vendorCost: 6000, operatingCost: 2000 } };
   assert.equal(getServiceActualCost(older), 8000);
