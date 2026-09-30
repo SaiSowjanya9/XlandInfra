@@ -174,7 +174,10 @@ bug, because a colleague reading the estimate on screen is reading what the cust
 
 1. **Letterhead.** A gold rule across the head of the page, then two facing blocks: on the left the
    company, on the right a **BILL TO** card — the customer's name, phone, email, and the property,
-   property code and city the estimate was written for.
+   property code and city the estimate was written for. The card is **flexible**: it widens to keep
+   an email or property code on one line, capped so it never overlaps the company block; a value too
+   long to sit beside its label drops to its own full-width line rather than snapping mid-word. The
+   same goes for the on-screen card and the email table cell — keep emails `nowrap`, never fixed-width.
    The company block is **one centred stack**: the logo and `XLAND INFRA` share the first line, and
    the tagline, address and contact lines are centred **on the whole lockup** beneath them — every
    line measured and placed by hand in the PDFs, and one centred table per line in the email, since
@@ -204,7 +207,7 @@ bug, because a colleague reading the estimate on screen is reading what the cust
 6. `SERVICES`: the same columns, priced, with the **Total Services Price** line under it.
 7. **Price Summary**, in a card against the **right** edge: Subtotal, Discount (only when one was
    given), GST, and the Total on a black band in gold-on-white. Not a full-width list.
-8. Notes / Description.
+8. Notes.
 9. Terms & Conditions, last, and only when the estimate carries them (see above).
 10. Footer: the legal name, email and phone, centred — **and nothing else**. No
     "computer-generated document" note, no "do not reply to this automated email", no watermark

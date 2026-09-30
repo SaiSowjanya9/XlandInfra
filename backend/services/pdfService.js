@@ -235,6 +235,9 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
   doc.fontSize(5.5).font('Helvetica');
   const suffixDrop = 5;                                   // name baseline to the rule
   const blockTop = logoY + logoSize / 2 - titleHeight / 2;
+  // The furthest right the company block reaches: the party card may grow leftward up to this, so
+  // a long email or property code keeps to one line inside it.
+  let companyRight = textX + nameWidth;
 
   doc.fontSize(14).font('Helvetica-Bold').fillColor('#1a1a1a')
      .text(COMPANY.name, textX, blockTop, { characterSpacing: 1.2, lineBreak: false });
@@ -252,11 +255,13 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
 
   doc.fontSize(6.5).font('Helvetica').fillColor(labelGray)
      .text(taglineText, textLeft, logoY + logoSize + 6, { characterSpacing: 0.7, lineBreak: false });
+  companyRight = Math.max(companyRight, textLeft + doc.widthOfString(taglineText, { characterSpacing: 0.7 }));
 
   let lineY = logoY + logoSize + 18;
   doc.fontSize(7.5);
   COMPANY.addressLines.forEach(line => {
     doc.fillColor('#4b5563').text(line, textLeft, lineY, { lineBreak: false });
+    companyRight = Math.max(companyRight, textLeft + doc.widthOfString(line));
     lineY += 10;
   });
 
@@ -269,20 +274,32 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
     doc.fillColor('#4b5563').text(item.value, contactX + iconSize + iconTextGap, lineY, { lineBreak: false });
     contactX += item.width + contactGap;
   });
+  companyRight = Math.max(companyRight, contactX - contactGap);
   const companyBottom = lineY + 11;
 
   // --- Right: the party the document is addressed to ---
-  const boxWidth = 200;
+  // The card is exactly as wide as its widest single-line value -- an email or a property code
+  // stays whole on one line -- never narrower than 200pt and never reaching into the company block.
+  const rows = (party.rows || []).filter(([, value]) => value !== undefined && value !== null && value !== '');
+  doc.fontSize(7).font('Helvetica');
+  const widestValue = rows.reduce((width, [, value]) => Math.max(width, doc.widthOfString(decodeHtml(String(value)))), 0);
+  const boxWidth = Math.min(Math.max(200, widestValue + 72), Math.max(200, pageWidth - margin - companyRight - 10));
   const boxX = pageWidth - margin - boxWidth;
   const capHeight = 16;
-  const rows = (party.rows || []).filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   // Measured before anything is drawn, so the box is exactly as tall as its contents
   const nameText = decodeHtml(String(party.name || '-'));
   doc.fontSize(9.5).font('Helvetica-Bold');
   const nameHeight = doc.heightOfString(nameText, { width: boxWidth - 16 });
   doc.fontSize(7).font('Helvetica');
-  const rowHeights = rows.map(([, value]) => doc.heightOfString(decodeHtml(String(value)), { width: boxWidth - 62 }));
+  // A value too long to sit beside its label -- a very long email -- drops to its own line across
+  // the card's full width rather than snapping mid-word.
+  const valueTexts = rows.map(([, value]) => decodeHtml(String(value)));
+  const valueFits = valueTexts.map(text => doc.widthOfString(text) <= boxWidth - 62);
+  const rowHeights = valueTexts.map((text, index) => {
+    const height = doc.heightOfString(text, { width: valueFits[index] ? boxWidth - 62 : boxWidth - 20 });
+    return valueFits[index] ? height : height + 8;
+  });
   const bodyHeight = 10 + nameHeight + 4 + rowHeights.reduce((sum, height) => sum + height + 2, 0) + 8;
 
   doc.rect(boxX, logoY, boxWidth, capHeight + bodyHeight).fillAndStroke('#ffffff', WARM.border);
@@ -297,11 +314,12 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
      .text(nameText, boxX + 10, rowY, { width: boxWidth - 16 });
   rowY += nameHeight + 4;
 
-  rows.forEach(([label, value], index) => {
+  rows.forEach(([label], index) => {
     doc.fontSize(6).font('Helvetica-Bold').fillColor(labelGray)
        .text(String(label).toUpperCase(), boxX + 10, rowY + 1, { width: 42, lineBreak: false });
     doc.fontSize(7).font('Helvetica').fillColor('#374151')
-       .text(decodeHtml(String(value)), boxX + 52, rowY, { width: boxWidth - 62 });
+       .text(valueTexts[index], boxX + (valueFits[index] ? 52 : 10), valueFits[index] ? rowY : rowY + 8,
+         { width: valueFits[index] ? boxWidth - 62 : boxWidth - 20 });
     rowY += rowHeights[index] + 2;
   });
 
@@ -830,7 +848,7 @@ const generateEstimatePDF = async (estimate) => {
       doc.font('Helvetica');
       y = totalY + TOTAL_HEIGHT + GAP.section;
 
-      // Notes/Description
+      // Notes
       if (description) {
         if (y + 40 > pageHeight) { doc.addPage(); y = MARGIN; }
         sectionHeading('Notes');

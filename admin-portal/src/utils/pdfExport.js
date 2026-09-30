@@ -294,6 +294,9 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const titleHeight = mm(14);
   const suffixDrop = mm(5);                               // name baseline down to the rule
   const blockTop = logoY + logoSize / 2 - titleHeight / 2;
+  // The furthest right the company block reaches: the BILL TO card may grow leftward up to this,
+  // so a long email keeps to one line inside it.
+  let companyRight = textX + nameWidth;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
@@ -318,12 +321,14 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   doc.setFontSize(6.5);
   doc.setTextColor(...labelGray);
   doc.text(taglineText, textLeft, logoY + logoSize + 2.5, { charSpace: 0.3 });
+  companyRight = Math.max(companyRight, textLeft + doc.getTextWidth(taglineText) + 0.3 * taglineText.length);
 
   let lineY = logoY + logoSize + 7;
   doc.setFontSize(7.5);
   doc.setTextColor(75, 85, 99);
   COMPANY.addressLines.forEach(line => {
     doc.text(line, textLeft, lineY);
+    companyRight = Math.max(companyRight, textLeft + doc.getTextWidth(line));
     lineY += 3.6;
   });
   // The one contact line, directly under the address
@@ -336,13 +341,13 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     doc.text(item.value, contactX + iconSize + iconTextGap, lineY);
     contactX += item.width + contactGap;
   });
+  companyRight = Math.max(companyRight, contactX - contactGap);
   lineY += 3.8;
   const companyBottom = lineY;
 
   // --- Right: BILL TO ---
-  const boxWidth = 70;
-  const boxX = pageWidth - margin - boxWidth;
-  const capHeight = 5.5;
+  // The card is exactly as wide as its widest single-line value -- an email or a property code
+  // stays whole on one line -- never narrower than 70mm and never reaching into the company block.
   const rows = [
     ['Phone', data.customerPhone],
     ['Email', data.customerEmail],
@@ -351,12 +356,24 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     ['City', data.city]
   ].filter(([, value]) => value !== undefined && value !== null && value !== '');
 
-  // Measured before anything is drawn, so the box is exactly as tall as its contents
   doc.setFontSize(7);
-  const wrapped = rows.map(([label, value]) => [label, doc.splitTextToSize(decodeHtml(String(value)), boxWidth - 22)]);
+  const widestValue = rows.reduce((width, [, value]) => Math.max(width, doc.getTextWidth(decodeHtml(String(value)))), 0);
+  const boxWidth = Math.min(Math.max(70, widestValue + 24), Math.max(70, pageWidth - margin - companyRight - 3));
+  const boxX = pageWidth - margin - boxWidth;
+  const capHeight = 5.5;
+
+  // Measured before anything is drawn, so the box is exactly as tall as its contents. A value too
+  // long to sit beside its label -- a very long email -- drops to its own line across the card's
+  // full width rather than snapping mid-word.
+  doc.setFontSize(7);
+  const wrapped = rows.map(([label, value]) => {
+    const text = decodeHtml(String(value));
+    const fits = doc.getTextWidth(text) <= boxWidth - 22;
+    return [label, fits ? [text] : doc.splitTextToSize(text, boxWidth - 8), fits];
+  });
   doc.setFontSize(9.5);
   const nameLines = doc.splitTextToSize(decodeHtml(String(data.customerName || '-')), boxWidth - 8);
-  const bodyHeight = 3 + nameLines.length * 4 + 1.5 + wrapped.reduce((height, [, lines]) => height + lines.length * 3.4, 0) + 3;
+  const bodyHeight = 3 + nameLines.length * 4 + 1.5 + wrapped.reduce((height, [, lines, fits]) => height + (lines.length + (fits ? 0 : 1)) * 3.4, 0) + 3;
   const boxHeight = capHeight + bodyHeight;
 
   doc.setFillColor(...WARM.accentSoft);
@@ -379,7 +396,7 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   doc.text(nameLines, boxX + 4, rowY);
   rowY += nameLines.length * 4 + 1.5;
 
-  wrapped.forEach(([label, lines]) => {
+  wrapped.forEach(([label, lines, fits]) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6);
     doc.setTextColor(...labelGray);
@@ -387,8 +404,8 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(55, 65, 81);
-    doc.text(lines, boxX + 18, rowY);
-    rowY += lines.length * 3.4;
+    doc.text(lines, boxX + (fits ? 18 : 4), fits ? rowY : rowY + 3.4);
+    rowY += (lines.length + (fits ? 0 : 1)) * 3.4;
   });
 
   // --- The strip naming the document ---
@@ -857,7 +874,7 @@ const generatePDF = (data, type, filename) => {
 
     y += sumHeight + 8;
 
-    // ===== NOTES/DESCRIPTION (Plain) =====
+    // ===== NOTES (Plain) =====
     if (data.description && data.description.trim()) {
       if (y + 20 > pageHeight - 25) {
         doc.addPage();
@@ -1375,8 +1392,9 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setTextColor(...secondaryText);
     doc.text('Name: ' + String(invoice.customerName || '-'), custCardX + 6, cy); cy += lineH;
     doc.text('Phone: ' + String(invoice.customerPhone || '-'), custCardX + 6, cy); cy += lineH;
+    // maxWidth scales a long email down rather than truncating it -- the full address always prints
     const email = String(invoice.customerEmail || '-');
-    doc.text('Email: ' + (email.length > 25 ? email.substring(0, 25) + '...' : email), custCardX + 6, cy); cy += lineH;
+    doc.text('Email: ' + email, custCardX + 6, cy, { maxWidth: cardWidth - 10 }); cy += lineH;
     doc.text('City: ' + String(invoice.city || '-'), custCardX + 6, cy);
     
     y += cardHeight + 8;

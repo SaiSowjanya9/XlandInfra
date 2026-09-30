@@ -55,13 +55,12 @@ const METHOD_STYLES = {
   custom_quote: 'bg-gray-100 text-gray-500',
 };
 
-// The secondary line under the measured amount. The ₹ rate is a cost, so it only shows in the
-// internal view; a capacity slab's band names the bracket the input fell in, which is not a cost.
-const inputSubLine = (service, internal) => {
+// The secondary line under the measured amount. Prices never appear here -- a ₹ rate is a cost
+// and stays out of the field entirely. A capacity slab's band names the bracket the input fell
+// in, which is not a cost, so it can stay.
+const inputSubLine = (service) => {
   const rate = getServiceRate(service);
-  if (!rate) return '';
-  if (!internal && rate.includes('₹')) return '';
-  return rate;
+  return rate && !rate.includes('₹') ? rate : '';
 };
 
 const hasPrice = (service) =>
@@ -120,7 +119,7 @@ export default function EstimateDraftServicesTable({
                   .filter(([, v]) => ['string', 'number'].includes(typeof v) && v !== '')
                   .map(([, v]) => `${v}${service.unit ? ` ${service.unit}` : ''}`).join(', ')
                 || '-';
-              const sub = inputSubLine(service, internal);
+              const sub = inputSubLine(service);
               const category = service.category || service.service_category;
               const code = service.service_code || service.serviceCode
                 || (service.catalogServiceId ? `SER-${String(service.catalogServiceId).padStart(3, '0')}` : '');
