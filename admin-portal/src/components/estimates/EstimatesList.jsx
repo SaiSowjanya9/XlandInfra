@@ -674,7 +674,10 @@ const EstimatesList = ({
           Back to All Estimates
         </button>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml} />
+          {/* Admin and Operations Manager are internal roles — the services table also shows
+              Vendor Cost, XLAND Cost and Margin %, matching the backend's margin gate. */}
+          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml}
+            internal={['admin', 'operations_manager'].includes(admin?.role)} />
         </div>
       </div>
     );

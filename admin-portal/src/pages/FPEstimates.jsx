@@ -3952,7 +3952,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
       </button>
       <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
+        {/* FP is internal — the services table also shows Vendor Cost, XLAND Cost and Margin % */}
+        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal />
       </div>
     </div>
   );

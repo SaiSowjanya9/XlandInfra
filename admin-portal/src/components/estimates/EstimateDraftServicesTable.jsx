@@ -25,8 +25,8 @@ const INPUT_KEYS = {
 
 // Package rows store camelCase fields (pricingMethod, inputValue, capacitySlabs), catalog rows the
 // picker's snake_case, and legacy add-ons neither — this folds all three into the shape the
-// estimatePackageUtils helpers read.
-const normalize = (row) => {
+// estimatePackageUtils helpers read. Exported so EstimateServicesTable normalizes the same way.
+export const normalizeServiceRow = (row) => {
   if (typeof row === 'string') return { name: row, frequency_type: 'Monthly' };
   const method = row.pricing_method || row.pricingMethod || row.pricingSnapshot?.pricing_method || '';
   const pricingInputs = row.pricingInputs || row.inputs
@@ -111,7 +111,7 @@ export default function EstimateDraftServicesTable({
           </thead>
           <tbody className={`divide-y ${warm ? 'divide-warm-border/60' : 'divide-gray-100'}`}>
             {items.map((item, idx) => {
-              const service = normalize(item.row || item);
+              const service = normalizeServiceRow(item.row || item);
               const vendorCost = getServiceVendorCost(service);
               const xlandCost = getServiceXlandCost(service);
               const margin = getServiceMarginPercent(service);
