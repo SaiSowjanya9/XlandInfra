@@ -56,13 +56,15 @@ const serviceColumns = (decode, internal) => {
     render: row => <p className="text-sm text-warm-text font-semibold">{row.frequency_count ?? row.frequencyCount ?? 1}</p> };
   const money = (value, cls = 'text-gray-700') =>
     <p className={`text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
-  const vendor = { label: 'Vendor Cost', head: 'col-span-1 text-right', cell: 'col-span-1 text-right',
+  // The three internal figures are print:hidden throughout: a browser print of the internal
+  // detail view is still the customer's document, so it prices like the customer-facing one
+  const vendor = { label: 'Vendor Cost', head: 'col-span-1 text-right print:hidden', cell: 'col-span-1 text-right print:hidden',
     render: row => money(getServiceVendorCost(row)) };
-  const xland = { label: 'XLAND Cost', head: 'col-span-1 text-right', cell: 'col-span-1 text-right',
+  const xland = { label: 'XLAND Cost', head: 'col-span-1 text-right print:hidden', cell: 'col-span-1 text-right print:hidden',
     render: row => money(getServiceXlandCost(row)) };
   const price = { label: 'Customer Price', head: 'col-span-1 text-right', cell: 'col-span-1 text-right',
     render: row => <p className="text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
-  const margin = { label: 'Margin %', head: 'col-span-1 text-center', cell: 'col-span-1 text-center',
+  const margin = { label: 'Margin %', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
     render: row => {
       const value = getServiceMarginPercent(row);
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
@@ -79,11 +81,13 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
   const sum = total ?? services.reduce((value, row) => value + getAddonPrice(row), 0);
   const columns = serviceColumns(decode, internal);
   // 12 tracks without the cost columns; the three internal figures take it to 15, with a floor so
-  // the money columns don't collapse — that floor is internal-only, other views keep squeezing
-  const grid = internal ? 'grid-cols-[repeat(15,minmax(0,1fr))]' : 'grid-cols-12';
-  const floor = internal ? 'min-w-[720px]' : '';
+  // the money columns don't collapse — that floor is internal-only, other views keep squeezing.
+  // On paper the cost cells are hidden and the tracks drop back to 12, so the printed table is
+  // laid out exactly as the customer-facing one.
+  const grid = internal ? 'grid-cols-[repeat(15,minmax(0,1fr))] print:grid-cols-12' : 'grid-cols-12';
+  const floor = internal ? 'min-w-[720px] print:min-w-0' : '';
   return (
-    <div className={internal ? 'overflow-x-auto' : undefined}>
+    <div className={internal ? 'overflow-x-auto print:overflow-visible' : undefined}>
       <div className={`grid ${grid} gap-2 px-3 py-2 bg-warm-section ${topRadius} ${floor}`}>
         {columns.map(column => <div key={column.label} className={`text-xs font-semibold text-warm-muted ${column.head}`}>{column.label}</div>)}
       </div>
