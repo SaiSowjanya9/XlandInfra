@@ -1929,7 +1929,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               </button>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
             </div>
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            {/* print-document: a browser print is this document alone -- index.css drops the
+                back bar above and the portal chrome around it */}
+            <div className="print-document p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* The letterhead the document opens with: XLAND INFRA and how to reach it, BILL TO
                   facing it, and the strip naming the estimate. The customer is named there, so
                   there is no Customer Details section below. */}

@@ -323,3 +323,25 @@ body {
     padding-top: max(0px, env(safe-area-inset-top));
   }
 }
+
+/* ========== PRINTING ========== */
+
+@media print {
+  /* Where a screen marks its document with .print-document, that subtree prints alone. The
+     :has() chain keeps the document's own ancestors -- they carry its layout -- while every
+     other element stays on screen: navigation, page headers, stat cards, back buttons and
+     action bars. On a page with no marked document nothing changes. */
+  body:has(.print-document) *:not(:has(.print-document)):not(.print-document):not(.print-document *) {
+    display: none !important;
+  }
+
+  /* An ancestor that pins or clips on screen must do neither on paper: a fixed overlay shows
+     only the first viewport of a long document, and an overflow scroller cuts the rest off. */
+  html:has(.print-document),
+  html:has(.print-document) body,
+  body:has(.print-document) *:has(.print-document) {
+    overflow: visible !important;
+    max-height: none !important;
+    position: static !important;
+  }
+}

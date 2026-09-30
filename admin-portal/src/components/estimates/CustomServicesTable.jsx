@@ -188,13 +188,15 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
             <th className={`${internal ? 'w-[15%]' : 'w-[24%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
             <th className={`${internal ? 'w-[11%]' : 'w-[14%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
             <th className={`${internal ? 'w-[8%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
+            {/* Internal costs and row controls are screen furniture: a browser print of the form
+                keeps only the customer's columns, so they are print:hidden */}
             {internal && <>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right" title="What the vendor charges for this service">Vendor Cost</th>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
-              <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center" title="XLAND cost as a share of the customer price">Margin %</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
+              <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
             </>}
             <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-right`} title="Customer price in rupees">Price (₹)</th>
-            <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center`}>Action</th>
+            <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
@@ -235,12 +237,12 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               </td>
               {/* The cost cells keep their places in an internal table; an in-place edit never
                   changes them -- the dialog is where cost and markup are set */}
-              {internal && <><td /><td /><td /></>}
+              {internal && <><td className="print:hidden" /><td className="print:hidden" /><td className="print:hidden" /></>}
               <td className="px-3 py-2.5">
                 <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
                   placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
                   <button type="button" onClick={saveEdit} title="Save service" aria-label="Save service"
                     className={`${iconButton} ${skin.faint} hover:bg-emerald-50 hover:text-emerald-600 focus:ring-emerald-100`}><Check className="h-4 w-4" /></button>
@@ -267,13 +269,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
-                <td className={`${cell} text-right`}>{costOr(getServiceVendorCost(row))}</td>
-                <td className={`${cell} text-right`}>{costOr(getServiceXlandCost(row))}</td>
-                <td className={`${cell} text-center`}>{marginOr(getServiceMarginPercent(row))}</td>
+                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
               <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               {/* Every row can be amended or taken back off the estimate */}
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
                   <button type="button" onClick={() => (onEditRow ? onEditRow(row, index) : startEdit(index))} title={`Edit ${row.name}`} aria-label={`Edit ${row.name}`}
                     className={`${iconButton} ${skin.faint} ${skin.iconEdit}`}><Pencil className="h-4 w-4" /></button>
@@ -292,12 +294,12 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
-                <td className={`${cell} text-right`}>{costOr(getServiceVendorCost(row))}</td>
-                <td className={`${cell} text-right`}>{costOr(getServiceXlandCost(row))}</td>
-                <td className={`${cell} text-center`}>{marginOr(getServiceMarginPercent(row))}</td>
+                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
               <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
-              <td className="px-3 py-2.5">{renderExtraActions?.(row)}</td>
+              <td className="px-3 py-2.5 print:hidden">{renderExtraActions?.(row)}</td>
             </tr>
           ))}
         </tbody>
@@ -305,12 +307,13 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           <tr className={`border-t ${skin.panelFoot}`}>
             <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-right text-sm font-semibold ${skin.text}`}>Total Services</td>
             <td className={`px-3 py-2.5 text-right text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
-            <td />
+            <td className="print:hidden" />
           </tr>
         </tfoot>}
       </table>
       </div>
-      <div className={`flex items-center justify-between gap-3 border-t px-5 py-3 ${skin.panelFoot}`}>
+      {/* The add-service bar is a form control, not part of the document */}
+      <div className={`flex items-center justify-between gap-3 border-t px-5 py-3 print:hidden ${skin.panelFoot}`}>
         <p role={problem ? 'alert' : undefined} className={`text-xs ${problem ? 'text-red-600' : 'text-transparent'}`}>{problem || '\u00a0'}</p>
         {addControl || (
           <button type="button" onClick={addBlankRow}

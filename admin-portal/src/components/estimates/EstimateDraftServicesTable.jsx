@@ -101,11 +101,13 @@ export default function EstimateDraftServicesTable({
               <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide">Input / Details</th>
               <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide">Frequency</th>
               <th className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide">Visits / Year</th>
-              {internal && <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">Vendor Cost (₹)</th>}
-              {internal && <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">XLAND Cost (₹)</th>}
+              {/* Cost columns and the Action cell are internal screen furniture: a browser print
+                  of the draft is still the customer's document, so they are print:hidden */}
+              {internal && <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide print:hidden">Vendor Cost (₹)</th>}
+              {internal && <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide print:hidden">XLAND Cost (₹)</th>}
               <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide">Customer Price (₹)</th>
-              {internal && <th className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide">Margin %</th>}
-              {hasActions && <th className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide w-16">Action</th>}
+              {internal && <th className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide print:hidden">Margin %</th>}
+              {hasActions && <th className="px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide w-16 print:hidden">Action</th>}
             </tr>
           </thead>
           <tbody className={`divide-y ${warm ? 'divide-warm-border/60' : 'divide-gray-100'}`}>
@@ -140,13 +142,13 @@ export default function EstimateDraftServicesTable({
                   </td>
                   <td className="px-3 py-2.5">
                     <div className={`font-semibold ${text}`}>{input}</div>
-                    {sub && <div className={`text-xs ${muted}`}>{sub}</div>}
+                    {sub && <div className={`text-xs ${muted} print:hidden`}>{sub}</div>}
                   </td>
                   <td className={`px-3 py-2.5 ${muted}`}>{service.frequency_type}</td>
                   <td className={`px-3 py-2.5 text-center ${muted}`}>{visits}</td>
-                  {internal && <td className={`px-3 py-2.5 text-right ${muted}`}>{vendorCost != null ? formatCurrency(vendorCost) : '—'}</td>}
+                  {internal && <td className={`px-3 py-2.5 text-right ${muted} print:hidden`}>{vendorCost != null ? formatCurrency(vendorCost) : '—'}</td>}
                   {internal && (
-                    <td className={`px-3 py-2.5 text-right ${muted}`}>
+                    <td className={`px-3 py-2.5 text-right ${muted} print:hidden`}>
                       <span className="inline-flex items-center gap-1.5">
                         {xlandCost != null ? formatCurrency(xlandCost) : '—'}
                         {item.onEdit && (
@@ -160,9 +162,9 @@ export default function EstimateDraftServicesTable({
                   <td className="px-3 py-2.5 text-right font-semibold text-emerald-600">
                     {hasPrice(service) ? formatCurrency(getAddonPrice(service)) : '—'}
                   </td>
-                  {internal && <td className="px-3 py-2.5 text-center font-semibold text-emerald-600">{margin != null ? `${Math.round(margin)}%` : '—'}</td>}
+                  {internal && <td className="px-3 py-2.5 text-center font-semibold text-emerald-600 print:hidden">{margin != null ? `${Math.round(margin)}%` : '—'}</td>}
                   {hasActions && (
-                    <td className="px-3 py-2.5 text-center">
+                    <td className="px-3 py-2.5 text-center print:hidden">
                       <span className="inline-flex items-center justify-center gap-2">
                         {!internal && item.onEdit && (
                           <button type="button" onClick={item.onEdit} className="text-gray-400 hover:text-gray-600" title="Edit service">

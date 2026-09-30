@@ -106,7 +106,9 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
   const money = value => formatCurrency(value || 0);
 
   return (
-    <div className="space-y-4 bg-slate-50/60 px-4 py-4 sm:px-6">
+    // print-document: a browser print of this view is this document alone -- the rule in
+    // index.css drops the portal chrome, the page header and the buttons around it
+    <div className="print-document space-y-4 bg-slate-50/60 px-4 py-4 sm:px-6 print:bg-white print:p-0">
       {/* Who the estimate is from and who it is for, as the printed document opens */}
       <div className="rounded-lg border border-gray-100 bg-white px-4 pt-3">
         <EstimateDocumentHeader estimate={estimate} decode={decode} status={status} />
