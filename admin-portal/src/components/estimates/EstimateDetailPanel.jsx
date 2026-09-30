@@ -6,8 +6,10 @@ import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
 
 /**
- * Everything a saved estimate holds, shown inside the row it belongs to. Clicking an Estimate ID in
- * the Admin, Ops Manager, FP or Manager list expands this instead of opening a modal.
+ * Everything a saved estimate holds, shown as the full-screen view behind an Estimate ID. Clicking
+ * an ID in the Admin, Ops Manager, FP or Manager list leaves the list for this document, and the
+ * Back button returns to it. Coordinator, Executive and Supervisor reach it through their own
+ * full-screen view instead.
  *
  * It is laid out as the document itself: the letterhead with BILL TO facing it, the property the
  * estimate was written for, its services, what it comes to, and the terms. The PDF and the email

@@ -180,10 +180,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     }, { replace: true });
   }, [setSearchParams]);
 
-  // Which row is expanded. The URL still carries it, so a link to an estimate opens it as before --
-  // it now expands the row in place instead of opening a modal.
+  // Which estimate is open full screen. The URL still carries it, so a link to an estimate opens
+  // it as before -- it now leaves the list for the document rather than expanding the row.
   const expandedEstimateId = viewEstimateId ? Number(viewEstimateId) : null;
-  const toggleExpandedEstimate = (id) => (expandedEstimateId === id ? closeViewEstimate() : openViewEstimate({ id }));
 
   const openViewPackage = useCallback((pkg) => {
     setSearchParams(prev => {
@@ -2953,10 +2952,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <tbody className="divide-y divide-warm-border/70">
                 {paginatedEstimates.map((est) => {
                   const isSelected = selectedEstimates.includes(est.id);
-                  const isExpanded = expandedEstimateId === est.id;
                   return (
                   <React.Fragment key={est.id}>
-                  <tr className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : isExpanded ? 'bg-warm-section' : 'hover:bg-warm-section'}`}>
+                  <tr className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : 'hover:bg-warm-section'}`}>
                     {/* Checkbox cell - hidden for FP Manager */}
                     {!isFPManager && (
                       <td className="px-3 py-4 text-center">
@@ -2973,11 +2971,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </td>
                     )}
                     <td className="px-4 py-4">
-                      {/* The ID opens the estimate in place; there is no view modal to open */}
-                      <button type="button" onClick={() => toggleExpandedEstimate(est.id)} aria-expanded={isExpanded}
-                        className="flex items-center gap-1.5 font-mono text-sm text-warm-text hover:text-warm-accent-hover"
-                        title={isExpanded ? 'Hide details' : 'Show details'}>
-                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-warm-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      {/* The ID opens the estimate full screen; the Back button returns here */}
+                      <button type="button" onClick={() => openViewEstimate({ id: est.id })}
+                        className="font-mono text-sm text-warm-text hover:text-warm-accent-hover"
+                        title="View details">
                         {est.estimate_id}
                       </button>
                     </td>
@@ -3049,13 +3046,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       </div>
                     </td>
                   </tr>
-                  {isExpanded && (
-                    <tr className="bg-warm-page/60">
-                      <td colSpan={isFPManager ? 8 : 9} className="p-0">
-                        <EstimateDetailPanel estimate={est} decode={decodeHtml} />
-                      </td>
-                    </tr>
-                  )}
                   </React.Fragment>
                   );
                 })}
@@ -4019,13 +4009,35 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4 flex flex-wrap items-center gap-3"><label className="text-sm font-medium text-warm-muted">Type:</label><select value={archivedTypeFilter} onChange={(e) => setArchivedTypeFilter(e.target.value)} className={`${CONTROL_H} px-3 text-sm text-warm-text bg-white border border-warm-border rounded-[10px] focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`}><option value="all">All Types</option><option value="property">Property Based</option><option value="direct">Direct</option></select><button onClick={() => setShowDeleteAllConfirm(true)} className={`${CONTROL_H} ml-auto inline-flex items-center gap-2 px-4 bg-red-600 text-white rounded-[10px] hover:bg-red-700 transition-colors text-sm font-medium`}><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <React.Fragment key={e.id}><tr className="hover:bg-warm-section"><td className="px-4 py-3"><button type="button" onClick={() => toggleExpandedEstimate(e.id)} aria-expanded={expandedEstimateId === e.id} className="flex items-center gap-1.5 font-mono text-xs text-warm-text hover:text-warm-accent-hover"><ChevronDown className={`w-3.5 h-3.5 shrink-0 text-warm-muted transition-transform ${expandedEstimateId === e.id ? 'rotate-180' : ''}`} />{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-warm-muted/80">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr>{expandedEstimateId === e.id && <tr className="bg-warm-page/60"><td colSpan={7} className="p-0"><EstimateDetailPanel estimate={e} decode={decodeHtml} /></td></tr>}</React.Fragment>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <React.Fragment key={e.id}><tr className="hover:bg-warm-section"><td className="px-4 py-3"><button type="button" onClick={() => openViewEstimate({ id: e.id })} className="font-mono text-xs text-warm-text hover:text-warm-accent-hover" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-warm-muted/80">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr></React.Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-warm-text mb-2">Delete Permanently?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Delete All Archived?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete All</button></div></div></div>}
     </div>
   );
 
+  // An estimate opened from a list leaves the list entirely: the document takes the whole area,
+  // and Back returns to whichever list -- active or archived -- opened it. `?viewEstimate=` stays
+  // in the URL, so a direct link to an estimate still lands on the document.
+  const detailEstimate = expandedEstimateId
+    ? [...estimates, ...archivedEstimates].find(e => Number(e.id) === expandedEstimateId) || null
+    : null;
+
+  const renderEstimateDetail = (estimate) => (
+    <div>
+      <button onClick={closeViewEstimate}
+        className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+      </button>
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
+    // Only the lists open the document: a lingering ?viewEstimate= on another tab is ignored
+    if (detailEstimate && (defaultTab === 'list' || defaultTab === 'archived')) return renderEstimateDetail(detailEstimate);
     switch (defaultTab) {
       case 'create': return renderCreateEstimate();
       case 'list': return renderAllEstimates();
