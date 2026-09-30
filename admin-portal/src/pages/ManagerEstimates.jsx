@@ -205,10 +205,9 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  // Which estimate is expanded in place. Clicking its ID opens the detail panel inside the row,
+  // Which estimate is open full screen. Clicking its ID leaves the list for the document,
   // which is what replaced the view modal.
   const [expandedEstimateId, setExpandedEstimateId] = useState(null);
-  const toggleExpandedEstimate = (id) => setExpandedEstimateId(current => (current === id ? null : id));
   // Terms & Conditions: the standard clauses. Editing them belongs to Admin, Operations Manager
   // and FP, so a Manager estimate carries the default wording and the card is read-only
   const { includeTerms, termsConditions } = newEstimateTerms();
@@ -1759,21 +1758,19 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => {
-                const isExpanded = expandedEstimateId === est.id;
                 return (
                 <Fragment key={est.id}>
-                <tr className={`hover:bg-gray-50 ${selectedEstimates.includes(est.id) ? 'bg-blue-50' : isExpanded ? 'bg-blue-50/40' : ''}`}>
+                <tr className={`hover:bg-gray-50 ${selectedEstimates.includes(est.id) ? 'bg-blue-50' : ''}`}>
                   <td className="px-2 py-3 text-center">
                     <button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">
                       {selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                     </button>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
-                    {/* The ID opens the estimate in place; there is no view modal to open */}
-                    <button type="button" onClick={() => toggleExpandedEstimate(est.id)} aria-expanded={isExpanded}
-                      className="flex items-center gap-1.5 font-mono text-xs text-gray-800 hover:text-blue-600"
-                      title={isExpanded ? 'Hide details' : 'Show details'}>
-                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    {/* The ID opens the estimate full screen; the Back button returns here */}
+                    <button type="button" onClick={() => setExpandedEstimateId(est.id)}
+                      className="font-mono text-xs text-gray-800 hover:text-blue-600"
+                      title="View details">
                       {est.estimate_id}
                     </button>
                   </td>
@@ -1816,13 +1813,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                     </div>
                   </td>
                 </tr>
-                {isExpanded && (
-                  <tr className="bg-slate-50/60">
-                    <td colSpan={10} className="p-0">
-                      <EstimateDetailPanel estimate={est} decode={decodeHtml} />
-                    </td>
-                  </tr>
-                )}
                 </Fragment>
                 );
               })}</tbody>
@@ -2353,12 +2343,33 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderArchived = () => (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <Fragment key={e.id}><tr className="hover:bg-gray-50"><td className="px-4 py-3"><button type="button" onClick={() => toggleExpandedEstimate(e.id)} aria-expanded={expandedEstimateId === e.id} className="flex items-center gap-1.5 font-mono text-xs text-gray-800 hover:text-blue-600" title={expandedEstimateId === e.id ? 'Hide details' : 'Show details'}><ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${expandedEstimateId === e.id ? 'rotate-180' : ''}`} />{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-gray-500 truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3 text-center text-xs text-gray-400">Archived</td></tr>{expandedEstimateId === e.id && <tr className="bg-slate-50/60"><td colSpan={7} className="p-0"><EstimateDetailPanel estimate={e} decode={decodeHtml} /></td></tr>}</Fragment>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <Fragment key={e.id}><tr className="hover:bg-gray-50"><td className="px-4 py-3"><button type="button" onClick={() => setExpandedEstimateId(e.id)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-gray-500 truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3 text-center text-xs text-gray-400">Archived</td></tr></Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
     </div>
   );
 
+  // An estimate opened from a list leaves the list entirely: the document takes the whole area,
+  // and Back returns to whichever list -- active or archived -- opened it.
+  const detailEstimate = expandedEstimateId
+    ? [...estimates, ...archivedEstimates].find(e => Number(e.id) === Number(expandedEstimateId)) || null
+    : null;
+
+  const renderEstimateDetail = (estimate) => (
+    <div>
+      <button onClick={() => setExpandedEstimateId(null)}
+        className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+      </button>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
+    // Only the lists open the document
+    if (detailEstimate && (defaultTab === 'list' || defaultTab === 'archived')) return renderEstimateDetail(detailEstimate);
     switch (defaultTab) {
       case 'create': return <div className="space-y-5">
         <fieldset className="flex flex-wrap gap-5 rounded-xl border border-slate-200 bg-white px-5 py-4">

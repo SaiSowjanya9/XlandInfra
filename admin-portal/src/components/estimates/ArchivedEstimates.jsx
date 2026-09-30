@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import {
   Archive, RotateCcw, Trash2, X, Calendar, Building2, User, ChevronDown,
-  Home, LayoutGrid, Layers, TreePine, Map, Briefcase
+  Home, LayoutGrid, Layers, TreePine, Map, Briefcase, ArrowLeft
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
 import EstimateDetailPanel from './EstimateDetailPanel';
@@ -44,8 +44,8 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   
   const [archivedEstimates, setArchivedEstimates] = useState([]);
   // Which estimate is expanded in place; the ID opens it, which is what replaced the view modal
+  // Which estimate is open full screen. Clicking its ID leaves the list for the document.
   const [expandedId, setExpandedId] = useState(null);
-  const toggleExpanded = (estimateId) => setExpandedId(current => (current === estimateId ? null : estimateId));
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -131,6 +131,25 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
     }
   };
 
+  // An estimate opened from the list leaves the list entirely: the document takes the whole
+  // area, and Back returns to the archived list.
+  const detailEstimate = expandedId ? archivedEstimates.find(e => e.estimateId === expandedId) || null : null;
+
+  if (detailEstimate) {
+    return (
+      <div>
+        <button onClick={() => setExpandedId(null)}
+          className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Archived Estimates
+        </button>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header with Filter and Delete All button */}
@@ -191,16 +210,14 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
               })
               .map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
-                const isExpanded = expandedId === estimate.estimateId;
                 return (
                   <Fragment key={estimate.estimateId}>
-                  <tr className={`hover:bg-gray-50 ${isExpanded ? 'bg-indigo-50/40' : ''}`}>
+                  <tr className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      {/* The ID opens the estimate in place; there is no view modal to open */}
-                      <button type="button" onClick={() => toggleExpanded(estimate.estimateId)} aria-expanded={isExpanded}
-                        className="flex items-center gap-1.5 font-medium text-gray-800 hover:text-indigo-600"
-                        title={isExpanded ? 'Hide details' : 'Show details'}>
-                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      {/* The ID opens the estimate full screen; the Back button returns here */}
+                      <button type="button" onClick={() => setExpandedId(estimate.estimateId)}
+                        className="font-medium text-gray-800 hover:text-indigo-600"
+                        title="View details">
                         {estimate.estimateId}
                       </button>
                     </td>
@@ -270,13 +287,6 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                       </div>
                     </td>
                   </tr>
-                  {isExpanded && (
-                    <tr className="bg-slate-50/60">
-                      <td colSpan={7} className="p-0">
-                        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
-                      </td>
-                    </tr>
-                  )}
                   </Fragment>
                 );
               })}

@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import {
   Search, Filter, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
-  TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight
+  TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight, ArrowLeft
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -124,10 +124,9 @@ const EstimatesList = ({
     dateTo: ''
   });
   const [showFilters, setShowFilters] = useState(false);
-  // Which estimate is expanded in place. Clicking its ID opens the detail panel inside the row,
+  // Which estimate is open full screen. Clicking its ID leaves the list for the document,
   // which is what replaced the view modal.
   const [expandedId, setExpandedId] = useState(null);
-  const toggleExpanded = (estimateId) => setExpandedId(current => (current === estimateId ? null : estimateId));
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editEstimate, setEditEstimate] = useState(null);
   const [editEstimateForm, setEditEstimateForm] = useState(null);
@@ -662,6 +661,25 @@ const EstimatesList = ({
     }
   };
 
+  // An estimate opened from the list leaves the list entirely: the document takes the whole
+  // area, and Back returns to the list. Filters and pagination are untouched by going back.
+  const detailEstimate = expandedId ? estimates.find(e => e.estimateId === expandedId) || null : null;
+
+  if (detailEstimate) {
+    return (
+      <div>
+        <button onClick={() => setExpandedId(null)}
+          className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to All Estimates
+        </button>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Search and Filter Bar */}
@@ -857,10 +875,9 @@ const EstimatesList = ({
               {paginatedEstimates.map((estimate) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 const isSelected = selectedEstimates.includes(estimate.id);
-                const isExpanded = expandedId === estimate.estimateId;
                 return (
                   <Fragment key={estimate.estimateId}>
-                  <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''} ${isExpanded ? 'bg-indigo-50/40' : ''}`}>
+                  <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
                     {/* Checkbox cell - hidden for ops manager */}
                     {!isOpsManager && (
                       <td className="px-3 py-3 sm:py-4 text-center">
@@ -877,12 +894,10 @@ const EstimatesList = ({
                       </td>
                     )}
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
-                      {/* The ID opens the estimate in place; there is no view modal to open */}
-                      <button type="button" onClick={() => toggleExpanded(estimate.estimateId)}
-                        aria-expanded={isExpanded}
-                        className="flex items-center gap-1.5 font-medium text-gray-800 text-xs sm:text-sm hover:text-indigo-600"
-                        title={isExpanded ? 'Hide details' : 'Show details'}>
-                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      {/* The ID opens the estimate full screen; the Back button returns here */}
+                      <button type="button" onClick={() => setExpandedId(estimate.estimateId)}
+                        className="font-medium text-gray-800 text-xs sm:text-sm hover:text-indigo-600"
+                        title="View details">
                         {estimate.estimateId}
                       </button>
                     </td>
@@ -1006,13 +1021,6 @@ const EstimatesList = ({
                       </div>
                     </td>
                   </tr>
-                  {isExpanded && (
-                    <tr className="bg-slate-50/60">
-                      <td colSpan={isOpsManager ? 9 : 10} className="p-0">
-                        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
-                      </td>
-                    </tr>
-                  )}
                   </Fragment>
                 );
               })}

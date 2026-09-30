@@ -967,7 +967,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           const TypeIcon = estimate.property_type === 'Apt' ? Home : Building2;
                           return (
                             <tr key={estimate.id} className="hover:bg-gray-50">
-                              <td className="py-4 px-4"><span className="font-medium text-gray-900">{estimate.estimate_id || `EST-${estimate.id}`}</span></td>
+                              <td className="py-4 px-4"><button type="button" onClick={() => setViewEstimate(estimate)} className="font-medium text-gray-900 hover:text-blue-600" title="View details">{estimate.estimate_id || `EST-${estimate.id}`}</button></td>
                               <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
                               <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (estimate.division || estimate.property_division || '-') : '-'}</span></td>
                               <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
@@ -1043,7 +1043,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     <tbody className="divide-y divide-gray-100">
                       {archivedEstimates.map(e => (
                         <tr key={e.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs">{e.estimate_id || `EST-${e.id}`}</td>
+                          <td className="px-4 py-3"><button type="button" onClick={() => setViewEstimate(e)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{e.estimate_id || `EST-${e.id}`}</button></td>
                           <td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td>
                           <td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td>
                           <td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td>
@@ -1558,13 +1558,17 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         </>
       )}
 
-      {/* View Estimate Modal */}
+      {/* View Estimate: the document fills the screen as its own page; Back returns to the list */}
       {viewEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
+              <button onClick={() => setViewEstimate(null)}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                <ArrowLeft className="w-4 h-4" />
+                Back to {activeTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+              </button>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
-              <button onClick={() => setViewEstimate(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* The letterhead the document opens with: XLAND INFRA and how to reach it, BILL TO
