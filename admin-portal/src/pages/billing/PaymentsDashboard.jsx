@@ -1020,7 +1020,6 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   Property-Based Estimates — Cost &amp; Margin
                   <span className="ml-2 text-xs font-normal text-gray-400">internal only</span>
                 </h3>
-                <p className="text-xs text-gray-500">Cost vs. customer price by estimate, with margin %</p>
               </div>
               {/* The calendar narrows the trend to a timeline. It filters the estimates the server
                   already decided are active and property-based -- nothing else enters this panel. */}
