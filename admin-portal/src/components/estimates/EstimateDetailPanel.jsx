@@ -188,7 +188,7 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
       </div>
 
       {(estimate.description || estimate.notes) && (
-        <Section title="Description / Notes">
+        <Section title="Notes">
           <p className="bg-white p-4 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-line">{decode(estimate.description || estimate.notes)}</p>
         </Section>
       )}

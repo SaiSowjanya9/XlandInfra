@@ -856,10 +856,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         <span style="font-size: 9px; letter-spacing: 0.9px; text-transform: uppercase; color: ${warm.muted}; font-weight: 600;">${label}</span><br>
         <span style="font-size: 12px; font-weight: 600; color: ${colour};">${value}</span>
       </td>`);
-    const partyRow = (label, value) => (value === undefined || value === null || value === '' ? '' : `
+    // `nowrap` keeps an unbreakable token -- an email or a property code -- on one line: the card
+    // grows to fit it rather than snapping it mid-word.
+    const partyRow = (label, value, nowrap = false) => (value === undefined || value === null || value === '' ? '' : `
       <tr>
         <td style="padding: 1px 8px 1px 0; font-size: 10px; letter-spacing: 0.3px; text-transform: uppercase; color: ${warm.muted}; font-weight: 600; vertical-align: top; white-space: nowrap;">${label}</td>
-        <td style="padding: 1px 0; font-size: 12px; color: #374151; vertical-align: top; word-break: break-word;">${value}</td>
+        <td style="padding: 1px 0; font-size: 12px; color: #374151; vertical-align: top; ${nowrap ? 'white-space: nowrap;' : 'word-break: break-word;'}">${value}</td>
       </tr>`);
     const summaryLine = (label, value, colour = warm.text) => `
       <tr>
@@ -943,7 +945,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </tr>
                   </table>
                 </td>
-                <td width="240" style="vertical-align: top;">
+                <td style="vertical-align: top; min-width: 240px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid ${warm.border}; border-radius: 8px; border-collapse: separate;">
                     <tr>
                       <td style="background: ${warm.accentSoft}; border-bottom: 1px solid ${warm.border}; padding: 6px 12px; font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: #8A6D12; border-radius: 8px 8px 0 0;">Bill To</td>
@@ -953,9 +955,9 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                         <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${customerName || invoice.client_name || 'Customer'}</div>
                         <table role="presentation" cellpadding="0" cellspacing="0">
                           ${partyRow('Phone', invoice.customer_phone || invoice.client_phone)}
-                          ${partyRow('Email', customerEmail || invoice.client_email)}
+                          ${partyRow('Email', customerEmail || invoice.client_email, true)}
                           ${partyRow('Property', invoice.property_name)}
-                          ${partyRow('Prop ID', invoice.property_code)}
+                          ${partyRow('Prop ID', invoice.property_code, true)}
                           ${partyRow('City', invoice.city)}
                         </table>
                       </td>

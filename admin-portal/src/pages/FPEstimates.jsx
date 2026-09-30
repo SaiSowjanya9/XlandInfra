@@ -2095,16 +2095,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </div>
           )}
 
-          {/* Description / Notes - Under Price Summary */}
+          {/* Notes - Under Price Summary */}
           <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
             <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
-              <h2 className="text-base font-semibold text-warm-text">Description / Notes</h2>
+              <h2 className="text-base font-semibold text-warm-text">Notes</h2>
             </div>
             <div className="p-6">
               <textarea 
                 value={estimateForm.description} 
                 onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                placeholder="Add any additional notes or description for this estimate..."
+                placeholder="Add any additional notes for this estimate..."
                 className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[100px]"
               />
             </div>
@@ -4138,7 +4138,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 </>
               )}
               <div><p className="text-sm font-semibold text-warm-text mb-3">Pricing</p><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-medium text-warm-muted mb-1.5">Discount (%)</label><input type="number" min="0" max="100" value={editEstimateForm.discount_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, discount_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div><div><label className="block text-xs font-medium text-warm-muted mb-1.5">GST (%)</label><input type="number" min="0" max="100" value={editEstimateForm.gst_percent} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, gst_percent: e.target.value })} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div></div><div className="mt-4 bg-warm-section p-4 rounded-[10px] space-y-2"><div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(calculateEditPricing().subtotal)}</span></div><div className="flex justify-between text-sm"><span>Discount</span><span className="text-red-500">-{formatCurrency(calculateEditPricing().discountAmt)}</span></div><div className="flex justify-between text-sm"><span>GST</span><span>{formatCurrency(calculateEditPricing().gstAmt)}</span></div><div className="flex justify-between font-semibold pt-2 border-t"><span>Total</span><span className="text-warm-accent-hover">{formatCurrency(calculateEditPricing().total)}</span></div></div></div>
-              <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Description</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div>
+              <div><label className="block text-xs font-medium text-warm-muted mb-1.5">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-warm-border rounded-[10px]" /></div>
               <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-warm-muted border border-warm-border rounded-[10px] hover:bg-warm-section">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-[10px] hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
           </div>

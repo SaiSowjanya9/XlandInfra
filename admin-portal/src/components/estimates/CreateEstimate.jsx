@@ -2679,16 +2679,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 )}
               </div>
 
-              {/* Description Section */}
+              {/* Notes Section */}
               <div className="px-6 py-4 border-t border-gray-100">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description / Notes
+                    Notes
                   </label>
                   <textarea
                     value={estimateForm.description}
                     onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })}
-                    placeholder="Add any additional notes or description for this estimate..."
+                    placeholder="Add any additional notes for this estimate..."
                     rows={3}
                     className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 resize-none"
                   />
@@ -3462,16 +3462,16 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               )}
             </div>
 
-            {/* Description Section for Direct */}
+            {/* Notes Section for Direct */}
             <div className="px-6 py-4 border-t border-gray-100">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description / Notes
+                  Notes
                 </label>
                 <textarea
                   value={estimateForm.description}
                   onChange={(e) => setEstimateForm({ ...estimateForm, description: e.target.value })}
-                  placeholder="Add any additional notes or description for this estimate..."
+                  placeholder="Add any additional notes for this estimate..."
                   rows={3}
                   className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500 resize-none"
                 />

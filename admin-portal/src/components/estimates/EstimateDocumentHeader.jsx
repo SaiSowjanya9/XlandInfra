@@ -26,10 +26,12 @@ const formatDate = value => {
     : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const BillRow = ({ label, children }) => (
+const BillRow = ({ label, nowrap = false, children }) => (
   <div className="flex gap-2">
     <span className="w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-500 pt-px">{label}</span>
-    <span className="min-w-0 break-words text-[11px] text-gray-700">{children}</span>
+    {/* An unbreakable token -- an email or a property code -- stays on one line: the card grows to
+        fit it rather than snapping it mid-word. Values with real spaces still wrap at the words. */}
+    <span className={`min-w-0 text-[11px] text-gray-700 ${nowrap ? 'whitespace-nowrap' : 'break-words'}`}>{children}</span>
   </div>
 );
 
@@ -90,14 +92,16 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
           </div>
         </div>
 
-        <div className="w-full overflow-hidden rounded-lg border border-warm-border sm:w-64 sm:shrink-0">
+        {/* The card keeps a 16rem floor but grows past it when a value -- a long email -- needs the
+            room, rather than snapping the value mid-word. */}
+        <div className="w-full overflow-hidden rounded-lg border border-warm-border sm:w-auto sm:min-w-[16rem] sm:shrink-0">
           <p className="border-b border-warm-border bg-warm-accent-soft px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8A6D12]">Bill To</p>
           <div className="space-y-1 px-3 py-2.5">
             <p className="text-[13px] font-bold text-gray-900 break-words">{customerName || '-'}</p>
             <BillRow label="Phone">{first(estimate.client_phone, estimate.customer_phone, estimate.customerPhone) || '-'}</BillRow>
-            <BillRow label="Email">{first(estimate.client_email, estimate.customer_email, estimate.customerEmail) || '-'}</BillRow>
+            <BillRow label="Email" nowrap>{first(estimate.client_email, estimate.customer_email, estimate.customerEmail) || '-'}</BillRow>
             {propertyName && <BillRow label="Property">{propertyName}</BillRow>}
-            {propertyCode && <BillRow label="Prop ID">{propertyCode}</BillRow>}
+            {propertyCode && <BillRow label="Prop ID" nowrap>{propertyCode}</BillRow>}
             {estimate.city && <BillRow label="City">{decode(estimate.city)}</BillRow>}
           </div>
         </div>

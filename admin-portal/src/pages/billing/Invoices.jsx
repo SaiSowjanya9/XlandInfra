@@ -1632,7 +1632,9 @@ const InvoiceDetailPanel = ({
           </div>
 
           {/* ===== PROPERTY & CUSTOMER DETAILS - Compact, equal height ===== */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* The customer card is allowed to take as much width as its content needs, so a long
+              email stays on one line instead of snapping mid-word */}
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,max-content)] gap-3">
             {/* Property Details */}
             <div className="bg-[#FBF7EE] rounded-lg p-3 border border-[#E8DCC8]">
               <p className="text-gray-900 text-xs font-bold uppercase mb-2">Property Details</p>
@@ -1650,7 +1652,7 @@ const InvoiceDetailPanel = ({
               <div className="text-xs space-y-1">
                 <p className="text-gray-600">Name: <span className="text-gray-800">{invoice.customerName || '-'}</span></p>
                 <p className="text-gray-600">Phone: <span className="text-gray-800">{invoice.customerPhone || '-'}</span></p>
-                <p className="text-gray-600 break-all">Email: <span className="text-gray-800">{invoice.customerEmail || '-'}</span></p>
+                <p className="text-gray-600 whitespace-nowrap overflow-x-auto">Email: <span className="text-gray-800">{invoice.customerEmail || '-'}</span></p>
                 <p className="text-gray-600">City: <span className="text-gray-800">{invoice.city || '-'}</span></p>
               </div>
             </div>
