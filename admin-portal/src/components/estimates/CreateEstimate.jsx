@@ -23,7 +23,8 @@ import {
 } from '../../utils/estimateStore';
 
 import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
-import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType } from '../../utils/estimatePackageUtils';
+import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType, getAddonName } from '../../utils/estimatePackageUtils';
+import EstimateDraftServicesTable from './EstimateDraftServicesTable';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -2647,47 +2648,27 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   </div>
                 )}
 
-                {/* Selected Add-ons Table - Blue theme */}
+                {/* Selected Add-ons Table - Blue theme. Admin is an internal portal, so the table
+                    also shows Vendor Cost, XLAND Cost and Margin % for configured services. */}
                 {selectedAddons.length > 0 && (
                   <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                     <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
                       <p className="text-sm font-semibold text-blue-800">Services</p>
                     </div>
-                    <table className="w-full table-fixed">
-                      {/* Table Header */}
-                      <thead>
-                        <tr className="bg-white border-b border-blue-100">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[10%]">Service</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[48%]">Description</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[18%]">Frequency</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[14%]">Visits</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[10%]">Action</th>
-                        </tr>
-                      </thead>
-                      {/* Table Body */}
-                      <tbody>
-                        {selectedAddons.map((addon) => (
-                          addon.services?.map((service, sIdx) => (
-                            <tr key={`${addon.addonId}-${sIdx}`} className="bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
-                              <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.name}</td>
-                              <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
-                              <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
-                              <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
-                              <td className="px-3 py-2.5">
-                                {catalogRowActions(addon, setEditingCatalogAddon, handleRemoveAddon)}
-                              </td>
-                            </tr>
-                          ))
-                        ))}
-                      </tbody>
-                      {/* Total Row */}
-                      <tfoot className="bg-blue-50 border-t border-blue-200">
-                        <tr>
-                          <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
-                          <td className="px-3 py-2.5 text-sm font-bold text-gray-900 text-right">₹{getAddonsTotal().toLocaleString()}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                    <div className="p-3">
+                      <EstimateDraftServicesTable
+                        internal
+                        decode={decodeHtml}
+                        items={selectedAddons.map((addon) => ({
+                          key: addon.addonId ?? getAddonName(addon),
+                          row: addon,
+                          tag: addon.catalogServiceId ? 'Configured' : 'Service',
+                          ...(addon.catalogServiceId ? { onEdit: () => setEditingCatalogAddon(addon) } : {}),
+                          onRemove: () => handleRemoveAddon(addon.addonId),
+                        }))}
+                        total={getAddonsTotal()}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -3450,47 +3431,27 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 </div>
               )}
 
-              {/* Selected Add-ons Table */}
+              {/* Selected Add-ons Table. Admin is an internal portal, so the table also shows
+                  Vendor Cost, XLAND Cost and Margin % for configured services. */}
               {directSelectedAddons.length > 0 && (
                 <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
                   <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
                     <p className="text-sm font-semibold text-blue-800">Services</p>
                   </div>
-                  <table className="w-full table-fixed">
-                    {/* Table Header */}
-                    <thead>
-                      <tr className="bg-white border-b border-blue-100">
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-blue-800 uppercase w-[10%]">Service</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[48%]">Description</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[18%]">Frequency</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[14%]">Visits</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-blue-800 uppercase w-[10%]">Action</th>
-                      </tr>
-                    </thead>
-                    {/* Table Body */}
-                    <tbody>
-                      {directSelectedAddons.map((addon) => (
-                        addon.services?.map((service, sIdx) => (
-                          <tr key={`${addon.addonId}-${sIdx}`} className="bg-white border-b border-gray-100 last:border-0 hover:bg-blue-50/30">
-                            <td className="px-3 py-2.5 text-sm font-medium text-gray-800">{service.name}</td>
-                            <td className="px-3 py-2.5 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(service.description || addon.description) || '-'}</td>
-                            <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequencyType || 'Monthly'}</td>
-                            <td className="px-3 py-2.5 text-sm text-gray-600 text-center">{service.frequency || 1}</td>
-                            <td className="px-3 py-2.5">
-                              {catalogRowActions(addon, setEditingDirectCatalogAddon, handleDirectRemoveAddon)}
-                            </td>
-                          </tr>
-                        ))
-                      ))}
-                    </tbody>
-                    {/* Total Row */}
-                    <tfoot className="bg-blue-50 border-t border-blue-200">
-                      <tr>
-                        <td colSpan={4} className="px-3 py-2.5 text-sm font-semibold text-blue-800">Total Services Price</td>
-                        <td className="px-3 py-2.5 text-sm font-bold text-gray-900 text-right">₹{getDirectAddonsTotal().toLocaleString()}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                  <div className="p-3">
+                    <EstimateDraftServicesTable
+                      internal
+                      decode={decodeHtml}
+                      items={directSelectedAddons.map((addon) => ({
+                        key: addon.addonId ?? getAddonName(addon),
+                        row: addon,
+                        tag: addon.catalogServiceId ? 'Configured' : 'Service',
+                        ...(addon.catalogServiceId ? { onEdit: () => setEditingDirectCatalogAddon(addon) } : {}),
+                        onRemove: () => handleDirectRemoveAddon(addon.addonId),
+                      }))}
+                      total={getDirectAddonsTotal()}
+                    />
+                  </div>
                 </div>
               )}
 

@@ -212,7 +212,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 const Icon = PROPERTY_ICONS[estimate.propertyType] || (estimate.estimateType === 'direct' ? User : Building2);
                 return (
                   <Fragment key={estimate.estimateId}>
-                  <tr className="hover:bg-gray-50">
+                  <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedId(estimate.estimateId)} title="View details">
                     <td className="px-6 py-4">
                       {/* The ID opens the estimate full screen; the Back button returns here */}
                       <button type="button" onClick={() => setExpandedId(estimate.estimateId)}
@@ -263,7 +263,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                         ₹{(estimate.totalPrice || calculateEstimateTotal(estimate)).toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {/* Restore/Delete buttons - Hidden for Operations Manager */}
                         {!isOpsManager && (
