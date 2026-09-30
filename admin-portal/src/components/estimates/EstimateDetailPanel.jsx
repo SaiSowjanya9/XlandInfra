@@ -15,9 +15,10 @@ import { EstimateTermsSection } from './EstimateTerms';
  * estimate was written for, its services, what it comes to, and the terms. The PDF and the email
  * print the same sections in the same order, so nothing read here is a surprise to the customer.
  *
- * It is read-only, and it states the customer's price alone -- no vendor cost, XLAND cost or
- * margin. Those figures belong to the payments dashboard's Cost & Margin panel, which is gated on
- * `canViewEstimateMargins`; an estimate screen shows what the customer is quoted.
+ * It is read-only. Pass `internal` — only from Admin, Operations Manager and FP views — to have the
+ * services table also state Vendor Cost, XLAND Cost and Margin %, the same columns the create
+ * form's draft table shows those portals. Everywhere else the table states the customer's price
+ * alone, so what a colleague or the customer reads there is what the customer receives.
  */
 /**
  * A section's fields as a ruled table: the label in a cream cell, its value in the white cell
@@ -92,7 +93,7 @@ const blockEntries = (estimate) => {
   return keys.map(key => [names[key] || `Block ${key}`, units[key] ?? 0]);
 };
 
-export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', status = null }) {
+export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', status = null, internal = false }) {
   if (!estimate) return null;
   const services = getEstimateAddons(estimate);
   const packageName = estimate.package_name || estimate.packageName;
@@ -151,7 +152,9 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
               <p className="font-medium text-sm text-gray-800">{decode(packageName)}</p>
               <p className="text-sm font-semibold text-gray-800">{money(estimate.package_price || estimate.packagePrice || estimate.packageRate)}</p>
             </div>
-            {packageServices.length > 0 && (
+            {/* Internal viewers read the package's services in the table below with their costs;
+                the compact list is kept for everyone else */}
+            {packageServices.length > 0 && !internal && (
               <ul className="mt-3 space-y-1">
                 {packageServices.map((service, index) => (
                   <li key={index} className="flex flex-wrap justify-between gap-2 text-xs text-gray-600">
@@ -165,9 +168,17 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
         </Section>
       )}
 
-      {services.length > 0 && (
+      {/* In the internal view the package's own services sit in the same table as the added
+          services, tagged Package — the layout the create form uses */}
+      {(internal ? packageServices.length > 0 || services.length > 0 : services.length > 0) && (
         <Section title="Services">
-          <EstimateServicesTable rows={services} decode={decode} />
+          <EstimateServicesTable
+            rows={internal
+              ? [...packageServices.map(s => (typeof s === 'string' ? { name: s, _tag: 'Package' } : { ...s, _tag: 'Package' })), ...services]
+              : services}
+            decode={decode}
+            internal={internal}
+          />
         </Section>
       )}
 
