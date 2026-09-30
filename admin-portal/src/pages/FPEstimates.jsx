@@ -32,6 +32,7 @@ import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
+import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
@@ -1408,10 +1409,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           .map((id, idx) => ({ idx, addon: addons.find(a => a.id == id || a.id === parseInt(id)) }))
           .filter(r => r.addon);
         const addonsTotal = selectedAddonRows.reduce((sum, r) => sum + (parseFloat(r.addon.price) || 0), 0);
-        // Only services added to the estimate can be removed or re-priced; a package's own cannot.
-        // With none of those in the table the Action column held nothing but dashes, so it is not
-        // drawn at all. Same condition as the totals row, so the two cannot disagree.
-        const hasRowActions = selectedAddonRows.length > 0 || tableCatalogAddons.length > 0;
         const pricing = calculatePricing();
         let pkgSvcData = selectedPkg?.services;
         if (typeof pkgSvcData === 'string') { try { pkgSvcData = JSON.parse(pkgSvcData); } catch(e) { pkgSvcData = {}; } }
@@ -1687,81 +1684,27 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {pkgServices.length === 0 && selectedAddonRows.length === 0 && tableCatalogAddons.length === 0 ? (
                 <div className="py-10 text-center text-sm text-warm-muted">Select an AMC package to see its services, or add services individually</div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-warm-section border-b border-warm-border">
-                    <tr>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[4%]">#</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
-                      <th className={`px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase ${hasRowActions ? 'w-[36%]' : 'w-[51%]'}`}>Description</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[13%]">Frequency</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[10%]">Visits</th>
-                      {/* A package's own services cannot be removed one by one, so with nothing else
-                          in the table the column held only dashes. It appears when a row can act. */}
-                      {hasRowActions && <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-warm-border/70">
-                    {pkgServices.map((svc, idx) => {
-                      const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
-                      const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
-                      const desc = decodeHtml(svc.description)?.trim();
-                      return (
-                        <tr key={`pkg-${idx}`} className="align-top">
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{idx + 1}</td>
-                          <td className="px-3 py-2.5">
-                            <p className="font-medium text-warm-text">{decodeHtml(svc.service || svc.name) || '-'}</p>
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-info text-warm-text border border-[#D8E2FA]">Package</span>
-                          </td>
-                          <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{freqType}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
-                          {hasRowActions && <td className="px-3 py-2.5" />}
-                        </tr>
-                      );
-                    })}
-                    {selectedAddonRows.map(({ addon, idx }, i) => {
-                      const freqType = addon.frequency_type || 'Monthly';
-                      const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
-                      const desc = decodeHtml(addon.description || addon.services?.[0]?.description)?.trim();
-                      return (
-                        <tr key={`addon-${idx}`} className="align-top">
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{pkgServices.length + i + 1}</td>
-                          <td className="px-3 py-2.5">
-                            <p className="font-medium text-warm-text">{decodeHtml(addon.service_name)}</p>
-                            <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-warning text-amber-700 border border-[#F3E2B3]">Service</span>
-                          </td>
-                          <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!desc ? 'text-center' : ''}`}>{desc || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{freqType}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, j) => j !== idx)})} className="text-red-400 hover:text-red-600" title="Remove service"><Trash2 className="w-4 h-4" /></button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {tableCatalogAddons.map((addon, i) => (
-                      <tr key={`catalog-${addon.addonId}`} className="align-top">
-                        <td className="px-3 py-2.5 text-center text-warm-muted">{pkgServices.length + selectedAddonRows.length + i + 1}</td>
-                        <td className="px-3 py-2.5">
-                          <p className="font-medium text-warm-text">{addon.name}</p>
-                          <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded bg-warm-success text-emerald-700 border border-[#CFEBDD]">Configured</span>
-                        </td>
-                        <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal ${!addon.description ? 'text-center' : ''}`}>{addon.description || '-'}</td>
-                        <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type}</td>
-                        <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_count}</td>
-                        <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  {(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) && (
-                    <tfoot className="bg-warm-accent-soft border-t border-warm-border">
-                      <tr>
-                        <td colSpan={3} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
-                        <td colSpan={3} className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(addonsTotal + tableCatalogAddonsTotal)}</td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
+                /* FP is an internal portal, so the table also shows Vendor Cost, XLAND Cost and
+                   Margin % — the same columns the customer-facing views deliberately omit. */
+                <div className="p-4">
+                  <EstimateDraftServicesTable
+                    warm
+                    internal
+                    decode={decodeHtml}
+                    items={[
+                      ...pkgServices.map((svc, idx) => ({ key: `pkg-${idx}`, row: svc, tag: 'Package' })),
+                      ...selectedAddonRows.map(({ addon, idx }) => ({
+                        key: `addon-${idx}`, row: addon, tag: 'Service',
+                        onRemove: () => setEstimateForm({ ...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, j) => j !== idx) }),
+                      })),
+                      ...tableCatalogAddons.map((addon) => ({
+                        key: `catalog-${addon.addonId}`, row: addon, tag: 'Configured',
+                        onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
+                      })),
+                    ]}
+                    total={(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) ? addonsTotal + tableCatalogAddonsTotal : null}
+                  />
+                </div>
               )}
             </div>
 
@@ -2084,50 +2027,28 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="bg-warm-accent-soft px-5 py-2.5 border-b border-warm-border">
                     <span className="text-sm font-semibold text-warm-text">Services</span>
                   </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-warm-border/70 bg-white">
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[16%]">Service</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[40%]">Description</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[16%]">Frequency</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[12%]">Visits</th>
-                        <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[16%]">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-warm-border/70 bg-white">
-                      {estimateForm.selectedAddons.map((id, idx) => {
-                        const addon = addons.find(a => a.id == id || a.id === parseInt(id));
-                        if (!addon) return null;
-                        const visits = addon.frequency_count ?? (FREQUENCY_COUNT_MAP?.[addon.frequency_type] ?? 0);
-                        return (
-                          <tr key={idx} className="align-top">
-                            <td className="px-3 py-2.5 text-warm-text font-medium">{decodeHtml(addon.service_name)}</td>
-                            <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center`}>{decodeHtml(addon.description || addon.services?.[0]?.description) || '-'}</td>
-                            <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type || 'Monthly'}</td>
-                            <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <button onClick={() => setEstimateForm({...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx)})} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {tableCatalogAddons.map(addon => (
-                        <tr key={`catalog-${addon.addonId}`} className="align-top">
-                          <td className="px-3 py-2.5 text-warm-text font-medium">{addon.name}</td>
-                          <td className="px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center">{addon.description || '-'}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_type}</td>
-                          <td className="px-3 py-2.5 text-center text-warm-muted">{addon.frequency_count}</td>
-                          <td className="px-3 py-2.5">{catalogRowActions(addon)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-warm-accent-soft border-t border-warm-border">
-                      <tr>
-                        <td colSpan={2} className="px-3 py-2.5 text-sm font-semibold text-warm-text">Total Services Price</td>
-                        <td colSpan={3} className="px-3 py-2.5 text-right font-bold text-warm-text whitespace-nowrap">{formatCurrency(estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                  {/* FP is an internal portal — the table carries the Vendor Cost, XLAND Cost and
+                      Margin % columns the customer-facing views deliberately omit. */}
+                  <div className="p-4">
+                    <EstimateDraftServicesTable
+                      warm
+                      internal
+                      decode={decodeHtml}
+                      items={[
+                        ...estimateForm.selectedAddons.map((id, idx) => ({
+                          key: `addon-${idx}`,
+                          row: addons.find(a => a.id == id || a.id === parseInt(id)) || {},
+                          tag: 'Service',
+                          onRemove: () => setEstimateForm({ ...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx) }),
+                        })),
+                        ...tableCatalogAddons.map((addon) => ({
+                          key: `catalog-${addon.addonId}`, row: addon, tag: 'Configured',
+                          onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
+                        })),
+                      ]}
+                      total={estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -2954,10 +2875,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   const isSelected = selectedEstimates.includes(est.id);
                   return (
                   <React.Fragment key={est.id}>
-                  <tr className={`transition-colors ${isSelected ? 'bg-warm-accent-soft' : 'hover:bg-warm-section'}`}>
-                    {/* Checkbox cell - hidden for FP Manager */}
+                  <tr className={`cursor-pointer transition-colors ${isSelected ? 'bg-warm-accent-soft' : 'hover:bg-warm-section'}`}
+                    onClick={() => openViewEstimate({ id: est.id })} title="View details">
+                    {/* Checkbox cell - hidden for FP Manager; it selects, never opens */}
                     {!isFPManager && (
-                      <td className="px-3 py-4 text-center">
+                      <td className="px-3 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleSelectEstimate(est.id)}
                           className="p-1 hover:bg-warm-accent-soft rounded transition-colors"
@@ -3012,7 +2934,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       <div className="font-medium text-warm-text">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</div>
                       <div className="text-xs text-warm-muted capitalize">{est.created_by_name ? (est.created_by_role || '').replace(/_/g, ' ') : ''}</div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       {isFPManager ? (
                         // FP Manager - View only (badge)
                         <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getEstimateStatusColor(est.status)}`}>
@@ -3035,7 +2957,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         {!isFPManager && (
                           <button onClick={() => openEditEstimate(est)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
@@ -4009,7 +3931,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       {archivedEstimates.length > 0 && !isFPManager && <div className="bg-white rounded-xl border border-warm-border shadow-warm p-4 flex flex-wrap items-center gap-3"><label className="text-sm font-medium text-warm-muted">Type:</label><select value={archivedTypeFilter} onChange={(e) => setArchivedTypeFilter(e.target.value)} className={`${CONTROL_H} px-3 text-sm text-warm-text bg-white border border-warm-border rounded-[10px] focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`}><option value="all">All Types</option><option value="property">Property Based</option><option value="direct">Direct</option></select><button onClick={() => setShowDeleteAllConfirm(true)} className={`${CONTROL_H} ml-auto inline-flex items-center gap-2 px-4 bg-red-600 text-white rounded-[10px] hover:bg-red-700 transition-colors text-sm font-medium`}><Trash2 className="w-4 h-4" />Delete All ({archivedEstimates.length})</button></div>}
-      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <React.Fragment key={e.id}><tr className="hover:bg-warm-section"><td className="px-4 py-3"><button type="button" onClick={() => openViewEstimate({ id: e.id })} className="font-mono text-xs text-warm-text hover:text-warm-accent-hover" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-warm-muted/80">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr></React.Fragment>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">{archivedEstimates.length === 0 ? <EmptyState icon={Archive} title="No archived estimates" description="Archived estimates will appear here" /> : <table className="w-full text-sm"><thead className="bg-warm-section border-b border-warm-border"><tr><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Estimate ID</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Type</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Division</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Client</th><th className="px-4 py-3 text-left font-semibold text-warm-muted uppercase text-xs tracking-wider">Archived On</th><th className="px-4 py-3 text-right font-semibold text-warm-muted uppercase text-xs tracking-wider">Total</th><th className="px-4 py-3 text-center font-semibold text-warm-muted uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody className="divide-y divide-warm-border/70">{archivedEstimates.filter(e => archivedTypeFilter === "all" ? true : archivedTypeFilter === "property" ? (e.estimate_type === "property_based" || e.property_id) : (e.estimate_type === "direct" && !e.property_id)).map(e => <React.Fragment key={e.id}><tr className="hover:bg-warm-section cursor-pointer" onClick={() => openViewEstimate({ id: e.id })} title="View details"><td className="px-4 py-3"><button type="button" onClick={() => openViewEstimate({ id: e.id })} className="font-mono text-xs text-warm-text hover:text-warm-accent-hover" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-warm-muted">{(e.estimate_type === 'property_based' || e.property_id) ? (e.division || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-warm-text">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-warm-muted whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-warm-muted truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-warm-muted/80">{e.property_code}</div>}</td><td className="px-4 py-3 text-warm-muted">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-center gap-1"><button onClick={() => handleDownloadPDF(e)} className="p-1.5 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded" title="Download PDF"><Download className="w-4 h-4" /></button><button onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-warm-muted hover:text-green-600 hover:bg-green-50 rounded"><RotateCcw className="w-4 h-4" /></button><button onClick={() => setDeleteConfirm(e)} className="p-1.5 text-warm-muted hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button></div></td></tr></React.Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-warm-text mb-2">Delete Permanently?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete</button></div></div></div>}
       {showDeleteAllConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-red-600 mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> Delete All Archived?</h3><p className="text-warm-muted mb-4">Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setShowDeleteAllConfirm(false)} className="px-4 py-2 border border-warm-border rounded-[10px] text-warm-text hover:bg-warm-section">Cancel</button><button onClick={handleDeleteAllArchived} className="px-4 py-2 bg-red-600 text-white rounded-[10px] hover:bg-red-700">Delete All</button></div></div></div>}
     </div>

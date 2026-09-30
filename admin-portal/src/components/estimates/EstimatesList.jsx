@@ -877,10 +877,11 @@ const EstimatesList = ({
                 const isSelected = selectedEstimates.includes(estimate.id);
                 return (
                   <Fragment key={estimate.estimateId}>
-                  <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
-                    {/* Checkbox cell - hidden for ops manager */}
+                  <tr className={`hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-indigo-50' : ''}`}
+                    onClick={() => setExpandedId(estimate.estimateId)} title="View details">
+                    {/* Checkbox cell - hidden for ops manager; it selects, never opens */}
                     {!isOpsManager && (
-                      <td className="px-3 py-3 sm:py-4 text-center">
+                      <td className="px-3 py-3 sm:py-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleSelectEstimate(estimate.id)}
                           className="p-1 hover:bg-gray-200 rounded transition-colors"
@@ -961,7 +962,7 @@ const EstimatesList = ({
                         <div className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</div>
                       )}
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                       {isOpsManager ? (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}>
                           {STATUS_LABELS[estimate.status] || estimate.status?.charAt(0).toUpperCase() + estimate.status?.slice(1) || 'Draft'}
@@ -982,7 +983,7 @@ const EstimatesList = ({
                         </div>
                       )}
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {!isOpsManager && (
                           <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Edit"><Edit2 className="w-4 h-4" /></button>

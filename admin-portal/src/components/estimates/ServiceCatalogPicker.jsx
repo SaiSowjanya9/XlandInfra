@@ -224,6 +224,10 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         applicable_property_types: service.applicable_property_types,
         frequency_type: quote.frequency, frequency_count: quote.visits,
         totalPrice: quote.totalPrice, pricingInputs: quote.inputs,
+        // The cost figures ride on the draft row so the create form's internal view can show them;
+        // the save payload maps its own fields, so they never reach the estimate or the customer.
+        vendorCost: quote.vendorCost, operatingCost: quote.operatingCost, marginPercentage: quote.marginPercentage,
+        vendorRatePerVisit: quote.vendorRatePerVisit, pricingSnapshot: { ...service, ...quote },
         services: [{ name: service.service_name, description: service.description, frequencyType: quote.frequency, frequency: quote.visits, price: quote.visits ? quote.totalPrice / quote.visits : quote.totalPrice }]
       });
       closeDialog();
