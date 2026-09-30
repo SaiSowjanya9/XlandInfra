@@ -38,6 +38,16 @@ const customerServiceDetails = (text, category = '') => String(text ?? '').split
   .map(line => customerLine(line, String(category ?? '').trim()))
   .filter(line => line.trim()).join('\n');
 
+// `Property Types` is catalog configuration -- which kinds of property a service is set up for --
+// not something a customer document states. It is stripped where a document is drawn rather than
+// where the estimate is saved, because estimates already stored carry the segment inside
+// `details` and `description`. Mirrors stripPropertyTypes in
+// admin-portal/src/utils/estimatePackageUtils.js.
+const PROPERTY_TYPES_SEGMENT = /^Property Types\s*:/i;
+const stripPropertyTypes = text => String(text ?? '').split('\n')
+  .map(line => line.split(' | ').filter(part => !PROPERTY_TYPES_SEGMENT.test(part.trim())).join(' | '))
+  .join('\n');
+
 const normalizeEstimateService = value => {
   const row = value && typeof value === 'object' ? value : { price: typeof value === 'number' ? value : 0, name: typeof value === 'string' ? value : 'Service' };
   const snapshot = parse(row.pricingSnapshot) || {};
@@ -217,4 +227,4 @@ const normalizeManualService = addon => {
 
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, stripPropertyTypes, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };

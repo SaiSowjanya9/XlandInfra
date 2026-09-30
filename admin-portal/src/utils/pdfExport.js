@@ -1,7 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getEstimateAddons, getAddonPrice, getServiceDescription } from './estimatePackageUtils';
+import { getEstimateAddons, getAddonPrice, getServiceDescription, stripPropertyTypes } from './estimatePackageUtils';
 import { estimateTermsLines } from './estimateTerms';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } from './companyInfo';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
@@ -716,7 +716,7 @@ const generatePDF = (data, type, filename) => {
         category].filter(Boolean).join('\n');
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
-      const details = withoutCategory(decodeHtml(String(item.description || '')), category);
+      const details = withoutCategory(stripPropertyTypes(decodeHtml(String(item.description || ''))), category);
       const row = [String(index + 1), name, details || '-', freqType, String(visits)];
       if (!priced) return row;
       // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so with
@@ -1397,8 +1397,8 @@ export const exportInvoiceToPDF = (invoice) => {
 
     const services = allItems.filter(item => !isAddon(item)).map(item => {
       const itemName = decodeHtml(item.name || '');
-      const itemDetails = decodeHtml(item.details || '');
-      const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
+      const itemDetails = stripPropertyTypes(decodeHtml(item.details || ''));
+      const fullDesc = stripPropertyTypes(decodeHtml(String(item.description || item.name || 'Service')));
       const parts = fullDesc.split(' - ');
       return {
         name: itemName || parts[0] || 'Service',
@@ -1410,7 +1410,7 @@ export const exportInvoiceToPDF = (invoice) => {
 
     // Extract addons
     const addons = allItems.filter(item => isAddon(item)).map(item => {
-      const fullDesc = decodeHtml(String(item.description || item.name || 'Service'));
+      const fullDesc = stripPropertyTypes(decodeHtml(String(item.description || item.name || 'Service')));
       let addonName = fullDesc;
       let addonDesc = '-';
       

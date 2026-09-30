@@ -139,6 +139,15 @@ const serviceMethod = (service) => service?.pricing_method || service?.pricingMe
 // no configured method behind it.
 export const getServiceMethodLabel = (service) => METHOD_LABELS[serviceMethod(service)] || '';
 
+// `Property Types` is catalog configuration -- which kinds of property a service is set up for --
+// not something a customer document states. It is stripped where a document is drawn rather than
+// where the estimate is saved, because estimates already stored carry the segment inside
+// `details` and `description`. Mirrors stripPropertyTypes in backend/utils/estimateData.js.
+const PROPERTY_TYPES_SEGMENT = /^Property Types\s*:/i;
+export const stripPropertyTypes = (text) => String(text ?? '').split('\n')
+  .map(line => line.split(' | ').filter(part => !PROPERTY_TYPES_SEGMENT.test(part.trim())).join(' | '))
+  .join('\n');
+
 /**
  * What was measured at this property -- "4 Lift", "15,000 Sq Ft", "125 KVA", "4 Guards" -- taken
  * from the inputs the estimate was priced from.

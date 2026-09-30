@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
-const { customerEstimateData } = require('../utils/estimateData');
+const { customerEstimateData, stripPropertyTypes } = require('../utils/estimateData');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
@@ -943,7 +943,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   const serviceRowsHtml = (list, { priced = true } = {}) => list.map((item, index) => {
     const name = emailText(item.name || item.service || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service');
     const category = item.category ? emailText(item.category) : '';
-    const details = item.description ? emailText(item.description) : '';
+    const details = item.description ? emailText(stripPropertyTypes(item.description)) : '';
     const frequency = emailText(String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''));
     const visits = item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1;
     const price = Number(item.price || item.totalPrice || item.calculatedPrice || item.services?.[0]?.price || 0);
@@ -2431,8 +2431,8 @@ const sendInvoiceEmail = async (invoice) => {
 
   // Generate services HTML
   const servicesHtml = serviceItems.map((item, idx) => {
-    const details = decodeHtml(item.details || '');
-    const fullDesc = decodeHtml(item.description || item.name || 'Service');
+    const details = stripPropertyTypes(decodeHtml(item.details || ''));
+    const fullDesc = stripPropertyTypes(decodeHtml(item.description || item.name || 'Service'));
     const parts = fullDesc.split(' - ');
     const serviceName = parts[0] || 'Service';
     const serviceDesc = details || parts.slice(1).join(' - ') || '-';
@@ -2451,7 +2451,7 @@ const sendInvoiceEmail = async (invoice) => {
 
   // Generate addons HTML
   const addonsHtml = addonItems.map((item, idx) => {
-    const fullDesc = decodeHtml(item.description || item.name || 'Service');
+    const fullDesc = stripPropertyTypes(decodeHtml(item.description || item.name || 'Service'));
     let addonName = fullDesc;
     let addonDesc = '-';
     

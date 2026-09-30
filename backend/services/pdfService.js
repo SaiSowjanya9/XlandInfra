@@ -1,5 +1,5 @@
 const PDFDocument = require('pdfkit');
-const { customerEstimateData } = require('../utils/estimateData');
+const { customerEstimateData, stripPropertyTypes } = require('../utils/estimateData');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../utils/companyInfo');
 const path = require('path');
@@ -728,7 +728,8 @@ const generateEstimatePDF = async (estimate) => {
         // among the details in the Description column
         name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
           decodeHtml(item.category || '')].filter(Boolean).join('\n'),
-        details: decodeHtml(item.details || item.description || item.service_description || '-') || '-',
+        // Property Types is catalog configuration, not something a customer document states
+        details: stripPropertyTypes(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
         visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
         // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so
@@ -978,8 +979,8 @@ const generateInvoicePDF = async (invoice) => {
             { label: 'Amount (Rs.)', width: 114, align: 'right' }
           ],
           rows: items.map((item, index) => {
-            const name = decodeHtml(String(item.description || item.name || item.serviceName || item.service_name || 'Service'));
-            const detail = decodeHtml(String(item.details || item.serviceDescription || ''));
+            const name = stripPropertyTypes(decodeHtml(String(item.description || item.name || item.serviceName || item.service_name || 'Service')));
+            const detail = stripPropertyTypes(decodeHtml(String(item.details || item.serviceDescription || '')));
             const quantity = item.quantity ?? item.qty;
             const amount = item.amount ?? item.totalPrice ?? item.total_price ?? item.unitPrice ?? item.unit_price ?? 0;
             return [
