@@ -89,7 +89,7 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
   return (
     <div className={internal ? 'overflow-x-auto print:overflow-visible' : undefined}>
       <div className={`grid ${grid} gap-2 px-3 py-2 bg-warm-section ${topRadius} ${floor}`}>
-        {columns.map(column => <div key={column.label} className={`text-xs font-semibold text-warm-muted ${column.head}`}>{column.label}</div>)}
+        {columns.map(column => <div key={column.label} className={`whitespace-nowrap text-xs font-semibold text-warm-muted ${column.head}`}>{column.label}</div>)}
       </div>
       <div className={`border border-warm-border divide-y divide-warm-border/60 ${floor}`}>
         {services.map((row, index) => (
