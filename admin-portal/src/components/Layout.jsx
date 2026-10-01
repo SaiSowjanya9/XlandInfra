@@ -169,7 +169,7 @@ const Layout = ({ admin, onLogout, children }) => {
         title={collapsed ? item.label : ''}
       >
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-        {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+        {!collapsed && <span className="text-sm whitespace-nowrap">{item.label}</span>}
       </Link>
     );
   };

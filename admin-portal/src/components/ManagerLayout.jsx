@@ -308,12 +308,12 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
         {!sidebarCollapsed && (
           item.subLabel ? (
-            <span className="flex flex-col leading-tight">
+            <span className="flex flex-col leading-tight text-sm">
               <span>{item.label}</span>
               <span>{item.subLabel}</span>
             </span>
           ) : (
-            <span className="whitespace-nowrap">{item.label}</span>
+            <span className="text-sm whitespace-nowrap">{item.label}</span>
           )
         )}
       </Link>
@@ -529,7 +529,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Work Orders</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
@@ -586,7 +586,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.estimates || (isEstimatesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
@@ -643,7 +643,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.billingPayments || (isBillingPaymentsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Billing & Payments</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Billing & Payments</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
@@ -700,7 +700,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.schedules || (isSchedulesActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Schedules</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Schedules</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
@@ -764,7 +764,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="whitespace-nowrap">Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
