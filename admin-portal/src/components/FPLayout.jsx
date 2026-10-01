@@ -378,12 +378,12 @@ const FPLayout = ({ admin, onLogout, children }) => {
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
         {!sidebarCollapsed && (
           item.subLabel ? (
-            <span className="flex flex-col leading-tight">
+            <span className="flex flex-col leading-tight text-sm">
               <span>{item.label}</span>
               <span>{item.subLabel}</span>
             </span>
           ) : (
-            <span className="whitespace-nowrap">{item.label}</span>
+            <span className="text-sm whitespace-nowrap">{item.label}</span>
           )
         )}
       </Link>
@@ -611,7 +611,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (workOrdersOpen || (isWorkOrdersSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Work Orders</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Work Orders</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
@@ -650,7 +650,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <FileText className="w-5 h-5 flex-shrink-0" style={{ color: (estimatesOpen || (isEstimatesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Estimates / AMC</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Estimates / AMC</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
@@ -689,7 +689,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: (billingPaymentsOpen || (isBillingPaymentsSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Billing & Payments</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Billing & Payments</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
@@ -728,7 +728,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: (schedulesOpen || (isSchedulesSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Schedules</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Schedules</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
@@ -767,7 +767,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Vendor Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Vendor Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
@@ -806,7 +806,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
               >
                 <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                   <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Employee Management</span>}
+                  {!sidebarCollapsed && <span className="text-sm truncate">Employee Management</span>}
                 </div>
                 {!sidebarCollapsed && (
                   <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
