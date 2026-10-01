@@ -12,7 +12,8 @@ import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../../utils/estimateStore';
-import { exportEstimateToPDF } from '../../utils/pdfExport';
+import { exportEstimateToPDF, printEstimatePDF } from '../../utils/pdfExport';
+import { useEstimatePrint } from '../../utils/useEstimatePrint';
 import { getServiceDescription, hasCatalogServices } from '../../utils/estimatePackageUtils';
 import EstimateDetailPanel from './EstimateDetailPanel';
 import * as XLSX from 'xlsx';
@@ -477,13 +478,8 @@ const EstimatesList = ({
     }
   };
 
-  const handleDownloadPDF = (estimate) => {
-    if (exportingId) return;
-    setExportingId(estimate.estimateId || estimate.estimate_id);
-    showToast('Generating PDF...');
-    
-    setTimeout(() => {
-      try {
+  // Resolve a stored estimate to the PDF's data -- the download and the document print share it
+  const buildEstimatePdfData = (estimate) => {
         console.log('PDF Export - Full estimate:', estimate);
         
         // Parse addons from multiple possible sources (same as FP portal)
@@ -587,8 +583,17 @@ const EstimatesList = ({
         };
         
         console.log('PDF Data:', pdfData);
-        const success = exportEstimateToPDF(pdfData);
-        if (success) {
+        return pdfData;
+  };
+
+  const handleDownloadPDF = (estimate) => {
+    if (exportingId) return;
+    setExportingId(estimate.estimateId || estimate.estimate_id);
+    showToast('Generating PDF...');
+
+    setTimeout(() => {
+      try {
+        if (exportEstimateToPDF(buildEstimatePdfData(estimate))) {
           showToast('PDF downloaded successfully!');
         }
       } catch (err) {
@@ -598,6 +603,10 @@ const EstimatesList = ({
       }
     }, 100);
   };
+
+  // Print the generated PDF itself -- a browser print of the page stamps the tab title and URL
+  // on every sheet, while the PDF viewer prints the document alone
+  const handlePrintEstimate = (estimate) => printEstimatePDF(buildEstimatePdfData(estimate));
 
   // Send email with estimate - with guard against double sending
   const handleSendEmail = async (estimate) => {
@@ -663,12 +672,16 @@ const EstimatesList = ({
   // area, and Back returns to the list. Filters and pagination are untouched by going back.
   const detailEstimate = expandedId ? estimates.find(e => e.estimateId === expandedId) || null : null;
 
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(detailEstimate, buildEstimatePdfData);
+
   if (detailEstimate) {
     return (
       <div>
-        {/* Screen furniture around the document: Back returns to the list, Print is a browser
-            print (the .print-document rule keeps it to the estimate alone) and Download is the
-            PDF -- the row's own download icon is gone, so the document is where both live */}
+        {/* Screen furniture around the document: Back returns to the list, Print sends the
+            generated PDF to the viewer's print (a browser page print stamps the tab title and
+            URL on every sheet) and Download is the same PDF -- the row's own download icon is
+            gone, so the document is where both live */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <button onClick={() => setExpandedId(null)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -676,7 +689,7 @@ const EstimatesList = ({
             Back to All Estimates
           </button>
           <div className="flex items-center gap-2">
-            <button onClick={() => window.print()}
+            <button onClick={() => handlePrintEstimate(detailEstimate)}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <Printer className="w-4 h-4" />Print
             </button>

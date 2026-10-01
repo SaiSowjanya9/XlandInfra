@@ -452,7 +452,7 @@ const drawEstimateLetterhead = (doc, margin, data) => {
 };
 
 // Generate Premium PDF with professional design
-const generatePDF = (data, type, filename) => {
+const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -943,6 +943,8 @@ const generatePDF = (data, type, filename) => {
     doc.setFont('helvetica', 'normal');
     doc.text(COMPANY_FOOTER_LINE, pageWidth / 2, footerY, { align: 'center' });
 
+    // The print path takes the document itself; every other caller gets the file saved
+    if (returnDoc) return doc;
     savePDFCrossPlatform(doc, filename);
     return true;
   } catch (error) {
@@ -951,8 +953,9 @@ const generatePDF = (data, type, filename) => {
   }
 };
 
-// Export estimate to PDF
-export const exportEstimateToPDF = (estimate) => {
+// Resolve an estimate to the document's data: services, addons and every alias a stored row
+// or a portal's own shape may carry. Shared by the download and the print path.
+const estimateExportData = (estimate) => {
   debug('[PDF] exportEstimateToPDF called for:', estimate?.estimateId || estimate?.estimate_id);
 
   try {
@@ -1169,12 +1172,55 @@ export const exportEstimateToPDF = (estimate) => {
       termsConditions: estimate.termsConditions ?? estimate.terms_conditions
     };
 
-    debug('[PDF] Generating PDF for:', exportData.estimateId);
-    const result = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
-    debug('[PDF] generatePDF result:', result);
-    return result;
+    return exportData;
   } catch (error) {
     console.error('PDF Export Error:', error);
+    return null;
+  }
+};
+
+// Export estimate to PDF
+export const exportEstimateToPDF = (estimate) => {
+  const exportData = estimateExportData(estimate);
+  if (!exportData) return false;
+  debug('[PDF] Generating PDF for:', exportData.estimateId);
+  const result = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`);
+  debug('[PDF] generatePDF result:', result);
+  return result;
+};
+
+// Print the estimate's PDF rather than the page it sits in. The browser's own print stamps the
+// page title and URL on every sheet -- chrome no stylesheet can remove -- while a document
+// opened in the PDF viewer prints alone. The generated file loads into a hidden frame and that
+// frame prints; if the frame cannot print, the PDF opens in a tab instead.
+export const printEstimatePDF = (estimate) => {
+  try {
+    const exportData = estimateExportData(estimate);
+    if (!exportData) return false;
+    const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true });
+    if (!doc) return false;
+    const url = URL.createObjectURL(doc.output('blob'));
+    const frame = document.createElement('iframe');
+    frame.title = `Estimate ${exportData.estimateId}`;
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    document.body.appendChild(frame);
+    frame.onload = () => {
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch {
+        window.open(url, '_blank');
+      }
+      // The blob outlives the dialog: some browsers never fire afterprint on a frame, so a
+      // timer is the fallback
+      const done = () => { frame.remove(); URL.revokeObjectURL(url); };
+      frame.contentWindow.addEventListener?.('afterprint', done, { once: true });
+      setTimeout(done, 60000);
+    };
+    frame.src = url;
+    return true;
+  } catch (error) {
+    console.error('[PDF] Print error:', error);
     return false;
   }
 };

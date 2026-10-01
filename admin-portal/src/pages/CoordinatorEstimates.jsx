@@ -20,7 +20,8 @@ import {
 } from '../utils/estimateStore';
 
 const ITEMS_PER_PAGE = 10;
-import { exportEstimateToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
+import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
@@ -662,6 +663,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       showToast('Failed to download PDF', 'error');
     }
   };
+
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(viewEstimate);
 
   // Keyboard shortcut handler for back navigation (Escape key)
   useEffect(() => {
@@ -1986,7 +1990,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Print/Download live on the opened document -- the list rows no longer carry a
                   download of their own. This bar is outside .print-document so neither prints. */}
               <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => window.print()} title="Print estimate"
+                <button onClick={() => { if (!printEstimatePDF(viewEstimate)) window.print(); }} title="Print estimate"
                   className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                   <Printer className="w-4 h-4" />Print
                 </button>

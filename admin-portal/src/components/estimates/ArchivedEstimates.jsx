@@ -5,7 +5,8 @@ import {
   Home, LayoutGrid, Layers, TreePine, Map, Briefcase, ArrowLeft, Download, Printer
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
-import { exportEstimateToPDF } from '../../utils/pdfExport';
+import { exportEstimateToPDF, printEstimatePDF } from '../../utils/pdfExport';
+import { useEstimatePrint } from '../../utils/useEstimatePrint';
 import EstimateDetailPanel from './EstimateDetailPanel';
 
 // Decode HTML entities (e.g., &amp; -> &)
@@ -136,32 +137,44 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   // area, and Back returns to the archived list.
   const detailEstimate = expandedId ? archivedEstimates.find(e => e.estimateId === expandedId) || null : null;
 
-  // The document's own download: the exporter already understands a stored estimate's snake_case
-  // fields; only package services need unwrapping, since they may live under services_data as the
-  // package's service rows rather than under package_services.
+  // Resolve a stored estimate to the PDF's data -- the download and the document print share it.
+  // The exporter already understands snake_case fields; only package services need unwrapping,
+  // since they may live under services_data as the package's service rows.
+  const buildEstimatePdfData = (estimate) => {
+    let packageServices = [];
+    for (const source of [estimate.package_services, estimate.packageServices, estimate.services_data]) {
+      if (!source) continue;
+      try {
+        const parsed = typeof source === 'string' ? JSON.parse(source) : source;
+        const list = Array.isArray(parsed) ? parsed : (parsed?.serviceRows || parsed?.services || []);
+        if (Array.isArray(list) && list.length) { packageServices = list; break; }
+      } catch { /* malformed JSON on a stored row -- skip that source */ }
+    }
+    return { ...estimate, packageServices };
+  };
+
   const handleDownloadPDF = (estimate) => {
     try {
-      let packageServices = [];
-      for (const source of [estimate.package_services, estimate.packageServices, estimate.services_data]) {
-        if (!source) continue;
-        try {
-          const parsed = typeof source === 'string' ? JSON.parse(source) : source;
-          const list = Array.isArray(parsed) ? parsed : (parsed?.serviceRows || parsed?.services || []);
-          if (Array.isArray(list) && list.length) { packageServices = list; break; }
-        } catch { /* malformed JSON on a stored row -- skip that source */ }
-      }
-      exportEstimateToPDF({ ...estimate, packageServices });
+      exportEstimateToPDF(buildEstimatePdfData(estimate));
     } catch (e) {
       console.error('PDF download error:', e);
     }
   };
 
+  // Print the generated PDF itself -- a browser print of the page stamps the tab title and URL
+  // on every sheet, while the PDF viewer prints the document alone
+  const handlePrintEstimate = (estimate) => printEstimatePDF(buildEstimatePdfData(estimate));
+
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(detailEstimate, buildEstimatePdfData);
+
   if (detailEstimate) {
     return (
       <div>
-        {/* Screen furniture around the document: Back returns to the list, Print is a browser
-            print (the .print-document rule keeps it to the estimate alone) and Download is the
-            PDF -- the list rows no longer carry a download of their own */}
+        {/* Screen furniture around the document: Back returns to the list, Print sends the
+            generated PDF to the viewer's print (a browser page print stamps the tab title and
+            URL on every sheet) and Download is the same PDF -- the list rows no longer carry a
+            download of their own */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <button onClick={() => setExpandedId(null)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -169,7 +182,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
             Back to Archived Estimates
           </button>
           <div className="flex items-center gap-2">
-            <button onClick={() => window.print()}
+            <button onClick={() => handlePrintEstimate(detailEstimate)}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               <Printer className="w-4 h-4" />Print
             </button>

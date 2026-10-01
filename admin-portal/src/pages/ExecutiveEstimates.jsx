@@ -9,7 +9,8 @@ import EstimateDraftServicesTable from '../components/estimates/EstimateDraftSer
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-import { exportEstimateToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
+import { useEstimatePrint } from '../utils/useEstimatePrint';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
 import EstimatePriceSummary from '../components/estimates/EstimatePriceSummary';
@@ -370,6 +371,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       setMessage({ type: 'error', text: 'Failed to download PDF' });
     }
   };
+
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(viewEstimate);
 
   // Keyboard shortcut handler for back navigation (Escape key)
   useEffect(() => {
@@ -1591,7 +1595,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Print/Download live on the opened document -- the list rows no longer carry a
                   download of their own. This bar is outside .print-document so neither prints. */}
               <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => window.print()} title="Print estimate"
+                <button onClick={() => { if (!printEstimatePDF(viewEstimate)) window.print(); }} title="Print estimate"
                   className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                   <Printer className="w-4 h-4" />Print
                 </button>
