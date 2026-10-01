@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeEstimateData, normalizeEstimateService, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, normalizeManualService } = require('./estimateData');
+const { normalizeEstimateData, normalizeEstimateService, customerEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, normalizeManualService, billToParty } = require('./estimateData');
 
 const addon = {
   catalogServiceId: 3, name: 'Generator Maintenance', description: 'Inspect and service generator', totalPrice: 11960.25,
@@ -214,4 +214,24 @@ test('a hand-entered service keeps an entered vendor cost and markup, bounded li
   // And none of it reaches the customer: delivery carries name, details and price, never the cost
   const customer = customerEstimateData({ estimateType: 'custom', addons: [row], total: 5200 });
   assert.doesNotMatch(JSON.stringify(customer), /vendorCost|markup_percentage|4000|30/);
+});
+
+test('BILL TO headlines the property for a community, the customer for a home', () => {
+  // GC and APT bill the property -- the customer drops to a Contact row
+  for (const propertyType of ['GC', 'APT', 'Gated Community', 'apartment']) {
+    const party = billToParty({ customerName: 'Sowjanya', propertyName: 'LKF Residency', propertyType });
+    assert.equal(party.name, 'LKF Residency');
+    assert.equal(party.contact, 'Sowjanya');
+    assert.equal(party.property, '');
+  }
+  // Villa, flat and plot bill the person -- the property stays a row
+  for (const propertyType of ['VILLA', 'FLAT', 'PLOT']) {
+    const party = billToParty({ customerName: 'Sowjanya', propertyName: 'Villa 42', propertyType });
+    assert.equal(party.name, 'Sowjanya');
+    assert.equal(party.contact, '');
+    assert.equal(party.property, 'Villa 42');
+  }
+  // A community estimate with no property name falls back to the customer, and snake_case rows work
+  assert.equal(billToParty({ customer_name: 'Sowjanya', property_type: 'GC' }).name, 'Sowjanya');
+  assert.equal(billToParty({ client_name: 'Sowjanya', property_name: 'LKF', property_type: 'APT' }).name, 'LKF');
 });

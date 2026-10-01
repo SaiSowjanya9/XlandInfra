@@ -19,6 +19,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { stripInternalServiceDetails } from '../utils/estimatePackageUtils';
+import { billToParty } from '../utils/estimateStore';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -415,14 +416,25 @@ const FPInvoiceView = ({ user }) => {
 
           {/* Two Column Header: Customer Info & Invoice Details */}
           <div className="grid grid-cols-2 gap-8 mb-10">
-            {/* Left: Bill To */}
+            {/* Left: Bill To -- a community's invoice headlines the property, with the
+                customer as its contact; a villa, flat or plot headlines the person */}
             <div>
               <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Bill To</h2>
               <div className="space-y-1">
-                <p className="text-lg font-semibold text-gray-900">{invoice.customerName || 'Customer'}</p>
-                {invoice.propertyName && (
-                  <p className="text-gray-600">{invoice.propertyName}</p>
-                )}
+                {(() => {
+                  const billedTo = billToParty(invoice);
+                  return (
+                    <>
+                      <p className="text-lg font-semibold text-gray-900">{billedTo.name || 'Customer'}</p>
+                      {billedTo.contact && (
+                        <p className="text-gray-600">Contact: {billedTo.contact}</p>
+                      )}
+                      {billedTo.property && (
+                        <p className="text-gray-600">{billedTo.property}</p>
+                      )}
+                    </>
+                  );
+                })()}
                 {invoice.customerEmail && (
                   <p className="text-gray-600">{invoice.customerEmail}</p>
                 )}

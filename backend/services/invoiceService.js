@@ -5,6 +5,7 @@
 
 const { pool } = require('../config/database');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
+const { billToParty } = require('../utils/estimateData');
 const { generateInvoicePDF } = require('./pdfService');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
@@ -872,6 +873,14 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       <td width="16%" style="background: ${warm.section}; border: 1px solid ${warm.border}; padding: 6px 9px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: ${warm.muted}; vertical-align: top;">${label}</td>
       <td ${span > 1 ? `colspan="${span}" ` : ''}style="border: 1px solid ${warm.border}; padding: 6px 9px; font-size: 12px; font-weight: 600; color: ${warm.text}; vertical-align: top; word-break: break-word;">${value}</td>`);
 
+    // A gated community or apartment invoice is billed to the property, which headlines the
+    // card; a villa, flat or plot is billed to the customer, and the property stays a row.
+    const billedTo = billToParty({
+      customerName: customerName || invoice.client_name,
+      propertyName: invoice.property_name,
+      propertyType: invoice.property_type
+    });
+
     const propertyPairs = [
       ['Name', invoice.property_name], ['Type', invoice.property_type], ['Property ID', invoice.property_code],
       ['Zone', invoice.zone], ['City', invoice.city], ['Billing', invoice.billing_duration || 'One-time'],
@@ -952,11 +961,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </tr>
                     <tr>
                       <td style="padding: 10px 12px;">
-                        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${customerName || invoice.client_name || 'Customer'}</div>
+                        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${billedTo.name || 'Customer'}</div>
                         <table role="presentation" cellpadding="0" cellspacing="0">
+                          ${partyRow('Contact', billedTo.contact)}
                           ${partyRow('Phone', invoice.customer_phone || invoice.client_phone)}
                           ${partyRow('Email', customerEmail || invoice.client_email, true)}
-                          ${partyRow('Property', invoice.property_name)}
+                          ${partyRow('Property', billedTo.property)}
                           ${partyRow('Prop ID', invoice.property_code, true)}
                           ${partyRow('City', invoice.city)}
                         </table>

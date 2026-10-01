@@ -247,4 +247,22 @@ const normalizeManualService = addon => {
 
 const hasCatalogServices = estimate => (estimate.estimate_type || estimate.estimateType) === 'custom' || firstList(estimate.addons, estimate.addons_data).some(addon => addon?.catalogServiceId || String(addon?.addonId || '').startsWith('CAT-'));
 
-module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, stripInternalServiceDetails, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService };
+// Who BILL TO headlines with. A gated community or an apartment block is billed as the
+// property -- the association, not a person -- so its name takes the headline and the
+// customer drops to a Contact row. A villa, flat or plot is billed to the person, and the
+// property stays a row of its own. The portal's estimateStore.js carries the same helper,
+// so the screen, the downloaded PDF and the emailed documents all agree.
+const billToParty = (party = {}) => {
+  const customerName = first(party.customerName, party.customer_name, party.client_name) || '';
+  const propertyName = first(party.propertyName, party.property_name, party.communityName, party.community_name) || '';
+  const propertyType = first(party.propertyType, party.property_type) || '';
+  const billedByProperty = !!propertyName && ['GC', 'APT'].includes(normalizePropertyType(propertyType));
+  return {
+    name: billedByProperty ? propertyName : (customerName || propertyName),
+    // The name that did not take the headline still belongs on the card, on a row of its own
+    contact: billedByProperty ? customerName : '',
+    property: billedByProperty ? '' : propertyName
+  };
+};
+
+module.exports = { normalizeEstimateService, normalizeEstimateData, customerEstimateData, customerServiceDetails, stripInternalServiceDetails, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices, isManualService, normalizeManualService, billToParty };

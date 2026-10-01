@@ -175,8 +175,13 @@ bug, because a colleague reading the estimate on screen is reading what the cust
 **Order, top to bottom:**
 
 1. **Letterhead.** A gold rule across the head of the page, then two facing blocks: on the left the
-   company, on the right a **BILL TO** card — the customer's name, phone, email, and the property,
-   property code and city the estimate was written for. The card is **flexible**: it widens to keep
+   company, on the right a **BILL TO** card. **Who headlines it depends on the property type**: a
+   gated community or an apartment is billed as the property — the association, not a person — so
+   the property name takes the bold headline and the customer drops to a `Contact` row, while a
+   villa, flat or plot is billed to the person and the property stays a `Property` row. `billToParty`
+   decides — `utils/estimateStore.js` on screen and in the downloaded PDF, `utils/estimateData.js`
+   for the emailed estimate, invoice and receipt and their PDF attachments — then phone, email,
+   property code and city follow. The card is **flexible**: it widens to keep
    an email or property code on one line, capped so it never overlaps the company block; a value too
    long to sit beside its label drops to its own full-width line rather than snapping mid-word. The
    same goes for the on-screen card and the email table cell — keep emails `nowrap`, never fixed-width.
