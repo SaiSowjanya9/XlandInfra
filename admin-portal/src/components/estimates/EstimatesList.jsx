@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import {
   Search, Filter, Edit, Edit2, Download, Send, Trash2, X, ChevronDown, Save, RefreshCw,
   Calendar, DollarSign, Building2, User, Home, LayoutGrid, Layers,
-  TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight, ArrowLeft
+  TreePine, Map, Briefcase, Archive, CheckSquare, Square, ChevronLeft, ChevronRight, ArrowLeft, Printer
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -477,9 +477,7 @@ const EstimatesList = ({
     }
   };
 
-  const handleDownloadPDF = (e, estimate) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleDownloadPDF = (estimate) => {
     if (exportingId) return;
     setExportingId(estimate.estimateId || estimate.estimate_id);
     showToast('Generating PDF...');
@@ -668,11 +666,27 @@ const EstimatesList = ({
   if (detailEstimate) {
     return (
       <div>
-        <button onClick={() => setExpandedId(null)}
-          className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to All Estimates
-        </button>
+        {/* Screen furniture around the document: Back returns to the list, Print is a browser
+            print (the .print-document rule keeps it to the estimate alone) and Download is the
+            PDF -- the row's own download icon is gone, so the document is where both live */}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button onClick={() => setExpandedId(null)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Back to All Estimates
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              <Printer className="w-4 h-4" />Print
+            </button>
+            <button onClick={() => handleDownloadPDF(detailEstimate)}
+              disabled={exportingId === (detailEstimate.estimateId || detailEstimate.estimate_id)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
+              <Download className="w-4 h-4" />Download PDF
+            </button>
+          </div>
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Admin and Operations Manager are internal roles — the services table also shows
               Vendor Cost, XLAND Cost and Margin %, matching the backend's margin gate. */}
@@ -994,15 +1008,6 @@ const EstimatesList = ({
                         {/* All other actions hidden for Operations Manager */}
                         {!isOpsManager && (
                           <>
-                            {/* Download PDF */}
-                            <button
-                              onClick={(e) => handleDownloadPDF(e, estimate)}
-                              disabled={exportingId === estimate.estimateId}
-                              className={`p-2 rounded-lg ${exportingId === estimate.estimateId ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
-                              title="Download PDF"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
                             {/* Send Email */}
                             <button
                               onClick={() => handleSendEmail(estimate)}

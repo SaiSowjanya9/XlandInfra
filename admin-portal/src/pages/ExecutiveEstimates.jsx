@@ -6,7 +6,7 @@ import { newEstimateTerms } from '../utils/estimateTerms';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF } from '../utils/pdfExport';
@@ -359,6 +359,17 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       resetEstimateForm();
     }
   }, [estimateForm.estimateType, selectedProperty]);
+
+  // Download the opened estimate's PDF -- the exporter resolves stored rows
+  // (package_services / services_data) to the document's services itself
+  const handleDownloadPDF = (estimate) => {
+    try {
+      exportEstimateToPDF(estimate);
+    } catch (e) {
+      console.error('PDF download error:', e);
+      setMessage({ type: 'error', text: 'Failed to download PDF' });
+    }
+  };
 
   // Keyboard shortcut handler for back navigation (Escape key)
   useEffect(() => {
@@ -1577,6 +1588,18 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 Back to {activeTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
               </button>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
+              {/* Print/Download live on the opened document -- the list rows no longer carry a
+                  download of their own. This bar is outside .print-document so neither prints. */}
+              <div className="ml-auto flex items-center gap-2">
+                <button onClick={() => window.print()} title="Print estimate"
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  <Printer className="w-4 h-4" />Print
+                </button>
+                <button onClick={() => handleDownloadPDF(viewEstimate)} title="Download PDF"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700">
+                  <Download className="w-4 h-4" />Download
+                </button>
+              </div>
             </div>
             {/* print-document: a browser print is this document alone -- index.css drops the
                 back bar above and the portal chrome around it */}

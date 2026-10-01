@@ -9,7 +9,7 @@ import EstimateDraftServicesTable from '../components/estimates/EstimateDraftSer
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
-  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft
+  DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft, Printer
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -579,6 +579,17 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       resetEstimateForm();
     }
   }, [estimateType, selectedProperty]);
+
+  // Download the opened estimate's PDF -- the exporter resolves stored rows
+  // (package_services / services_data) to the document's services itself
+  const handleDownloadPDF = (estimate) => {
+    try {
+      exportEstimateToPDF(estimate);
+    } catch (e) {
+      console.error('PDF download error:', e);
+      showToast('Failed to download PDF', 'error');
+    }
+  };
 
   // Keyboard shortcut handler for back navigation (Escape key)
   useEffect(() => {
@@ -1928,6 +1939,18 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
               </button>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
+              {/* Print/Download live on the opened document -- the list rows no longer carry a
+                  download of their own. This bar is outside .print-document so neither prints. */}
+              <div className="ml-auto flex items-center gap-2">
+                <button onClick={() => window.print()} title="Print estimate"
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                  <Printer className="w-4 h-4" />Print
+                </button>
+                <button onClick={() => handleDownloadPDF(viewEstimate)} title="Download PDF"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700">
+                  <Download className="w-4 h-4" />Download
+                </button>
+              </div>
             </div>
             {/* print-document: a browser print is this document alone -- index.css drops the
                 back bar above and the portal chrome around it */}

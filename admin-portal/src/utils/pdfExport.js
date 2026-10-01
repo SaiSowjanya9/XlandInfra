@@ -995,8 +995,27 @@ export const exportEstimateToPDF = (estimate) => {
         quantity: s.quantity ?? null
       }));
     }
+    // A stored estimate keeps its package rows under services_data -- the same field
+    // backend/utils/estimateData.js falls back to -- as serviceRows, services, or a bare array
+    if (services.length === 0 && estimate.services_data) {
+      try {
+        const parsed = typeof estimate.services_data === 'string' ? JSON.parse(estimate.services_data) : estimate.services_data;
+        const list = Array.isArray(parsed) ? parsed : (parsed?.serviceRows || parsed?.services || []);
+        if (Array.isArray(list) && list.length > 0) {
+          debug('[PDF] Using services_data:', list);
+          services = list.map(s => ({
+            name: s.service || s.name || s.serviceName || 'Service',
+            frequencyCount: s.frequencyCount ?? s.frequency_count ?? s.frequency ?? s.visits ?? 1,
+            frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
+            description: s.description || '',
+            category: s.category || '',
+            quantity: s.quantity ?? null
+          }));
+        }
+      } catch (e) { debug('[PDF] services_data parse error:', e); }
+    }
     // PRIORITY 2: Check serviceRows (package service rows from form)
-    else if (estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
+    if (services.length === 0 && estimate.serviceRows && Array.isArray(estimate.serviceRows) && estimate.serviceRows.length > 0) {
       services = estimate.serviceRows.filter(sr => sr.service || sr.name).map(sr => ({
         name: sr.service || sr.name || 'Service',
         frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,

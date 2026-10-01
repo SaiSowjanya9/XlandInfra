@@ -2,9 +2,10 @@ import { Fragment, useState, useEffect } from 'react';
 import { getAuthToken } from '../../utils/safeStorage';
 import {
   Archive, RotateCcw, Trash2, X, Calendar, Building2, User, ChevronDown,
-  Home, LayoutGrid, Layers, TreePine, Map, Briefcase, ArrowLeft
+  Home, LayoutGrid, Layers, TreePine, Map, Briefcase, ArrowLeft, Download, Printer
 } from 'lucide-react';
 import { calculateEstimateTotal } from '../../utils/estimateStore';
+import { exportEstimateToPDF } from '../../utils/pdfExport';
 import EstimateDetailPanel from './EstimateDetailPanel';
 
 // Decode HTML entities (e.g., &amp; -> &)
@@ -135,14 +136,49 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
   // area, and Back returns to the archived list.
   const detailEstimate = expandedId ? archivedEstimates.find(e => e.estimateId === expandedId) || null : null;
 
+  // The document's own download: the exporter already understands a stored estimate's snake_case
+  // fields; only package services need unwrapping, since they may live under services_data as the
+  // package's service rows rather than under package_services.
+  const handleDownloadPDF = (estimate) => {
+    try {
+      let packageServices = [];
+      for (const source of [estimate.package_services, estimate.packageServices, estimate.services_data]) {
+        if (!source) continue;
+        try {
+          const parsed = typeof source === 'string' ? JSON.parse(source) : source;
+          const list = Array.isArray(parsed) ? parsed : (parsed?.serviceRows || parsed?.services || []);
+          if (Array.isArray(list) && list.length) { packageServices = list; break; }
+        } catch { /* malformed JSON on a stored row -- skip that source */ }
+      }
+      exportEstimateToPDF({ ...estimate, packageServices });
+    } catch (e) {
+      console.error('PDF download error:', e);
+    }
+  };
+
   if (detailEstimate) {
     return (
       <div>
-        <button onClick={() => setExpandedId(null)}
-          className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Archived Estimates
-        </button>
+        {/* Screen furniture around the document: Back returns to the list, Print is a browser
+            print (the .print-document rule keeps it to the estimate alone) and Download is the
+            PDF -- the list rows no longer carry a download of their own */}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button onClick={() => setExpandedId(null)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Archived Estimates
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              <Printer className="w-4 h-4" />Print
+            </button>
+            <button onClick={() => handleDownloadPDF(detailEstimate)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+              <Download className="w-4 h-4" />Download PDF
+            </button>
+          </div>
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml}
             internal={['admin', 'operations_manager'].includes(admin?.role)} />
