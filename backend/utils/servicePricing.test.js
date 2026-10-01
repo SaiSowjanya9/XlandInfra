@@ -435,7 +435,12 @@ test('slab boundaries are inclusive and above-range custom quotes are explicit',
   assert.equal(quote(configuration, { capacity: 51 }).requiresCustomQuote, true);
   assert.equal(quote(configuration, { capacity: 51, custom_quote: 800 }).vendorCost, 800);
   assert.throws(() => quote(configuration, { capacity: 25.5 }), /whole number/i);
-  assert.throws(() => calculateServiceQuote(validateService(config(configuration)), { property_type: 'APT', capacity: 51, custom_quote: 800 }, 'supervisor'), /admin or manager/i);
+  // Admins, managers, the operations manager and the FP side may enter the quote; field and
+  // data-entry roles may not
+  ['admin', 'manager', 'operations_manager', 'franchise_partner', 'fp_admin', 'fp_manager'].forEach(role =>
+    assert.equal(calculateServiceQuote(validateService(config(configuration)), { property_type: 'APT', capacity: 51, custom_quote: 800 }, role).vendorCost, 800, role));
+  assert.throws(() => calculateServiceQuote(validateService(config(configuration)), { property_type: 'APT', capacity: 51, custom_quote: 800 }, 'supervisor'), /admin, manager or franchise partner/i);
+  assert.throws(() => calculateServiceQuote(validateService(config(configuration)), { property_type: 'APT', capacity: 51, custom_quote: 800 }, 'fp_executive'), /admin, manager or franchise partner/i);
 });
 
 test('generator slabs apply the matching rate and slab-specific frequency and visits', () => {

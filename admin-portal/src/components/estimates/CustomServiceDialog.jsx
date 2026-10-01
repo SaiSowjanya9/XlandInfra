@@ -203,8 +203,9 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
             </label>
 
             {/* Derived, never typed: the markup in rupees and its share of the price -- the same
-                two readouts the service form shows a catalog service */}
-            {costed && <>
+                two readouts the service form shows a catalog service. Shown from the start, so the
+                pair is where the reader expects it; a dash stands in until a cost makes them real. */}
+            {withCosts && <>
               <label className="block">
                 <span className={label}>XLAND Cost (₹)</span>
                 <input readOnly value={xlandCost == null ? '—' : xlandCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
