@@ -46,20 +46,21 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   // Regular Coordinator nav items
   const navItems = [
     { path: '/coordinator', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
     { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/coordinator/employees/zones', icon: MapPin, label: 'Employee Zone', subLabel: 'Management' },
   ];
 
   // FP Coordinator nav items - same structure as regular coordinator
   const fpNavItems = [
     { path: '/coordinator', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
     { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
-    { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/coordinator/employees/zones', icon: MapPin, label: 'Employee Zone', subLabel: 'Management' },
   ];
+
+  // Stands alone rather than inside a section; rendered last, where Employee Management sits
+  const employeeZoneItem = { path: '/coordinator/employees/zones', icon: MapPin, label: 'Employee Zone', subLabel: 'Management' };
 
   const vendorSubItems = [
     { path: '/coordinator/vendors/add', icon: UserPlus, label: 'Add Vendor' },
@@ -244,53 +245,6 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                   <NavLink key={item.path} item={item} mobile />
                 ))}
                 
-                {/* Vendor Management Section */}
-                <div className="mt-3 pt-3" >
-                  <button
-                    onClick={toggleVendors}
-                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                    style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
-                    onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                    onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                    title={sidebarCollapsed ? 'Vendor Management' : ''}
-                  >
-                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                      {!sidebarCollapsed && <span className="whitespace-nowrap">Vendor Management</span>}
-                    </div>
-                    {!sidebarCollapsed && (
-                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
-                        expandedMenus.vendors ? 'bg-amber-500/20' : 'bg-white/10'
-                      }`}>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            expandedMenus.vendors ? 'rotate-180' : ''
-                          }`}
-                          style={{ color: expandedMenus.vendors ? colors.activeText : colors.iconGold }}
-                        />
-                      </span>
-                    )}
-                  </button>
-                  {expandedMenus.vendors && !sidebarCollapsed && (
-                    <div className="ml-4 mt-1 space-y-1 pl-3" >
-                      {vendorSubItems.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = location.pathname === item.path;
-                        return (
-                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
-                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
-                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
-                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
-                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
-                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-                            <span>{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
                 {/* Estimates Section */}
                 <div className="mt-1">
                   <button
@@ -384,14 +338,8 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                     </div>
                   )}
                 </div>
-              </>
-            ) : (
-              <>
-                {navItems.map((item) => (
-                  <NavLink key={item.path} item={item} mobile />
-                ))}
 
-                {/* Vendor Management Section - Only for regular coordinators */}
+                {/* Vendor Management Section */}
                 <div className="mt-3 pt-3" >
                   <button
                     onClick={toggleVendors}
@@ -437,6 +385,15 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Employee Zone Management stands alone, last in the sidebar order */}
+                <NavLink item={employeeZoneItem} mobile />
+              </>
+            ) : (
+              <>
+                {navItems.map((item) => (
+                  <NavLink key={item.path} item={item} mobile />
+                ))}
 
                 {/* Estimates Section - Only for regular coordinators */}
                 <div className="mt-1">
@@ -531,6 +488,56 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                     </div>
                   )}
                 </div>
+
+                {/* Vendor Management Section - Only for regular coordinators */}
+                <div className="mt-3 pt-3" >
+                  <button
+                    onClick={toggleVendors}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                    style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                    onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                    onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                    title={sidebarCollapsed ? 'Vendor Management' : ''}
+                  >
+                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                      <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                      {!sidebarCollapsed && <span className="whitespace-nowrap">Vendor Management</span>}
+                    </div>
+                    {!sidebarCollapsed && (
+                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                        expandedMenus.vendors ? 'bg-amber-500/20' : 'bg-white/10'
+                      }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            expandedMenus.vendors ? 'rotate-180' : ''
+                          }`}
+                          style={{ color: expandedMenus.vendors ? colors.activeText : colors.iconGold }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  {expandedMenus.vendors && !sidebarCollapsed && (
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
+                      {vendorSubItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Employee Zone Management stands alone, last in the sidebar order */}
+                <NavLink item={employeeZoneItem} mobile />
               </>
             )}
           </nav>

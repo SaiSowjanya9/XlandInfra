@@ -244,8 +244,8 @@ const FPLayout = ({ admin, onLogout, children }) => {
   // Base nav items - Add Customer is standalone (not expandable)
   const navItems = [
     { path: '/fp', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/fp/properties', icon: Building2, label: 'Property Management' },
     { path: '/fp/customers/add', icon: UserPlus, label: 'Add Customer' },
+    { path: '/fp/properties', icon: Building2, label: 'Property Management' },
   ];
 
   // Work Orders sub-items
@@ -635,84 +635,6 @@ const FPLayout = ({ admin, onLogout, children }) => {
               )}
             </div>
 
-            {/* Vendor Management Section */}
-            <div className="mt-3 pt-3" >
-              <button
-                onClick={toggleVendor}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{
-                  background: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
-                  color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
-                }}
-                onMouseEnter={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                title={sidebarCollapsed ? 'Vendor Management' : ''}
-              >
-                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Vendor Management</span>}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
-                    vendorOpen ? 'bg-amber-500/20' : 'bg-white/10'
-                  }`}>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        vendorOpen ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: vendorOpen ? colors.activeText : colors.iconGold }}
-                    />
-                  </span>
-                )}
-              </button>
-              {vendorOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" >
-                  {vendorSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile isSubItem />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Employee Management Section */}
-            <div className="mt-1">
-              <button
-                onClick={toggleEmployee}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{
-                  background: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
-                  color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
-                }}
-                onMouseEnter={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                title={sidebarCollapsed ? 'Employee Management' : ''}
-              >
-                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="truncate">Employee Management</span>}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
-                    employeeOpen ? 'bg-amber-500/20' : 'bg-white/10'
-                  }`}>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        employeeOpen ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: employeeOpen ? colors.activeText : colors.iconGold }}
-                    />
-                  </span>
-                )}
-              </button>
-              {employeeOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" >
-                  {employeeSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile isSubItem />
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Estimates Section */}
             <div className="mt-1">
               <button
@@ -824,6 +746,84 @@ const FPLayout = ({ admin, onLogout, children }) => {
               {schedulesOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3">
                   {schedulesSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Vendor Management Section */}
+            <div className="mt-3 pt-3" >
+              <button
+                onClick={toggleVendor}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Vendor Management' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="truncate">Vendor Management</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    vendorOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        vendorOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: vendorOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {vendorOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {vendorSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Employee Management Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleEmployee}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Employee Management' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="truncate">Employee Management</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    employeeOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        employeeOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: employeeOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {employeeOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>

@@ -367,13 +367,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Dashboard only */}
             <NavLink item={{ path: '/employee', icon: LayoutDashboard, label: 'Dashboard' }} mobile />
 
+            <NavLink item={{ path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' }} mobile />
+
             {/* Property Management - Direct link, FP selection on page */}
             <NavLink item={{ path: '/employee/customer-submissions', icon: Building2, label: 'Property Management' }} mobile />
-
-            {/* Other nav items */}
-            {navItems.filter(item => item.path !== '/employee').map((item) => (
-              <NavLink key={item.path} item={item} mobile />
-            ))}
 
             {/* Work Orders Section */}
             <div className="mt-3 pt-3" >
@@ -405,78 +402,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               {workOrdersOpen && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {filteredWorkOrdersSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile isSubItem />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Vendor Management Section */}
-            <div className="mt-3 pt-3" >
-              <button
-                onClick={toggleVendor}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{ background: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
-                onMouseEnter={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                title={sidebarCollapsed ? 'Vendor Management' : ''}
-              >
-                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
-                    vendorOpen ? 'bg-amber-500/20' : 'bg-white/10'
-                  }`}>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        vendorOpen ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: vendorOpen ? colors.activeText : colors.iconGold }}
-                    />
-                  </span>
-                )}
-              </button>
-              {vendorOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" >
-                  {vendorSubItems.map((item) => (
-                    <NavLink key={item.path} item={item} mobile isSubItem />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Employee Management Section */}
-            <div className="mt-1">
-              <button
-                onClick={toggleEmployee}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{ background: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
-                onMouseEnter={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                title={sidebarCollapsed ? 'Employee Management' : ''}
-              >
-                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Employee Management</span>}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
-                    employeeOpen ? 'bg-amber-500/20' : 'bg-white/10'
-                  }`}>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        employeeOpen ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: employeeOpen ? colors.activeText : colors.iconGold }}
-                    />
-                  </span>
-                )}
-              </button>
-              {employeeOpen && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3" >
-                  {employeeSubItems.map((item) => (
                     <NavLink key={item.path} item={item} mobile isSubItem />
                   ))}
                 </div>
@@ -596,6 +521,83 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
                 </div>
               )}
             </div>
+
+            {/* Vendor Management Section */}
+            <div className="mt-3 pt-3" >
+              <button
+                onClick={toggleVendor}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!vendorOpen && !(isVendorSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Vendor Management' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Store className="w-5 h-5 flex-shrink-0" style={{ color: (vendorOpen || (isVendorSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Vendor Management</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    vendorOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        vendorOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: vendorOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {vendorOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {vendorSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Employee Management Section */}
+            <div className="mt-1">
+              <button
+                onClick={toggleEmployee}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{ background: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                onMouseEnter={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!employeeOpen && !(isEmployeeSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Employee Management' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Users className="w-5 h-5 flex-shrink-0" style={{ color: (employeeOpen || (isEmployeeSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Employee Management</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    employeeOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        employeeOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: employeeOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {employeeOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {employeeSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Admin extras outside the shared order (User Management, QR Management) */}
+            {navItems.filter(item => item.path !== '/employee' && item.path !== '/employee/create-customer').map((item) => (
+              <NavLink key={item.path} item={item} mobile />
+            ))}
 
           </nav>
 

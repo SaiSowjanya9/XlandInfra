@@ -63,10 +63,12 @@ const Layout = ({ admin, onLogout, children }) => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/customer-submissions', icon: Building2, label: 'Property Management' },
-    { path: '/categories', icon: FolderTree, label: 'Categories' },
     { path: '/create-customer', icon: FileInput, label: 'Create Customer' },
+    { path: '/customer-submissions', icon: Building2, label: 'Property Management' },
   ];
+
+  // Categories sits outside the shared sidebar order, after the last section
+  const categoriesItem = { path: '/categories', icon: FolderTree, label: 'Categories' };
 
   // Work Orders sub-items
   const workOrdersSubItems = [
@@ -335,6 +337,8 @@ const Layout = ({ admin, onLogout, children }) => {
                 </div>
               )}
             </div>
+
+            <NavLink item={categoriesItem} mobile collapsed={sidebarCollapsed} />
           </nav>
 
           {/* User Info & Logout */}
