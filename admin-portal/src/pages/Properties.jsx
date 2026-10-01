@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { shortDivision } from '../utils/fieldOptionsStore';
 import CategorySelection from '../components/common/CategorySelection';
 import { safeStorage } from '../utils/safeStorage';
 import { getAddonName, getAddonPrice, getServiceDescription } from '../utils/estimatePackageUtils';
@@ -528,7 +529,7 @@ const Properties = () => {
       'Type': getTypeLabel(p.entryType),
       'Zone': p.zone || '',
       'Area Name': p.areaName || '',
-      'Division': p.division || '',
+      'Division': shortDivision(p.division),
       'Total Units': p.totalUnits || 0,
       'Number of Blocks': p.numberOfBlocks || '',
       'Block Info': p.blockNA ? 'N/A' : (p.blockInfo || ''),
@@ -595,7 +596,7 @@ const Properties = () => {
       'Community Name': property.name || '',
       'Type': getTypeLabel(property.entryType),
       'Zone': property.zone || '',
-      'Division': property.division || '',
+      'Division': shortDivision(property.division),
       'Area Name': property.areaName || '',
       'Address': property.address || '',
       'City': property.city || '',
@@ -921,7 +922,7 @@ const Properties = () => {
                         {property.area || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {property.division_name || property.division || '-'}
+                        {shortDivision(property.division_name || property.division) || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
                         {property.total_units || property.totalUnits || 0}
@@ -1097,7 +1098,7 @@ const Properties = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.division_name || viewProperty.division || viewProperty.division_id || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{shortDivision(viewProperty.division_name || viewProperty.division || viewProperty.division_id) || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>

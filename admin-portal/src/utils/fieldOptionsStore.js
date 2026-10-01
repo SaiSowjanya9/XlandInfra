@@ -166,6 +166,13 @@ export const getDivisions = () => {
   return getFieldOptions().divisions;
 };
 
+// Divisions are often stored with the word itself ("Division C"). Where the value sits under a
+// Division heading or label the word only repeats it, so displays strip it and show the bare name.
+export const shortDivision = (value) => {
+  const raw = String(value ?? '').trim();
+  return raw.replace(/^division\b\s*/i, '').trim() || raw;
+};
+
 // Get service types
 export const getServiceTypes = () => {
   return getFieldOptions().serviceTypes;
