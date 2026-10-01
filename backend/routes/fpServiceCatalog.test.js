@@ -139,9 +139,9 @@ test('FPs configure services in their own scope only, and estimates are re-price
   assert.equal(quoted.data.totalPrice, 13500);
   assert.equal(quoted.data.vendorCost, 10000);
   assert.equal((await request('/catalog/2/quote', 'POST', { property_type: 'PLOT', quantity: 10 })).status, 400);
-  // Above-range slab capacities need a custom quote, which stays with admins and managers
+  // Above-range slab capacities need a custom quote, which the FP enters itself
   assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 30 })).data.requiresCustomQuote, true);
-  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 30, custom_quote: 5000 })).status, 400);
+  assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 30, custom_quote: 5000 })).data.vendorCost, 5000);
   assert.equal((await request('/catalog/4/quote', 'POST', { property_type: 'APT', capacity: 20 })).data.totalPrice, 10800);
   assert.equal((await request('/catalog/2/quote', 'POST', { property_type: 'APT', quantity: 10 }, 'employee')).data.totalPrice, 13500);
 

@@ -250,7 +250,12 @@ const calculateServiceQuote = (config, input = {}, role) => {
   }
   if (requiresCustomQuote) {
     if (input.custom_quote === undefined || input.custom_quote === '') return { requiresCustomQuote: true, frequency, visits, inputs };
-    if (!['admin', 'manager'].includes(role)) fail('Custom quotes must be entered by an admin or manager.');
+    // Who may hand a vendor figure in: the portals that price estimates -- admin, operations
+    // manager, manager and the FP side (the partner and its admin/manager employees). Field and
+    // data-entry roles (coordinator, supervisor, executive, and their fp_* mirrors) stay out.
+    if (!['admin', 'manager', 'operations_manager', 'franchise_partner', 'franchise', 'fp_admin', 'fp_manager'].includes(role)) {
+      fail('Custom quotes must be entered by an admin, manager or franchise partner.');
+    }
     inputs.custom_quote = number(input.custom_quote, 'Total vendor quote', 0.01);
     vendorCost = inputs.custom_quote;
   }

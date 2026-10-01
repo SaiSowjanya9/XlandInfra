@@ -185,7 +185,14 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...inputs, property_type: propertyType, fpId: fpId || 'all' }), signal: controller.signal
       }).then(response => response.json())
-        .then(result => { if (result?.success) setPreview(result.data); else setPreview(null); })
+        .then(result => {
+          if (result?.success) {
+            setPreview(result.data);
+            // The server is the authority on whether a figure needs quoting by hand; a custom-quote
+            // answer opens the vendor cost field the same way picking such a slab does
+            if (result.data?.requiresCustomQuote) setRequiresQuote(true);
+          } else setPreview(null);
+        })
         .catch(() => {});
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -327,7 +334,14 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                 {input && service.pricing_method === 'capacity_slab'
                   ? <label className={fieldLabel}>Slab *
                     <CapacitySlabSelect slabs={service.capacity_slabs} unit={service.unit} capacity={inputs.capacity}
-                      onChange={value => setInput('capacity', value)} ariaLabel={`${service.service_name} slab`}
+                      onChange={(value, slab) => {
+                        setInput('capacity', value);
+                        // A band priced case by case asks for the vendor quote the moment it is
+                        // picked: waiting for a failed OK hid the field it was asking about.
+                        const needsQuote = Boolean(slab?.isCustomQuote);
+                        setRequiresQuote(needsQuote);
+                        setError(needsQuote ? 'This capacity requires a custom quote. Enter the total vendor cost for the selected service period.' : '');
+                      }} ariaLabel={`${service.service_name} slab`}
                       className={`${inputClass} mt-2`} />
                   </label>
                   : input && <label className={fieldLabel}>{input[1]} ({service.unit}) *<input autoFocus aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}

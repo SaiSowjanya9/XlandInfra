@@ -160,6 +160,13 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
   what the customer will read, but there is nothing to change and no box to untick. Manager,
   Coordinator, Supervisor and Executive pass it, and Manager also passes `editableTerms={false}`
   to `CustomEstimateBuilder`, which the admin Estimates page shares with it.
+- **A custom quote is priced by the portals that price estimates.** `calculateServiceQuote` in
+  `backend/utils/servicePricing.js` accepts `custom_quote` from admin, manager, operations_manager
+  and the FP side (`franchise_partner`, `franchise`, `fp_admin`, `fp_manager`) — coordinator,
+  supervisor, executive and their `fp_*` mirrors are refused, so a field hidden on their screen is
+  also refused at the route. `ServiceCatalogPicker` opens the vendor-quote field the moment a slab
+  flagged `isCustomQuote` is picked rather than after a failed OK, and syncs it again from the
+  preview quote's `requiresCustomQuote`.
 - **The gate is the backend's.** `estimateTermsColumns(req.body, req.user.role)` returns the default
   clauses for any role outside `TERMS_EDITOR_ROLES` (admin, operations_manager, franchise_partner,
   franchise), whatever the request carried — a field missing from a screen is not what stops a
