@@ -191,11 +191,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
             {/* Internal costs and row controls are screen furniture: a browser print of the form
                 keeps only the customer's columns, so they are print:hidden */}
             {internal && <>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-right print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
               <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
             </>}
-            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-right`} title="Customer price in rupees">Price (₹)</th>
+            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price (₹)</th>
             <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
           </tr>
         </thead>
@@ -240,7 +240,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               {internal && <><td className="print:hidden" /><td className="print:hidden" /><td className="print:hidden" /></>}
               <td className="px-3 py-2.5">
                 <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
-                  placeholder="0" aria-label="Customer price" className={`${numberClass} text-right`} />
+                  placeholder="0" aria-label="Customer price" className={`${numberClass} text-center`} />
               </td>
               <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
@@ -269,11 +269,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
-                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
-                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
                 <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
-              <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
+              <td className={`${cell} text-center font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
@@ -294,19 +294,19 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
-                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
-                <td className={`${cell} text-right print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{costOr(getServiceVendorCost(row))}</td>
+                <td className={`${cell} text-center print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
                 <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
-              <td className={`${cell} text-right font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
+              <td className={`${cell} text-center font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               <td className="px-3 py-2.5 print:hidden">{renderExtraActions?.(row)}</td>
             </tr>
           ))}
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className={`border-t ${skin.panelFoot}`}>
-            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-right text-sm font-semibold ${skin.text}`}>Total Services</td>
-            <td className={`px-3 py-2.5 text-right text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
+            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-center text-sm font-semibold ${skin.text}`}>Total Services</td>
+            <td className={`px-3 py-2.5 text-center text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td className="print:hidden" />
           </tr>
         </tfoot>}

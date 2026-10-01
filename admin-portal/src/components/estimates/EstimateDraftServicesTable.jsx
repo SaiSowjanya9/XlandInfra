@@ -74,6 +74,7 @@ export default function EstimateDraftServicesTable({
   total,
   totalLabel = 'Total Services Price',
   warm = false,
+  bare = false,
   decode,
 }) {
   if (!items?.length) return null;
@@ -90,7 +91,9 @@ export default function EstimateDraftServicesTable({
   const colCount = (internal ? 10 : 7) + (hasActions ? 1 : 0);
 
   return (
-    <div className={`border rounded-xl overflow-hidden ${warm ? 'border-warm-border' : 'border-blue-200'}`}>
+    // `bare` drops the table's own border so it can sit flush inside a card that already frames it —
+    // nesting two bordered boxes only squeezes the columns into the horizontal scroller.
+    <div className={bare ? 'overflow-hidden' : `border rounded-xl overflow-hidden ${warm ? 'border-warm-border' : 'border-blue-200'}`}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -103,9 +106,9 @@ export default function EstimateDraftServicesTable({
               <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Visits / Year</th>
               {/* Cost columns and the Action cell are internal screen furniture: a browser print
                   of the draft is still the customer's document, so they are print:hidden */}
-              {internal && <th className="px-3 py-2.5 text-right text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Vendor Cost (₹)</th>}
-              {internal && <th className="px-3 py-2.5 text-right text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">XLAND Cost (₹)</th>}
-              <th className="px-3 py-2.5 text-right text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Customer Price (₹)</th>
+              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Vendor Cost (₹)</th>}
+              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">XLAND Cost (₹)</th>}
+              <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Customer Price (₹)</th>
               {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Margin %</th>}
               {hasActions && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide w-16 print:hidden">Action</th>}
             </tr>
@@ -146,10 +149,10 @@ export default function EstimateDraftServicesTable({
                   </td>
                   <td className={`px-3 py-2.5 ${muted}`}>{service.frequency_type}</td>
                   <td className={`px-3 py-2.5 text-center ${muted}`}>{visits}</td>
-                  {internal && <td className={`px-3 py-2.5 text-right ${muted} print:hidden`}>{vendorCost != null ? formatCurrency(vendorCost) : '—'}</td>}
+                  {internal && <td className={`px-3 py-2.5 text-center ${muted} print:hidden`}>{vendorCost != null ? formatCurrency(vendorCost) : '—'}</td>}
                   {internal && (
-                    <td className={`px-3 py-2.5 text-right ${muted} print:hidden`}>
-                      <span className="inline-flex items-center gap-1.5">
+                    <td className={`px-3 py-2.5 text-center ${muted} print:hidden`}>
+                      <span className="inline-flex items-center justify-center gap-1.5">
                         {xlandCost != null ? formatCurrency(xlandCost) : '—'}
                         {item.onEdit && (
                           <button type="button" onClick={item.onEdit} className="text-gray-400 hover:text-gray-600" title="Edit service pricing">
@@ -159,7 +162,7 @@ export default function EstimateDraftServicesTable({
                       </span>
                     </td>
                   )}
-                  <td className="px-3 py-2.5 text-right font-semibold text-emerald-600">
+                  <td className="px-3 py-2.5 text-center font-semibold text-emerald-600">
                     {hasPrice(service) ? formatCurrency(getAddonPrice(service)) : '—'}
                   </td>
                   {internal && <td className="px-3 py-2.5 text-center font-semibold text-emerald-600 print:hidden">{margin != null ? `${Math.round(margin)}%` : '—'}</td>}
@@ -189,7 +192,7 @@ export default function EstimateDraftServicesTable({
               {/* The figure lands under the Customer Price column, with Margin and Action left empty */}
               <tr className={`border-t ${totalRowCls}`}>
                 <td colSpan={internal ? 8 : 6} className="px-4 py-2.5 text-sm font-semibold">{totalLabel}</td>
-                <td className="px-4 py-2.5 text-right font-bold text-gray-900">{formatCurrency(total)}</td>
+                <td className="px-4 py-2.5 text-center font-bold text-gray-900">{formatCurrency(total)}</td>
                 {colCount - (internal ? 9 : 7) > 0 && <td colSpan={colCount - (internal ? 9 : 7)} />}
               </tr>
             </tfoot>

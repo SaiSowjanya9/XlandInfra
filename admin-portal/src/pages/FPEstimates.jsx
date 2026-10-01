@@ -1693,9 +1693,11 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <div className="py-10 text-center text-sm text-warm-muted">Select an AMC package to see its services, or add services individually</div>
               ) : (
                 /* FP is an internal portal, so the table also shows Vendor Cost, XLAND Cost and
-                   Margin % — the same columns the customer-facing views deliberately omit. */
-                <div className="p-4">
-                  <EstimateDraftServicesTable
+                   Margin % — the same columns the customer-facing views deliberately omit. The
+                   table is bare: the card already frames it, a second border would just squeeze
+                   the columns into the horizontal scroller. */
+                <EstimateDraftServicesTable
+                    bare
                     warm
                     internal
                     decode={decodeHtml}
@@ -1712,7 +1714,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     ]}
                     total={(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) ? addonsTotal + tableCatalogAddonsTotal : null}
                   />
-                </div>
               )}
             </div>
 
@@ -2029,15 +2030,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
                   from the Custom Services table's own Add Service menu */}
 
-              {/* Services Table - Only show when services selected */}
+              {/* Services Table - Only show when services selected. The table stands on its own
+                  border: a labelled box around it would squeeze the columns into the scroller. */}
               {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
-                <div className="border border-warm-border rounded-xl overflow-hidden">
-                  <div className="bg-warm-accent-soft px-5 py-2.5 border-b border-warm-border">
-                    <span className="text-sm font-semibold text-warm-text">Services</span>
-                  </div>
+                <div>
+                  <p className="text-sm font-semibold text-warm-text mb-2">Services</p>
                   {/* FP is an internal portal — the table carries the Vendor Cost, XLAND Cost and
                       Margin % columns the customer-facing views deliberately omit. */}
-                  <div className="p-4">
                     <EstimateDraftServicesTable
                       warm
                       internal
@@ -2056,7 +2055,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       ]}
                       total={estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal}
                     />
-                  </div>
                 </div>
               )}
 

@@ -1098,14 +1098,11 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           {/* Package mode shows the configured-service picker on the Estimate Structure row; custom
               mode offers it from the Custom Services table's own Add Service menu */}
           {(selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
-            <div className="border border-blue-200 rounded-xl overflow-hidden">
-              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200">
-                <span className="text-sm font-semibold text-blue-700">Services</span>
-              </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-700 mb-2">Services</p>
               {/* Manager is not an internal portal — the table omits Vendor Cost, XLAND Cost and
                   Margin %, which only Admin and FP see. */}
-              <div className="p-4 bg-white">
-                <EstimateDraftServicesTable
+              <EstimateDraftServicesTable
                   decode={decodeHtml}
                   items={[
                     ...selectedAddons.map((addonId, idx) => ({
@@ -1122,7 +1119,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   ]}
                   total={selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0) + tableCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0)}
                 />
-              </div>
             </div>
           )}
         </div>
