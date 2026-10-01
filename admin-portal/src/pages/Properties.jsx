@@ -887,7 +887,7 @@ const Properties = () => {
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Type</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Zone</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Area</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Division</th>
+                  <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">Division</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Units</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Address</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">City</th>
@@ -921,7 +921,7 @@ const Properties = () => {
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {property.area || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                      <td className="px-4 py-3 text-center text-gray-700 whitespace-nowrap">
                         {shortDivision(property.division_name || property.division) || '-'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-center">
