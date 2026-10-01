@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { shortDivision } from '../utils/fieldOptionsStore';
 import { estimateServiceRows } from '../utils/estimatePackageUtils';
 import CategorySelection from '../components/common/CategorySelection';
 import {
@@ -1127,7 +1128,7 @@ const ManagerProperties = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{viewingProperty.division_name || divisions.find(d => d.id == viewingProperty.division_id)?.name || viewingProperty.division || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{shortDivision(viewingProperty.division_name || divisions.find(d => d.id == viewingProperty.division_id)?.name || viewingProperty.division) || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>

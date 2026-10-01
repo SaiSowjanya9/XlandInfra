@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { shortDivision } from '../utils/fieldOptionsStore';
 import CategorySelection from '../components/common/CategorySelection';
 import {
   Building2,
@@ -387,7 +388,7 @@ const ExecutiveProperties = ({ user }) => {
       'Type': property.property_type?.replace(/_/g, ' ') || '',
       'Zone': property.zone_name || '',
       'Area': property.area || property.area_name || '',
-      'Division': property.division || '',
+      'Division': shortDivision(property.division),
       'Units': property.units || property.number_of_units || '1',
       'Address': property.address || '',
       'City': property.city || '',
@@ -734,7 +735,7 @@ const ExecutiveProperties = ({ user }) => {
                         <span className="text-sm text-gray-600">{property.area || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{property.division || '-'}</span>
+                        <span className="text-sm text-gray-600">{shortDivision(property.division) || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600 max-w-[150px] truncate block">{property.address || '-'}</span>
@@ -876,7 +877,7 @@ const ExecutiveProperties = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.division || selectedProperty.division_id || '-'}</p>
+                    <p className="text-sm font-medium text-gray-900">{shortDivision(selectedProperty.division || selectedProperty.division_id) || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Property Type</p>
