@@ -2,6 +2,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails } from './estimatePackageUtils';
+import { billToParty } from './estimateStore';
 import { estimateTermsLines } from './estimateTerms';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } from './companyInfo';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
@@ -348,10 +349,15 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   // --- Right: BILL TO ---
   // The card is exactly as wide as its widest single-line value -- an email or a property code
   // stays whole on one line -- never narrower than 70mm and never reaching into the company block.
+  // A gated community or an apartment estimate is billed to the property, so its name takes the
+  // headline and the customer drops to a Contact line; a villa, flat or plot is billed to the
+  // person and the property stays a row. billToParty decides.
+  const billedTo = billToParty(data);
   const rows = [
+    ['Contact', billedTo.contact],
     ['Phone', data.customerPhone],
     ['Email', data.customerEmail],
-    ['Property', data.propertyName || data.communityName],
+    ['Property', billedTo.property],
     ['Prop ID', data.propertyCode],
     ['City', data.city]
   ].filter(([, value]) => value !== undefined && value !== null && value !== '');
@@ -372,7 +378,7 @@ const drawEstimateLetterhead = (doc, margin, data) => {
     return [label, fits ? [text] : doc.splitTextToSize(text, boxWidth - 8), fits];
   });
   doc.setFontSize(9.5);
-  const nameLines = doc.splitTextToSize(decodeHtml(String(data.customerName || '-')), boxWidth - 8);
+  const nameLines = doc.splitTextToSize(decodeHtml(String(billedTo.name || '-')), boxWidth - 8);
   const bodyHeight = 3 + nameLines.length * 4 + 1.5 + wrapped.reduce((height, [, lines, fits]) => height + (lines.length + (fits ? 0 : 1)) * 3.4, 0) + 3;
   const boxHeight = capHeight + bodyHeight;
 

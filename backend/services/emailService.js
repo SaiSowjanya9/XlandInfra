@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
-const { customerEstimateData, stripInternalServiceDetails } = require('../utils/estimateData');
+const { customerEstimateData, stripInternalServiceDetails, billToParty } = require('../utils/estimateData');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
@@ -1117,6 +1117,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // The clauses the estimate carries, read through the same helper as the PDF and the portal
   const termsLines = estimateTermsLines({ includeTerms: estimate.includeTerms, termsConditions: estimate.termsConditions });
 
+  // A gated community or apartment estimate is billed to the property, which headlines the
+  // card; a villa, flat or plot is billed to the customer, and the property stays a row.
+  const billedTo = billToParty({ customerName, propertyName, propertyType });
+
   const metaField = (label, value, color = '#111827') => `
     <td width="25%" style="padding: 0 10px 0 0; vertical-align: top;">
       <span style="font-size: 9px; letter-spacing: 0.9px; text-transform: uppercase; color: #6b7280; font-weight: 600;">${label}</span><br>
@@ -1237,11 +1241,12 @@ const sendEstimateEmail = async (estimate, actionToken) => {
                     </tr>
                     <tr>
                       <td style="padding: 10px 12px;">
-                        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${emailText(customerName) || '-'}</div>
+                        <div style="font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 5px;">${emailText(billedTo.name) || '-'}</div>
                         <table role="presentation" cellpadding="0" cellspacing="0" style="table-layout: auto;">
+                          ${billRow('Contact', billedTo.contact)}
                           ${billRow('Phone', customerPhone)}
                           ${billRow('Email', customerEmail, true)}
-                          ${billRow('Property', propertyName)}
+                          ${billRow('Property', billedTo.property)}
                           ${billRow('Prop ID', estimate.propertyCode, true)}
                           ${billRow('City', city)}
                         </table>

@@ -1,5 +1,6 @@
 import { Globe, Mail, Phone } from 'lucide-react';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_LOGO_ICON } from '../../utils/companyInfo';
+import { billToParty } from '../../utils/estimateStore';
 
 // The icon beside each contact line. The PDFs draw the same three from primitives.
 const CONTACT_ICONS = { phone: Phone, email: Mail, website: Globe };
@@ -45,8 +46,9 @@ const MetaField = ({ label, children }) => (
 
 export default function EstimateDocumentHeader({ estimate, decode = value => value ?? '', status = null }) {
   if (!estimate) return null;
-  const customerName = decode(first(estimate.client_name, estimate.customer_name, estimate.customerName) || '');
-  const propertyName = decode(first(estimate.property_name, estimate.propertyName, estimate.communityName) || '');
+  // A gated community or apartment estimate is billed to the property; a villa, flat or plot
+  // is billed to the customer. billToParty decides the headline and which name takes a row.
+  const party = billToParty(estimate);
   const propertyCode = first(estimate.property_code, estimate.propertyCode);
   const billingRaw = first(estimate.billing_duration, estimate.billingDuration) || 'Yearly';
 
@@ -97,10 +99,11 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
         <div className="w-full overflow-hidden rounded-lg border border-warm-border sm:w-auto sm:min-w-[16rem] sm:shrink-0">
           <p className="border-b border-warm-border bg-warm-accent-soft px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8A6D12]">Bill To</p>
           <div className="space-y-1 px-3 py-2.5">
-            <p className="text-[13px] font-bold text-gray-900 break-words">{customerName || '-'}</p>
+            <p className="text-[13px] font-bold text-gray-900 break-words">{decode(party.name) || '-'}</p>
+            {party.contact && <BillRow label="Contact">{decode(party.contact)}</BillRow>}
             <BillRow label="Phone">{first(estimate.client_phone, estimate.customer_phone, estimate.customerPhone) || '-'}</BillRow>
             <BillRow label="Email" nowrap>{first(estimate.client_email, estimate.customer_email, estimate.customerEmail) || '-'}</BillRow>
-            {propertyName && <BillRow label="Property">{propertyName}</BillRow>}
+            {party.property && <BillRow label="Property">{decode(party.property)}</BillRow>}
             {propertyCode && <BillRow label="Prop ID" nowrap>{propertyCode}</BillRow>}
             {estimate.city && <BillRow label="City">{decode(estimate.city)}</BillRow>}
           </div>

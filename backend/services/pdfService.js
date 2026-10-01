@@ -1,5 +1,5 @@
 const PDFDocument = require('pdfkit');
-const { customerEstimateData, stripInternalServiceDetails } = require('../utils/estimateData');
+const { customerEstimateData, stripInternalServiceDetails, billToParty } = require('../utils/estimateData');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../utils/companyInfo');
 const path = require('path');
@@ -349,19 +349,23 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
   return y + stripHeight + 18;
 };
 
-/** The letterhead an estimate opens with: the customer in BILL TO, the estimate named in the strip. */
+/** The letterhead an estimate opens with: the billed party in BILL TO, the estimate named in the strip. */
 const drawEstimateLetterhead = (doc, margin, estimate) => {
   const billing = String(estimate.billingDuration || estimate.billing_duration || 'Yearly');
   const estimateType = String(estimate.estimateType || '-').replace(/_/g, ' ');
   const sentence = text => String(text).charAt(0).toUpperCase() + String(text).slice(1);
+  // A gated community or apartment estimate is billed to the property, which headlines the
+  // card; a villa, flat or plot is billed to the customer, and the property stays a row.
+  const billedTo = billToParty(estimate);
   return drawLetterhead(doc, margin, {
     party: {
       title: 'Bill To',
-      name: estimate.customerName,
+      name: billedTo.name,
       rows: [
+        ['Contact', billedTo.contact],
         ['Phone', estimate.customerPhone],
         ['Email', estimate.customerEmail],
-        ['Property', estimate.propertyName],
+        ['Property', billedTo.property],
         ['Prop ID', estimate.propertyCode],
         ['City', estimate.city]
       ]
@@ -932,17 +936,23 @@ const generateInvoicePDF = async (invoice) => {
       // The due date is the one figure on an invoice that carries a deadline, so it is picked out
       // in red exactly as the estimate's Valid Until is.
       let y = drawLetterhead(doc, MARGIN, {
-        party: {
-          title: 'Bill To',
-          name: customerName,
-          rows: [
-            ['Phone', customerPhone],
-            ['Email', customerEmail],
-            ['Property', propertyName],
-            ['Prop ID', propertyCode],
-            ['City', city]
-          ]
-        },
+        party: (() => {
+          // The estimate's rule holds here too: a community is billed to the property,
+          // a villa, flat or plot to the person
+          const billedTo = billToParty({ customerName, propertyName, propertyType });
+          return {
+            title: 'Bill To',
+            name: billedTo.name,
+            rows: [
+              ['Contact', billedTo.contact],
+              ['Phone', customerPhone],
+              ['Email', customerEmail],
+              ['Property', billedTo.property],
+              ['Prop ID', propertyCode],
+              ['City', city]
+            ]
+          };
+        })(),
         meta: [
           ['INVOICE NO.', invoiceId || '-'],
           ['DATE', formatDocumentDate(invoiceDate)],
@@ -1058,6 +1068,7 @@ const generateReceiptPDF = async (payment) => {
 
       const {
         paymentId, invoiceId, customerName, customerEmail, customerPhone, propertyName, propertyCode,
+        propertyType, property_type,
         amount,          // Amount paid in this transaction
         invoiceAmount,   // Total invoice amount
         balanceAmount,   // Remaining balance after this payment
@@ -1078,16 +1089,22 @@ const generateReceiptPDF = async (payment) => {
       // rather than asking for it. The amount paid is the figure the reader is looking for, so it
       // is in the strip beside the date.
       let y = drawLetterhead(doc, MARGIN, {
-        party: {
-          title: 'Received From',
-          name: customerName,
-          rows: [
-            ['Phone', customerPhone],
-            ['Email', customerEmail],
-            ['Property', propertyName],
-            ['Prop ID', propertyCode]
-          ]
-        },
+        party: (() => {
+          // Same billing rule as the estimate: the property headlines for a community,
+          // the person for a villa, flat or plot
+          const billedTo = billToParty({ customerName, propertyName, propertyType: propertyType || property_type });
+          return {
+            title: 'Received From',
+            name: billedTo.name,
+            rows: [
+              ['Contact', billedTo.contact],
+              ['Phone', customerPhone],
+              ['Email', customerEmail],
+              ['Property', billedTo.property],
+              ['Prop ID', propertyCode]
+            ]
+          };
+        })(),
         meta: [
           ['RECEIPT NO.', paymentId || '-'],
           ['DATE', formatDocumentDate(paymentDate || Date.now())],

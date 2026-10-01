@@ -67,6 +67,24 @@ export const normalizePropertyType = (type) => {
   return type;
 };
 
+// Who BILL TO headlines with. A gated community or an apartment block is billed as the
+// property -- the association, not a person -- so the property name takes the headline and
+// the customer drops to a Contact row. A villa, flat or plot is billed to the person, and
+// the property stays a row of its own. The same rule is drawn by the downloaded PDF
+// (pdfExport.js) and by backend/utils/estimateData.js for the emailed documents.
+export const billToParty = (estimate = {}) => {
+  const propertyName = estimate.property_name || estimate.propertyName || estimate.community_name || estimate.communityName || '';
+  const customerName = estimate.client_name || estimate.customer_name || estimate.customerName || '';
+  const billedByProperty = !!propertyName
+    && ['GC', 'APT'].includes(normalizePropertyType(estimate.property_type || estimate.propertyType));
+  return {
+    name: billedByProperty ? propertyName : (customerName || propertyName),
+    // The name that did not take the headline still belongs on the card, on a row of its own
+    contact: billedByProperty ? customerName : '',
+    property: billedByProperty ? '' : propertyName
+  };
+};
+
 // Frequency types (how often service occurs). 'Other' stays so a package can carry a manual count.
 export const FREQUENCY_TYPES = ['On Request', 'Monthly', 'Every 2 Months', 'Quarterly', 'Every 4 Months',
   'Half Yearly', 'Yearly', 'Weekly', 'Bi-Weekly', 'Custom'];
