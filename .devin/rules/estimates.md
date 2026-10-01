@@ -123,6 +123,13 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
   `Monthly - 12 visits` as a single inline string no longer appears there.
 - The email body **lists the Terms & Conditions** as well as attaching the PDF, through the same
   `estimateTermsLines` helper, so a message and its attachment cannot state different terms.
+- **Terms & Conditions is one block and never splits across pages.** Both PDF generators
+  (`utils/pdfExport.js` for the download and `services/pdfService.js` for the attachment) wrap and
+  measure every clause before anything is drawn, and move the whole section — heading included — to
+  a fresh page when it does not fit below the summary. A block taller than a page is the one
+  exception, since it cannot fit anywhere whole; the per-clause page check stays for that case. The
+  screen version carries the same rule through `break-inside-avoid` on `EstimateTermsSection`, so the
+  browser-print fallback paginates the same way.
 
 ## GST and Discount
 

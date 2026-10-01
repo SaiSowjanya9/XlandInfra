@@ -852,24 +852,34 @@ const generateEstimatePDF = async (estimate) => {
       doc.font('Helvetica');
       y = totalY + TOTAL_HEIGHT + GAP.section;
 
-      // Notes
+      // Notes - measured whole like the terms below, so the block moves to a fresh page rather
+      // than splitting mid-paragraph. PDFKit paginates a doc.text that overflows, which is what
+      // split it before.
       if (description) {
-        if (y + 40 > pageHeight) { doc.addPage(); y = MARGIN; }
+        const notesHeight = GAP.heading + doc.heightOfString(decodeHtml(description), { width: CONTENT_WIDTH, lineGap: 3 });
+        if (y + notesHeight > pageHeight) { doc.addPage(); y = MARGIN; }
         sectionHeading('Notes');
         doc.fontSize(9).fillColor('#333333').font('Helvetica').text(decodeHtml(description), MARGIN, y, { width: CONTENT_WIDTH, lineGap: 3 });
         y += doc.heightOfString(decodeHtml(description), { width: CONTENT_WIDTH, lineGap: 3 }) + GAP.section;
       }
 
-      // Terms & Conditions - last section, and only when the estimate carries them
+      // Terms & Conditions - last section, and only when the estimate carries them. The block
+      // reads as one: measured whole before anything is drawn, so it either fits on this page
+      // or opens a fresh one -- never split mid-list. A block taller than a page still flows,
+      // since it cannot fit anywhere whole.
       const termsLines = estimateTermsLines({ includeTerms, termsConditions: estimate.termsConditions });
       if (termsLines.length) {
-        if (y + 40 > pageHeight) { doc.addPage(); y = MARGIN; }
+        doc.fontSize(8).font('Helvetica');
+        const clauseHeights = termsLines.map((line, index) =>
+          doc.heightOfString(`${index + 1}. ${decodeHtml(line)}`, { width: CONTENT_WIDTH, lineGap: 2 }) + 4);
+        const blockHeight = 10 + GAP.heading + clauseHeights.reduce((sum, h) => sum + h, 0);
+        if (y + blockHeight > pageHeight) { doc.addPage(); y = MARGIN; }
         doc.fontSize(10).fillColor(navy).font('Helvetica-Bold').text('TERMS & CONDITIONS', MARGIN, y, { lineBreak: false });
         y += GAP.heading;
         doc.fontSize(8).fillColor('#333333').font('Helvetica');
         termsLines.forEach((line, index) => {
           const text = `${index + 1}. ${decodeHtml(line)}`;
-          const height = doc.heightOfString(text, { width: CONTENT_WIDTH, lineGap: 2 });
+          const height = clauseHeights[index] - 4;
           if (y + height > pageHeight) { doc.addPage(); y = MARGIN; }
           doc.text(text, MARGIN, y, { width: CONTENT_WIDTH, lineGap: 2, continued: false });
           y += height + 4;

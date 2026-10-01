@@ -881,30 +881,42 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     y += sumHeight + 8;
 
     // ===== NOTES (Plain) =====
+    // Measured whole like the terms below: jsPDF never paginates a drawn block, so without the
+    // upfront check an overflowing note ran under the footer instead of onto a fresh page.
     if (data.description && data.description.trim()) {
-      if (y + 20 > pageHeight - 25) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2).slice(0, 8);
+      if (y + 8 + noteLines.length * 4 + 6 > pageHeight - 25) {
         doc.addPage();
         y = 20;
       }
-      
+
       doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('NOTES', margin, y);
       y += 8;
-      
-      const noteLines = doc.splitTextToSize(decodeHtml(String(data.description)), pageWidth - margin * 2);
+
       doc.setTextColor(...darkText);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text(noteLines.slice(0, 8), margin, y);
+      doc.text(noteLines, margin, y);
       y += noteLines.length * 4 + 6;
     }
 
     // ===== TERMS & CONDITIONS - last section, only when the estimate carries them =====
     const termsLines = estimateTermsLines(data);
     if (termsLines.length) {
-      if (y + 16 > pageHeight - 25) {
+      // The block reads as one: measured whole before anything is drawn, so it either fits on
+      // this page or opens a fresh one -- never split mid-list. A block taller than a page
+      // still flows, since it cannot fit anywhere whole.
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      const wrapped = termsLines.map((clause, index) =>
+        doc.splitTextToSize(`${index + 1}. ${decodeHtml(String(clause))}`, pageWidth - margin * 2 - 4));
+      const blockHeight = 8 + wrapped.reduce((height, lines) => height + lines.length * 3.6 + 2, 0) + 4;
+      if (y + 16 + blockHeight > pageHeight - 25) {
         doc.addPage();
         y = 20;
       }
@@ -917,14 +929,13 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       doc.setTextColor(...darkText);
       doc.setFontSize(7.5);
       doc.setFont('helvetica', 'normal');
-      termsLines.forEach((clause, index) => {
-        const wrapped = doc.splitTextToSize(`${index + 1}. ${decodeHtml(String(clause))}`, pageWidth - margin * 2 - 4);
-        if (y + wrapped.length * 3.6 > pageHeight - 25) {
+      wrapped.forEach(lines => {
+        if (y + lines.length * 3.6 > pageHeight - 25) {
           doc.addPage();
           y = 20;
         }
-        doc.text(wrapped, margin + 2, y);
-        y += wrapped.length * 3.6 + 2;
+        doc.text(lines, margin + 2, y);
+        y += lines.length * 3.6 + 2;
       });
       y += 4;
     }

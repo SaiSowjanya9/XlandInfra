@@ -102,7 +102,7 @@ export function EstimateTermsSection({ estimate, className = '' }) {
   if (!lines.length) return null;
 
   return (
-    <div className={className}>
+    <div className={`break-inside-avoid ${className}`}>
       <h4 className="mb-2 text-sm font-semibold text-gray-800">Terms &amp; Conditions</h4>
       <ol className="list-decimal space-y-1 rounded-lg border border-gray-200 bg-gray-50 py-3 pl-8 pr-4 text-xs text-gray-600">
         {lines.map((line, index) => <li key={index}>{line}</li>)}
