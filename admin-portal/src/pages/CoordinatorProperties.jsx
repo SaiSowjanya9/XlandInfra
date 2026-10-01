@@ -701,7 +701,7 @@ const CoordinatorProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Type</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Zone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Area</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Division</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Division</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
@@ -733,7 +733,7 @@ const CoordinatorProperties = ({ user }) => {
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.area || '-'}</span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-center">
                         <span className="text-sm text-gray-600">{shortDivision(property.division_name || property.division) || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
