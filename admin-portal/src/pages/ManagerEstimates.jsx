@@ -18,7 +18,8 @@ import {
 } from '../utils/estimateStore';
 
 const ITEMS_PER_PAGE = 10;
-import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, exportPackageToPDF, printEstimatePDF } from '../utils/pdfExport';
+import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import { EstimateInput, PropertyIdInput } from '../components/estimates/EstimateFields';
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
@@ -454,7 +455,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // Export estimate to PDF
-  const handleExportPDF = (estimate) => {
+  // Resolve a stored estimate to the PDF's data -- the download and the document print share it
+  const buildEstimatePdfData = (estimate) => {
     // Parse addons from multiple possible sources
     let addonsArray = [];
     if (estimate.addons && Array.isArray(estimate.addons) && estimate.addons.length > 0) {
@@ -560,8 +562,14 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       })
     };
     
-    exportEstimateToPDF(pdfData);
+    return pdfData;
   };
+
+  const handleExportPDF = (estimate) => exportEstimateToPDF(buildEstimatePdfData(estimate));
+
+  // Print the generated PDF itself -- a browser print of the page stamps the tab title and URL
+  // on every sheet, while the PDF viewer prints the document alone
+  const handlePrintEstimate = (estimate) => printEstimatePDF(buildEstimatePdfData(estimate));
 
   // Edit estimate functions for DIRECT estimates only
   const openEditEstimate = (estimate) => {
@@ -2334,10 +2342,14 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     ? [...estimates, ...archivedEstimates].find(e => Number(e.id) === Number(expandedEstimateId)) || null
     : null;
 
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(detailEstimate, buildEstimatePdfData);
+
   const renderEstimateDetail = (estimate) => (
     <div>
-      {/* Screen furniture around the document: Back returns to the list, Print is a browser print
-          (the .print-document rule keeps it to the estimate alone) and Download is the PDF */}
+      {/* Screen furniture around the document: Back returns to the list, Print sends the
+          generated PDF to the viewer's print (a browser page print stamps the tab title and URL
+          on every sheet) and Download is the same PDF */}
       <div className="mb-4 flex items-center justify-between gap-3">
         <button onClick={() => setExpandedEstimateId(null)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -2345,7 +2357,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
           Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
         </button>
         <div className="flex items-center gap-2">
-          <button onClick={() => window.print()}
+          <button onClick={() => handlePrintEstimate(estimate)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
             <Printer className="w-4 h-4" />Print
           </button>

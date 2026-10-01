@@ -16,7 +16,8 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
 import { getAuthToken } from '../utils/safeStorage';
-import { exportEstimateToPDF, exportPackageToPDF } from '../utils/pdfExport';
+import { exportEstimateToPDF, exportPackageToPDF, printEstimatePDF } from '../utils/pdfExport';
+import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription, hasCatalogServices } from '../utils/estimatePackageUtils';
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
 import { newEstimateTerms } from '../utils/estimateTerms';
@@ -801,7 +802,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // Export FP estimate to PDF with properly formatted data
-  const handleExportPDF = (estimate) => {
+  // Resolve a stored estimate to the PDF's data -- the download and the document print share it
+  const buildEstimatePdfData = (estimate) => {
     console.log('Export PDF - Full estimate:', estimate);
     
     // Parse addons from multiple possible sources (no prices shown)
@@ -946,8 +948,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     };
     
     console.log('PDF Data:', pdfData);
-    exportEstimateToPDF(pdfData);
+    return pdfData;
   };
+
+  const handleExportPDF = (estimate) => exportEstimateToPDF(buildEstimatePdfData(estimate));
+
+  // Print the generated PDF itself -- a browser print of the page stamps the tab title and URL
+  // on every sheet, while the PDF viewer prints the document alone
+  const handlePrintEstimate = (estimate) => printEstimatePDF(buildEstimatePdfData(estimate));
 
   // Send email with estimate - with guard against double sending
   const handleSendEmail = async (estimate) => {
@@ -3933,11 +3941,15 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     ? [...estimates, ...archivedEstimates].find(e => Number(e.id) === expandedEstimateId) || null
     : null;
 
+  // While a document is open, Ctrl+P prints its PDF, not the page
+  useEstimatePrint(detailEstimate, buildEstimatePdfData);
+
   const renderEstimateDetail = (estimate) => (
     <div>
-      {/* Screen furniture around the document: Back returns to the list, Print is a browser print
-          (the .print-document rule keeps it to the estimate alone) and Download is the PDF -- the
-          row's own download icon is gone, so the document is where both actions live */}
+      {/* Screen furniture around the document: Back returns to the list, Print sends the
+          generated PDF to the viewer's print (a browser page print stamps the tab title and URL
+          on every sheet) and Download is the same PDF -- the row's own download icon is gone, so
+          the document is where both actions live */}
       <div className="mb-4 flex items-center justify-between gap-3">
         <button onClick={closeViewEstimate}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">
@@ -3945,7 +3957,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
         </button>
         <div className="flex items-center gap-2">
-          <button onClick={() => window.print()}
+          <button onClick={() => handlePrintEstimate(estimate)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">
             <Printer className="w-4 h-4" />Print
           </button>
