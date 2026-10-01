@@ -305,7 +305,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className={`border-t ${skin.panelFoot}`}>
-            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-center text-sm font-semibold ${skin.text}`}>Total Services</td>
+            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-left text-sm font-semibold ${skin.text}`}>Total Services</td>
             <td className={`px-3 py-2.5 text-center text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td className="print:hidden" />
           </tr>
