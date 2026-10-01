@@ -2651,12 +2651,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 {/* Selected Add-ons Table - Blue theme. Admin is an internal portal, so the table
                     also shows Vendor Cost, XLAND Cost and Margin % for configured services. */}
                 {selectedAddons.length > 0 && (
-                  <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                      <p className="text-sm font-semibold text-blue-800">Services</p>
-                    </div>
-                    <div className="p-3">
-                      <EstimateDraftServicesTable
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800 mb-2">Services</p>
+                    <EstimateDraftServicesTable
                         internal
                         decode={decodeHtml}
                         items={selectedAddons.map((addon) => ({
@@ -2668,7 +2665,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         }))}
                         total={getAddonsTotal()}
                       />
-                    </div>
                   </div>
                 )}
 
@@ -3434,12 +3430,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
               {/* Selected Add-ons Table. Admin is an internal portal, so the table also shows
                   Vendor Cost, XLAND Cost and Margin % for configured services. */}
               {directSelectedAddons.length > 0 && (
-                <div className="bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden">
-                  <div className="px-3 py-2 bg-blue-100/60 border-b border-blue-200">
-                    <p className="text-sm font-semibold text-blue-800">Services</p>
-                  </div>
-                  <div className="p-3">
-                    <EstimateDraftServicesTable
+                <div>
+                  <p className="text-sm font-semibold text-blue-800 mb-2">Services</p>
+                  <EstimateDraftServicesTable
                       internal
                       decode={decodeHtml}
                       items={directSelectedAddons.map((addon) => ({
@@ -3451,7 +3444,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       }))}
                       total={getDirectAddonsTotal()}
                     />
-                  </div>
                 </div>
               )}
 

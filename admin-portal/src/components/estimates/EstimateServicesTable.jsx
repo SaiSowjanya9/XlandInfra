@@ -58,11 +58,11 @@ const serviceColumns = (decode, internal) => {
     <p className={`text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
-  const vendor = { label: 'Vendor Cost', head: 'col-span-1 text-right print:hidden', cell: 'col-span-1 text-right print:hidden',
+  const vendor = { label: 'Vendor Cost', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
     render: row => money(getServiceVendorCost(row)) };
-  const xland = { label: 'XLAND Cost', head: 'col-span-1 text-right print:hidden', cell: 'col-span-1 text-right print:hidden',
+  const xland = { label: 'XLAND Cost', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
     render: row => money(getServiceXlandCost(row)) };
-  const price = { label: 'Customer Price', head: 'col-span-1 text-right', cell: 'col-span-1 text-right',
+  const price = { label: 'Customer Price', head: 'col-span-1 text-center', cell: 'col-span-1 text-center',
     render: row => <p className="text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
   const margin = { label: 'Margin %', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
     render: row => {
@@ -98,9 +98,13 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
           </div>
         ))}
       </div>
-      <div className={`flex justify-between items-center bg-warm-section p-3 ${bottomRadius} ${floor}`}>
-        <p className="font-semibold text-warm-text">Total Services Price</p>
-        <p className="font-bold text-warm-text">{formatCurrency(sum)}</p>
+      {/* The total rides the same grid so the figure lands under the Customer Price column, not
+          the card's edge. On paper the internal cost tracks are hidden, so the label's span widens
+          by two (the two hidden cost tracks the price column slides back over). */}
+      <div className={`grid ${grid} gap-2 items-center bg-warm-section px-3 py-2 ${bottomRadius} ${floor}`}>
+        <p className={`font-semibold text-warm-text ${internal ? '[grid-column:span_13/span_13] print:[grid-column:span_11/span_11]' : 'col-span-11'}`}>Total Services Price</p>
+        <p className="col-span-1 text-center font-bold text-warm-text">{formatCurrency(sum)}</p>
+        {internal && <div className="col-span-1 print:hidden" />}
       </div>
     </div>
   );

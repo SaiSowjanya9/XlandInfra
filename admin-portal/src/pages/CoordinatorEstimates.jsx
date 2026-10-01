@@ -771,9 +771,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </select>
           </div>
           {selectedAddons.length > 0 && (
-            <div className="border border-blue-200 rounded-xl overflow-hidden">
-              <div className="bg-blue-50 px-5 py-2.5 border-b border-blue-200"><span className="text-sm font-semibold text-blue-700">Services</span></div>
-              <div className="p-4 bg-white">
+            <div>
+              <p className="text-sm font-semibold text-blue-700 mb-2">Services</p>
                 <EstimateDraftServicesTable
                   decode={decodeHtml}
                   items={selectedAddons.map((addonId, idx) => ({
@@ -784,7 +783,6 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                   }))}
                   total={selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0)}
                 />
-              </div>
             </div>
           )}
         </div>
