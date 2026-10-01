@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Globe, Mail, Phone } from 'lucide-react';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 import { billToParty } from '../../utils/estimateStore';
@@ -45,6 +46,17 @@ const MetaField = ({ label, children }) => (
 );
 
 export default function EstimateDocumentHeader({ estimate, decode = value => value ?? '', status = null }) {
+  // A browser print still carries the page title top-left and the URL top-right -- the browser's
+  // furniture, which no stylesheet can remove. While a document is open its number is the better
+  // title than the app's name, so the header reads "EST-143" rather than "Customer Portal Admin".
+  const documentId = first(estimate?.estimate_id, estimate?.estimateId);
+  useEffect(() => {
+    if (!documentId) return;
+    const previous = document.title;
+    document.title = `${documentId} -- XLAND INFRA`;
+    return () => { document.title = previous; };
+  }, [documentId]);
+
   if (!estimate) return null;
   // A gated community or apartment estimate is billed to the property; a villa, flat or plot
   // is billed to the customer. billToParty decides the headline and which name takes a row.
