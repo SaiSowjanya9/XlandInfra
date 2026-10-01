@@ -7,7 +7,7 @@ import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, Send, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft,
-  CheckSquare, Square, Loader2
+  CheckSquare, Square, Loader2, Printer
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -1779,7 +1779,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => handleExportPDF(est)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Download PDF"><Download className="w-4 h-4" /></button>
                       <button 
                         onClick={() => handleSendEmail(est)} 
                         disabled={sendingEmailId === est.id || !est.client_email}
@@ -2337,11 +2336,25 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const renderEstimateDetail = (estimate) => (
     <div>
-      <button onClick={() => setExpandedEstimateId(null)}
-        className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
-      </button>
+      {/* Screen furniture around the document: Back returns to the list, Print is a browser print
+          (the .print-document rule keeps it to the estimate alone) and Download is the PDF */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button onClick={() => setExpandedEstimateId(null)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <Printer className="w-4 h-4" />Print
+          </button>
+          <button onClick={() => handleExportPDF(estimate)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+            <Download className="w-4 h-4" />Download PDF
+          </button>
+        </div>
+      </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <EstimateDetailPanel estimate={estimate} decode={decodeHtml} />
       </div>
