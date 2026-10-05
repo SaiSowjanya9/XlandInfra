@@ -66,9 +66,9 @@ const serviceColumns = (decode, internal) => {
     render: row => money(getServiceVendorCost(row)) };
   const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceXlandCost(row)) };
-  const price = { label: 'Customer Price', head: 'text-right', cell: 'text-right',
+  const price = { label: 'Customer Price', head: 'text-center', cell: 'text-center',
     render: row => <p className="whitespace-nowrap text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
-  const margin = { label: 'Margin %', head: 'text-right print:hidden', cell: 'text-right print:hidden',
+  const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
       const value = getServiceMarginPercent(row);
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
@@ -112,7 +112,7 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
           <tr>
             <td colSpan={6} className={`${cell} font-semibold text-warm-text`}>Total Services Price</td>
             {internal && <td colSpan={2} className={`${cell} print:hidden`} />}
-            <td className={`${cell} whitespace-nowrap text-right font-bold text-warm-text`}>{formatCurrency(sum)}</td>
+            <td className={`${cell} whitespace-nowrap text-center font-bold text-warm-text`}>{formatCurrency(sum)}</td>
             {internal && <td className={`${cell} print:hidden`} />}
           </tr>
         </tfoot>
