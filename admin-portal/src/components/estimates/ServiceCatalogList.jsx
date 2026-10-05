@@ -4,6 +4,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { primaryInputLabel } from '../../utils/estimatePackageUtils';
 import AddServicePage, { methodLabel, propertyTypeLabel, PROPERTY_TYPES } from './AddServicePage';
 import { useSkinClasses } from '../../utils/estimateTheme';
+import { decodeEntities } from '../../utils/text';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Paise only when there are paise, so a column of rates stays narrow enough to read at a glance
@@ -203,7 +204,9 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             <tr className={sk("hover:bg-slate-50/60")}>
               <td className={sk(`${cell} text-center text-slate-400`)}>{index + 1}</td>
               <td className={sk(cell)}>
-                <p className={sk("font-semibold text-slate-900")} title={service.service_name}>{service.service_name}</p>
+                <p className={sk("font-semibold text-slate-900")} title={decodeEntities(service.service_name)}>{decodeEntities(service.service_name)}</p>
+                {/* The category reads under the name, lighter, as it does in the estimate tables */}
+                {service.category && <p className={sk("mt-0.5 text-[11px] font-normal text-slate-400")}>{decodeEntities(service.category)}</p>}
               </td>
               <td className={sk(`${cell} text-slate-500`)} title={service.description || ''}><p className={sk("line-clamp-2")}>{service.description || '—'}</p></td>
               {/* Capacity Slab prices from a table of its own, so the row opens to show every slab */}
