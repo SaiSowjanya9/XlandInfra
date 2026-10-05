@@ -1,3 +1,5 @@
+import { capacityForSlab } from './rangeMatch.js';
+
 // The service rows of an AMC package form, shared by every portal that builds a package.
 //
 // Every change returns new row objects. The forms used to assign into the row they were holding
@@ -58,6 +60,40 @@ export const packageRowFromDialog = values => {
     vendorRequired: values.vendorRequired,
     vendorCost: vendorPrice,
     price: vendorPrice
+  };
+};
+
+// A configured service picked into a package. The row keeps what it was picked from, so the
+// package can price it: which service, how it is priced, the unit its amount is measured in.
+//
+// A package row is a template, so it opens already priceable -- one unit, area, capacity or person,
+// or a slab already chosen -- rather than at ₹0 until something is typed. For a slab service that is
+// the first slab with a price: a custom-quote slab cannot be quoted, so opening on one put the row
+// in error before anything was typed. The slab's own schedule comes with it, as when a slab is
+// picked by hand, because a service that forbids a frequency change refuses any other.
+const DEFAULT_AMOUNT = { quantity_based: 1, area_based: 1, capacity_based: 1, manpower: 1 };
+export const packageRowFromCatalog = (service, countMap = {}) => {
+  const frequencyType = service.default_frequency || 'Monthly';
+  const slabs = service.capacity_slabs || [];
+  const isSlab = service.pricing_method === 'capacity_slab';
+  const slab = isSlab ? slabs.find(s => s?.capacityFrom != null && String(s.capacityFrom).trim() !== '' && !s.isCustomQuote) : null;
+  const rowFrequency = slab?.defaultFrequency || frequencyType;
+  return {
+    service: service.service_name, description: service.description || '',
+    frequencyType: rowFrequency,
+    frequencyCount: slab?.defaultVisitsPerYear ?? service.default_visits_per_year ?? countMap[rowFrequency] ?? 0,
+    catalogServiceId: service.id, category: service.category || '',
+    pricingMethod: service.pricing_method, unit: service.unit || '',
+    inputValue: isSlab ? (slab ? capacityForSlab(slabs, slab) : '') : (DEFAULT_AMOUNT[service.pricing_method] ?? ''),
+    // The quote refuses a property type the service does not cover, so the row remembers which
+    // ones it does: that is what it is priced against until the package has a type of its own
+    applicablePropertyTypes: service.applicable_property_types || [],
+    allowFrequencyOverride: Boolean(service.allow_frequency_override),
+    defaultFrequency: frequencyType,
+    defaultVisitsPerYear: service.default_visits_per_year ?? countMap[frequencyType] ?? 0,
+    // Capacity Slab prices from a table, so the row carries the table: the form lists every slab
+    // and the capacity in the row decides which one applies
+    ...(isSlab ? { capacitySlabs: slabs, defaultMarkupPercentage: service.default_markup_percentage } : {})
   };
 };
 

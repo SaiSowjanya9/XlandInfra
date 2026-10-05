@@ -1,9 +1,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from './packageRows.js';
+import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromCatalog, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from './packageRows.js';
 import { capitalizeFirst, decodeEntities, sameEntry } from './text.js';
 
 const COUNTS = { Monthly: 12, Quarterly: 4, Custom: null };
+
+test('a configured service opens in a package already priceable', () => {
+  const base = { id: 9, service_name: 'Lift AMC', description: 'Checks', category: 'Lifts', unit: 'Persons',
+    default_frequency: 'Monthly', default_visits_per_year: 12, applicable_property_types: ['GC'], allow_frequency_override: false };
+  // One of whatever the method measures, so a quote is asked for straight away
+  for (const method of ['quantity_based', 'area_based', 'capacity_based', 'manpower']) {
+    assert.equal(packageRowFromCatalog({ ...base, pricing_method: method }, COUNTS).inputValue, 1, method);
+  }
+  assert.equal(packageRowFromCatalog({ ...base, pricing_method: 'fixed_price' }, COUNTS).inputValue, '');
+
+  // A slab service skips a custom-quote slab, which cannot be quoted, and takes the chosen slab's
+  // own schedule: the quote refuses any other on a service that forbids a frequency change
+  const slabs = [
+    { capacityFrom: 0, capacityTo: null, isCustomQuote: true },
+    { capacityFrom: 0, capacityTo: 3, vendorRate: 500, defaultFrequency: 'Quarterly', defaultVisitsPerYear: 4 },
+    { capacityFrom: 0, capacityTo: 6, vendorRate: 800 }
+  ];
+  const row = packageRowFromCatalog({ ...base, pricing_method: 'capacity_slab', capacity_slabs: slabs }, COUNTS);
+  assert.equal(row.inputValue, 0);
+  assert.equal(row.frequencyType, 'Quarterly');
+  assert.equal(row.frequencyCount, 4);
+  assert.equal(row.allowFrequencyOverride, false);
+  assert.deepEqual(row.capacitySlabs, slabs);
+  // Only custom-quote slabs: nothing to price, so the amount waits to be chosen
+  assert.equal(packageRowFromCatalog({ ...base, pricing_method: 'capacity_slab', capacity_slabs: [slabs[0]] }, COUNTS).inputValue, '');
+});
 
 test('a row update never touches the row objects it was given', () => {
   const rows = [Object.freeze({ service: 'A', frequencyType: 'Monthly', frequencyCount: 12 })];

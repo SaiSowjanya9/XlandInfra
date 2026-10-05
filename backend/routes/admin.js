@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const { authenticate, generateToken } = require('../middleware/auth');
 const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
-const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
+const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices, fetchVendorlessServiceNames
 } = require('../utils/pendingProperties');
@@ -3425,6 +3425,9 @@ const transformPackage = (pkg) => {
   let billingDuration = pkg.billing_duration || 'yearly';
   // Blank rather than zero: no markup and a markup of nothing are different answers
   let markupPercentage = '';
+  // Every type the package was saved for. Only the first used to be passed on, so a GC + APT
+  // package reopened as GC alone and an edit saved it back that way.
+  let propertyTypes = null;
   
   // Parse the services field - it contains JSON with serviceRows nested inside
   if (pkg.services) {
@@ -3439,6 +3442,7 @@ const transformPackage = (pkg) => {
         if (parsed.property_type) propertyType = parsed.property_type;
         if (parsed.billing_duration) billingDuration = parsed.billing_duration;
         if (parsed.markup_percentage !== undefined && parsed.markup_percentage !== null) markupPercentage = parsed.markup_percentage;
+        if (Array.isArray(parsed.property_types) && parsed.property_types.length) propertyTypes = parsed.property_types;
       } 
       // Or it might be a direct array of services
       else if (Array.isArray(parsed)) {
@@ -3465,6 +3469,7 @@ const transformPackage = (pkg) => {
     name: pkg.name || pkg.package_name,
     description: pkg.description || '',
     propertyType: mappedPropertyType,
+    propertyTypes: (propertyTypes || [mappedPropertyType]).map(type => propTypeMap[type] || type),
     price: parseFloat(pkg.base_price || pkg.price) || 0,
     rate: parseFloat(pkg.base_price || pkg.price) || 0,
     services: servicesString, // String for display
@@ -3541,6 +3546,7 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Package name is required' });
     }
     
+    await assertUniquePackageName(pool, fpId, packageName);
     const packageCode = `FP${fpId}-AMC-${Date.now()}`;
     
     const [result] = await pool.execute(
@@ -3583,6 +3589,9 @@ router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
     const { packageName, serviceRows, rate, billingDuration, description } = req.body;
     const markupPercentage = req.body.markupPercentage ?? req.body.markup_percentage ?? null;
     const packageTypes = packagePropertyTypes(req.body);
+    const [[existing]] = await pool.execute('SELECT franchise_partner_id FROM fp_amc_packages WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ success: false, message: 'AMC Package not found' });
+    await assertUniquePackageName(pool, existing.franchise_partner_id, packageName, id);
     
     const [result] = await pool.execute(
       `UPDATE fp_amc_packages 

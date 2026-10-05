@@ -1,6 +1,18 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { packagePropertyTypes } = require('./packagePropertyTypes');
+const { packagePropertyTypes, assertUniquePackageName } = require('./packagePropertyTypes');
+
+test('a package name an FP already has is refused, whatever its case, spacing or escaping', async () => {
+  // Stored the way the security middleware leaves it: HTML-escaped
+  const db = { execute: async () => [[{ id: 7, name: 'Lifts &amp; DG &#x2F; Gold' }]] };
+  for (const name of ['Lifts & DG / Gold', '  lifts &  dg / GOLD ', 'Lifts &amp; DG &#x2F; Gold']) {
+    await assert.rejects(assertUniquePackageName(db, 1, name), err => err.status === 409 && /already exists/.test(err.message), name);
+  }
+  // A different name, and the same package being saved again under its own name, both pass
+  await assertUniquePackageName(db, 1, 'Lifts & DG / Silver');
+  await assertUniquePackageName(db, 1, 'Lifts & DG / Gold', 7);
+  await assert.rejects(assertUniquePackageName(db, 1, '   '), err => err.status === 400);
+});
 
 test('a package accepts several property types and still understands a single legacy value', () => {
   assert.deepEqual(packagePropertyTypes({ property_types: ['GC', 'APT', 'PLOT'] }), ['GC', 'APT', 'PLOT']);
