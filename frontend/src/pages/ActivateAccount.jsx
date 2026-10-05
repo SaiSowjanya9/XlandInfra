@@ -273,7 +273,7 @@ const ActivateAccount = () => {
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, temp: !showPasswords.temp })}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.temp ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -313,7 +313,7 @@ const ActivateAccount = () => {
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -346,7 +346,7 @@ const ActivateAccount = () => {
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

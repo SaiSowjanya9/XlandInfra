@@ -964,9 +964,15 @@ body {
   backface-visibility: hidden;
 }
 
-/* Optimize transitions - use GPU compositing */
-button, a, [class*="hover:"] {
-  transform: translateZ(0);
+/* Optimize transitions - use GPU compositing.
+   In the base layer, so any transform utility on the element (-translate-y-1/2, hover:scale-105 ...)
+   still wins. Unlayered, `[class*="hover:"]` outranked them all: the password eye's
+   -translate-y-1/2 was replaced by translateZ(0) and it hung below the middle of its field, and the
+   portal slider's arrow buttons sat low the same way. */
+@layer base {
+  button, a, [class*="hover:"] {
+    transform: translateZ(0);
+  }
 }
 
 /* Contain layout for cards to isolate repaints */
