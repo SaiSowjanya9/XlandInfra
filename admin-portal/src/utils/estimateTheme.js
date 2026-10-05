@@ -166,6 +166,18 @@ const WARM_CLASSES = {
   'focus:ring-blue-100': 'focus:ring-warm-accent/20',
   'focus:ring-blue-200': 'focus:ring-warm-accent/20',
   'focus-visible:outline-blue-500': 'focus-visible:outline-warm-accent',
+  // Grey and blue as the shared property location card (common/PropertyLocationDisplay) draws them
+  'bg-gray-50': 'bg-warm-section',
+  'bg-gray-100': 'bg-warm-accent-soft',
+  'bg-blue-100': 'bg-warm-accent-soft',
+  'border-gray-200': 'border-warm-border',
+  'hover:bg-gray-100': 'hover:bg-warm-section',
+  'text-gray-900': 'text-warm-text',
+  'text-gray-800': 'text-warm-text',
+  'text-gray-600': 'text-warm-muted',
+  'text-gray-500': 'text-warm-muted',
+  'bg-green-600': 'bg-emerald-700',
+  'hover:bg-green-700': 'hover:bg-emerald-800',
   // Radius and shadow follow the warm spec: 12px cards, 10px inputs and buttons, soft warm shadow
   'rounded-lg': 'rounded-[10px]',
   'shadow-sm': 'shadow-warm'

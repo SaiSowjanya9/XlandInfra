@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { EstimateThemeProvider } from '../utils/estimateTheme';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { shortDivision } from '../utils/fieldOptionsStore';
@@ -1515,51 +1516,52 @@ const FPProperties = ({ user }) => {
 
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
+        <EstimateThemeProvider value="warm">
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
+            <div className="flex items-center justify-between px-6 py-4 bg-warm-section rounded-t-xl">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gray-900">{selectedProperty.name}</h2>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  <h2 className="text-xl font-bold text-warm-text">{selectedProperty.name}</h2>
+                  <span className="px-2.5 py-1 bg-warm-accent-soft text-warm-text rounded-full text-xs font-medium">
                     {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
+                <p className="text-sm text-warm-muted mt-1">{selectedProperty.property_id}</p>
               </div>
               <button
                 onClick={closeViewModal}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                className="p-2 hover:bg-warm-accent-soft rounded-[10px] transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-warm-muted" />
               </button>
             </div>
 
             <div className="p-5 space-y-4 overflow-y-auto">
               {/* Property Information */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Information</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                <h3 className="text-sm font-semibold text-warm-text mb-2">Property Information</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3">
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Zone</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.zone_name || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Area Name</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.area || selectedProperty.area_name || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Area Name</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.area || selectedProperty.area_name || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{shortDivision(selectedProperty.division_name || selectedProperty.division || selectedProperty.division_id) || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Division</p>
+                    <p className="text-sm font-medium text-warm-text">{shortDivision(selectedProperty.division_name || selectedProperty.division || selectedProperty.division_id) || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Property Type</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Property Type</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Total Units</p>
+                    <p className="text-sm font-medium text-warm-text">
                       {(() => {
                         // For GC, calculate from units_per_block
                         if (selectedProperty.units_per_block) {
@@ -1576,8 +1578,8 @@ const FPProperties = ({ user }) => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Created Date</p>
+                    <p className="text-sm font-medium text-warm-text">
                       {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                     </p>
                   </div>
@@ -1590,10 +1592,10 @@ const FPProperties = ({ user }) => {
                 selectedProperty.entry_type === 'GC'
               )) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Block Details</h3>
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Block Details</h3>
                   <div className="mb-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Blocks</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || 1}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Number of Blocks</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.number_of_blocks || 1}</p>
                   </div>
                   {(() => {
                     try {
@@ -1625,15 +1627,15 @@ const FPProperties = ({ user }) => {
                               const hasUnitTypes = unitTypeEntries.length > 0;
                               
                               return (
-                                <div key={blockNum} className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div key={blockNum} className="px-4 py-3 bg-warm-section rounded-[10px] border border-warm-border">
                                   <div className="flex justify-between items-center mb-3">
-                                    <p className="text-sm font-semibold text-blue-600">{blockName}</p>
-                                    <p className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</p>
+                                    <p className="text-sm font-semibold text-warm-accent-hover">{blockName}</p>
+                                    <p className="text-sm font-medium text-warm-text">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</p>
                                   </div>
                                   {hasUnitTypes && (
                                     <div className="flex flex-wrap gap-2">
                                       {unitTypeEntries.map(([key, count]) => (
-                                        <span key={key} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                        <span key={key} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
                                           {getDisplayName(key)}: {count}
                                         </span>
                                       ))}
@@ -1657,15 +1659,15 @@ const FPProperties = ({ user }) => {
                 selectedProperty.entry_type === 'APT'
               )) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Apartment Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3 mb-3">
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Apartment Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3 mb-3">
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{selectedProperty.block_na ? 'N/A' : (selectedProperty.block_info || '-')}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Block Information</p>
+                      <p className="text-sm font-medium text-warm-text">{selectedProperty.block_na ? 'N/A' : (selectedProperty.block_info || '-')}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Units</p>
-                      <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_units || '-'}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Number of Units</p>
+                      <p className="text-sm font-medium text-warm-text">{selectedProperty.number_of_units || '-'}</p>
                     </div>
                   </div>
                   {(() => {
@@ -1689,11 +1691,11 @@ const FPProperties = ({ user }) => {
                       
                       if (!hasUnitTypes) return null;
                       return (
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
+                        <div className="p-3 bg-warm-section rounded-[10px] border border-warm-border">
+                          <p className="text-xs text-warm-muted mb-2 font-medium">Unit Type Breakdown</p>
                           <div className="flex flex-wrap gap-2">
                             {unitTypeEntries.map(([key, count]) => (
-                              <span key={key} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                              <span key={key} className="px-2 py-1 bg-warm-accent-soft text-warm-text text-xs rounded-full">
                                 {getDisplayName(key)}: {count}
                               </span>
                             ))}
@@ -1711,10 +1713,10 @@ const FPProperties = ({ user }) => {
                 selectedProperty.entry_type === 'VILLA'
               )) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Villa Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Villa Number</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Villa Details</h3>
+                  <div className="rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Villa Number</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.villa_plot_number || '-'}</p>
                   </div>
                 </div>
               )}
@@ -1725,15 +1727,15 @@ const FPProperties = ({ user }) => {
                 selectedProperty.entry_type === 'FLAT'
               )) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Flat Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Flat Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3">
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Flat Number</p>
-                      <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Flat Number</p>
+                      <p className="text-sm font-medium text-warm-text">{selectedProperty.villa_plot_number || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{selectedProperty.flat_block_na ? 'N/A' : (selectedProperty.flat_block_info || '-')}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Block Information</p>
+                      <p className="text-sm font-medium text-warm-text">{selectedProperty.flat_block_na ? 'N/A' : (selectedProperty.flat_block_info || '-')}</p>
                     </div>
                   </div>
                 </div>
@@ -1745,40 +1747,40 @@ const FPProperties = ({ user }) => {
                 selectedProperty.entry_type === 'PLOT'
               )) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Plot Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Plot Number</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.plot_na ? 'N/A' : (selectedProperty.villa_plot_number || '-')}</p>
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Plot Details</h3>
+                  <div className="rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Plot Number</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.plot_na ? 'N/A' : (selectedProperty.villa_plot_number || '-')}</p>
                   </div>
                 </div>
               )}
 
               {/* Address */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Address</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                <h3 className="text-sm font-semibold text-warm-text mb-2">Address</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-[10px] border border-warm-border bg-warm-section/60 px-4 py-3">
                   <div className="col-span-2 sm:col-span-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Street Address</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Street Address</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">City</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">City</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.city || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">State/Province</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.state || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">State/Province</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.state || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">ZIP/Postal Code</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedProperty.zip_code || '-'}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">ZIP/Postal Code</p>
+                    <p className="text-sm font-medium text-warm-text">{selectedProperty.zip_code || '-'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Property Location */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Location</h3>
+                <h3 className="text-sm font-semibold text-warm-text mb-2">Property Location</h3>
                 <PropertyLocationDisplay 
                   location={{
                     lat: selectedProperty.mapLocation?.lat || selectedProperty.latitude,
@@ -1814,28 +1816,28 @@ const FPProperties = ({ user }) => {
                 
                 return (
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h3>
+                    <h3 className="text-sm font-semibold text-warm-text mb-2">Contact Information</h3>
                     <div className="space-y-2">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                        <div key={index} className="bg-warm-section rounded-[10px] border border-warm-border px-4 py-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                            <div className="w-6 h-6 bg-warm-accent-soft rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-warm-accent-hover">{index + 1}</span>
                             </div>
-                            <span className="text-xs text-gray-500">Contact {index + 1}</span>
+                            <span className="text-xs text-warm-muted">Contact {index + 1}</span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-x-6 gap-y-2">
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Name</p>
-                              <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Name</p>
+                              <p className="text-sm font-medium text-warm-text">{contact.name || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Email</p>
-                              <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Email</p>
+                              <p className="text-sm font-medium text-warm-text break-all">{contact.email || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Phone</p>
-                              <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Phone</p>
+                              <p className="text-sm font-medium text-warm-text whitespace-nowrap">
                                 {(() => {
                                   if (!contact.phone) return '-';
                                   const phone = contact.phone.toString().trim();
@@ -1856,16 +1858,16 @@ const FPProperties = ({ user }) => {
               {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.property_type || '').toLowerCase()) ||
                ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.entry_type || '').toLowerCase())) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg px-4 py-3 border border-amber-100">
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-[10px] px-4 py-3 border border-amber-100">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Name</p>
-                        <p className="text-sm font-medium text-gray-900">{selectedProperty.watchman_name || selectedProperty.watchmanName || 'N/A'}</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Watchman Name</p>
+                        <p className="text-sm font-medium text-warm-text">{selectedProperty.watchman_name || selectedProperty.watchmanName || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Contact</p>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-warm-muted mb-0.5">Watchman Contact</p>
+                        <p className="text-sm font-medium text-warm-text">
                           {(() => {
                             const contact = selectedProperty.watchman_contact || selectedProperty.watchmanContact;
                             if (!contact) return 'N/A';
@@ -1885,9 +1887,9 @@ const FPProperties = ({ user }) => {
               {/* Additional Notes */}
               {selectedProperty.notes && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Additional Notes</h3>
-                  <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedProperty.notes}</p>
+                  <h3 className="text-sm font-semibold text-warm-text mb-2">Additional Notes</h3>
+                  <div className="bg-warm-section rounded-[10px] px-4 py-3 border border-warm-border">
+                    <p className="text-sm text-warm-text whitespace-pre-wrap">{selectedProperty.notes}</p>
                   </div>
                 </div>
               )}
@@ -1895,48 +1897,48 @@ const FPProperties = ({ user }) => {
               {/* Estimates Section */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
+                  <FileText className="w-4 h-4 text-warm-muted" />
+                  <h3 className="text-base font-semibold text-warm-text">Estimates ({propertyEstimates.length})</h3>
                 </div>
                 {loadingEstimates ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <RefreshCw className="w-8 h-8 text-gray-400 mx-auto mb-3 animate-spin" />
-                    <p className="text-sm text-gray-500">Loading estimates...</p>
+                  <div className="bg-warm-section rounded-[10px] p-8 text-center">
+                    <RefreshCw className="w-8 h-8 text-warm-muted mx-auto mb-3 animate-spin" />
+                    <p className="text-sm text-warm-muted">Loading estimates...</p>
                   </div>
                 ) : propertyEstimates.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No estimates for this property</p>
-                    <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
+                  <div className="bg-warm-section rounded-[10px] p-8 text-center">
+                    <FileText className="w-10 h-10 text-warm-border mx-auto mb-3" />
+                    <p className="text-sm text-warm-muted">No estimates for this property</p>
+                    <p className="text-xs text-warm-muted mt-1">Create an estimate from the Estimates section</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {propertyEstimates.map((est) => (
-                      <div key={est.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div key={est.id} className="bg-white border border-warm-border rounded-[10px] p-4 hover:shadow-sm transition-shadow">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-sm text-gray-700">{est.estimate_id}</span>
+                          <span className="font-mono text-sm text-warm-text">{est.estimate_id}</span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             est.status === 'approved' ? 'bg-green-100 text-green-700' :
-                            est.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                            est.status === 'sent' ? 'bg-warm-accent-soft text-warm-text' :
                             est.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
+                            'bg-warm-accent-soft text-warm-text'
                           }`}>{est.status || 'draft'}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
-                            <span className="text-gray-500">Package:</span>
+                            <span className="text-warm-muted">Package:</span>
                             <span className="ml-1 font-medium">{est.package_name || '-'}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Total:</span>
+                            <span className="text-warm-muted">Total:</span>
                             <span className="ml-1 font-semibold text-green-600">₹{Number(est.total_amount || 0).toLocaleString()}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Created:</span>
+                            <span className="text-warm-muted">Created:</span>
                             <span className="ml-1">{est.created_at ? new Date(est.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">By:</span>
+                            <span className="text-warm-muted">By:</span>
                             <span className="ml-1">{est.created_by_name || '-'}</span>
                           </div>
                         </div>
@@ -1949,44 +1951,44 @@ const FPProperties = ({ user }) => {
               {/* Assigned Vendors Section - Read Only */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <Truck className="w-4 h-4 text-purple-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
+                  <Truck className="w-4 h-4 text-warm-accent" />
+                  <h3 className="text-base font-semibold text-warm-text">Assigned Vendors</h3>
                 </div>
                 {loadingVendorAssignments ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
-                    <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
-                    <p className="text-sm text-gray-500">Loading vendor assignments...</p>
+                  <div className="bg-warm-section rounded-[10px] p-6 text-center">
+                    <RefreshCw className="w-6 h-6 text-warm-muted mx-auto mb-2 animate-spin" />
+                    <p className="text-sm text-warm-muted">Loading vendor assignments...</p>
                   </div>
                 ) : propertyVendorAssignments.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
-                    <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No vendors assigned to this property</p>
+                  <div className="bg-warm-section rounded-[10px] p-6 text-center">
+                    <Truck className="w-8 h-8 text-warm-border mx-auto mb-2" />
+                    <p className="text-sm text-warm-muted">No vendors assigned to this property</p>
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-warm-border rounded-[10px] overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-purple-50 border-b border-purple-100">
+                      <thead className="bg-warm-section border-b border-warm-border">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Contact</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-warm-border/70">
                         {propertyVendorAssignments.map((assignment, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
+                          <tr key={idx} className="hover:bg-warm-section">
                             <td className="px-4 py-3">
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-warm-text">
                                 {assignment.serviceType || assignment.service_type || 'General'}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-gray-800">
+                              <span className="text-warm-text">
                                 {assignment.vendorName || assignment.vendor_name || '-'}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-gray-600 text-xs">
+                              <span className="text-warm-muted text-xs">
                                 {assignment.vendorPhone || assignment.vendor_phone || '-'}
                               </span>
                             </td>
@@ -2000,6 +2002,7 @@ const FPProperties = ({ user }) => {
             </div>
           </div>
         </div>
+        </EstimateThemeProvider>
       )}
 
       {/* Assign Modal - Table Layout for Vendor Assignment */}
