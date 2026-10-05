@@ -1518,7 +1518,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
 
       {/* All Packages Tab */}
-      {amcActiveTab === 'all-packages' && (
+      {/* A package opens here, in place of the list, as an estimate does in All Estimates */}
+      {amcActiveTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} />}
+      {amcActiveTab === 'all-packages' && !viewAmcPackage && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -2206,8 +2208,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* An AMC package opens full screen, as an estimate does from All Estimates */}
-      <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} />
 
       {/* View Service Modal */}
       {viewAddon && (

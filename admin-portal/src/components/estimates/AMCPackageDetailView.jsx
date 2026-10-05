@@ -1,15 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { formatCurrency, getPackagePropertyTypes, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import { decodeEntities } from '../../utils/text';
-import useScrollLock from '../../hooks/useScrollLock';
 
 /**
- * An AMC package opened from the AMC Packages list, full screen, the way an estimate opens from
- * All Estimates: a Back bar, then everything the package holds. It replaces the centred View
- * modal each portal drew for itself (and the eye icon that opened it) -- the row or the package
- * name opens this instead. One component for every portal, so the six lists show a package the
- * same way.
+ * An AMC package opened from the AMC Packages list, in place of the list -- inside the portal, with
+ * its sidebar and page header still there -- the way an estimate opens from All Estimates: a Back
+ * button, then everything the package holds in one card. It is not an overlay: an earlier version
+ * covered the whole window and read as a separate page. It replaces the centred View modal each
+ * portal drew for itself (and the eye icon that opened it); the row or the package name opens this
+ * instead. One component for every portal, so the six lists show a package the same way. The caller
+ * renders it where the list goes and hides the list while it is open.
  *
  * The lists hand packages over in different shapes -- `servicesData`, `serviceRows`, or the stored
  * `services` JSON with `serviceRows` inside -- so all of them are read. Stored text is HTML-escaped
@@ -34,10 +35,12 @@ const packageBilling = pkg => {
 };
 
 export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back to AMC Packages', actions = null }) {
-  // The page behind holds still, and Escape returns to the list like the Back button
-  useScrollLock(Boolean(pkg));
+  // Escape returns to the list like the Back button. Opening a package brings its top into view,
+  // since the row clicked may have been far down the list.
+  const topRef = useRef(null);
   useEffect(() => {
     if (!pkg) return undefined;
+    topRef.current?.scrollIntoView({ block: 'start' });
     const onKeyDown = event => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -56,17 +59,17 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
   const code = pkg.packageId || pkg.package_code || `PKG-${pkg.id}`;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white" role="dialog" aria-modal="true" aria-labelledby="amc-package-title">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
-          <button type="button" onClick={onClose}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-            <ArrowLeft className="h-4 w-4" />{backLabel}
-          </button>
-          <h3 className="text-base font-semibold text-gray-800 sm:text-lg">AMC Package Details</h3>
-          {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
-        </div>
+    <section ref={topRef} aria-labelledby="amc-package-title" className="scroll-mt-4">
+      {/* Back above the document, as All Estimates has it */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={onClose}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50">
+          <ArrowLeft className="h-4 w-4" />{backLabel}
+        </button>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
 
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
         <div className="space-y-6 p-4 sm:p-6">
           <div className="rounded-xl border border-warm-border bg-warm-section p-5">
             <h4 id="amc-package-title" className="text-xl font-bold text-warm-text [overflow-wrap:anywhere]">{name}</h4>
@@ -145,6 +148,6 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
