@@ -6,6 +6,7 @@
 const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./staffServiceCatalog');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const express = require('express');
+const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const router = express.Router();
@@ -2011,7 +2012,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
   }
 });
 
-router.post('/estimates', requireExecutiveScope, validateStaffCatalogEstimate('executive'), async (req, res) => {
+router.post('/estimates', requireExecutiveScope, attachPackageSnapshot(pool), validateStaffCatalogEstimate('executive'), async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;
@@ -2139,7 +2140,7 @@ router.put('/estimates/:id/restore', requireExecutiveScope, async (req, res) => 
 });
 
 // Update estimate details (for direct estimates)
-router.put('/estimates/:id', requireExecutiveScope, async (req, res) => {
+router.put('/estimates/:id', requireExecutiveScope, attachPackageSnapshot(pool), async (req, res) => {
   try {
     const estimateId = req.params.id;
     const franchisePartnerId = req.franchisePartnerId;

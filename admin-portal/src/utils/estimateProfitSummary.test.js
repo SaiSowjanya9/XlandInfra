@@ -26,6 +26,21 @@ test('each estimate is costed exactly as the payments dashboard costs it', () =>
   assert.equal(estimateProfit(snapshotOnly).customerPrice, 1500);
 });
 
+test('a package estimate counts what the package costs as well as what it sells for', () => {
+  // ₹12,000 package costing ₹10,000, plus a typed service at ₹5,000 costing ₹4,000
+  const packaged = { estimate_id: 'E5', status: 'draft', subtotal: 17000, package_price: 12000,
+    package_services: JSON.stringify([{ name: 'Lift AMC', vendorCost: 10000 }, { name: 'Uncosted row' }]),
+    addons_data: [{ name: 'Deep cleaning', customService: true, totalPrice: 5000, vendorCost: 4000 }] };
+  for (const result of [estimateProfit(packaged), estimateMargin(packaged)]) {
+    assert.equal(result.vendorCost, 14000);
+    assert.equal(result.customerPrice, 17000);
+    assert.equal(result.profit, 3000);
+    assert.equal(result.marginPercent, 17.65);
+  }
+  // Stored as an array as well as as JSON text
+  assert.equal(estimateProfit({ ...packaged, package_services: [{ vendorCost: 10000 }] }).vendorCost, 14000);
+});
+
 test('the summary adds up costed live estimates only, and says what it left out', () => {
   const summary = estimateProfitSummary([costed, snapshotOnly, typedOnly, rejected]);
   assert.equal(summary.estimateCount, 3);

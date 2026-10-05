@@ -438,7 +438,7 @@ router.get('/property-estimate-margins', authenticate, canViewEstimateMargins, a
     const fpId = scopedFp || requestedFp;
     const [estimates] = await pool.execute(`
       SELECT fe.estimate_id, fe.client_name, fe.property_name, fe.property_code, fe.property_type,
-             fe.status, fe.subtotal, fe.package_price, fe.addons_data, fe.created_at,
+             fe.status, fe.subtotal, fe.package_price, fe.package_services, fe.addons_data, fe.created_at,
              fp.company_name AS fp_name
       FROM fp_estimates fe
       LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id

@@ -784,6 +784,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       editing={customServiceDraft?.row || null}
       apiPath={FP_CATALOG_API}
       theme="warm"
+      internal
       onClose={() => setCustomServiceDraft(null)}
       onSubmit={values => {
         const draft = customServiceDraft;

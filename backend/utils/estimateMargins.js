@@ -32,7 +32,12 @@ const figure = (...values) => {
 const estimateMargin = (estimate) => {
   const rows = parseRows(estimate.addons_data ?? estimate.addons);
   const sum = (getter) => round2(rows.reduce((total, row) => total + getter(row || {}), 0));
-  const vendorCost = sum(row => figure(row.vendorCost, row.pricingSnapshot?.vendorCost));
+  // The package's own services carry what the vendor charges for them (utils/packageSnapshot.js).
+  // The package price is already inside the subtotal, so leaving its cost out overstated the margin
+  // of every package estimate.
+  const packageCost = round2(parseRows(estimate.package_services ?? estimate.packageServices)
+    .reduce((total, row) => total + figure(row?.vendorCost), 0));
+  const vendorCost = round2(sum(row => figure(row.vendorCost, row.pricingSnapshot?.vendorCost)) + packageCost);
   const operatingCost = sum(row => figure(row.operatingCost, row.pricingSnapshot?.operatingCost));
   const servicesPrice = sum(row => figure(row.totalPrice, row.price, row.pricingSnapshot?.totalPrice));
   // The subtotal is what the customer was quoted, package included, so it is the selling price

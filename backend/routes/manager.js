@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -2576,7 +2577,7 @@ router.post('/estimates/send-email', requireManagerScope, async (req, res) => {
 });
 
 // Create estimate - dual-tag with manager_id AND franchise_partner_id
-router.post('/estimates', requireManagerScope, require('./managerServiceCatalog').validatePackageEstimate, async (req, res) => {
+router.post('/estimates', requireManagerScope, attachPackageSnapshot(pool), require('./managerServiceCatalog').validatePackageEstimate, async (req, res) => {
   try {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
@@ -2688,7 +2689,7 @@ router.put('/estimates/:id/archive', requireManagerScope, async (req, res) => {
 });
 
 // Update estimate details (for direct estimates)
-router.put('/estimates/:id', requireManagerScope, async (req, res) => {
+router.put('/estimates/:id', requireManagerScope, attachPackageSnapshot(pool), async (req, res) => {
   try {
     const estimateId = req.params.id;
     const scopeId = getScopeId(req);
