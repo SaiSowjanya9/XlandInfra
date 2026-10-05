@@ -1,10 +1,8 @@
 import { Fragment } from 'react';
 import { formatCurrency, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
-import { estimateProfit } from '../../utils/estimateProfitSummary';
 import EstimateServicesTable from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
-import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
 import { EstimateTermsSection } from './EstimateTerms';
 
 /**
@@ -106,7 +104,6 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
   const unitLabel = ['FLAT', 'Flat', 'flat'].includes(propertyType) ? 'Flat Number'
     : ['PLOT', 'Plot', 'plot'].includes(propertyType) ? 'Plot Number' : 'Villa Number';
   const money = value => formatCurrency(value || 0);
-  const profit = internal ? estimateProfit(estimate) : null;
 
   return (
     // print-document: a browser print of this view is this document alone -- the rule in
@@ -191,11 +188,6 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
       <div className="border-t border-gray-100 pt-4">
         <EstimatePriceSummary estimate={estimate} />
       </div>
-
-      {internal && profit && (
-        <EstimateProfitSummaryPanel vendorCost={profit.vendorCost} operatingCost={profit.operatingCost}
-          customerPrice={profit.customerPrice} className="border-t border-gray-100 pt-4" />
-      )}
 
       {(estimate.description || estimate.notes) && (
         <Section title="Notes">

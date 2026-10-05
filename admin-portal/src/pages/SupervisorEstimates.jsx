@@ -25,11 +25,9 @@ import { capitalizeFirst } from '../utils/text';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
-import { estimateProfit } from '../utils/estimateProfitSummary';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
 import EstimatePriceSummary from '../components/estimates/EstimatePriceSummary';
-import EstimateProfitSummaryPanel from '../components/estimates/EstimateProfitSummaryPanel';
 import * as XLSX from 'xlsx';
 
 const ITEMS_PER_PAGE = 10;
@@ -2203,15 +2201,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <EstimatePriceSummary estimate={viewEstimate} />
               </div>
-
-              {/* Internal Profit Summary - screen only, the same four figures as the package form */}
-              {(() => {
-                const profit = estimateProfit(viewEstimate);
-                return profit.customerPrice > 0 && (
-                  <EstimateProfitSummaryPanel vendorCost={profit.vendorCost} operatingCost={profit.operatingCost}
-                    customerPrice={profit.customerPrice} className="border-t border-gray-100 pt-4" />
-                );
-              })()}
 
               {/* Notes - After Price Summary */}
               {viewEstimate.description && (
