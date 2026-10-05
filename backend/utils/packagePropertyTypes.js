@@ -24,4 +24,20 @@ const packagePropertyTypes = body => {
   return normalized;
 };
 
-module.exports = { packagePropertyTypes, normalizePackagePropertyType: normalizeType, PACKAGE_PROPERTY_TYPES: TYPES };
+// Two packages of one FP are the same package when their names differ only in case or spacing.
+// The forms already warn, but a name reaching the API any other way made a second entry nobody
+// could tell apart in the estimate's package list. Stored names are HTML-escaped, so both sides
+// are compared decoded. Mirrors duplicatePackageName in admin-portal/src/utils/packageRows.js.
+const { decodeEntities } = require('./htmlEntities');
+const packageNameKey = name => decodeEntities(String(name ?? '')).trim().replace(/\s+/g, ' ').toLowerCase();
+
+const assertUniquePackageName = async (db, fpId, name, exceptId = null) => {
+  const key = packageNameKey(name);
+  if (!key) throw Object.assign(new Error('Package name is required'), { status: 400 });
+  const [rows] = await db.execute('SELECT id, name FROM fp_amc_packages WHERE franchise_partner_id = ?', [fpId]);
+  const clash = rows.find(row => packageNameKey(row.name) === key && String(row.id) !== String(exceptId));
+  if (clash) throw Object.assign(new Error(`A package named "${decodeEntities(clash.name)}" already exists.`), { status: 409 });
+};
+
+module.exports = { packagePropertyTypes, normalizePackagePropertyType: normalizeType, PACKAGE_PROPERTY_TYPES: TYPES,
+  assertUniquePackageName, packageNameKey };

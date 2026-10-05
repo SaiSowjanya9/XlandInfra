@@ -7,7 +7,7 @@ const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
-const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
+const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
 const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -5334,6 +5334,7 @@ router.post('/amc-packages', requireFPScope, async (req, res) => {
     // The package's own markup, kept so a reopened package prices as it was saved
     const markupPercentage = req.body.markup_percentage ?? req.body.markupPercentage ?? null;
 
+    await assertUniquePackageName(pool, req.fpId, name);
     const packageCode = `FP${req.fpId}-AMC-${Date.now()}`;
 
     // Check if table has required columns, use appropriate insert
@@ -5384,6 +5385,7 @@ router.put('/amc-packages/:id', requireFPScope, async (req, res) => {
     // The package's own markup, kept so a reopened package prices as it was saved rather than
     // falling back to each service's own quote
     const markupPercentage = req.body.markup_percentage ?? req.body.markupPercentage ?? null;
+    await assertUniquePackageName(pool, req.fpId, name, id);
 
     const [result] = await pool.execute(
       `UPDATE fp_amc_packages 
