@@ -871,7 +871,7 @@ const EstimatesList = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="list-table w-full min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {/* Checkbox column - hidden for ops manager */}

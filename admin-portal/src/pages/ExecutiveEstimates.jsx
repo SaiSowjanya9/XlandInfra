@@ -1034,7 +1034,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="text-center py-12"><FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No estimates found</p></div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="list-table w-full">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created By</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
                       </thead>
@@ -1105,7 +1105,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 {archivedEstimates.length === 0 ? (
                   <div className="text-center py-16"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div>
                 ) : (
-                  <table className="w-full text-sm">
+                  <table className="list-table w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th>
@@ -1512,7 +1512,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="p-8 text-center"><p className="text-gray-500">No packages found for this property type</p><button onClick={() => setFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all packages</button></div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="list-table w-full">
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Package Name</th>
@@ -1580,7 +1580,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 ) : (addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType))).length === 0 ? (<div className="p-8 text-center"><p className="text-gray-500">No services found for this property type</p><button onClick={() => setAddonFilterPropertyType('all')} className="mt-2 text-sm text-blue-600 hover:underline">Show all services</button></div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="list-table w-full">
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service Name</th>

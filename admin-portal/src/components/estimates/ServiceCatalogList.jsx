@@ -178,7 +178,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       : <div>
         {/* Fixed proportional widths: the table can never grow past the page, so there is no
             sideways scrollbar and every column stays visible at once. */}
-        <table className={sk("w-full table-fixed text-left text-[11px]")}>
+        <table className={sk("list-table w-full table-fixed text-left text-[11px]")}>
           {/* Thirteen columns on one fixed width: a two-word heading wraps onto a second line in a
               narrow window rather than overflowing into the column beside it. align-bottom keeps
               the wrapped ones sitting on the same baseline as the rest. */}
