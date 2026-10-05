@@ -25,6 +25,7 @@ import { capitalizeFirst } from '../utils/text';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
+import { estimateProfit } from '../utils/estimateProfitSummary';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
 import EstimatePriceSummary from '../components/estimates/EstimatePriceSummary';
@@ -2201,6 +2202,33 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <EstimatePriceSummary estimate={viewEstimate} />
               </div>
+
+              {/* Internal Profit Summary */}
+              {(() => {
+                const profit = estimateProfit(viewEstimate);
+                return profit.customerPrice > 0 && (
+                  <div className="border-t border-gray-100 pt-4 print:hidden">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Internal Profit Summary</p>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                      {[
+                        ['Vendor Cost', profit.vendorCost],
+                        ['Operating Cost', profit.operatingCost],
+                        ['Actual Cost', profit.actualCost],
+                        ['Customer Price', profit.customerPrice],
+                        ['Gross Profit', profit.profit],
+                        ['Gross Margin', profit.marginPercent == null ? '—' : `${profit.marginPercent}%`]
+                      ].map(([label, value]) => (
+                        <div key={label} className="min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+                          <dt className="truncate text-[11px] text-gray-500" title={label}>{label}</dt>
+                          <dd className="mt-1 truncate text-sm font-bold tabular-nums text-gray-900" title={value}>
+                            {typeof value === 'number' ? formatCurrency(value) : value}
+                          </dd>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Notes - After Price Summary */}
               {viewEstimate.description && (
