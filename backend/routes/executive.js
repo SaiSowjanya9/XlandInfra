@@ -4,6 +4,7 @@
  */
 
 const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./staffServiceCatalog');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -1004,7 +1005,7 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Subcategory is required' });
     }
 
-    const workOrderId = `WO-${Date.now()}`;
+    const workOrderId = generateWorkOrderId();
 
 
     // Fetch property details if not provided - including actual property_id, zone, and division

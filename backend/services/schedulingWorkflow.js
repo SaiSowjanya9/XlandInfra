@@ -24,6 +24,7 @@
  */
 
 const { pool } = require('../config/database');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 
 // ID Generators
 const generateId = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -448,7 +449,7 @@ async function generateWorkOrdersForUpcomingVisits() {
     for (const occurrence of upcomingOccurrences) {
       await connection.beginTransaction();
       try {
-        const workOrderId = generateId('WO');
+        const workOrderId = generateWorkOrderId();
 
         // Create work order
         await connection.execute(`

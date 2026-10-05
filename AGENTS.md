@@ -79,6 +79,18 @@ Mistakes that fail silently and have each already broken live endpoints:
   not that the code is wrong — the `assign_vendor` and `fp_amc_packages.price` errors were both
   fixed here well before they stopped appearing there. Check `git log` for the fix before chasing it.
 
+## Work Order IDs
+
+- **One format: `WO-` followed by digits** (the creation time in ms, e.g. `WO-1783455968280`). Always
+  call `generateWorkOrderId()` from `backend/utils/workOrderId.js`; it also keeps IDs strictly
+  increasing, because `work_order_id` is UNIQUE and the schedulers create several per millisecond.
+  Eight places used to build their own, which is how base-36 IDs like `WO-MTWCEEFE-0P6H` (customer
+  requests, visit schedulers) got mixed in. `node --test backend/utils/workOrderId.test.js` fails if
+  any file builds a `WO-` ID itself.
+- Older records are renumbered with `node backend/scripts/renumber-work-orders.js` (dry run) and
+  `--apply`. Only `fp_estimates.work_order_id` and `invoices.source_work_order_id` refer to the code;
+  every other reference uses `work_orders.id`.
+
 ## Stored Text Is HTML-Escaped
 
 - **`middleware/security.js` escapes every string of every request** (`/` → `&#x2F;`, `&` →

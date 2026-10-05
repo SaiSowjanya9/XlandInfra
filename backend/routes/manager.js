@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const router = express.Router();
@@ -1233,7 +1234,7 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Subcategory is required' });
     }
 
-    const workOrderId = `WO-${Date.now()}`;
+    const workOrderId = generateWorkOrderId();
     
     // For FP-created managers: store BOTH franchise_partner_id AND manager_id
     // So work order shows in both FP dashboard and Manager dashboard

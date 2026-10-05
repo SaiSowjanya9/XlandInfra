@@ -1,4 +1,5 @@
 const express = require('express');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
@@ -67,13 +68,6 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// Generate unique order number
-const generateOrderNumber = () => {
-  const prefix = 'WO';
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${timestamp}-${random}`;
-};
 
 // ============================================
 // GET CATEGORIES (Public - for customer portal)
@@ -180,7 +174,7 @@ router.post('/', (req, res, next) => {
       }
     }
 
-    const orderNumber = generateOrderNumber();
+    const orderNumber = generateWorkOrderId();
     
     // Process uploaded files
     const attachments = req.files ? req.files.map(file => ({
@@ -734,7 +728,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
       }
     }
 
-    const orderNumber = generateOrderNumber();
+    const orderNumber = generateWorkOrderId();
     const attachments = req.files ? req.files.map(file => ({
       fileName: file.filename,
       originalName: file.originalname,

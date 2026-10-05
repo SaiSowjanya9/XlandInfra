@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes } = require('../utils/packagePropertyTypes');
@@ -1480,7 +1481,7 @@ router.post('/work-orders', requireFPScope, upload.array('attachments', 5), asyn
       }
     }
 
-    const workOrderId = `WO-${Date.now()}`;
+    const workOrderId = generateWorkOrderId();
     const title = `Service Request - ${property[0].name || 'Property'}`;
 
     // Get category and subcategory names - use customSubcategory for "Other" category
