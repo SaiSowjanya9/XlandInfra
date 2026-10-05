@@ -6,6 +6,7 @@
 const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./staffServiceCatalog');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const express = require('express');
+const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const router = express.Router();
@@ -2360,7 +2361,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
   }
 });
 
-router.post('/estimates', requireSupervisorScope, validateStaffCatalogEstimate('supervisor'), async (req, res) => {
+router.post('/estimates', requireSupervisorScope, attachPackageSnapshot(pool), validateStaffCatalogEstimate('supervisor'), async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || 1;

@@ -999,7 +999,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const [customServiceDraft, setCustomServiceDraft] = useState(null);
   const renderCustomServiceDialog = () => (
     <CustomServiceDialog open={!!customServiceDraft} editing={customServiceDraft?.row || null}
-      apiPath="/api/manager/service-catalog"
+      apiPath="/api/manager/service-catalog" internal
       onClose={() => setCustomServiceDraft(null)}
       onSubmit={values => {
         const draft = customServiceDraft;

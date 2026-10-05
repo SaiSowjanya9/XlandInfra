@@ -162,7 +162,11 @@ router.validatePackageEstimate = async (req, res, next) => {
     const scope = await context(req);
     if (addons.length > 100 || addons.some(addon => !addon || typeof addon !== 'object')) fail('Add at most 100 valid services.');
     let property;
-    if (['property_based', 'property-based'].includes(req.body.estimate_type)) {
+    // Only a configured service is priced against the property, so only then is it looked up. A
+    // package with a hand-entered service was refused "Select a valid property": the form sends the
+    // catalog property only alongside a configured service, as the staff portals' guard expects.
+    const hasCatalog = addons.some(addon => addon.catalogServiceId || String(addon.addonId || '').startsWith('CAT-'));
+    if (hasCatalog && ['property_based', 'property-based'].includes(req.body.estimate_type)) {
       const id = Number(req.body.catalog_property_id);
       if (!Number.isSafeInteger(id) || id <= 0) fail('Select a valid property.');
       [property] = await propertiesForScope(scope, id, req.body.catalog_property_source || 'onboarded_properties');

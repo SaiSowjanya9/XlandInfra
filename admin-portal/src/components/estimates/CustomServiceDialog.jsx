@@ -27,11 +27,13 @@ const isFigure = value => value !== '' && value != null && Number.isFinite(Numbe
 // for the vendor price. The field is the same field either way, which is why this is a label rather
 // than a second dialog.
 export default function CustomServiceDialog({ open, onClose, onSubmit, editing = null,
-  apiPath = '/api/admin/service-catalog', fpId, theme,
+  apiPath = '/api/admin/service-catalog', fpId, theme, internal = false,
   title, priceLabel = 'Customer Price', subtitle = 'Entered by hand, so the customer price is set here rather than calculated' }) {
   // Vendor cost and markup only where the figure sold is a customer's. A package row's price IS
   // what the vendor charges, so asking for a vendor cost beside it would price the row twice.
-  const withCosts = priceLabel === 'Customer Price';
+  // And only for a portal allowed internal figures (`internal`): Coordinator, Supervisor and
+  // Executive have the layout but not the costs, and the dialog showed them all four.
+  const withCosts = internal && priceLabel === 'Customer Price';
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
   const skin = estimateSkin(theme ?? pageTheme);

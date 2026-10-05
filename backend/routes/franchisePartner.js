@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -4430,7 +4431,7 @@ router.get('/estimates', requireFPScope, async (req, res) => {
 });
 
 // Create estimate
-router.post('/estimates', requireFPScope, fpServiceCatalog.validatePackageEstimate, async (req, res) => {
+router.post('/estimates', requireFPScope, attachPackageSnapshot(pool), fpServiceCatalog.validatePackageEstimate, async (req, res) => {
   try {
     const {
       estimate_type, property_id, property_code, client_name, client_phone, client_email,
@@ -4800,7 +4801,7 @@ router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
 });
 
 // Update estimate details (full update for property-based estimates)
-router.put('/estimates/:id', requireFPScope, async (req, res) => {
+router.put('/estimates/:id', requireFPScope, attachPackageSnapshot(pool), async (req, res) => {
   try {
     const estimateId = req.params.id;
     
