@@ -3,6 +3,7 @@
  * All routes are scoped to the logged-in executive's data
  */
 
+const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./staffServiceCatalog');
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -176,6 +177,9 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // Apply authentication middleware to all routes below
 router.use(authenticate);
 router.use(attachExecutiveScope);
+
+// The configured services, read-only, for the estimate form's Add Service menu
+router.use('/service-catalog', requireExecutiveScope, createStaffCatalogRouter('executive'));
 
 // =====================================================
 // DASHBOARD (Zone-centric - shows only data for assigned zones)
@@ -2006,7 +2010,7 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
   }
 });
 
-router.post('/estimates', requireExecutiveScope, async (req, res) => {
+router.post('/estimates', requireExecutiveScope, validateStaffCatalogEstimate('executive'), async (req, res) => {
   try {
     const executiveId = req.executiveId;
     const franchisePartnerId = req.franchisePartnerId;

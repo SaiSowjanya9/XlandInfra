@@ -4,6 +4,7 @@ import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 import { getServiceMarginPercent, getServiceVendorCost, getServiceXlandCost } from '../../utils/estimatePackageUtils';
+import { capitalizeFirst, decodeEntities } from '../../utils/text';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
 // services: there is no configured rate behind them, so the price is entered directly rather than
@@ -59,9 +60,10 @@ export const buildCustomService = (values, addonId) => {
 };
 
 // The values a dialog opens on: a new row starts on the defaults, an existing one on what it holds
+// Text comes back from the server HTML-escaped, so it is decoded before it is edited and saved again
 export const customServiceValues = row => ({
-  name: row?.name || '', description: row?.description || '',
-  category: row?.category || '', quantity: row?.quantity ?? 1,
+  name: decodeEntities(row?.name || ''), description: decodeEntities(row?.description || ''),
+  category: decodeEntities(row?.category || ''), quantity: row?.quantity ?? 1,
   frequency_type: row?.frequency_type || 'Monthly',
   frequency_count: row?.frequency_count ?? 12,
   price: row ? String(row.totalPrice ?? row.price ?? '') : '',
@@ -83,7 +85,14 @@ const complaint = values => {
   if (String(values.name || '').trim() === '') return 'Enter a service name.';
   const price = String(values.price ?? '').trim();
   if (price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) return 'Enter a customer price for this service.';
-  return '';
+  return customVisitsComplaint(values);
+};
+
+// Custom is the one frequency with no count of its own, so the count typed for it must be a real one
+export const customVisitsComplaint = values => {
+  if (!isCustomFrequency(values.frequency_type)) return '';
+  const visits = Number(values.frequency_count);
+  return Number.isInteger(visits) && visits >= 1 && visits <= 366 ? '' : 'Enter the visits per year for a Custom frequency (1 to 366).';
 };
 
 // `title` is null where the hosting card already names the section, so the heading is never shown
@@ -117,11 +126,14 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
   const startEdit = index => {
     const row = rows[index];
     setProblem('');
-    setEdit({ index, values: { name: row.name, description: row.description, frequency_type: row.frequency_type,
+    setEdit({ index, values: { name: decodeEntities(row.name), description: decodeEntities(row.description), frequency_type: row.frequency_type,
       frequency_count: row.frequency_count, price: isBlank(row) ? '' : (row.totalPrice ?? row.price),
       // Carried through an in-place edit so a costed row stays costed even though the cells are
       // not editable here -- the dialog is where they are set.
-      vendorCost: row.vendorCost ?? '', markupPercentage: row.markup_percentage ?? '' } });
+      vendorCost: row.vendorCost ?? '', markupPercentage: row.markup_percentage ?? '',
+      // Likewise the category, quantity and vendor answer: rebuilding the row without them dropped
+      // all three the first time a row was edited in place
+      category: row.category ?? '', quantity: row.quantity ?? '', vendorRequired: row.skip_vendor_assignment !== true } });
   };
   // A row arrives blank from the Custom option, so it opens for typing without another click.
   // Where the caller edits in its own dialog no blank row is ever appended, so this stands down.
@@ -132,8 +144,9 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
   }, [rows, edit, onEditRow]);
 
   // Picking a frequency fills the annual visits from the same table the catalog uses; it stays editable
-  const setEditField = (field, value) => {
+  const setEditField = (field, raw) => {
     setProblem('');
+    const value = field === 'name' || field === 'description' ? capitalizeFirst(raw) : raw;
     setEdit(prev => ({ ...prev, values: { ...prev.values, [field]: value,
       // Switching to Custom keeps the figure already there to be edited; any other frequency
       // replaces it with the count that frequency means.
@@ -255,17 +268,17 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
             <tr key={row.addonId} className="align-top">
               <td className={`${cell} text-center ${skin.muted}`}>{index + 1}</td>
               <td className={`${cell} break-words font-medium ${skin.strong}`}>
-                {row.name}
+                {decodeEntities(row.name)}
                 {/* Category, quantity and a job arranged without a vendor sit under the name: they
                     belong to the row but do not each earn a column of their own */}
                 {(row.category || row.quantity || row.skip_vendor_assignment) && (
                   <span className={`mt-0.5 block text-[11px] font-normal ${skin.muted}`}>
-                    {[row.category, row.quantity ? `Qty ${row.quantity}` : '', row.skip_vendor_assignment ? 'No vendor' : '']
+                    {[decodeEntities(row.category), row.quantity ? `Qty ${row.quantity}` : '', row.skip_vendor_assignment ? 'No vendor' : '']
                       .filter(Boolean).join(' · ')}
                   </span>
                 )}
               </td>
-              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
+              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{decodeEntities(row.description) || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
@@ -289,8 +302,8 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           {extraRows.map((row, index) => (
             <tr key={row.addonId} className="align-top">
               <td className={`${cell} text-center ${skin.muted}`}>{rows.length + index + 1}</td>
-              <td className={`${cell} break-words font-medium ${skin.strong}`}>{row.name}</td>
-              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{row.description || '-'}</td>
+              <td className={`${cell} break-words font-medium ${skin.strong}`}>{decodeEntities(row.name)}</td>
+              <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{decodeEntities(row.description) || '-'}</td>
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>

@@ -46,6 +46,12 @@ const LEGACY_UNITS = { quantity_based: ['Units', 'Lifts', 'Pumps', 'Tanks'], are
   capacity_based: ['Liters', 'KW'], capacity_slab: ['Liters', 'KW'], manpower: ['Persons', 'Guards', 'Personnel'] };
 const unitIsValid = (pricingMethod, unit) =>
   unitOptionsFor(pricingMethod).includes(unit) || (LEGACY_UNITS[pricingMethod] ?? []).includes(unit);
+// The type a unit added from the form's own "Save" row belongs to, so a capacity unit added on a
+// Capacity Slab service is offered on Capacity Based too, and never on Area Based
+const CUSTOM_UNIT_TYPES = { fixed_price: 'billing', quantity_based: 'count', area_based: 'area',
+  capacity_based: 'capacity', capacity_slab: 'capacity', manpower: 'manpower' };
+const unitTypeFor = pricingMethod => CUSTOM_UNIT_TYPES[pricingMethod] ?? null;
+const unitKey = value => String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 const PROPERTY_TYPES = ['APT', 'GC', 'FLAT', 'VILLA', 'IH', 'PLOT'];
 const PROPERTY_TYPE_LABELS = { GC: 'Gated Community', APT: 'Apartment', FLAT: 'Flat', VILLA: 'Villa', PLOT: 'Plot', IH: 'Independent House' };
 const propertyTypeLabel = type => PROPERTY_TYPE_LABELS[String(type ?? '').toUpperCase()] || String(type ?? '');
@@ -99,12 +105,17 @@ const normalizePropertyType = value => {
   return ({ APARTMENT: 'APT', APARTMENTS: 'APT', GATEDCOMMUNITY: 'GC', FLATS: 'FLAT', VILLAS: 'VILLA', PLOTS: 'PLOT', INDEPENDENTHOUSE: 'IH' })[type] || type;
 };
 
-const validateService = input => {
+// `customUnits` are the units saved for this method's unit type (and any a saved service already
+// uses): the route reads them, because this stays a pure function. A unit outside both the master
+// list and these is still refused.
+const validateService = (input, { customUnits = [] } = {}) => {
   if (!input || typeof input !== 'object') fail('Service configuration is required.');
+  const customUnit = !unitIsValid(input.pricing_method, input.unit) && Object.hasOwn(METHOD_UNITS, input.pricing_method ?? '')
+    ? customUnits.find(unit => unitKey(unit) && unitKey(unit) === unitKey(input.unit)) : undefined;
   const config = {
     service_name: text(input.service_name, 'Service name', 150), category: text(input.category, 'Category', 100),
-    pricing_method: input.pricing_method, unit: input.unit,
-    description: text(input.description ?? '', 'Description', 500, false),
+    pricing_method: input.pricing_method, unit: customUnit ?? input.unit,
+    description: text(input.description ?? '', 'Description', 500, true),
     default_frequency: input.default_frequency,
     allow_frequency_override: boolean(input.allow_frequency_override, 'Allow frequency override'),
     allow_manual_visits: boolean(input.allow_manual_visits, 'Allow manual visits'),
@@ -117,7 +128,7 @@ const validateService = input => {
     // XLAND's own annual cost of running the service; an estimate may still override it
     default_operating_cost: number(input.default_operating_cost ?? 0, 'Default XLAND operating cost', 0, 1e9)
   };
-  if (!Object.hasOwn(METHOD_UNITS, config.pricing_method) || !unitIsValid(config.pricing_method, config.unit)) fail('Select a valid pricing method and unit.');
+  if (!Object.hasOwn(METHOD_UNITS, config.pricing_method) || !(customUnit || unitIsValid(config.pricing_method, config.unit))) fail('Select a valid pricing method and unit.');
   if (!Object.hasOwn(ALL_FREQUENCIES, config.default_frequency)) fail('Select a valid default frequency.');
   config.default_visits_per_year = visitsFor(config.default_frequency, input.default_visits_per_year, 'Default visits per year');
   if (!config.allow_manual_visits && config.default_visits_per_year !== ALL_FREQUENCIES[config.default_frequency]) fail('Default visits must match the selected frequency when manual visits are disabled.');
@@ -148,11 +159,8 @@ const validateService = input => {
         recommendedMax: number(range?.recommendedMax, `Range ${index + 1} recommended maximum`, config.minimum_manpower, 1e6, true),
         ratePerPerson: number(range?.ratePerPerson, `Range ${index + 1} rate per person`)
       }));
-      config.manpower_ranges.forEach((range, index, rows) => {
-        if (!index && range.areaFrom > 1) fail('The first manpower range must begin at 0 or 1 Sq Ft.');
+      config.manpower_ranges.forEach((range, index) => {
         if (range.areaTo !== null && range.areaTo < range.areaFrom) fail(`Range ${index + 1} upper area must not be less than its lower area.`);
-        if (range.areaTo === null && index !== rows.length - 1) fail('Only the last manpower range can have no upper limit.');
-        if (index && range.areaFrom !== rows[index - 1].areaTo + 1) fail('Manpower ranges must be consecutive whole-number areas without gaps or overlaps.');
         if (range.recommendedMax < range.recommendedMin) fail(`Range ${index + 1} recommended maximum must not be below its minimum.`);
       });
     }
@@ -175,14 +183,20 @@ const validateService = input => {
         defaultFrequency, defaultVisitsPerYear
       };
     });
-    config.capacity_slabs.forEach((slab, index, slabs) => {
+    config.capacity_slabs.forEach((slab, index) => {
       if (slab.capacityTo !== null && slab.capacityTo < slab.capacityFrom) fail(`Slab ${index + 1} upper capacity must not be less than its lower capacity.`);
-      if (slab.capacityTo === null && index !== slabs.length - 1) fail('Only the last slab can have no upper limit.');
-      if (index && slab.capacityFrom !== slabs[index - 1].capacityTo + 1) fail('Slabs must have consecutive whole-number ranges without gaps or overlaps.');
     });
   }
   return config;
 };
+
+const narrowestRange = (items, value, from, to) => (Array.isArray(items) && Number.isFinite(value) ? items : []).reduce((best, item) => {
+  if (!Number.isFinite(Number(item?.[from])) || value < Number(item[from])) return best;
+  const open = item[to] === null;
+  if (!open && !(Number.isFinite(Number(item[to])) && value <= Number(item[to]))) return best;
+  const width = open ? Infinity : Number(item[to]) - Number(item[from]);
+  return !best || width < best.width ? { item, width } : best;
+}, null)?.item;
 
 const calculateServiceQuote = (config, input = {}, role) => {
   const propertyType = normalizePropertyType(input.property_type);
@@ -190,8 +204,8 @@ const calculateServiceQuote = (config, input = {}, role) => {
   let capacity, slab;
   if (config.pricing_method === 'capacity_slab') {
     capacity = number(input.capacity, 'Capacity', 0, 1e9, true);
-    if (capacity < config.capacity_slabs[0].capacityFrom) fail('Capacity is below the first configured slab.');
-    slab = config.capacity_slabs.find(item => capacity >= item.capacityFrom && (item.capacityTo === null || capacity <= item.capacityTo));
+    if (capacity < Math.min(...config.capacity_slabs.map(item => item.capacityFrom))) fail('Capacity is below the lowest configured slab.');
+    slab = narrowestRange(config.capacity_slabs, capacity, 'capacityFrom', 'capacityTo');
   }
   const defaultFrequency = slab?.defaultFrequency ?? config.default_frequency;
   const configuredVisits = slab?.defaultVisitsPerYear ?? (defaultFrequency === config.default_frequency ? config.default_visits_per_year : ALL_FREQUENCIES[defaultFrequency]);
@@ -232,9 +246,8 @@ const calculateServiceQuote = (config, input = {}, role) => {
       let range;
       if (config.manpower_ranges?.length) {
         inputs.area = number(input.area, 'Property area', 1, 1e9, true);
-        range = config.manpower_ranges.find(item => inputs.area >= item.areaFrom && (item.areaTo === null || inputs.area <= item.areaTo));
-        if (!range) fail('Property area is outside the configured manpower ranges.');
-        inputs.manpower_range = { areaFrom: range.areaFrom, areaTo: range.areaTo, recommendedMin: range.recommendedMin, recommendedMax: range.recommendedMax };
+        range = narrowestRange(config.manpower_ranges, inputs.area, 'areaFrom', 'areaTo');
+        if (range) inputs.manpower_range = { areaFrom: range.areaFrom, areaTo: range.areaTo, recommendedMin: range.recommendedMin, recommendedMax: range.recommendedMax };
       }
       inputs.personnel = number(input.personnel ?? Math.max(config.minimum_manpower, range?.recommendedMin ?? 1), 'Personnel count', config.minimum_manpower, 1e6, true);
       inputs.working_hours_per_visit = config.working_hours_per_visit;
@@ -288,4 +301,4 @@ const calculateEstimateSummary = (quotes, discountPercentage = 0, gstPercentage 
 };
 
 module.exports = { validateService, calculateServiceQuote, calculateEstimateSummary, normalizePropertyType,
-  primaryInputLabel, propertyTypeLabel, UNIT_TYPES, unitOptionsFor };
+  primaryInputLabel, propertyTypeLabel, UNIT_TYPES, unitOptionsFor, narrowestRange, unitTypeFor, unitIsValid, CUSTOM_UNIT_TYPES };

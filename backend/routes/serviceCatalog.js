@@ -7,12 +7,31 @@ const { randomUUID } = require('crypto');
 const { normalizeEstimateService } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { categoryOptions, addCategory, removeCategory } = require('../utils/serviceCategories');
+const { unitOptions, customUnitNames, addUnit, removeUnit } = require('../utils/serviceUnits');
+const { decodeDeep } = require('../utils/htmlEntities');
+const { sanitizeObject } = require('../middleware/security');
 const router = express.Router();
 
+// Stored text is HTML-escaped (middleware/security.js escapes every request), and server-built
+// emails and PDFs rely on that, so storage stays escaped. `parseService` is what the server prices
+// and copies into estimates from; `clientService` is what a form reads, decoded, so loading a
+// service and saving it again no longer escapes the escapes.
 const parseService = row => ({
   ...(typeof row.configuration === 'string' ? JSON.parse(row.configuration) : row.configuration),
   id: row.id, franchise_partner_id: row.scope_id || null, created_at: row.created_at
 });
+const clientService = row => decodeDeep(parseService(row));
+
+// Validated on the decoded text, so a length limit counts characters rather than entity codes and a
+// saved unit is recognised whatever escaping it arrived with; escaped exactly once to be stored.
+// An existing service keeps the unit it was saved with even if that unit was later removed.
+const prepareService = async (pool, scope, body, existingConfig = null) => {
+  const input = decodeDeep(body);
+  const customUnits = await customUnitNames(pool, scope, input.pricing_method);
+  const existingUnit = existingConfig && existingConfig.pricing_method === input.pricing_method ? decodeDeep(existingConfig.unit) : null;
+  const config = validateService(input, { customUnits: existingUnit ? [...customUnits, existingUnit] : customUnits });
+  return { config, stored: sanitizeObject(config) };
+};
 const scopeId = value => {
   if (value === undefined || value === null || value === 'all') return 0;
   if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) throw Object.assign(new Error('Invalid FP scope.'), { status: 400 });
@@ -32,7 +51,7 @@ router.get('/', async (req, res) => {
     const [rows] = await db.pool.execute(
       `SELECT * FROM service_catalog ${scope ? 'WHERE scope_id IN (0, ?)' : ''} ORDER BY created_at DESC, id DESC`, scope ? [scope] : []
     );
-    let services = rows.map(parseService);
+    let services = rows.map(clientService);
     if (req.query.propertyType) services = services.filter(service => service.applicable_property_types.includes(normalizePropertyType(req.query.propertyType)));
     res.json({ success: true, data: services });
   } catch (error) { handleError(res, error); }
@@ -40,23 +59,26 @@ router.get('/', async (req, res) => {
 
 const saveService = async (req, res) => {
   try {
-    // The category may be typed rather than chosen, so it is validated as text, not against a list
-    const config = validateService(req.body);
     const scope = scopeId(req.body.franchise_partner_id);
     if (scope) {
       const [partners] = await db.pool.execute('SELECT id FROM franchise_partners WHERE id = ?', [scope]);
       if (!partners.length) return res.status(400).json({ success: false, message: 'The selected franchise partner does not exist.' });
     }
+    let existing = [];
     if (req.params.id) {
-      const [existing] = await db.pool.execute('SELECT * FROM service_catalog WHERE id = ?', [req.params.id]);
+      [existing] = await db.pool.execute('SELECT * FROM service_catalog WHERE id = ?', [req.params.id]);
       if (!existing.length) return res.status(404).json({ success: false, message: 'Service not found.' });
       if (existing[0].scope_id !== scope) return res.status(400).json({ success: false, message: 'An existing service cannot be moved to another FP scope.' });
-      await db.pool.execute('UPDATE service_catalog SET service_name = ?, configuration = ? WHERE id = ?', [config.service_name, JSON.stringify(config), req.params.id]);
+    }
+    // The category may be typed rather than chosen, so it is validated as text, not against a list
+    const { config, stored } = await prepareService(db.pool, scope, req.body, existing[0] ? parseService(existing[0]) : null);
+    if (req.params.id) {
+      await db.pool.execute('UPDATE service_catalog SET service_name = ?, configuration = ? WHERE id = ?', [stored.service_name, JSON.stringify(stored), req.params.id]);
       return res.json({ success: true, data: { ...config, id: Number(req.params.id), franchise_partner_id: scope || null } });
     }
     const [result] = await db.pool.execute(
       'INSERT INTO service_catalog (service_name, scope_id, configuration, created_by) VALUES (?, ?, ?, ?)',
-      [config.service_name, scope, JSON.stringify(config), req.user.id]
+      [stored.service_name, scope, JSON.stringify(stored), req.user.id]
     );
     res.status(201).json({ success: true, data: { ...config, id: result.insertId, franchise_partner_id: scope || null } });
   } catch (error) { handleError(res, error); }
@@ -95,6 +117,21 @@ router.post('/categories', requireRole('admin'), async (req, res) => {
 // every scope, so the check is made against the whole catalog rather than one FP's slice.
 router.delete('/categories/:id', requireRole('admin'), async (req, res) => {
   try { res.json({ success: true, data: await removeCategory(db.pool, 0, req.params.id) }); }
+  catch (error) { handleError(res, error); }
+});
+
+// The Unit / Capacity Unit box: the method's built-in units, units saved services already use, and
+// any saved with the box's own Save row. Same rules as the categories above.
+router.get('/units', async (req, res) => {
+  try { res.json({ success: true, data: await unitOptions(db.pool, scopeId(req.query.fpId), req.query.pricing_method), canManage: req.user.role === 'admin' }); }
+  catch (error) { handleError(res, error); }
+});
+router.post('/units', requireRole('admin'), async (req, res) => {
+  try { res.status(201).json({ success: true, data: await addUnit(db.pool, scopeId(req.body.fpId), req.body.pricing_method, req.body.name, req.user.id) }); }
+  catch (error) { handleError(res, error); }
+});
+router.delete('/units/:id', requireRole('admin'), async (req, res) => {
+  try { res.json({ success: true, data: await removeUnit(db.pool, 0, req.params.id) }); }
   catch (error) { handleError(res, error); }
 });
 
@@ -138,18 +175,26 @@ const priceCustomEstimate = async (body, role, authorizedProperty = null) => {
   if (scope && scope !== Number(property.franchise_partner_id)) invalid('Property belongs to another FP.');
   const rows = [];
   for (const row of body.rows) {
-    if (!Number.isSafeInteger(Number(row?.service_id)) || Number(row.service_id) <= 0 || !Number.isSafeInteger(Number(row.vendor_id)) || Number(row.vendor_id) <= 0) invalid('Select a service and vendor for every row.');
+    if (!Number.isSafeInteger(Number(row?.service_id)) || Number(row.service_id) <= 0) invalid('Select a service for every row.');
     const [services] = await db.pool.execute('SELECT * FROM service_catalog WHERE id = ?', [row.service_id]);
     if (!services.length) invalid('A selected service no longer exists.');
     const config = parseService(services[0]);
     if (config.franchise_partner_id && config.franchise_partner_id !== Number(property.franchise_partner_id)) invalid('Service belongs to another FP.');
-    const [vendors] = await db.pool.execute(
-      `SELECT id, vendor_id, COALESCE(company_name, owner_name) AS name, franchise_partner_id FROM onboarded_vendors WHERE id = ? AND (status = 'active' OR status IS NULL)`, [row.vendor_id]
-    );
-    if (!vendors.length || (vendors[0].franchise_partner_id && vendors[0].franchise_partner_id !== Number(property.franchise_partner_id))) invalid('The selected vendor is not available for this property.');
+    // A service arranged without a vendor (skip_vendor_assignment) needs none; every other one does
+    const hasVendor = row.vendor_id !== undefined && row.vendor_id !== null && row.vendor_id !== '';
+    if (!hasVendor && !config.skip_vendor_assignment) invalid(`Select a vendor for ${config.service_name}.`);
+    let vendor = null;
+    if (hasVendor) {
+      if (!Number.isSafeInteger(Number(row.vendor_id)) || Number(row.vendor_id) <= 0) invalid('The selected vendor is not available for this property.');
+      const [vendors] = await db.pool.execute(
+        `SELECT id, vendor_id, COALESCE(company_name, owner_name) AS name, franchise_partner_id FROM onboarded_vendors WHERE id = ? AND (status = 'active' OR status IS NULL)`, [row.vendor_id]
+      );
+      if (!vendors.length || (vendors[0].franchise_partner_id && vendors[0].franchise_partner_id !== Number(property.franchise_partner_id))) invalid('The selected vendor is not available for this property.');
+      vendor = vendors[0];
+    }
     const quote = calculateServiceQuote(config, { ...row.inputs, property_type: property.entry_type }, role);
     if (quote.requiresCustomQuote) invalid(`${config.service_name} requires a custom quote for this capacity. Enter the total vendor cost for the service period.`);
-    rows.push(normalizeEstimateService({ ...config, service_id: config.id, service_name: config.service_name, vendor_id: vendors[0].id, vendor_name: vendors[0].name, ...quote }));
+    rows.push(normalizeEstimateService({ ...config, service_id: config.id, service_name: config.service_name, vendor_id: vendor?.id ?? null, vendor_name: vendor?.name ?? '', ...quote }));
   }
   return {
     property: { id: property.id, property_id: property.property_id, source_table: property.source_table || 'onboarded_properties', entry_type: property.entry_type, community_name: property.community_name, zone: property.zone, division: property.division, city: property.city, address: property.address,
@@ -251,4 +296,4 @@ const validateCatalogEstimate = (req, res, next) => {
   }));
 };
 
-module.exports = { router, validateCatalogEstimate, parseService, priceCustomEstimate, buildCatalogAddons };
+module.exports = { router, validateCatalogEstimate, parseService, clientService, prepareService, priceCustomEstimate, buildCatalogAddons };

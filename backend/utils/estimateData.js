@@ -1,4 +1,4 @@
-const { normalizePropertyType, primaryInputLabel, propertyTypeLabel } = require('./servicePricing');
+const { normalizePropertyType, primaryInputLabel, propertyTypeLabel, narrowestRange } = require('./servicePricing');
 const { resolveEstimateTerms } = require('./estimateTerms');
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
 const amount = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -89,7 +89,7 @@ const normalizeEstimateService = value => {
   // The unit rides along with the amount; on its own it still has to be stated
   else if (unit && unit !== primaryInput) parts.push(`Unit: ${unit}`);
   if (method === 'capacity_slab') {
-    const slab = firstList(snapshot.capacity_slabs, row.capacity_slabs).find(item => Number(inputs.capacity) >= item.capacityFrom && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo));
+    const slab = narrowestRange(firstList(snapshot.capacity_slabs, row.capacity_slabs), Number(inputs.capacity), 'capacityFrom', 'capacityTo');
     if (slab) parts.push(`Slab: ${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`);
   }
   if (method === 'manpower') {

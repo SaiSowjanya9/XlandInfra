@@ -29,13 +29,18 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   const [quote, setQuote] = useState(null);
   // Even where the service permits it, changing the frequency is a deliberate act. A row saved with
   // an overridden frequency opens with the box already ticked, so its state matches what it holds.
-  const [overrideFrequency, setOverrideFrequency] = useState(
-    Boolean(initialRow?.frequency && initialRow.default_frequency && initialRow.frequency !== initialRow.default_frequency)
-  );
+  // The row holds the quote, not the service's default, so the default is read off the service itself
+  const [overrideFrequency, setOverrideFrequency] = useState(() => {
+    const initialService = services.find(item => String(item.id) === String(initialRow?.service_id || ''));
+    const saved = initialRow?.frequency ?? initialRow?.inputs?.frequency;
+    return Boolean(initialService?.allow_frequency_override && saved && saved !== initialService.default_frequency);
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const service = services.find(item => String(item.id) === serviceId);
   const field = service && INPUTS[service.pricing_method];
+  // A service arranged without a vendor ("Do Not Assign Vendor") is added without choosing one
+  const vendorNeeded = !service?.skip_vendor_assignment;
 
   useEffect(() => {
     setQuote(null);
@@ -75,15 +80,17 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
   };
   const save = () => {
     const vendor = vendors.find(item => String(item.id) === vendorId);
-    if (!service || !vendor || !quote || quote.requiresCustomQuote || loading) return;
-    onSave({ ...quote, service_id: service.id, service_name: service.service_name, description: service.description, pricing_method: service.pricing_method, unit: service.unit, vendor_id: vendor.id, vendor_name: vendor.name });
+    if (!service || !quote || quote.requiresCustomQuote || loading) return;
+    if (vendorNeeded && !vendor) { setError(vendors.length ? 'Select a vendor for this service.' : 'No active vendor is available for this property. Add a vendor first, or mark the service Do Not Assign Vendor.'); return; }
+    onSave({ ...quote, service_id: service.id, service_name: service.service_name, description: service.description, category: service.category, pricing_method: service.pricing_method, unit: service.unit,
+      vendor_id: vendor?.id ?? null, vendor_name: vendor?.name ?? '' });
   };
 
   return <section className="rounded-xl border border-blue-200 bg-white p-5">
     <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-slate-800">{initialRow ? 'Edit Service' : 'Add Services'}</h3><button type="button" onClick={onCancel} aria-label="Close service editor" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Select Service *"><select value={serviceId} onChange={event => selectService(event.target.value)} className={inputClass}><option value="">Select a service</option>{services.map(item => <option key={item.id} value={item.id}>{serviceOptionLabel(item, services)}</option>)}</select></Field>
-      <Field label="Vendor *"><select value={vendorId} onChange={event => setVendorId(event.target.value)} className={inputClass}><option value="">Select a vendor</option>{vendors.map(item => <option key={item.id} value={item.id}>{item.name}{item.service_type ? ` — ${item.service_type}` : ''}</option>)}</select></Field>
+      <Field label={vendorNeeded ? 'Vendor *' : 'Vendor (not required)'}><select value={vendorId} onChange={event => setVendorId(event.target.value)} className={inputClass}><option value="">{vendors.length ? 'Select a vendor' : 'No vendors available'}</option>{vendors.map(item => <option key={item.id} value={item.id}>{item.name}{item.service_type ? ` — ${item.service_type}` : ''}</option>)}</select></Field>
     </div>
     {service && <>
       <p className="mt-4 inline-block rounded bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700">{methodLabel(service.pricing_method)}</p>
@@ -95,17 +102,23 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
             capacity={inputs.capacity} onChange={value => updateInput('capacity', value)}
             ariaLabel={`${service.service_name} slab`} className={inputClass} /></Field>
           : field && <Field label={`${field[1]} (${service.unit}) *`}><input type="number" min={isVisitManpower(service) ? service.minimum_manpower : field[2]} step={field[2]} value={inputs[field[0]] ?? ''} onChange={event => updateInput(field[0], event.target.value)} className={inputClass} /></Field>}
-        <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override || !overrideFrequency} onChange={event => {
-          const frequency = event.target.value;
-          setQuote(null);
-          setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
-        }} className={inputClass}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select>
-          {service.allow_frequency_override && <span className="mt-1.5 flex items-center gap-2 text-xs font-normal text-slate-600">
-            <input type="checkbox" checked={overrideFrequency} onChange={event => {
-              setOverrideFrequency(event.target.checked);
-              if (!event.target.checked) { setQuote(null); setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) })); }
-            }} className="accent-blue-600" />Override frequency
-          </span>}</Field>
+        {/* The checkbox has its own label: nested inside the select's, a click on "Override
+            frequency" went to the disabled select, so the box would not tick */}
+        <div>
+          <Field label="Frequency *"><select value={inputs.frequency} disabled={!service.allow_frequency_override || !overrideFrequency} onChange={event => {
+            const frequency = event.target.value;
+            setQuote(null);
+            setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
+          }} className={inputClass}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></Field>
+          {service.allow_frequency_override
+            ? <label className="mt-1.5 inline-flex cursor-pointer items-center gap-2 text-xs font-normal text-slate-600">
+              <input type="checkbox" checked={overrideFrequency} onChange={event => {
+                setOverrideFrequency(event.target.checked);
+                if (!event.target.checked) { setQuote(null); setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) })); }
+              }} className="accent-blue-600" />Override frequency
+            </label>
+            : <p className="mt-1.5 text-[11px] text-slate-400">Fixed by the service. Turn on Allow Frequency Override on the service to change it.</p>}
+        </div>
         <Field label="Visits Per Year"><input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} bg-slate-50`} /><span className="mt-1 block text-[10px] font-normal text-slate-400">Auto calculated</span></Field>
         {service.pricing_method === 'fixed_visit_custom' && <Field label="One-off Custom Work Cost (₹)"><input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => updateInput('custom_work_cost', event.target.value)} className={inputClass} /></Field>}
         {(service.pricing_method === 'custom_quote' || quote?.requiresCustomQuote || inputs.custom_quote !== undefined) && <Field label="Total Vendor Quote for Service Period (₹) *"><input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => updateInput('custom_quote', event.target.value)} className={inputClass} /></Field>}
@@ -130,7 +143,7 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
       </div>}
     </>}
     {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
-    <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600">Cancel</button><button type="button" onClick={save} disabled={!service || !vendorId || !quote || quote.requiresCustomQuote || loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{initialRow ? 'Update Service' : 'Add Service'}</button></div>
+    <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600">Cancel</button><button type="button" onClick={save} disabled={!service || !quote || quote.requiresCustomQuote || loading} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{initialRow ? 'Update Service' : 'Add Service'}</button></div>
   </section>;
 };
 
@@ -238,7 +251,7 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><h2 className="text-sm font-semibold text-slate-800">Service List</h2><button type="button" disabled={!property || !!editor} onClick={() => setEditor({ key: Date.now(), index: null })} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 disabled:opacity-50"><Plus className="h-3 w-3" />Add Another Service</button></div>
           {rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1000px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr>{['#', 'Service', 'Method', 'Input / Details', 'Vendor', 'Frequency', 'Visits / Year', 'Vendor Cost (₹)', 'Operating Cost (₹)', 'Customer Price (₹)', 'Margin %', 'Action'].map(label => <th key={label} className="px-3 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row, index) => <tr key={index} className="text-slate-700">
-            <td className="px-3 py-4">{index + 1}</td><td className="px-3 py-4 font-medium">{row.service_name}</td><td className="px-3 py-4"><span className="whitespace-nowrap rounded bg-orange-50 px-2 py-1 text-orange-700">{methodLabel(row.pricing_method)}</span></td><td className="px-3 py-4">{inputDetails(row)}</td><td className="px-3 py-4">{row.vendor_name}</td><td className="px-3 py-4">{row.frequency}</td><td className="px-3 py-4 text-center">{row.visits}</td><td className="px-3 py-4">{money(row.vendorCost)}</td><td className="px-3 py-4">{money(row.operatingCost)}</td><td className="px-3 py-4 font-semibold text-green-700">{money(row.totalPrice)}</td><td className="px-3 py-4">{row.marginPercentage}%</td><td className="px-3 py-4"><div className="flex gap-1"><button type="button" disabled={!!editor} aria-label={`Edit ${row.service_name}`} onClick={() => setEditor({ key: Date.now(), index })} className="p-1 text-slate-500 disabled:opacity-30"><Edit2 className="h-3.5 w-3.5" /></button><button type="button" disabled={!!editor} aria-label={`Remove ${row.service_name}`} onClick={() => setRows(prev => prev.filter((_, rowIndex) => rowIndex !== index))} className="p-1 text-red-500 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button></div></td>
+            <td className="px-3 py-4">{index + 1}</td><td className="px-3 py-4 font-medium">{row.service_name}</td><td className="px-3 py-4"><span className="whitespace-nowrap rounded bg-orange-50 px-2 py-1 text-orange-700">{methodLabel(row.pricing_method)}</span></td><td className="px-3 py-4">{inputDetails(row)}</td><td className="px-3 py-4">{row.vendor_name || <span className="text-slate-400">Not required</span>}</td><td className="px-3 py-4">{row.frequency}</td><td className="px-3 py-4 text-center">{row.visits}</td><td className="px-3 py-4">{money(row.vendorCost)}</td><td className="px-3 py-4">{money(row.operatingCost)}</td><td className="px-3 py-4 font-semibold text-green-700">{money(row.totalPrice)}</td><td className="px-3 py-4">{row.marginPercentage}%</td><td className="px-3 py-4"><div className="flex gap-1"><button type="button" disabled={!!editor} aria-label={`Edit ${row.service_name}`} onClick={() => setEditor({ key: Date.now(), index })} className="p-1 text-slate-500 disabled:opacity-30"><Edit2 className="h-3.5 w-3.5" /></button><button type="button" disabled={!!editor} aria-label={`Remove ${row.service_name}`} onClick={() => setRows(prev => prev.filter((_, rowIndex) => rowIndex !== index))} className="p-1 text-red-500 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button></div></td>
           </tr>)}</tbody></table></div> : <div className="p-8 text-center text-sm text-slate-400">{property ? 'Add individual services to build this estimate.' : 'Select a property to get started.'}</div>}
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-5"><Field label="Notes"><textarea rows={3} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} placeholder="Notes for the customer" /></Field></section>

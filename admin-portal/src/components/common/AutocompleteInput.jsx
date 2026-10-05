@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Check, Loader2, Plus } from 'lucide-react';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import { capitalizeFirst } from '../../utils/text';
 
 /**
  * AutocompleteInput - A reusable typeahead/autocomplete component
@@ -30,6 +31,10 @@ import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
  *   -- which is how a name typed by mistake leaves the list again. Only the caller knows which
  *   options may go, so nothing is assumed here.
  * - theme: 'warm' renders the beige estimate skin; anything else keeps the original slate/blue one
+ * - capitalize: the first letter of what is typed is upper case (a picked option is left as listed)
+ *
+ * Leaving the field with a value that matches an option except for case or spacing selects that
+ * option, so "lifts" typed beside a listed "Lifts" is saved as "Lifts" rather than as a second entry.
  */
 const AutocompleteInput = ({
   value = '',
@@ -52,6 +57,7 @@ const AutocompleteInput = ({
   onDeleteOption,
   id,
   theme,
+  capitalize = false,
 }) => {
   // The hook runs every render; an explicit theme prop still wins over the page's own
   const pageTheme = useEstimateTheme();
@@ -120,7 +126,21 @@ const AutocompleteInput = ({
 
   // The typed value is offered for saving only while it is genuinely new: the whole list is
   // checked, not the filtered slice, so a name the filter happened to hide is never added twice.
-  const sameText = (first, second) => String(first ?? '').trim().toLowerCase() === String(second ?? '').trim().toLowerCase();
+  const sameText = (first, second) => String(first ?? '').trim().replace(/\s+/g, ' ').toLowerCase() === String(second ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  // A value typed to match a listed option in all but case or spacing becomes that option when the
+  // field is left. Read from a ref, because the outside-click listener is registered only once.
+  const latest = useRef({});
+  latest.current = { inputValue, normalizedOptions, onChange, value, allowCustom, isOpen };
+  const snapToOption = () => {
+    const { inputValue: typed, normalizedOptions: listed, onChange: change, value: current, allowCustom: custom } = latest.current;
+    if (!custom || !String(typed || '').trim()) return;
+    const match = listed.find(option => sameText(option.label, typed));
+    if (match && (match.value !== current || match.label !== typed)) {
+      setInputValue(match.label);
+      change?.(match.value);
+    }
+  };
   const offerCustom = Boolean(onCreateOption) && !disabled && inputValue.trim() !== '' &&
     !normalizedOptions.some(option => sameText(option.label, inputValue));
 
@@ -172,6 +192,7 @@ const AutocompleteInput = ({
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
+        if (containerRef.current.contains(document.activeElement) || latest.current.isOpen) snapToOption();
         setIsOpen(false);
       }
     };
@@ -181,7 +202,7 @@ const AutocompleteInput = ({
 
   // Handle input change
   const handleInputChange = (e) => {
-    const newValue = e.target.value;
+    const newValue = capitalize ? capitalizeFirst(e.target.value) : e.target.value;
     setInputValue(newValue);
     setIsOpen(true);
     setBrowsing(false);
@@ -253,6 +274,7 @@ const AutocompleteInput = ({
         setHighlightedIndex(-1);
         break;
       case 'Tab':
+        snapToOption();
         setIsOpen(false);
         break;
     }
@@ -293,6 +315,8 @@ const AutocompleteInput = ({
           value={inputValue}
           onChange={handleInputChange}
           onFocus={() => { setIsOpen(true); setBrowsing(true); }}
+          // A field still focused after a pick reopens on a click, rather than needing a key press
+          onClick={() => { if (!disabled && !isOpen) { setIsOpen(true); setBrowsing(true); } }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}

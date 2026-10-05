@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { decodeEntities } from '../utils/text';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -27,8 +28,9 @@ export default function useServiceCategories({ apiPath, fpId, enabled = true }) 
     }).then(async response => {
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load categories.');
-      // The endpoint answers with { name, id, removable } objects
-      setCategories(Array.isArray(result.data) ? result.data.filter(item => item?.name) : []);
+      // The endpoint answers with { name, id, removable } objects. Names are decoded on the server;
+      // decoding again here also covers a server that has not been updated yet.
+      setCategories(Array.isArray(result.data) ? result.data.filter(item => item?.name).map(item => ({ ...item, name: decodeEntities(item.name) })) : []);
       setCanManage(!!result.canManage);
     }).catch(loadError => {
       if (loadError.name !== 'AbortError') setError('Unable to load categories. Please retry.');
@@ -49,7 +51,8 @@ export default function useServiceCategories({ apiPath, fpId, enabled = true }) 
   // The saved category is in the list before the caller selects it, so the box never names
   // something the dropdown below it does not offer
   const createCategory = useCallback(async name => {
-    const created = await send('/categories', 'POST', { name, ...(scope ? { fpId: scope } : {}) });
+    const saved = await send('/categories', 'POST', { name, ...(scope ? { fpId: scope } : {}) });
+    const created = { ...saved, name: decodeEntities(saved.name) };
     setCategories(prev => prev.some(item => item.name.toLowerCase() === created.name.toLowerCase())
       ? prev.map(item => item.name.toLowerCase() === created.name.toLowerCase() ? { ...item, ...created } : item)
       : [...prev, created]);

@@ -6,9 +6,16 @@
 // again: a name saved with the tick in the Category box is stored there straight away, before any
 // service, estimate or package carries it. Everything else here is a name already in use, which is
 // why only a `service_categories` row that nothing else offers comes back as `removable`.
+//
+// Every name is stored HTML-escaped (middleware/security.js escapes each request) and handed back
+// decoded, so "Lift/Elevator" reads as typed rather than "Lift&#x2F;Elevator", and is one entry
+// whether it was saved once or saved again after being loaded into a form.
+const { decodeEntities } = require('./htmlEntities');
+const { sanitizeString } = require('../middleware/security');
+
 const MAX_NAME_LENGTH = 100;
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
-const key = name => String(name ?? '').trim().toLowerCase();
+const key = name => decodeEntities(String(name ?? '')).trim().replace(/\s+/g, ' ').toLowerCase();
 
 // A missing table or column must not cost the whole dropdown, so a failing source is skipped.
 // Adding and deleting use pool.execute directly: there the error is the answer.
@@ -80,7 +87,7 @@ const categoryOptions = async (pool, scopeId) => {
     const identity = key(name);
     if (!identity || seen.has(identity)) return;
     seen.add(identity);
-    options.push({ name: String(name).trim(), id, removable });
+    options.push({ name: decodeEntities(String(name)).trim(), id, removable });
   };
   inherited.forEach(name => push(name));
   // A name this table holds that something else already offers keeps that first entry, so it stays
@@ -92,21 +99,23 @@ const categoryOptions = async (pool, scopeId) => {
 // Saving a name the list already offers is not an error: the box ends up holding what was typed,
 // which is all the tick promises. Nothing is inserted in that case.
 const addCategory = async (pool, scopeId, rawName, userId = null) => {
-  const name = String(rawName ?? '').trim().replace(/\s+/g, ' ');
+  const name = decodeEntities(String(rawName ?? '')).trim().replace(/\s+/g, ' ');
   if (!name) fail('Enter a category name.');
   if (name.length > MAX_NAME_LENGTH) fail(`A category name can be at most ${MAX_NAME_LENGTH} characters.`);
   const existing = (await categoryOptions(pool, scopeId)).find(option => key(option.name) === key(name));
   if (existing) return existing;
   const scope = Number(scopeId) || 0;
+  // Stored escaped, the way every other name the list reads from is stored
+  const storedName = sanitizeString(name);
   try {
     const [result] = await pool.execute('INSERT INTO service_categories (scope_id, name, created_by) VALUES (?, ?, ?)',
-      [scope, name, userId ?? null]);
+      [scope, storedName, userId ?? null]);
     return { name, id: result.insertId, removable: true };
   } catch (error) {
     if (error.code !== 'ER_DUP_ENTRY') throw error;
     // Two people typed the same new category at once; the one already stored is the answer
-    const [[row]] = await pool.execute('SELECT id, name FROM service_categories WHERE name = ? AND scope_id = ?', [name, scope]);
-    return { name: row?.name || name, id: row?.id ?? null, removable: true };
+    const [[row]] = await pool.execute('SELECT id, name FROM service_categories WHERE name = ? AND scope_id = ?', [storedName, scope]);
+    return { name: row?.name ? decodeEntities(row.name) : name, id: row?.id ?? null, removable: true };
   }
 };
 

@@ -7,7 +7,7 @@ const config = (overrides = {}) => ({
   service_name: 'Generator Maintenance', category: 'Generator', pricing_method: 'fixed_price', unit: 'Visit',
   applicable_property_types: ['APT', 'GC'], default_frequency: 'Monthly', default_visits_per_year: 12,
   allow_frequency_override: true, allow_manual_visits: false, default_markup_percentage: 50,
-  description: '', fixed_price: 100, ...overrides
+  description: 'Routine maintenance visit', fixed_price: 100, ...overrides
 });
 const quote = (overrides, inputs = {}) => calculateServiceQuote(validateService(config(overrides)), { property_type: 'APT', ...inputs }, 'admin');
 
@@ -29,7 +29,7 @@ test('lift reference calculates slab, operating cost, customer price and profit 
   assert.equal(calculateEstimateSummary([result]).gst, 2624);
   assert.equal(calculateEstimateSummary([result]).total, 17204);
   assert.equal(quote(lift, { capacity: 21 }).requiresCustomQuote, true);
-  assert.throws(() => quote(lift, { capacity: 0 }), /below the first/i);
+  assert.throws(() => quote(lift, { capacity: 0 }), /below the lowest/i);
   assert.equal(calculateEstimateSummary([result], 50).profit, -3510);
   assert.equal(quote(lift, { capacity: 10, markup_percentage: 0 }).profit, 0);
   assert.throws(() => quote(lift, { capacity: 10, operating_cost: -1 }), /operating cost/i);
@@ -106,17 +106,22 @@ test('manpower range boundaries, missing areas, minimum headcount and overtime a
   assert.throws(() => quote({ ...manpower, overtime_rate_per_hour: null }, { area: 1500, overtime_hours_per_visit: 1 }), /overtime/i);
   assert.equal(quote({ ...manpower, manpower_ranges: [] }, { personnel: 2 }).vendorCost, 10800);
   assert.throws(() => quote({ ...manpower, manpower_ranges: [], minimum_manpower: 2 }, { personnel: 1 }), /personnel/i);
-  assert.throws(() => quote({ ...manpower, manpower_ranges: manpower.manpower_ranges.slice(0, 1) }, { area: 2000 }), /range/i);
+  const outside = quote({ ...manpower, manpower_ranges: manpower.manpower_ranges.slice(0, 1) }, { area: 2000 });
+  assert.equal(outside.inputs.manpower_range, undefined);
+  assert.equal(outside.vendorCost, quote({ ...manpower, manpower_ranges: [] }, { personnel: outside.inputs.personnel }).vendorCost);
 });
 
-test('manpower template rejects gaps, overlaps, invalid recommendations and invalid rates', () => {
+test('manpower ranges may overlap, leave gaps or start anywhere; invalid rows are still rejected', () => {
   for (const ranges of [
     [{ ...manpower.manpower_ranges[0], areaFrom: 2 }],
     [manpower.manpower_ranges[0], { ...manpower.manpower_ranges[1], areaFrom: 1000 }],
     [manpower.manpower_ranges[0], { ...manpower.manpower_ranges[1], areaFrom: 1002 }],
+    [{ ...manpower.manpower_ranges[0], areaTo: null }, manpower.manpower_ranges[1]]
+  ]) assert.doesNotThrow(() => validateService(config({ ...manpower, manpower_ranges: ranges })));
+  for (const ranges of [
     [{ ...manpower.manpower_ranges[0], recommendedMin: 3, recommendedMax: 2 }],
     [{ ...manpower.manpower_ranges[0], ratePerPerson: -1 }],
-    [{ ...manpower.manpower_ranges[0], areaTo: null }, manpower.manpower_ranges[1]]
+    [{ ...manpower.manpower_ranges[0], areaFrom: 500, areaTo: 100 }]
   ]) assert.throws(() => validateService(config({ ...manpower, manpower_ranges: ranges })), /range/i);
   for (const overrides of [{ manpower_basis: 'invalid' }, { working_hours_per_visit: 25 }, { minimum_manpower: 0 }, { rate_per_person: '' }, { overtime_rate_per_hour: -1 }]) assert.throws(() => validateService(config({ ...manpower, ...overrides })));
 });
@@ -490,12 +495,27 @@ test('slab schedules validate values and preserve legacy service-level defaults'
   assert.equal(quote({ ...service, capacity_slabs: [{ ...slab, defaultFrequency: 'Quarterly' }] }, { capacity: 75 }).visits, 4);
 });
 
-test('invalid, overlapping, gapped, and premature open-ended slabs are rejected', () => {
-  for (const slabs of [[],
+test('empty and inverted slabs are rejected', () => {
+  for (const slabs of [[], [{ capacityFrom: 30, capacityTo: 10, vendorRate: 1 }]])
+    assert.throws(() => validateService(config({ pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: slabs })), /slab/i);
+});
+
+test('overlapping, gapped and open-ended slabs in any position are accepted and price from the tightest slab', () => {
+  for (const slabs of [
     [{ capacityFrom: 0, capacityTo: 25, vendorRate: 1 }, { capacityFrom: 25, capacityTo: 50, vendorRate: 1 }],
     [{ capacityFrom: 0, capacityTo: 25, vendorRate: 1 }, { capacityFrom: 27, capacityTo: 50, vendorRate: 1 }],
     [{ capacityFrom: 0, capacityTo: null, vendorRate: 1 }, { capacityFrom: 26, capacityTo: 50, vendorRate: 1 }]
-  ]) assert.throws(() => validateService(config({ pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: slabs })), /slab/i);
+  ]) assert.doesNotThrow(() => validateService(config({ pricing_method: 'capacity_slab', unit: 'KVA', capacity_slabs: slabs })));
+  const lift = { pricing_method: 'capacity_slab', unit: 'Persons', default_markup_percentage: 0, capacity_slabs: [
+    { name: '0+ Persons', capacityFrom: 0, capacityTo: null, isCustomQuote: true },
+    { name: '0–6 Persons', capacityFrom: 0, capacityTo: 6, vendorRate: 8000 },
+    { name: '0–3 Persons', capacityFrom: 0, capacityTo: 3, vendorRate: 6000 }
+  ] };
+  assert.equal(quote(lift, { capacity: 2 }).vendorRatePerVisit, 6000);
+  assert.equal(quote(lift, { capacity: 5 }).vendorRatePerVisit, 8000);
+  assert.equal(quote(lift, { capacity: 9 }).requiresCustomQuote, true);
+  const gapped = { ...lift, capacity_slabs: [{ capacityFrom: 0, capacityTo: 3, vendorRate: 6000 }, { capacityFrom: 10, capacityTo: 20, vendorRate: 9000 }] };
+  assert.equal(quote(gapped, { capacity: 5 }).requiresCustomQuote, true);
 });
 
 test('configuration rejects invalid names, percentages, property types, units, and rates', () => {
@@ -506,6 +526,68 @@ test('configuration rejects invalid names, percentages, property types, units, a
     { default_frequency: 'Never' }, { default_visits_per_year: 3 }, { default_markup_percentage: -1 },
     { applicable_property_types: ['COMMERCIAL'] }, { allow_manual_visits: 'false' }
   ]) assert.throws(() => validateService(config(overrides)));
+});
+
+// The exact shape AddServicePage posts: every method's fields are sent, most of them unused
+const formPayload = overrides => ({
+  service_name: 'Housekeeping', category: 'Housekeeping', unit: 'Person', applicable_property_types: ['APT', 'GC'],
+  default_frequency: 'Monthly', default_visits_per_year: 12, allow_frequency_override: false, allow_manual_visits: false,
+  skip_vendor_assignment: false, default_markup_percentage: 20, default_operating_cost: 0, description: 'Daily cleaning of common areas',
+  rate_per_unit: 0, fixed_price: 0, rate_per_quantity: 0, rate_per_capacity: 0, capacity_slabs: null,
+  manpower_basis: 'per_visit', rate_per_person: 600, role_designation: 'Housekeeping Staff', working_hours_per_visit: 8,
+  overtime_rate_per_hour: 100, minimum_manpower: 2, monthly_rate: 0, billing_period: 'Monthly', period_months: 12,
+  manpower_ranges: [], ...overrides
+});
+
+test('the Manpower Requirement Template saves exactly what the form sends and reads back the same', () => {
+  const ranges = [
+    { areaFrom: 0, areaTo: 1000, recommendedMin: 2, recommendedMax: 3, ratePerPerson: 600 },
+    { areaFrom: 1001, areaTo: 5000, recommendedMin: 3, recommendedMax: 5, ratePerPerson: 550 },
+    { areaFrom: 5001, areaTo: null, recommendedMin: 5, recommendedMax: 8, ratePerPerson: 500 }
+  ];
+  const saved = validateService(formPayload({ pricing_method: 'manpower', manpower_ranges: ranges }));
+  assert.deepEqual(saved.manpower_ranges, ranges);
+  for (const field of ['manpower_basis', 'rate_per_person', 'role_designation', 'working_hours_per_visit', 'overtime_rate_per_hour', 'minimum_manpower']) {
+    assert.equal(saved[field], formPayload({})[field], field);
+  }
+  // Stored, read back and saved again unchanged
+  const reread = JSON.parse(JSON.stringify(saved));
+  assert.deepEqual(validateService(reread), saved);
+  // Each range prices with its own rate and suggests its own headcount
+  const quoteFor = area => calculateServiceQuote(saved, { property_type: 'APT', area }, 'admin');
+  assert.equal(quoteFor(800).inputs.personnel, 2);
+  assert.equal(quoteFor(3000).inputs.personnel, 3);
+  assert.equal(quoteFor(3000).vendorCost, 3 * 550 * 12);
+  assert.equal(quoteFor(9000).inputs.manpower_range.recommendedMin, 5);
+  // No template at all is a valid service too, priced at the base rate
+  assert.equal(calculateServiceQuote(validateService(formPayload({ pricing_method: 'manpower' })), { property_type: 'APT', personnel: 2 }, 'admin').vendorCost, 2 * 600 * 12);
+  // A recommended maximum below the service's minimum manpower is refused, as the form's own min= says
+  assert.throws(() => validateService(formPayload({ pricing_method: 'manpower', manpower_ranges: [{ ...ranges[0], recommendedMin: 1, recommendedMax: 1 }] })), /range 1/i);
+});
+
+test('capacity slabs keep their names through the form payload', () => {
+  const saved = validateService(formPayload({ pricing_method: 'capacity_slab', unit: 'Persons', capacity_slabs: [
+    { name: '0–3 Persons', capacityFrom: 0, capacityTo: 3, vendorRate: 6000, isCustomQuote: false, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 },
+    { name: '', capacityFrom: 0, capacityTo: null, vendorRate: null, isCustomQuote: true, defaultFrequency: 'Monthly', defaultVisitsPerYear: 12 }
+  ] }));
+  assert.deepEqual(saved.capacity_slabs.map(slab => slab.name), ['0–3 Persons', '']);
+});
+
+test('a service must carry a description', () => {
+  for (const description of [undefined, '', '   ']) {
+    assert.throws(() => validateService(config({ description })), /description is required/i);
+  }
+  assert.throws(() => validateService(config({ description: 'x'.repeat(501) })), /description/i);
+  assert.equal(validateService(config({ description: '  Covers the pumps  ' })).description, 'Covers the pumps');
+});
+
+test('a unit saved from the form is accepted for its own unit type only, in its saved spelling', () => {
+  const slab = { pricing_method: 'capacity_slab', capacity_slabs: [{ capacityFrom: 0, capacityTo: null, vendorRate: 100 }] };
+  assert.throws(() => validateService(config({ ...slab, unit: 'Cubic Feet' })), /valid pricing method and unit/i);
+  assert.equal(validateService(config({ ...slab, unit: 'cubic  feet' }), { customUnits: ['Cubic Feet'] }).unit, 'Cubic Feet');
+  // A built-in unit of another type stays refused, saved units or not
+  assert.throws(() => validateService(config({ unit: 'KL' }), { customUnits: ['Cubic Feet'] }), /valid pricing method and unit/i);
+  assert.throws(() => validateService(config({ pricing_method: 'unknown', unit: 'Cubic Feet' }), { customUnits: ['Cubic Feet'] }));
 });
 
 test('estimate inputs reject unsupported properties, missing quantity, zero visits and invalid quotes', () => {

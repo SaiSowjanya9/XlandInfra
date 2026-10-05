@@ -5,7 +5,8 @@ const { requireRole } = require('../middleware/rbac');
 const { requireManagerScope } = require('../middleware/managerScope');
 const { getAssignedZones, getEmployeeIdForZoneLookup, getCreatorIdentifier, buildPropertyZoneOrCreatorFilter, buildOnboardedPropertyZoneOrCreatorFilter } = require('../middleware/zoneHelper');
 const { calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
-const { parseService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
+const { parseService, clientService, priceCustomEstimate, buildCatalogAddons } = require('./serviceCatalog');
+const { unitOptions } = require('../utils/serviceUnits');
 const { isManualService, normalizeManualService } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { categoryOptions } = require('../utils/serviceCategories');
@@ -64,11 +65,15 @@ const quoteEstimate = async req => {
   const body = req.body;
   if (!Array.isArray(body.rows) || !body.rows.length || body.rows.length > 100) fail('Add between 1 and 100 service rows.');
   if (!Number.isSafeInteger(Number(body.property_id)) || Number(body.property_id) <= 0) fail('Select a property.');
-  const ids = [...new Set(body.rows.map(row => Number(row?.vendor_id)))];
+  // A row for a service arranged without a vendor carries none; priceCustomEstimate decides which
+  // services need one. Every vendor that is given must still be in scope.
+  const ids = [...new Set(body.rows.filter(row => row?.vendor_id != null && row.vendor_id !== '').map(row => Number(row.vendor_id)))];
   if (ids.some(id => !Number.isSafeInteger(id) || id <= 0)) fail('Select a vendor for each service.');
   const scope = await context(req);
   const [properties, vendors] = await Promise.all([
-    propertiesForScope(scope, Number(body.property_id), body.property_source || 'onboarded_properties'), vendorsForScope(scope, ids)
+    propertiesForScope(scope, Number(body.property_id), body.property_source || 'onboarded_properties'),
+    // No vendor given at all (every service skips one) is nothing to look up, and `IN ()` is not SQL
+    ids.length ? vendorsForScope(scope, ids) : []
   ]);
   if (!properties.length) fail('Property is outside your assigned scope.', 403);
   if (ids.some(id => !vendors.some(vendor => Number(vendor.id) === id))) fail('A vendor is outside your assigned scope.', 403);
@@ -78,9 +83,14 @@ const quoteEstimate = async req => {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM service_catalog WHERE scope_id IN (0, ?) ORDER BY created_at DESC, id DESC', [req.catalogFpId]);
-    const services = rows.map(parseService).filter(service => !req.query.propertyType || service.applicable_property_types.includes(normalizePropertyType(req.query.propertyType)));
+    const services = rows.map(clientService).filter(service => !req.query.propertyType || service.applicable_property_types.includes(normalizePropertyType(req.query.propertyType)));
     res.json({ success: true, data: services });
   } catch (error) { handleError(res, error); }
+});
+// Read-only like the categories: the unit box lists what exists but cannot add to it
+router.get('/units', async (req, res) => {
+  try { res.json({ success: true, data: await unitOptions(pool, req.catalogFpId, req.query.pricing_method), canManage: false }); }
+  catch (error) { handleError(res, error); }
 });
 // The service form reads its Category suggestions from the catalog it is pointed at, so this has
 // to answer for the Manager too -- without it the dropdown is empty and the form says it cannot

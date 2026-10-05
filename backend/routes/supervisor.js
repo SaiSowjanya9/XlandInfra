@@ -3,6 +3,7 @@
  * All routes are scoped to the logged-in supervisor's data
  */
 
+const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./staffServiceCatalog');
 const express = require('express');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -247,6 +248,9 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // Apply authentication middleware to all routes below
 router.use(authenticate);
 router.use(attachSupervisorScope);
+
+// The configured services, read-only, for the estimate form's Add Service menu
+router.use('/service-catalog', requireSupervisorScope, createStaffCatalogRouter('supervisor'));
 
 // =====================================================
 // DASHBOARD (FP-scoped - shows ALL FP data)
@@ -2355,7 +2359,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
   }
 });
 
-router.post('/estimates', requireSupervisorScope, async (req, res) => {
+router.post('/estimates', requireSupervisorScope, validateStaffCatalogEstimate('supervisor'), async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || 1;
