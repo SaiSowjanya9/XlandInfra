@@ -21,6 +21,7 @@ import {
   getEstimateUnits, formatAddonsForExport, FREQUENCY_COUNT_MAP
 } from '../utils/estimateStore';
 import * as XLSX from 'xlsx';
+import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -753,7 +754,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       try { servicesData = JSON.parse(servicesData); } catch (e) { return servicesData || '-'; }
     }
     const serviceRows = servicesData?.serviceRows || servicesData || [];
-    return Array.isArray(serviceRows) ? serviceRows.map(s => s.name || s.service || 'Service').join(', ') : '-';
+    return Array.isArray(serviceRows) ? serviceRows.map(s => decodeHtml(s.name || s.service || 'Service')).join(', ') : '-';
   };
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
@@ -1517,7 +1518,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Services Included</th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Rate</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1533,32 +1533,12 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                             }
                           };
                           return (
-                            <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-6 py-4"><span className="font-semibold text-gray-900">{pkg.name || 'Unnamed Package'}</span></td>
+                            <tr key={pkg.id} onClick={() => setViewAmcPackage({ ...pkg, servicesData: getPackageServices(pkg), serviceRows: Array.isArray(getPackageServices(pkg)) ? getPackageServices(pkg) : [], propertyType: getPackagePropertyType(pkg), billingDuration: pkg.billing_duration })} className="hover:bg-gray-50 transition-colors cursor-pointer" title="View package">
+                              <td className="px-6 py-4"><span className="font-semibold text-gray-900 hover:text-blue-600 hover:underline">{decodeHtml(pkg.name) || 'Unnamed Package'}</span></td>
                               <td className="px-4 py-4"><span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full border border-slate-200 whitespace-nowrap">{getPropertyTypeLabel(getPackagePropertyType(pkg))}</span></td>
                               <td className="px-4 py-4"><span className={`px-2.5 py-1 text-xs font-medium rounded-full border whitespace-nowrap ${getBillingBadgeColor(pkg.billing_duration)}`}>{BILLING_DURATIONS.find(d => d.value === pkg.billing_duration)?.label || 'Monthly'}</span></td>
-                              <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={servicesText}>{servicesText}</p></td>
+                              <td className="px-4 py-4 max-w-xs"><p className="text-sm text-gray-600 truncate" title={decodeHtml(servicesText)}>{decodeHtml(servicesText)}</p></td>
                               <td className="px-4 py-4 text-right"><span className="text-lg font-bold text-slate-800">{formatCurrency(getPackagePrice(pkg))}</span></td>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center justify-center gap-1">
-                                  <button 
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const servicesData = getPackageServices(pkg);
-                                      const serviceRows = Array.isArray(servicesData) ? servicesData : [];
-                                      const propertyType = getPackagePropertyType(pkg);
-                                      const billingDuration = pkg.billing_duration;
-                                      setViewAmcPackage({ ...pkg, servicesData, serviceRows, propertyType, billingDuration });
-                                    }}
-                                    className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer" 
-                                    title="View"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
                             </tr>
                           );
                         })}
@@ -1867,104 +1847,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* View AMC Package Modal */}
-      {viewAmcPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => setViewAmcPackage(null)}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold text-gray-800">AMC Package Details</h3>
-              <button onClick={() => setViewAmcPackage(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Package Header */}
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-5 rounded-xl border border-indigo-100">
-                <h4 className="text-xl font-bold text-indigo-900">{viewAmcPackage.name}</h4>
-                <p className="text-sm text-indigo-600 mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
-              </div>
-
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Property Type</p>
-                  <p className="font-semibold text-gray-900">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Billing</p>
-                  <p className="font-semibold text-gray-900 capitalize">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Yearly'}</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 mb-1">Total Price</p>
-                  <p className="font-bold text-xl text-green-600">{formatCurrency(getPackagePrice(viewAmcPackage))}</p>
-                </div>
-              </div>
-
-              {/* Services Included */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-4">Services Included</p>
-                {viewAmcPackage.serviceRows && viewAmcPackage.serviceRows.length > 0 ? (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-                      <div className="col-span-1 text-xs font-semibold text-gray-600">#</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-gray-600 text-center">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-gray-600 text-center">Visits</div>
-                    </div>
-                    {/* Service Rows */}
-                    {viewAmcPackage.serviceRows.map((svc, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-4 bg-blue-50/50 border-b border-blue-100 last:border-b-0">
-                        <div className="col-span-1">
-                          <span className="w-7 h-7 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                        </div>
-                        <div className="col-span-2 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm" style={{wordBreak: 'break-word'}}>{decodeHtml(svc.name || svc.service) || 'Service'}</p>
-                        </div>
-                        <div className="col-span-5">
-                          <p className={`text-sm text-gray-600 text-center`}>
-                            {decodeHtml(svc.description)?.trim() || '-'}
-                          </p>
-                        </div>
-                        <div className="col-span-2 text-center">
-                          <p className="text-sm text-gray-700">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
-                        </div>
-                        <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-gray-900">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400 italic">No services listed</p>
-                )}
-              </div>
-
-              {/* Price Summary */}
-              <div>
-                <h4 className="text-sm font-bold text-gray-800 mb-4 text-center uppercase">Price Summary</h4>
-                <div className="bg-gray-50 rounded-xl p-5 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                    <span className="font-bold text-gray-800">TOTAL:</span>
-                    <span className="font-bold text-xl text-green-600">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* An AMC package opens full screen, as an estimate does from All Estimates */}
+      <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} />
       {/* Edit Estimate Modal - Direct Estimates Only */}
       {editEstimate && editEstimateForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>

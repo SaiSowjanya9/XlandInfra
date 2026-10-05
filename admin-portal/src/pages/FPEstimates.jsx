@@ -39,6 +39,7 @@ import EstimateDraftServicesTable from '../components/estimates/EstimateDraftSer
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
+import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -3265,13 +3266,17 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       try { servicesData = JSON.parse(servicesData); } catch (e) { servicesData = null; }
                     }
                     const serviceRows = servicesData?.serviceRows || servicesData || [];
-                    const servicesText = Array.isArray(serviceRows) ? serviceRows.map(s => s.name || s.service || s).join(', ') : '-';
+                    const servicesText = Array.isArray(serviceRows) ? serviceRows.map(s => decodeHtml(s.name || s.service || s)).join(', ') : '-';
                     const propertyType = servicesData?.property_type || pkg.property_type;
                     const billingDuration = servicesData?.billing_duration || pkg.billing_duration;
+                    // The row and its name open the package full screen, as an estimate opens from
+                    // All Estimates; the action buttons stop the click so they never open it too
+                    const openPackage = () => openViewPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration });
                     return (
-                      <tr key={pkg.id} className="hover:bg-warm-section transition-colors">
+                      <tr key={pkg.id} onClick={openPackage} className="hover:bg-warm-section transition-colors cursor-pointer" title="View package">
                         <td className="px-6 py-4">
-                          <span className="font-semibold text-warm-text">{pkg.name || 'Unnamed Package'}</span>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); openPackage(); }}
+                            className="text-left font-semibold text-warm-text hover:text-warm-accent-hover hover:underline">{decodeHtml(pkg.name) || 'Unnamed Package'}</button>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex flex-wrap gap-1">
@@ -3298,20 +3303,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                         )}
                         {/* Action buttons - Hidden for FP Manager */}
                         {!isFPManager && (
-                          <td className="px-4 py-4">
+                          <td className="px-4 py-4 cursor-default" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
-                              <button 
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  openViewPackage({ ...pkg, servicesData: serviceRows, propertyType, billingDuration });
-                                }}
-                                className="p-2 text-warm-muted hover:text-warm-accent-hover hover:bg-warm-accent-soft rounded-[10px] transition-colors cursor-pointer" 
-                                title="View"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
                               <button 
                                 onClick={() => {
                                   setEditingAmcPackage(pkg.id);
@@ -4034,112 +4027,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       {renderCustomServiceDialog()}
       {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-[10px] shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
 
-      {/* View AMC Package Modal */}
-      {viewAmcPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={closeViewPackage}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-warm-border/70 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-semibold text-warm-text">AMC Package Details</h3>
-              <button onClick={closeViewPackage} className="p-2 hover:bg-warm-section rounded-[10px] transition-colors">
-                <X className="w-5 h-5 text-warm-muted" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              {/* Package Header */}
-              <div className="bg-warm-section p-5 rounded-xl border border-warm-border">
-                <h4 className="text-xl font-bold text-warm-text">{viewAmcPackage.name}</h4>
-                <p className="text-sm text-warm-accent-hover mt-1">{viewAmcPackage.package_code || `PKG-${viewAmcPackage.id}`}</p>
-              </div>
-
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-warm-section p-4 rounded-xl">
-                  <p className="text-xs text-warm-muted mb-1">Property Type</p>
-                  {/* Every type the package applies to, not only the first */}
-                  <p className="font-semibold text-warm-text">{(getPkgPropertyTypes(viewAmcPackage).length ? getPkgPropertyTypes(viewAmcPackage) : [viewAmcPackage.propertyType]).map(getPropertyTypeLabel).join(', ')}</p>
-                </div>
-                <div className="bg-warm-section p-4 rounded-xl">
-                  <p className="text-xs text-warm-muted mb-1">Billing</p>
-                  <p className="font-semibold text-warm-text capitalize">{viewAmcPackage.billingDuration?.replace('-', ' ') || 'Yearly'}</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-xl">
-                  <p className="text-xs text-warm-muted mb-1">Total Price</p>
-                  <p className="font-bold text-xl text-green-600">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
-                </div>
-              </div>
-
-              {decodeHtml(viewAmcPackage.description)?.trim() && (
-                <div>
-                  <p className="text-xs text-warm-muted mb-1">Description</p>
-                  <p className="text-sm text-warm-text whitespace-pre-wrap [overflow-wrap:anywhere]">{decodeHtml(viewAmcPackage.description)}</p>
-                </div>
-              )}
-
-              {/* Services Included */}
-              <div>
-                <p className="text-sm font-semibold text-warm-text mb-4">Services Included</p>
-                {viewAmcPackage.servicesData && viewAmcPackage.servicesData.length > 0 ? (
-                  <div className="border border-warm-border rounded-xl overflow-hidden">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-warm-section border-b border-warm-border">
-                      <div className="col-span-1 text-xs font-semibold text-warm-muted">#</div>
-                      <div className="col-span-2 text-xs font-semibold text-warm-muted">Service</div>
-                      <div className="col-span-5 text-xs font-semibold text-warm-muted text-center">Description</div>
-                      <div className="col-span-2 text-xs font-semibold text-warm-muted text-center">Frequency</div>
-                      <div className="col-span-2 text-xs font-semibold text-warm-muted text-center">Visits</div>
-                    </div>
-                    {/* Service Rows */}
-                    {viewAmcPackage.servicesData.map((svc, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 items-center px-4 py-4 bg-warm-accent-soft/50 border-b border-warm-border/70 last:border-b-0">
-                        <div className="col-span-1">
-                          <span className="w-7 h-7 bg-warm-text text-white text-xs font-bold rounded-full flex items-center justify-center">{idx + 1}</span>
-                        </div>
-                        <div className="col-span-2 min-w-0">
-                          <p className="font-medium text-warm-text text-sm" style={{wordBreak: 'break-word'}}>{decodeHtml(svc.name || svc.service) || 'Service'}</p>
-                        </div>
-                        <div className="col-span-5 min-w-0 overflow-hidden">
-                          <p className="text-sm text-warm-muted text-center" style={{wordBreak: 'break-word', overflowWrap: 'anywhere'}}>
-                            {decodeHtml(svc.description)?.trim() || '-'}
-                          </p>
-                        </div>
-                        <div className="col-span-2 text-center min-w-0">
-                          <p className="text-sm text-warm-text truncate">{svc.frequency_type || svc.frequencyType || svc.frequency || 'Monthly'}</p>
-                        </div>
-                        <div className="col-span-2 text-center">
-                          <p className="text-sm font-medium text-warm-text">{svc.frequency_count ?? svc.frequencyCount ?? svc.visits ?? 0}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-warm-muted italic">No services listed</p>
-                )}
-              </div>
-
-              {/* Price Summary */}
-              <div>
-                <h4 className="text-sm font-bold text-warm-text mb-4 text-center uppercase">Price Summary</h4>
-                <div className="bg-warm-section rounded-xl p-5 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-warm-muted">Subtotal:</span>
-                    <span className="font-semibold text-warm-text">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-warm-muted">GST ({viewAmcPackage.gst_percentage || 0}%):</span>
-                    <span className="font-semibold text-warm-text">{formatCurrency(((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-warm-border">
-                    <span className="font-bold text-warm-text">TOTAL:</span>
-                    <span className="font-bold text-xl text-green-600">{formatCurrency((viewAmcPackage.price || viewAmcPackage.base_price) + (((viewAmcPackage.price || viewAmcPackage.base_price) * (viewAmcPackage.gst_percentage || 0)) / 100))}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* An AMC package opens full screen, as an estimate does from All Estimates */}
+      <AMCPackageDetailView pkg={viewAmcPackage} onClose={closeViewPackage} />
 
       {/* Edit Estimate Modal */}
       {editEstimate && editEstimateForm && (
