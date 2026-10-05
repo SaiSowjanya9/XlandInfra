@@ -7,6 +7,7 @@ import { customServiceValues, customVisitsComplaint } from './CustomServicesTabl
 import { capitalizeFirst } from '../../utils/text';
 import AutocompleteInput from '../common/AutocompleteInput';
 import useServiceCategories from '../../hooks/useServiceCategories';
+import useScrollLock from '../../hooks/useScrollLock';
 
 // A service typed in by hand is entered here rather than in the table row, because a row has no
 // space for what one needs: a category, a quantity and whether the job needs a vendor as well as
@@ -40,6 +41,8 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
   const [values, setValues] = useState(() => customServiceValues(editing));
   const [problem, setProblem] = useState('');
   const nameRef = useRef(null);
+  // The page stays put while the dialog is open over it
+  useScrollLock(open);
   // Category suggestions are the service catalog's own, so a category used on a configured service
   // and one typed here are offered from the same list -- and saved into the same list
   const { categories, canManage, createCategory, deleteCategory } = useServiceCategories({ apiPath, fpId, enabled: open });
@@ -122,7 +125,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
   const readOnlyField = `${field} ${skin.readOnlyBg} cursor-not-allowed`;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="custom-service-title">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="custom-service-title">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div>
@@ -133,7 +136,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
             className={`shrink-0 rounded-[10px] p-1.5 ${skin.faint} ${skin.iconMuted}`}><X className="h-4 w-4" /></button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className={label}>Service <span className="text-red-500">*</span></span>

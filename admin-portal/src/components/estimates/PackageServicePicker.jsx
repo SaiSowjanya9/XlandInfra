@@ -5,6 +5,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { FREQUENCY_COUNT_MAP } from '../../utils/estimateStore';
 import { methodLabel, propertyTypeLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import useScrollLock from '../../hooks/useScrollLock';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -22,6 +23,8 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [picked, setPicked] = useState([]);
+  // The page stays put while the list is open over it
+  useScrollLock(open);
   const token = getAuthToken();
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
   if (!open) return null;
   const typeLabels = propertyTypes.map(propertyTypeLabel).filter(Boolean).join(', ');
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="package-service-picker-title">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="package-service-picker-title">
       <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div className="min-w-0">
@@ -84,7 +87,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
               className={`w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 ${skin.fieldSoft}`} />
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
           {loading ? <p className={`flex items-center gap-2 py-6 text-sm ${skin.muted}`}><Loader2 className="h-4 w-4 animate-spin" />Loading services...</p>
             : error ? <p role="alert" className="py-6 text-sm text-red-600">{error}</p>
             : !shown.length ? <p className={`py-6 text-center text-sm ${skin.muted}`}>

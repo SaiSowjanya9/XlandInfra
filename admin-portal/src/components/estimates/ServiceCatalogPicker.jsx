@@ -7,6 +7,7 @@ import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import useScrollLock from '../../hooks/useScrollLock';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // The dropdown sits on the panel's own tint; the dialog's fields sit on white and follow the
@@ -62,6 +63,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   const quoteRequest = useRef(null);
   const token = getAuthToken();
   const service = services.find(item => String(item.id) === selectedId);
+  // The page stays put while a service's details are open over it
+  useScrollLock(Boolean(service));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -135,17 +138,23 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
   // Anchored to the button: above it when there is room, below it when there is not, and right-aligned
   // so a wide list never runs off the edge of the screen.
   const MENU_HEIGHT = 320;
-  const openMenu = () => {
+  // Where the menu goes for the button as it is on screen now. Null once the button is out of view.
+  const placeMenu = () => {
     const rect = menuRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect || rect.bottom < 0 || rect.top > window.innerHeight) return null;
     const above = rect.top > MENU_HEIGHT + 16;
-    setMenuPosition({
+    return {
       right: Math.max(8, window.innerWidth - rect.right),
       ...(above ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }),
       // Never collapse to nothing in a short viewport: it scrolls instead
       maxHeight: Math.max(180, Math.min(MENU_HEIGHT, (above ? rect.top : window.innerHeight - rect.bottom) - 16)),
       minWidth: Math.max(rect.width, 260)
-    });
+    };
+  };
+  const openMenu = () => {
+    const position = placeMenu();
+    if (!position) return;
+    setMenuPosition(position);
     setMenuOpen(true);
   };
   // Closes on a click elsewhere or Escape, like any dropdown. The panel is outside this component's
@@ -157,13 +166,25 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
       setMenuOpen(false);
     };
     const onKeyDown = event => { if (event.key === 'Escape') setMenuOpen(false); };
-    // Fixed coordinates go stale the moment the page moves, so the menu closes rather than drifting
-    const onReflow = () => setMenuOpen(false);
+    // The menu follows its button as the page scrolls or resizes. It used to close on any scroll at
+    // all -- the listener captures every element's scroll, the menu's own list included -- so the
+    // moment the services were scrolled to find one, the menu vanished. Its own scroll is ignored,
+    // and it closes only once the button itself has left the screen.
+    let frame = 0;
+    const onReflow = event => {
+      if (event?.target instanceof Node && menuPanelRef.current?.contains(event.target)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const position = placeMenu();
+        if (position) setMenuPosition(position); else setMenuOpen(false);
+      });
+    };
     document.addEventListener('mousedown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('resize', onReflow);
     window.addEventListener('scroll', onReflow, true);
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener('mousedown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('resize', onReflow);
@@ -268,7 +289,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
         {menuOpen && menuPosition && createPortal(
           <div ref={menuPanelRef} role="menu" style={{ position: 'fixed', ...menuPosition }}
             className={`z-50 flex max-w-[22rem] flex-col overflow-hidden rounded-xl border bg-white shadow-xl ${skin.border}`}>
-            <div className="min-h-0 overflow-y-auto py-1">
+            <div className="min-h-0 overflow-y-auto overscroll-contain py-1">
               {extraItems.map(item => (
                 <button key={item.key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); item.onSelect(); }}
                   className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium transition-colors ${skin.menuItem}`}>
@@ -307,7 +328,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
 
       {/* Selecting a service opens its details here rather than expanding the panel: the estimate
           gets its row only once OK is pressed, so a service being looked at is never half-added. */}
-      {service && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-service-title">
+      {service && <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-service-title">
         <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
           <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
             <div className="min-w-0">
@@ -322,7 +343,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               className={`shrink-0 rounded-lg p-1.5 disabled:opacity-50 ${skin.faint} ${skin.iconEdit}`}><X className="h-4 w-4" /></button>
           </div>
           {/* The scroll lives on the wrapper: a fieldset is an unreliable flex/scroll container */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <fieldset disabled={saving} className="min-w-0 px-6 py-5">
               {service.description && <p className={`mb-5 text-xs leading-relaxed ${skin.muted}`}>{service.description}</p>}
               <div className="grid gap-4 sm:grid-cols-2">
