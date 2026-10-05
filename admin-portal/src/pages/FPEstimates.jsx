@@ -3481,13 +3481,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <label htmlFor="fp-package-description" className="block text-xs font-medium text-warm-muted mb-1.5">Package Description</label>
                   <textarea
                     id="fp-package-description"
-                    rows={3}
+                    rows={5}
                     maxLength={1000}
                     value={amcForm.description}
                     onChange={(e) => { const description = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, description })); }}
                     placeholder="What this package covers, visit terms, exclusions..."
-                    className="w-full px-4 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                    className="w-full min-h-[120px] px-4 py-3 border border-warm-border rounded-[10px] text-sm leading-relaxed resize-y focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                   />
+                  <p className="mt-1 text-right text-[11px] text-warm-muted">{(amcForm.description || '').length} / 1000</p>
                 </div>
 
                 {/* Service Configuration. Every column a configured service needs to be priced: what
@@ -3636,13 +3637,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           {/* Description: the full width of the row, so it can be read and typed */}
                           <div className="col-span-full">
                             <textarea
-                              rows={2}
+                              rows={3}
                               maxLength={1000}
                               value={row.description || ''}
                               onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
                               placeholder="Service description — what this service covers in the package"
                               aria-label={`${row.service || 'Service'} description`}
-                              className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm resize-y bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                              className="w-full min-h-[80px] px-3 py-2.5 border border-warm-border rounded-[10px] text-sm leading-relaxed resize-y bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                             />
                           </div>
                         </div>

@@ -782,13 +782,14 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <label htmlFor="package-description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">Package Description</label>
                 <textarea
                   id="package-description"
-                  rows={3}
+                  rows={5}
                   maxLength={1000}
                   value={amcForm.description}
                   onChange={(e) => { const description = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, description })); }}
                   placeholder="What this package covers, visit terms, exclusions..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm resize-y focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
+                  className="w-full min-h-[120px] px-4 py-3 border border-gray-300 rounded-lg text-sm leading-relaxed resize-y focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                 />
+                <p className="mt-1 text-right text-[11px] text-gray-400">{(amcForm.description || '').length} / 1000</p>
               </div>
 
               {/* Service Configuration. Every column a configured service needs to be priced: what it
@@ -940,13 +941,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         {/* Description: the full width of the row, so it can be read and typed */}
                         <div className="w-full md:col-span-full">
                           <textarea
-                            rows={2}
+                            rows={3}
                             maxLength={1000}
                             value={row.description || ''}
                             onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
                             placeholder="Service description — what this service covers in the package"
                             aria-label={`${row.service || 'Service'} description`}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-y bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                            className="w-full min-h-[80px] px-3 py-2.5 border border-gray-300 rounded-lg text-sm leading-relaxed resize-y bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                           />
                         </div>
                       </div>
