@@ -5,11 +5,12 @@
  */
 
 const { pool } = require('../config/database');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 
 // Generate unique IDs
 const generateSeriesId = () => `SER-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 const generateOccurrenceId = (seriesPrefix, visitNumber) => `${seriesPrefix}-${String(visitNumber).padStart(2, '0')}`;
-const generateWorkOrderId = () => `WO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+// Work order IDs come from the one shared generator: WO- followed by digits
 
 // Frequency to days mapping
 const FREQUENCY_DAYS = {

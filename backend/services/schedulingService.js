@@ -4,6 +4,7 @@
  */
 
 const { pool } = require('../config/database');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const { assignVendorFilter } = require('../utils/estimateScheduling');
 
 // Generate unique IDs
@@ -685,7 +686,7 @@ async function generateWorkOrdersForUpcomingVisits(daysAhead = 7) {
 
     for (const visit of visits) {
       // Generate unique work order ID
-      const workOrderId = `WO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
+      const workOrderId = generateWorkOrderId();
       
       // Build comprehensive work order description
       const description = `

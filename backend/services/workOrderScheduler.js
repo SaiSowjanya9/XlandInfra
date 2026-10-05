@@ -12,6 +12,7 @@
  */
 
 const cron = require('node-cron');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const { pool } = require('../config/database');
 const { initSchedulingSchema } = require('../config/schedulingSchema');
 const { sendEmail, getWorkOrderNotificationRecipients } = require('./emailService');
@@ -122,7 +123,7 @@ async function generateScheduledWorkOrders() {
     for (const visit of upcomingVisits) {
       try {
         // Generate unique work order ID
-        const workOrderId = generateId('WO');
+        const workOrderId = generateWorkOrderId();
         
         // Build comprehensive work order description
         const description = `

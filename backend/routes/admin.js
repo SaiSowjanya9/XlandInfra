@@ -1,4 +1,5 @@
 const express = require('express');
+const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
@@ -1112,9 +1113,7 @@ router.post('/work-orders', authenticate, managerOrAdmin, async (req, res) => {
     }
 
     // Generate work order ID
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    const workOrderId = `WO-${timestamp}${random}`;
+    const workOrderId = generateWorkOrderId();
 
     // Get franchise partner ID from property if not provided
     let fpId = franchisePartnerId;
