@@ -24,7 +24,9 @@ import {
   Banknote,
   FileCheck,
   Copy,
-  Info
+  Info,
+  Lock,
+  HelpCircle
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -47,7 +49,8 @@ const ALL_PAYMENT_METHODS = [
     description: 'Pay securely using your debit card, credit card or net banking.', 
     icon: CreditCard, 
     type: 'online',
-    badges: ['VISA', 'MC', 'RuPay', 'maestro', 'Net Banking']
+    badges: ['VISA', 'MC', 'RuPay', 'maestro', 'Net Banking'],
+    feeText: 'Processing Fee', feeAmount: '2%', tags: ['Secure Payment', 'Razorpay Trusted']
   },
   { 
     id: 'upi', 
@@ -55,28 +58,32 @@ const ALL_PAYMENT_METHODS = [
     description: 'Scan QR code or pay using any UPI app.', 
     icon: Smartphone, 
     type: 'online',
-    badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM']
+    badges: ['GPay', 'PhonePe', 'Paytm', 'BHIM'],
+    feeText: 'Processing Fee', feeAmount: '2%', tags: ['Instant Payment', 'Razorpay Secured']
   },
   { 
     id: 'bank_transfer', 
     label: 'Bank Transfer', 
     description: 'Transfer directly from your bank account.', 
     icon: Landmark, 
-    type: 'offline'
+    type: 'offline',
+    feeText: 'No Additional Charges', tags: ['Direct Collection', 'No Fees']
   },
   { 
     id: 'cash', 
     label: 'Cash', 
     description: 'Pay with cash at our office / collection point.', 
     icon: Banknote, 
-    type: 'offline'
+    type: 'offline',
+    feeText: 'No Additional Charges', tags: ['Direct Collection', 'No Fees']
   },
   { 
     id: 'cheque', 
     label: 'Cheque', 
     description: 'Pay using cheque.', 
     icon: FileCheck, 
-    type: 'offline'
+    type: 'offline',
+    feeText: 'No Additional Charges', tags: ['Direct Collection', 'No Fees']
   }
 ];
 
@@ -410,7 +417,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 text-left">
+                      <div className="flex-1 min-w-0 text-left">
                         <p className={`font-semibold ${isSelected ? 'text-white' : 'text-dark-200'}`}>
                           {method.label}
                         </p>
@@ -495,6 +502,37 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                             ))}
                           </div>
                         )}
+                      </div>
+
+                      {/* What the method costs: the gateway's processing fee on cards and UPI, nothing on
+                          a direct payment -- the same wording as the emailed payment link */}
+                      <div className="flex-shrink-0 self-start text-right">
+                        {method.feeAmount ? (<>
+                          <p className="text-[11px] text-dark-400">{method.feeText}</p>
+                          <div className="mt-0.5 flex items-center justify-end gap-1">
+                            <span className="text-sm font-semibold text-white">{method.feeAmount}</span>
+                            <HelpCircle className="h-3.5 w-3.5 text-dark-400" aria-hidden="true" />
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-end gap-1">
+                            {method.id === 'upi'
+                              ? <span className="text-[11px] font-semibold text-green-400">{method.tags[0]}</span>
+                              : <><Lock className="h-3 w-3 text-dark-400" /><span className="text-[11px] text-dark-300">{method.tags[0]}</span></>}
+                          </div>
+                          <div className="mt-0.5 flex items-center justify-end gap-1">
+                            <Shield className="h-3 w-3 text-blue-400" />
+                            <span className="text-[11px] font-medium text-blue-400">{method.tags[1]}</span>
+                          </div>
+                        </>) : (<>
+                          <p className="text-xs font-semibold text-green-400">{method.feeText}</p>
+                          <div className="mt-0.5 flex items-center justify-end gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                            <span className="text-[11px] text-dark-300">{method.tags[0]}</span>
+                          </div>
+                          <div className="mt-0.5 flex items-center justify-end gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-500" />
+                            <span className="text-[11px] font-medium text-green-400">{method.tags[1]}</span>
+                          </div>
+                        </>)}
                       </div>
                     </button>
                   );
