@@ -9,7 +9,7 @@ import { capitalizeFirst, decodeDeep, sameEntry } from '../../utils/text';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { primaryInputLabel, unitGroupsFor, unitOptionsFor } from '../../utils/estimatePackageUtils';
 import { useSkinClasses } from '../../utils/estimateTheme';
-import { narrowestRange } from '../../utils/rangeMatch';
+import { capacityForSlab, narrowestRange } from '../../utils/rangeMatch';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -744,7 +744,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                   value={previewSlab ? String(previewSlab.id ?? previewSlab.capacityFrom) : ''}
                   onChange={event => {
                     const chosen = capacitySlabs.find(slab => String(slab.id ?? slab.capacityFrom) === event.target.value);
-                    setExampleCapacity(chosen ? String(chosen.capacityFrom) : '');
+                    // A capacity inside this slab and no tighter one, so overlapping slabs preview too
+                    setExampleCapacity(chosen ? String(capacityForSlab(capacitySlabs, chosen)) : '');
                   }}
                   className={sk(inputClass)}
                 >
@@ -755,7 +756,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 </select>
               </Field>
               {/* The arithmetic still needs a capacity, so the one being priced from is stated */}
-              {previewSlab && <p className={sk("mt-2 text-[11px] text-slate-500")}>Priced at {previewSlab.capacityFrom} {formData.unit}</p>}
+              {previewSlab && <p className={sk("mt-2 text-[11px] text-slate-500")}>Priced at {exampleCapacity} {formData.unit}</p>}
               <dl className={sk("mt-4 space-y-3 text-xs text-slate-600")}>
                 <div className={sk("flex justify-between gap-3")}><dt>Matching Slab</dt><dd className={sk("font-medium text-slate-800")}>{previewSlab ? slabLabel(previewSlab) : '—'}</dd></div>
                 <div className={sk("flex justify-between gap-3")}><dt>Rate Per Visit</dt><dd className={sk("font-medium text-slate-800")}>{currency(slabVendorCost == null ? null : Number(previewSlab.vendorRate))}</dd></div>
