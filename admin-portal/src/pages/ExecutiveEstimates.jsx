@@ -13,11 +13,9 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
-import { estimateProfit } from '../utils/estimateProfitSummary';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
 import EstimatePriceSummary from '../components/estimates/EstimatePriceSummary';
-import EstimateProfitSummaryPanel from '../components/estimates/EstimateProfitSummaryPanel';
 import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport, FREQUENCY_COUNT_MAP
@@ -1848,15 +1846,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="border-t border-gray-100 pt-4">
                 <EstimatePriceSummary estimate={viewEstimate} />
               </div>
-
-              {/* Internal Profit Summary - screen only, the same four figures as the package form */}
-              {(() => {
-                const profit = estimateProfit(viewEstimate);
-                return profit.customerPrice > 0 && (
-                  <EstimateProfitSummaryPanel vendorCost={profit.vendorCost} operatingCost={profit.operatingCost}
-                    customerPrice={profit.customerPrice} className="border-t border-gray-100 pt-4" />
-                );
-              })()}
 
               {/* Notes - After Price Summary */}
               {viewEstimate.description && (
