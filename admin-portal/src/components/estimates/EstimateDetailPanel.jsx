@@ -4,6 +4,7 @@ import { estimateProfit } from '../../utils/estimateProfitSummary';
 import EstimateServicesTable from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
+import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
 import { EstimateTermsSection } from './EstimateTerms';
 
 /**
@@ -192,25 +193,8 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
       </div>
 
       {internal && profit && (
-        <div className="print:hidden">
-          <Section title="Internal Profit Summary">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {[
-                ['Vendor Cost', money(profit.vendorCost)],
-                ['Operating Cost', money(profit.operatingCost)],
-                ['Actual Cost', money(profit.actualCost)],
-                ['Customer Price', money(profit.customerPrice)],
-                ['Gross Profit', money(profit.profit)],
-                ['Gross Margin', profit.marginPercent == null ? '—' : `${profit.marginPercent}%`]
-              ].map(([label, value]) => (
-              <div key={label} className="min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
-                <dt className="truncate text-[11px] text-gray-500" title={label}>{label}</dt>
-                <dd className="mt-1 truncate text-sm font-bold tabular-nums text-gray-900" title={value}>{value}</dd>
-              </div>
-            ))}
-            </div>
-          </Section>
-        </div>
+        <EstimateProfitSummaryPanel vendorCost={profit.vendorCost} operatingCost={profit.operatingCost}
+          customerPrice={profit.customerPrice} className="border-t border-gray-100 pt-4" />
       )}
 
       {(estimate.description || estimate.notes) && (
