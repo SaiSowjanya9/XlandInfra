@@ -1,17 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   CreditCard,
-  DollarSign,
-  TrendingUp,
   Clock,
   AlertCircle,
   CheckCircle,
   FileText,
   RefreshCw,
   ArrowUpRight,
-  ArrowDownRight,
   Calendar,
-  IndianRupee,
+  IndianRupee
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -258,8 +255,8 @@ const FPPaymentDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Today's Collection & Quick Actions - Responsive */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Today's Collection & Invoice Status - Responsive */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Today's Collection */}
         <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
@@ -305,35 +302,6 @@ const FPPaymentDashboard = ({ user }) => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/fp/payments/invoices')}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
-            >
-              <FileText className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">View All Invoices</span>
-            </button>
-            <button
-              onClick={() => navigate('/fp/payments/history')}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
-            >
-              <Clock className="w-5 h-5 text-purple-600" />
-              <span className="text-sm font-medium text-gray-700">Payment History</span>
-            </button>
-            {canEdit && (
-              <button
-                onClick={() => navigate('/fp/payments/invoices/create')}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
-              >
-                <CreditCard className="w-5 h-5 text-amber-600" />
-                <span className="text-sm font-medium text-gray-700">Create Invoice</span>
-              </button>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Recent Payments */}

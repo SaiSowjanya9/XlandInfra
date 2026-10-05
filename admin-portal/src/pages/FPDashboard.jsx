@@ -5,8 +5,6 @@ import {
   ClipboardList,
   Store,
   FileText,
-  Clock,
-  CheckCircle,
   AlertCircle,
   RefreshCw,
   ArrowRight,
@@ -14,8 +12,6 @@ import {
   UserCheck,
   Briefcase,
   Shield,
-  Plus,
-  UserPlus,
   Bell,
   X,
   AlertTriangle,
@@ -1102,75 +1098,6 @@ const FPDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            onClick={() => navigate('/fp/customers/add')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Add Customer</p>
-                <p className="text-xs text-gray-500">Register new customer</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          <button
-            onClick={() => navigate('/fp/work-orders')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <ClipboardList className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Create Work Order</p>
-                <p className="text-xs text-gray-500">Create a new work order</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          <button
-            onClick={() => navigate('/fp/employees/add')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Add Employee</p>
-                <p className="text-xs text-gray-500">Add new team member</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-
-          <button
-            onClick={() => navigate('/fp/estimates/create')}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-teal-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Create Estimate</p>
-                <p className="text-xs text-gray-500">Create new estimate</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
