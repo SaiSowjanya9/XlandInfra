@@ -154,14 +154,14 @@ const Login = ({ onLogin }) => {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="input-field pr-10"
+                  className="input-field pr-12"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
