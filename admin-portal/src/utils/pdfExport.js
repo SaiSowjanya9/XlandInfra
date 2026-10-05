@@ -670,23 +670,21 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
     const services = data.services || data.packageServices || [];
     
-    // Both service lists share one renderer, and an estimate's carries the two columns the
-    // backend's emailed PDF has always had -- Qty and Price -- so the downloaded document and the
-    // attached one are the same. A package's own services are covered by the package price, so
-    // their Price cell reads as a dash rather than as zero.
+    // Both service lists share one renderer, and an estimate's carries a Price column. There is no
+    // Qty column -- the user asked for it to go. A package's own services are covered by the
+    // package price, so their Price cell reads as a dash rather than as zero.
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
     const serviceHead = priced
-      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'QTY', 'PRICE (RS.)']]
+      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'PRICE (RS.)']]
       : [['#', 'Service', 'Description', 'Frequency', 'Visits']];
     const serviceColumnStyles = priced ? {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 36, halign: 'left' },
-      2: { cellWidth: 56, halign: 'left' },
+      2: { cellWidth: 68, halign: 'left' },
       3: { cellWidth: 26, halign: 'center' },
       4: { cellWidth: 14, halign: 'center' },
-      5: { cellWidth: 12, halign: 'center' },
-      6: { cellWidth: 26, halign: 'right' }
+      5: { cellWidth: 26, halign: 'right' }
     } : {
       0: { cellWidth: 12, halign: 'center' },
       1: { cellWidth: 38, halign: 'left' },
@@ -742,9 +740,6 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       const details = withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category);
       const row = [String(index + 1), name, details || '-', freqType, String(visits)];
       if (!priced) return row;
-      // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so with
-      // a dash rather than inventing a 1
-      row.push(item.quantity == null || item.quantity === '' ? '-' : String(item.quantity));
       row.push(charged ? formatCurrency(getAddonPrice(item)) : '-');
       return row;
     };
