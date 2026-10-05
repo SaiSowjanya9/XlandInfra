@@ -21,24 +21,28 @@ import { normalizeServiceRow } from './EstimateDraftServicesTable';
 // The table is drawn in the cream skin, not green: every filled block here -- the header, the row
 // number, the method badge and the total -- is a warm tint, and figures read in warm text.
 
+// A real table, not a grid of equal tracks: the grid gave every money column one fifteenth of the
+// width, too narrow for "Customer Price", and the unwrappable headings ran into one another --
+// "Vendor CostXLAND CostCustomer Price". Table columns size to their headings and contents.
+// `head`/`cell` carry alignment and print visibility only.
 const serviceColumns = (decode, internal) => {
-  const number = { label: '#', head: 'col-span-1', cell: 'col-span-1',
+  const number = { label: '#', head: 'w-10', cell: '',
     render: (row, index) => <span className="w-5 h-5 bg-warm-accent-soft border border-warm-border text-warm-text text-xs font-bold rounded-full flex items-center justify-center">{index + 1}</span> };
   // The category says what kind of service this is, so it reads under the name rather than among
   // the details -- the same place the PDF sets it
-  const service = { label: 'Service', head: 'col-span-3', cell: 'col-span-3 min-w-0',
+  const service = { label: 'Service', head: '', cell: 'min-w-[140px]',
     render: row => <>
       <p className="font-medium text-gray-800 text-sm break-words">{decode(getAddonName(row))}</p>
       {row.category && <p className="text-[10px] text-gray-500">{decode(row.category)}</p>}
       {/* A package's own service, folded into the internal table beside the added services */}
       {row._tag && <span className="mt-0.5 inline-block rounded bg-warm-accent-soft px-1.5 py-px text-[10px] text-warm-muted">{row._tag}</span>}
     </> };
-  const method = { label: 'Method', head: 'col-span-2', cell: 'col-span-2',
+  const method = { label: 'Method', head: '', cell: '',
     // A hand-entered service has no configured method, so it says nothing rather than guessing one
     render: row => (getServiceMethodLabel(row)
       ? <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{getServiceMethodLabel(row)}</span>
       : <span className="text-xs text-gray-400">-</span>) };
-  const input = { label: 'Input / Details', head: 'col-span-2', cell: 'col-span-2 min-w-0',
+  const input = { label: 'Input / Details', head: '', cell: 'min-w-[110px]',
     // What was measured at the property -- 4 Lift, 15,000 Sq Ft. The subline is screen-only
     // (print:hidden keeps a browser print clean): a slab band names the bracket the input fell in
     // for everyone, while a ₹ rate is the vendor's price and shows to internal viewers only.
@@ -50,21 +54,21 @@ const serviceColumns = (decode, internal) => {
         {showSub && <p className="text-[10px] text-gray-500 print:hidden">{sub}</p>}
       </>;
     } };
-  const frequency = { label: 'Frequency', head: 'col-span-2 text-center', cell: 'col-span-2 text-center',
+  const frequency = { label: 'Frequency', head: 'text-center', cell: 'text-center',
     render: row => <p className="text-sm text-warm-text">{row.frequency_type || row.frequencyType || 'Monthly'}</p> };
-  const visits = { label: 'Visits / Year', head: 'col-span-1 text-center', cell: 'col-span-1 text-center',
+  const visits = { label: 'Visits / Year', head: 'text-center', cell: 'text-center',
     render: row => <p className="text-sm text-warm-text font-semibold">{row.frequency_count ?? row.frequencyCount ?? 1}</p> };
   const money = (value, cls = 'text-gray-700') =>
-    <p className={`text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
+    <p className={`whitespace-nowrap text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
-  const vendor = { label: 'Vendor Cost', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
+  const vendor = { label: 'Vendor Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceVendorCost(row)) };
-  const xland = { label: 'XLAND Cost', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
+  const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceXlandCost(row)) };
-  const price = { label: 'Customer Price', head: 'col-span-1 text-center', cell: 'col-span-1 text-center',
-    render: row => <p className="text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
-  const margin = { label: 'Margin %', head: 'col-span-1 text-center print:hidden', cell: 'col-span-1 text-center print:hidden',
+  const price = { label: 'Customer Price', head: 'text-right', cell: 'text-right',
+    render: row => <p className="whitespace-nowrap text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
+  const margin = { label: 'Margin %', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => {
       const value = getServiceMarginPercent(row);
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
@@ -80,32 +84,39 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
   if (!services.length) return null;
   const sum = total ?? services.reduce((value, row) => value + getAddonPrice(row), 0);
   const columns = serviceColumns(decode, internal);
-  // 12 tracks without the cost columns; the three internal figures take it to 15, with a floor so
-  // the money columns don't collapse — that floor is internal-only, other views keep squeezing.
-  // On paper the cost cells are hidden and the tracks drop back to 12, so the printed table is
-  // laid out exactly as the customer-facing one.
-  const grid = internal ? 'grid-cols-[repeat(15,minmax(0,1fr))] print:grid-cols-12' : 'grid-cols-12';
-  const floor = internal ? 'min-w-[720px] print:min-w-0' : '';
+  const cell = 'px-3 py-2 align-middle';
   return (
-    <div className={internal ? 'overflow-x-auto print:overflow-visible' : undefined}>
-      <div className={`grid ${grid} gap-2 px-3 py-2 bg-warm-section ${topRadius} ${floor}`}>
-        {columns.map(column => <div key={column.label} className={`whitespace-nowrap text-xs font-semibold text-warm-muted ${column.head}`}>{column.label}</div>)}
-      </div>
-      <div className={`border border-warm-border divide-y divide-warm-border/60 ${floor}`}>
-        {services.map((row, index) => (
-          <div key={index} className={`grid ${grid} gap-2 px-3 py-2 items-center bg-white`}>
-            {columns.map(column => <div key={column.label} className={column.cell}>{column.render(row, index)}</div>)}
-          </div>
-        ))}
-      </div>
-      {/* The total rides the same grid so the figure lands under the Customer Price column, not
-          the card's edge. On paper the internal cost tracks are hidden, so the label's span widens
-          by two (the two hidden cost tracks the price column slides back over). */}
-      <div className={`grid ${grid} gap-2 items-center bg-warm-section px-3 py-2 ${bottomRadius} ${floor}`}>
-        <p className={`font-semibold text-warm-text ${internal ? '[grid-column:span_13/span_13] print:[grid-column:span_11/span_11]' : 'col-span-11'}`}>Total Services Price</p>
-        <p className="col-span-1 text-center font-bold text-warm-text">{formatCurrency(sum)}</p>
-        {internal && <div className="col-span-1 print:hidden" />}
-      </div>
+    // Scrolls sideways on a narrow screen rather than squeezing the columns; on paper it lays out
+    // in full, with the internal cost cells hidden
+    <div className={`overflow-x-auto print:overflow-visible border border-warm-border ${topRadius} ${bottomRadius}`}>
+      <table className="w-full border-collapse">
+        <thead className="bg-warm-section">
+          <tr>
+            {columns.map(column => (
+              <th key={column.label} scope="col"
+                className={`${cell} whitespace-nowrap text-xs font-semibold text-warm-muted ${/text-(right|center)/.test(column.head) ? '' : 'text-left'} ${column.head}`}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-warm-border/60 bg-white">
+          {services.map((row, index) => (
+            <tr key={index}>
+              {columns.map(column => <td key={column.label} className={`${cell} ${column.cell}`}>{column.render(row, index)}</td>)}
+            </tr>
+          ))}
+        </tbody>
+        {/* The figure sits in the Customer Price column. The label spans the six columns every
+            view has; the internal cost cells either side are their own cells, so when print hides
+            them the total still lands under the price. */}
+        <tfoot className="bg-warm-section">
+          <tr>
+            <td colSpan={6} className={`${cell} font-semibold text-warm-text`}>Total Services Price</td>
+            {internal && <td colSpan={2} className={`${cell} print:hidden`} />}
+            <td className={`${cell} whitespace-nowrap text-right font-bold text-warm-text`}>{formatCurrency(sum)}</td>
+            {internal && <td className={`${cell} print:hidden`} />}
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }
