@@ -217,7 +217,30 @@ const initOnboardingTables = async () => {
       { name: 'city', def: "VARCHAR(100) DEFAULT NULL" },
       { name: 'state', def: "VARCHAR(100) DEFAULT NULL" },
       { name: 'postal_code', def: "VARCHAR(20) DEFAULT NULL" },
-      { name: 'created_by', def: "VARCHAR(100) DEFAULT 'system'" }
+      { name: 'created_by', def: "VARCHAR(100) DEFAULT 'system'" },
+      { name: 'latitude', def: "DECIMAL(10,8) DEFAULT NULL" },
+      { name: 'longitude', def: "DECIMAL(11,8) DEFAULT NULL" },
+      { name: 'map_lat', def: "DECIMAL(10,8) DEFAULT NULL" },
+      { name: 'map_lng', def: "DECIMAL(11,8) DEFAULT NULL" },
+      { name: 'map_address', def: "TEXT" },
+      { name: 'block_unit_types', def: "JSON DEFAULT NULL" },
+      { name: 'flat_block_info', def: "VARCHAR(200) DEFAULT NULL" },
+      { name: 'flat_block_na', def: "TINYINT(1) DEFAULT 0" },
+      { name: 'plot_na', def: "TINYINT(1) DEFAULT 0" },
+      { name: 'association_contacts', def: "JSON DEFAULT NULL" },
+      { name: 'contact_person', def: "VARCHAR(255) DEFAULT NULL" },
+      { name: 'contact_phone', def: "VARCHAR(50) DEFAULT NULL" },
+      { name: 'contact_email', def: "VARCHAR(255) DEFAULT NULL" },
+      { name: 'zone', def: "VARCHAR(100) DEFAULT NULL" },
+      { name: 'division', def: "VARCHAR(100) DEFAULT NULL" },
+      { name: 'watchman_name', def: "VARCHAR(200) DEFAULT NULL" },
+      { name: 'watchman_contact', def: "VARCHAR(50) DEFAULT NULL" },
+      { name: 'franchise_partner_id', def: "INT DEFAULT NULL" },
+      { name: 'manager_id', def: "INT DEFAULT NULL" },
+      { name: 'coordinator_id', def: "INT DEFAULT NULL" },
+      { name: 'supervisor_id', def: "INT DEFAULT NULL" },
+      { name: 'executive_id', def: "INT DEFAULT NULL" },
+      { name: 'total_units', def: "INT DEFAULT 0" }
     ];
     
     for (const col of columnsToAdd) {
@@ -252,19 +275,53 @@ const initOnboardingTables = async () => {
       console.log(`  - Status column check failed`);
     }
 
-    // Add total_units column to properties table if it doesn't exist
-    try {
-      const [totalUnitsCol] = await conn.execute(
-        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'properties' AND COLUMN_NAME = 'total_units'`,
-        [dbConfig.database]
-      );
-      if (totalUnitsCol.length === 0) {
-        await conn.execute(`ALTER TABLE properties ADD COLUMN total_units INT DEFAULT 0`);
-        console.log(`  ✓ Added column: total_units to properties table`);
+    // Ensure all columns the FP/employee Add Customer flow writes exist on `properties`
+    // (older DBs may predate the ALTER migrations; several used MariaDB-only syntax)
+    const propertyColumnsToAdd = [
+      { name: 'total_units', def: "INT DEFAULT 0" },
+      { name: 'block_na', def: "TINYINT(1) DEFAULT 0" },
+      { name: 'flat_block_info', def: "VARCHAR(200) DEFAULT NULL" },
+      { name: 'flat_block_na', def: "TINYINT(1) DEFAULT 0" },
+      { name: 'plot_na', def: "TINYINT(1) DEFAULT 0" },
+      { name: 'block_unit_types', def: "JSON DEFAULT NULL" },
+      { name: 'association_contacts', def: "JSON DEFAULT NULL" },
+      { name: 'watchman_name', def: "VARCHAR(200) DEFAULT NULL" },
+      { name: 'watchman_contact', def: "VARCHAR(50) DEFAULT NULL" },
+      { name: 'map_address', def: "TEXT" },
+      { name: 'latitude', def: "DECIMAL(10,8) DEFAULT NULL" },
+      { name: 'longitude', def: "DECIMAL(11,8) DEFAULT NULL" },
+      { name: 'landmark', def: "VARCHAR(255) DEFAULT NULL" },
+      { name: 'notes', def: "TEXT" },
+      { name: 'entry_type', def: "VARCHAR(20) DEFAULT NULL" },
+      { name: 'category', def: "VARCHAR(50) DEFAULT NULL" },
+      { name: 'area_name', def: "VARCHAR(255) DEFAULT NULL" },
+      { name: 'number_of_blocks', def: "INT DEFAULT 1" },
+      { name: 'units_per_block', def: "JSON DEFAULT NULL" },
+      { name: 'block_names', def: "JSON DEFAULT NULL" },
+      { name: 'block_info', def: "VARCHAR(255) DEFAULT NULL" },
+      { name: 'number_of_units', def: "INT DEFAULT NULL" },
+      { name: 'villa_plot_number', def: "VARCHAR(100) DEFAULT NULL" },
+      { name: 'franchise_partner_id', def: "INT DEFAULT NULL" },
+      { name: 'manager_id', def: "INT DEFAULT NULL" },
+      { name: 'coordinator_id', def: "INT DEFAULT NULL" },
+      { name: 'supervisor_id', def: "INT DEFAULT NULL" },
+      { name: 'executive_id', def: "INT DEFAULT NULL" },
+      { name: 'status', def: "VARCHAR(20) DEFAULT 'active'" }
+    ];
+    for (const col of propertyColumnsToAdd) {
+      try {
+        const [rows] = await conn.execute(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+           WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'properties' AND COLUMN_NAME = ?`,
+          [dbConfig.database, col.name]
+        );
+        if (rows.length === 0) {
+          await conn.execute(`ALTER TABLE properties ADD COLUMN ${col.name} ${col.def}`);
+          console.log(`  ✓ Added column: properties.${col.name}`);
+        }
+      } catch (e) {
+        console.log(`  - properties.${col.name} column check failed:`, e.message);
       }
-    } catch (e) {
-      console.log(`  - total_units column check failed:`, e.message);
     }
 
     // Fix created_by column type if it's INT (should be VARCHAR)

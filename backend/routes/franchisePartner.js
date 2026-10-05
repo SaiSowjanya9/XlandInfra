@@ -733,7 +733,7 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
         'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
         'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
         'flat_block_info', 'flat_block_na', 'plot_na',
-        'watchman_name', 'watchman_contact', 'association_contacts', 'total_units'
+        'watchman_name', 'watchman_contact', 'association_contacts', 'total_units', 'map_address'
       ],
       onboarded_properties: [
         'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
@@ -2062,7 +2062,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
       // Property form data
       zone, areaName, division, propertyType, communityName,
       associationContacts, numberOfBlocks, unitsPerBlock, blockNames, blockUnitTypes,
-      numberOfUnits, villaPlotNumber, blockInfo, blockNA,
+      numberOfUnits, villaPlotNumber, blockInfo, blockNA, flatBlockInfo, flatBlockNA, plotNA,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
       // Simple customer data (for backward compatibility)
@@ -2088,6 +2088,10 @@ router.post('/customers', requireFPScope, async (req, res) => {
       // Extract watchman info from request body
       const { watchmanName, watchmanContact } = req.body;
 
+      const totalUnits = entryType === 'GC' && unitsPerBlock
+        ? Object.values(unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0)
+        : entryType === 'APT' ? (parseInt(numberOfUnits) || 0) : 1;
+
       // Create property first (zone_id and division_id store names as VARCHAR)
       const [propertyResult] = await pool.execute(
         `INSERT INTO properties (
@@ -2096,8 +2100,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
           franchise_partner_id, created_by, latitude, longitude, landmark, notes,
           entry_type, category, area_name, number_of_blocks, units_per_block,
           block_names, block_unit_types, number_of_units, villa_plot_number, block_info,
-          watchman_name, watchman_contact, association_contacts
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          block_na, flat_block_info, flat_block_na, plot_na,
+          watchman_name, watchman_contact, association_contacts, total_units, map_address
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
@@ -2108,8 +2113,10 @@ router.post('/customers', requireFPScope, async (req, res) => {
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
           JSON.stringify(blockNames || {}), JSON.stringify(blockUnitTypes || {}),
           numberOfUnits || null, villaPlotNumber || '', blockInfo || '',
+          blockNA ? 1 : 0, flatBlockInfo || '', flatBlockNA ? 1 : 0, plotNA ? 1 : 0,
           watchmanName || null, watchmanContact || null, 
-          associationContacts ? JSON.stringify(associationContacts) : null
+          associationContacts ? JSON.stringify(associationContacts) : null,
+          totalUnits, mapLocation?.address || null
         ]
       );
 
@@ -2131,11 +2138,12 @@ router.post('/customers', requireFPScope, async (req, res) => {
           [customerResult] = await pool.execute(
             `INSERT INTO customer_accounts (
               customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
-              activation_token, activation_expires, is_activated, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              activation_token, activation_expires, is_activated, created_by, franchise_partner_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
-              tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'franchise_partner'
+              tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'franchise_partner',
+              req.fpId || null
             ]
           );
           

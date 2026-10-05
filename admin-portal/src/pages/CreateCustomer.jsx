@@ -642,25 +642,27 @@ const CreateCustomer = ({ admin }) => {
           </button>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl shadow-sm border border-slate-200 p-10">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Entry Type</h2>
-            <p className="text-gray-500">Choose the type of customer data you want to enter</p>
+        {/* Same tile design as the FP portal's entry-type picker, so every portal's Add
+            Customer screen is identical */}
+        <div className="bg-white rounded-xl border border-gray-100 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-semibold text-gray-900">Select Entry Type</h2>
+            <p className="text-gray-500 mt-1">Choose the type of customer data you want to enter</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
             {ENTRY_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   onClick={() => handleSelectEntryType(type.id)}
-                  className="group relative p-4 md:p-5 bg-white border-2 border-gray-100 rounded-xl hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all duration-300 text-center"
+                  className="flex flex-col items-center p-4 md:p-5 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
                 >
-                  <div className={`w-12 h-12 md:w-14 md:h-14 ${type.color} rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform duration-300 shadow-md`}>
-                    <Icon className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                  <div className={`w-11 h-11 md:w-12 md:h-12 ${type.color} rounded-xl flex items-center justify-center mb-2 md:mb-3`}>
+                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
-                  <h3 className="text-xs md:text-sm font-medium text-gray-800 leading-tight">{type.name}</h3>
+                  <p className="font-medium text-gray-900 text-xs md:text-sm text-center leading-tight">{type.name}</p>
                 </button>
               );
             })}

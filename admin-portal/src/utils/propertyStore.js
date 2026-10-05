@@ -197,6 +197,9 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
         blockUnitTypes: formData.blockUnitTypes,
         blockInfo: formData.blockInfo,
         blockNA: formData.blockNA,
+        flatBlockInfo: formData.flatBlockInfo,
+        flatBlockNA: formData.flatBlockNA,
+        plotNA: formData.plotNA,
         numberOfUnits: formData.numberOfUnits,
         villaPlotNumber: formData.villaPlotNumber,
         // Address fields
