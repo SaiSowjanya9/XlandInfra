@@ -878,7 +878,7 @@ const SupervisorProperties = ({ user }) => {
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -898,29 +898,29 @@ const SupervisorProperties = ({ user }) => {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 overflow-y-auto">
+            <div className="p-5 space-y-4 overflow-y-auto">
               {/* Property Information */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Information</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Zone</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || selectedProperty.zone || selectedProperty.area || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Area Name</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.area_name || selectedProperty.area || selectedProperty.city || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Division</p>
                     <p className="text-sm font-medium text-gray-900">{shortDivision(selectedProperty.division || selectedProperty.division_id) || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Property Type</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
                     <p className="text-sm font-medium text-gray-900">
                       {(() => {
                         if (selectedProperty.units_per_block) {
@@ -937,7 +937,7 @@ const SupervisorProperties = ({ user }) => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
                     <p className="text-sm font-medium text-gray-900">
                       {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                     </p>
@@ -951,9 +951,9 @@ const SupervisorProperties = ({ user }) => {
                 selectedProperty.entry_type === 'GC'
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Block Details</h3>
+                  <div className="mb-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Blocks</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || 1}</p>
                   </div>
                   {(() => {
@@ -964,21 +964,21 @@ const SupervisorProperties = ({ user }) => {
                       const numBlocks = selectedProperty.number_of_blocks || Object.keys(blockNames).length || Object.keys(unitsPerBlock).length || 1;
                       if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
                         return (
-                          <div className="space-y-4">
+                          <div className="space-y-2">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
                               const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
                               // Try multiple key formats: block number, string block number, block name
                               const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
-                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div key={blockNum} className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
                                   <div className="flex gap-4 mb-3">
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Name</p>
                                       <p className="text-sm font-medium text-gray-900">{blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`}</p>
                                     </div>
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
                                       <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
@@ -1014,14 +1014,14 @@ const SupervisorProperties = ({ user }) => {
                 selectedProperty.entry_type === 'APT'
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Apartment Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3 mb-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.block_na ? 'N/A' : (selectedProperty.block_info || '-')}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Number of Units</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Units</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_units || '-'}</p>
                     </div>
                   </div>
@@ -1054,9 +1054,9 @@ const SupervisorProperties = ({ user }) => {
               {/* Villa Details */}
               {(selectedProperty.property_type === 'villa' || selectedProperty.property_type === 'VILLA') && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Villa Number</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Villa Details</h3>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Villa Number</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
                   </div>
                 </div>
@@ -1065,14 +1065,14 @@ const SupervisorProperties = ({ user }) => {
               {/* Flat Details */}
               {(selectedProperty.property_type === 'flat' || selectedProperty.property_type === 'FLAT') && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Flat Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Flat Number</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Flat Number</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.flat_block_na ? 'N/A' : (selectedProperty.flat_block_info || '-')}</p>
                     </div>
                   </div>
@@ -1082,9 +1082,9 @@ const SupervisorProperties = ({ user }) => {
               {/* Plot Details */}
               {(selectedProperty.property_type === 'plot' || selectedProperty.property_type === 'PLOT') && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Plot Number</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Plot Details</h3>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Plot Number</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.plot_na ? 'N/A' : (selectedProperty.villa_plot_number || '-')}</p>
                   </div>
                 </div>
@@ -1092,26 +1092,26 @@ const SupervisorProperties = ({ user }) => {
 
               {/* Address */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Address</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                  <div className="col-span-2 sm:col-span-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Street Address</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Apt/Suite</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Apt/Suite</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">City</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.city || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">State/Province</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.state || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">ZIP/Postal Code</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.zip_code || '-'}</p>
                   </div>
                 </div>
@@ -1119,7 +1119,7 @@ const SupervisorProperties = ({ user }) => {
 
               {/* Property Location */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Location</h3>
                 <PropertyLocationDisplay 
                   location={{
                     lat: selectedProperty.mapLocation?.lat || selectedProperty.latitude,
@@ -1153,27 +1153,27 @@ const SupervisorProperties = ({ user }) => {
                 
                 return (
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
-                    <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h3>
+                    <div className="space-y-2">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3">
+                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-blue-600">{index + 1}</span>
                             </div>
                             <span className="text-xs text-gray-500">Contact {index + 1}</span>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-x-6 gap-y-2">
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Name</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Name</p>
                               <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Email</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Email</p>
                               <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Phone</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Phone</p>
                               <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
                                 {(() => {
                                   if (!contact.phone) return '-';
@@ -1195,15 +1195,15 @@ const SupervisorProperties = ({ user }) => {
               {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.property_type || '').toLowerCase()) ||
                ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.entry_type || '').toLowerCase())) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
-                    <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-lg px-4 py-3 border border-amber-100">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Name</p>
                         <p className="text-sm font-medium text-gray-900">{selectedProperty.watchman_name || selectedProperty.watchmanName || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Contact</p>
                         <p className="text-sm font-medium text-gray-900">
                           {(() => {
                             const contact = selectedProperty.watchman_contact || selectedProperty.watchmanContact;

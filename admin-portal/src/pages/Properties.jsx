@@ -1065,7 +1065,7 @@ const Properties = () => {
       {/* View Property Modal - Clean Single View (FP Style) */}
       {viewProperty && !selectedEstimate && !showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={handleClosePropertyView}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -1083,29 +1083,29 @@ const Properties = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Property Information */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Information</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Zone</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Zone</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.zone_name || viewProperty.zone || viewProperty.zoneId || viewProperty.zone_id || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Area Name</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Area Name</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.area || viewProperty.area_name || viewProperty.areaName || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Division</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Division</p>
                     <p className="text-sm font-medium text-gray-900">{shortDivision(viewProperty.division_name || viewProperty.division || viewProperty.division_id) || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Property Type</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Property Type</p>
                     <p className="text-sm font-medium text-gray-900">{getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
                     <p className="text-sm font-medium text-gray-900">
                       {(() => {
                         // First check direct total_units fields
@@ -1126,7 +1126,7 @@ const Properties = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
                     <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.created_at || viewProperty.createdAt)}</p>
                   </div>
                 </div>
@@ -1137,9 +1137,9 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Block Details</h3>
+                  <div className="mb-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Blocks</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_blocks || viewProperty.numberOfBlocks || 1}</p>
                   </div>
                   {(() => {
@@ -1151,20 +1151,20 @@ const Properties = () => {
                       const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
                       if (Object.keys(blockNames).length > 0 || Object.keys(unitsPerBlock).length > 0) {
                         return (
-                          <div className="space-y-4">
+                          <div className="space-y-2">
                             {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
                               const blockName = blockNames[blockNum] || blockNames[String(blockNum)] || `Block ${blockNum}`;
                               const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
-                                <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div key={blockNum} className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
                                   <div className="flex gap-4 mb-3">
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Block Name</p>
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Name</p>
                                       <p className="text-sm font-medium text-gray-900">{blockName}</p>
                                     </div>
                                     <div>
-                                      <p className="text-xs text-gray-500 mb-1">Total Units</p>
+                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
                                       <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
@@ -1199,14 +1199,14 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Apartment Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3 mb-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{viewProperty.block_na ? 'N/A' : (viewProperty.block_info || viewProperty.blockInfo || '-')}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Number of Units</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Units</p>
                       <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_units || viewProperty.numberOfUnits || '-'}</p>
                     </div>
                   </div>
@@ -1241,9 +1241,9 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Villa Number</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Villa Details</h3>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Villa Number</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
                   </div>
                 </div>
@@ -1254,14 +1254,14 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Flat Details</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Flat Number</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Flat Number</p>
                       <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Block Information</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{viewProperty.flat_block_na ? 'N/A' : (viewProperty.flat_block_info || viewProperty.flatBlockInfo || '-')}</p>
                     </div>
                   </div>
@@ -1273,9 +1273,9 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Plot Number</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Plot Details</h3>
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Plot Number</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.plot_na ? 'N/A' : (viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-')}</p>
                   </div>
                 </div>
@@ -1283,22 +1283,22 @@ const Properties = () => {
 
               {/* Address */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Street Address</p>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Address</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                  <div className="col-span-2 sm:col-span-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Street Address</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.address || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">City</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">City</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.city || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">State/Province</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">State/Province</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.state || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">ZIP/Postal Code</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">ZIP/Postal Code</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.postalCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                   </div>
                 </div>
@@ -1306,7 +1306,7 @@ const Properties = () => {
 
               {/* Property Location */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Location</h3>
                 <PropertyLocationDisplay 
                   location={{
                     lat: viewProperty.mapLocation?.lat || viewProperty.latitude,
@@ -1347,27 +1347,27 @@ const Properties = () => {
                 
                 return (
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
-                    <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h3>
+                    <div className="space-y-2">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3">
+                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-blue-600">{index + 1}</span>
                             </div>
                             <span className="text-xs text-gray-500">Contact {index + 1}</span>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_2.5fr_1fr] gap-x-6 gap-y-2">
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Name</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Name</p>
                               <p className="text-sm font-medium text-gray-900">{contact.name || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Email</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Email</p>
                               <p className="text-sm font-medium text-gray-900 break-all">{contact.email || '-'}</p>
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-1">Phone</p>
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Phone</p>
                               <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
                                 {(() => {
                                   if (!contact.phone) return '-';
@@ -1390,15 +1390,15 @@ const Properties = () => {
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase()
               )) && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
-                    <div className="grid grid-cols-2 gap-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Watchman Information</h3>
+                  <div className="bg-amber-50 rounded-lg px-4 py-3 border border-amber-100">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Name</p>
                         <p className="text-sm font-medium text-gray-900">{viewProperty.watchman_name || viewProperty.watchmanName || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Watchman Contact</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Contact</p>
                         <p className="text-sm font-medium text-gray-900">
                           {(() => {
                             const contact = viewProperty.watchman_contact || viewProperty.watchmanContact;
@@ -1419,8 +1419,8 @@ const Properties = () => {
               {/* Additional Notes */}
               {viewProperty.notes && (
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Additional Notes</h3>
+                  <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
                   </div>
                 </div>
