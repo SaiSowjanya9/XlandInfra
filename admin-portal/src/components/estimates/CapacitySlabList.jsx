@@ -1,4 +1,5 @@
 import { findCapacitySlab } from './AddServicePage';
+import { capacityForSlab } from '../../utils/rangeMatch';
 
 /**
  * Every slab of a Capacity Slab service, wherever one is being priced or read.
@@ -33,16 +34,19 @@ export const slabOptionLabel = (slab, unit) => {
 export function CapacitySlabSelect({ slabs = [], unit = '', capacity, onChange, className = '', id, ariaLabel = 'Slab' }) {
   const usable = (Array.isArray(slabs) ? slabs : []).filter(slab => String(slab?.capacityFrom ?? '').trim() !== '');
   const current = findCapacitySlab(usable, capacity);
-  const keyOf = slab => String(slab.id ?? slab.capacityFrom);
+  // Each option is its slab's position. Keyed by the lower bound, slabs that share one (0–3, 0–6,
+  // 0+) were the same option, so every choice resolved to the first of them.
+  const keyOf = slab => String(usable.indexOf(slab));
   return (
     <select
       id={id} aria-label={ariaLabel} className={className}
       value={current ? keyOf(current) : ''}
       onChange={event => {
-        const chosen = usable.find(slab => keyOf(slab) === event.target.value);
-        // The slab itself is passed on as well: a slab carries its own frequency and visit count, and
-        // a caller that keeps a schedule of its own has to follow it or the quote is refused
-        onChange(chosen ? String(chosen.capacityFrom) : '', chosen);
+        const chosen = usable[Number(event.target.value)];
+        // The capacity that lands in this slab and no tighter one, so overlapping slabs can each be
+        // picked. The slab itself is passed on as well: it carries its own frequency and visit
+        // count, and a caller that keeps a schedule of its own has to follow it
+        onChange(event.target.value === '' || !chosen ? '' : String(capacityForSlab(usable, chosen)), chosen);
       }}
     >
       <option value="">Select a slab</option>
