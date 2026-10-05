@@ -1337,7 +1337,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
     const {
       // Property form data
       zone, areaName, division, propertyType, communityName,
-      associationContacts, numberOfBlocks, unitsPerBlock, blockNames,
+      associationContacts, numberOfBlocks, unitsPerBlock, blockNames, blockUnitTypes,
       numberOfUnits, villaPlotNumber, blockInfo, blockNA, flatBlockInfo, flatBlockNA, plotNA,
       address, city, state, postalCode, landmark, mapLocation, notes,
       entryType, category,
@@ -1370,11 +1370,11 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
           property_id, community_name, property_type, address, city, state, postal_code,
           contact_person, contact_phone, contact_email, zone, division,
           executive_id, franchise_partner_id, created_by, latitude, longitude, landmark, notes,
-          entry_type, category, area_name, number_of_blocks, units_per_block,
+          entry_type, category, area_name, number_of_blocks, units_per_block, block_unit_types,
           block_names, number_of_units, villa_plot_number, block_info, block_na,
           flat_block_info, flat_block_na, plot_na,
-          watchman_name, watchman_contact, association_contacts, total_units, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+          watchman_name, watchman_contact, association_contacts, total_units, map_lat, map_lng, map_address, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
         [
           propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
@@ -1382,10 +1382,14 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
           executiveId, franchisePartnerId, creatorId, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
-          numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),
+          numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}), JSON.stringify(blockUnitTypes || {}),
           JSON.stringify(blockNames || {}), numberOfUnits || null, villaPlotNumber || '', blockInfo || '', blockNA ? 1 : 0,
           flatBlockInfo || '', flatBlockNA ? 1 : 0, plotNA ? 1 : 0,
-          watchmanName || null, watchmanContact || null, JSON.stringify(associationContacts || []), numberOfUnits || null
+          watchmanName || null, watchmanContact || null, JSON.stringify(associationContacts || []),
+          entryType === 'GC' && unitsPerBlock
+            ? Object.values(unitsPerBlock).reduce((sum, u) => sum + (parseInt(u) || 0), 0)
+            : entryType === 'APT' ? (parseInt(numberOfUnits) || 0) : 1,
+          mapLocation?.lat || null, mapLocation?.lng || null, mapLocation?.address || null
         ]
       );
 
@@ -1402,15 +1406,32 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         }
       }
 
-      // Create client record
-      await pool.execute(
-        `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-          property_id, executive_id, franchise_partner_id, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
-         address || '', city || '', state || '', postalCode || '',
-         propertyResult.insertId, executiveId, franchisePartnerId, creatorId]
-      );
+      // Create client record.
+      // clients.property_id FKs to properties(id) on some DBs, so retry NULL on FK failure.
+      try {
+        await pool.execute(
+          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
+            property_id, executive_id, franchise_partner_id, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
+           address || '', city || '', state || '', postalCode || '',
+           propertyResult.insertId, executiveId, franchisePartnerId, creatorId]
+        );
+      } catch (clientErr) {
+        console.error('Clients insert retry w/o property_id/created_by:', clientErr.message);
+        try {
+          await pool.execute(
+            `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
+              property_id, executive_id, franchise_partner_id, created_by, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, NOW())`,
+            [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
+             address || '', city || '', state || '', postalCode || '',
+             executiveId, franchisePartnerId]
+          );
+        } catch (retryErr) {
+          console.error('Clients insert failed (non-critical):', retryErr.message);
+        }
+      }
 
       // Create customer account and send activation email
       const emailResult = await createCustomerAccountAndSendEmail({

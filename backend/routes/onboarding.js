@@ -51,6 +51,9 @@ router.post('/', authenticate, async (req, res) => {
       blockUnitTypes,
       blockInfo,
       blockNA,
+      flatBlockInfo,
+      flatBlockNA,
+      plotNA,
       numberOfUnits,
       villaPlotNumber,
       // Address fields
@@ -108,14 +111,19 @@ router.post('/', authenticate, async (req, res) => {
 
     const propertyId = generatePropertyId(entryType);
 
+    // Primary contact denormalized onto the property row (staff portals do the same)
+    const primaryContact = associationContacts?.[0] || {};
+
     const [result] = await conn.execute(
       `INSERT INTO onboarded_properties
         (property_id, entry_type, category, zone, area_name, division, property_type,
          community_name, number_of_blocks, block_names, units_per_block, block_unit_types, block_info,
-         block_na, number_of_units, villa_plot_number, total_units,
+         block_na, flat_block_info, flat_block_na, plot_na, number_of_units, villa_plot_number, total_units,
          address, address_line1, apt_suite_unit, apt_suite_na, city, state, postal_code,
-         landmark, map_lat, map_lng, map_address, notes, created_by, watchman_name, watchman_contact)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         landmark, latitude, longitude, map_lat, map_lng, map_address, notes, created_by,
+         watchman_name, watchman_contact, association_contacts, contact_person, contact_phone, contact_email,
+         status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         propertyId,
         entryType,
@@ -131,6 +139,9 @@ router.post('/', authenticate, async (req, res) => {
         (entryType === 'GC' || entryType === 'APT') && blockUnitTypes ? JSON.stringify(blockUnitTypes) : null,
         entryType === 'APT' ? (blockInfo || null) : null,
         entryType === 'APT' ? (blockNA ? 1 : 0) : 0,
+        entryType === 'FLAT' ? (flatBlockInfo || null) : null,
+        entryType === 'FLAT' ? (flatBlockNA ? 1 : 0) : 0,
+        entryType === 'PLOT' ? (plotNA ? 1 : 0) : 0,
         entryType === 'APT' ? (parseInt(numberOfUnits) || null) : null,
         (entryType === 'VILLA' || entryType === 'PLOT' || entryType === 'FLAT') ? (villaPlotNumber || null) : null,
         totalUnits,
@@ -144,11 +155,17 @@ router.post('/', authenticate, async (req, res) => {
         landmark || null,
         mapLocation?.lat || null,
         mapLocation?.lng || null,
+        mapLocation?.lat || null,
+        mapLocation?.lng || null,
         mapLocation?.address || null,
         notes || null,
         creatorName,
         (entryType === 'GC' || entryType === 'APT') ? (watchmanName || null) : null,
-        (entryType === 'GC' || entryType === 'APT') ? (watchmanContact || null) : null
+        (entryType === 'GC' || entryType === 'APT') ? (watchmanContact || null) : null,
+        associationContacts ? JSON.stringify(associationContacts) : null,
+        primaryContact.name || null,
+        primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : null,
+        primaryContact.email || null
       ]
     );
 
@@ -175,6 +192,43 @@ router.post('/', authenticate, async (req, res) => {
       }
     } else {
       console.log('📇 No contacts to insert');
+    }
+
+    // Also create a record in clients table (staff portals do the same for their customer lists).
+    // clients.property_id FKs to properties(id) on some DBs, so retry NULL on FK failure.
+    try {
+      const clientId = `CLT-${Date.now()}`;
+      await conn.execute(
+        `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code,
+          property_id, created_by, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          clientId,
+          primaryContact.name || communityName,
+          primaryContact.email || '',
+          primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
+          address || '', city || '', state || '', postalCode || '',
+          insertedId, creatorName
+        ]
+      );
+    } catch (clientErr) {
+      console.error('Clients insert retry w/o property_id/created_by:', clientErr.message);
+      try {
+        await conn.execute(
+          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code,
+            property_id, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NOW())`,
+          [
+            `CLT-${Date.now()}`,
+            primaryContact.name || communityName,
+            primaryContact.email || '',
+            primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
+            address || '', city || '', state || '', postalCode || ''
+          ]
+        );
+      } catch (retryErr) {
+        console.error('Clients insert failed (non-critical):', retryErr.message);
+      }
     }
 
     await conn.commit();
