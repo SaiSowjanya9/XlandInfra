@@ -404,71 +404,74 @@ const Dashboard = ({ user }) => {
         </div>
       </div>
 
+      {/* Phones and tablets open on Quick Access and then the stats; a desktop keeps the stats
+          first. Below lg every card is its icon and its name -- the summary lines are desktop only. */}
+      <div className="flex flex-col">
       {/* Stats Row - 4 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <button onClick={() => navigate('/dashboard/work-order')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+      <div className="order-2 lg:order-1 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <button onClick={() => navigate('/dashboard/work-order')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-3 sm:p-5 hover:bg-dark-800 transition-all duration-200 group text-left min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <ClipboardList className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="text-sm text-dark-300">Total Orders</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-dark-300 truncate">Total Orders</p>
               <p className="text-2xl font-bold text-white">{stats?.total || 0}</p>
-              <p className="text-xs text-dark-400">All Work Orders</p>
+              <p className="hidden lg:block text-xs text-dark-400">All Work Orders</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+        <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-3 sm:p-5 hover:bg-dark-800 transition-all duration-200 group text-left min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Clock className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="text-sm text-dark-300">Pending</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-dark-300 truncate">Pending</p>
               <p className="text-2xl font-bold text-white">{Number(stats?.pending) || 0}</p>
-              <p className="text-xs text-dark-400">Awaiting Action</p>
+              <p className="hidden lg:block text-xs text-dark-400">Awaiting Action</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+        <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-3 sm:p-5 hover:bg-dark-800 transition-all duration-200 group text-left min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <CheckCircle className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="text-sm text-dark-300">Completed</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-dark-300 truncate">Completed</p>
               <p className="text-2xl font-bold text-white">{stats?.completed || 0}</p>
-              <p className="text-xs text-dark-400">Successfully Done</p>
+              <p className="hidden lg:block text-xs text-dark-400">Successfully Done</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/contact')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-5 hover:bg-dark-800 transition-all duration-200 group text-left">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+        <button onClick={() => navigate('/dashboard/contact')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-3 sm:p-5 hover:bg-dark-800 transition-all duration-200 group text-left min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Building2 className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <p className="text-sm text-dark-300">Property</p>
-              <p className="text-lg font-bold text-white truncate max-w-[120px]">{user?.propertyName || 'N/A'}</p>
-              <p className="text-xs text-dark-400">Your Home</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-dark-300 truncate">Property</p>
+              <p className="text-base sm:text-lg font-bold text-white truncate lg:max-w-[120px]">{user?.propertyName || 'N/A'}</p>
+              <p className="hidden lg:block text-xs text-dark-400">Your Home</p>
             </div>
           </div>
         </button>
       </div>
 
       {/* Quick Access Cards */}
-      <div className="mb-8">
+      <div className="order-1 lg:order-2 mb-8">
         <h2 className="text-lg font-semibold text-white mb-4">Quick Access</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {menuItems.map((item) => {
             const Icon = item.icon;
             
             if (item.locked) {
               return (
-                <div key={item.path} className="relative bg-dark-800/50 rounded-2xl shadow-lg border border-dark-600/30 overflow-hidden opacity-60 cursor-not-allowed p-5">
+                <div key={item.path} className="relative bg-dark-800/50 rounded-2xl shadow-lg border border-dark-600/30 overflow-hidden opacity-60 cursor-not-allowed p-3 sm:p-5">
                   <div className="absolute top-3 right-3 z-10">
                     <div className="bg-dark-700 border border-dark-500 rounded-full p-1.5">
                       <Lock className="w-4 h-4 text-dark-400" />
@@ -478,7 +481,7 @@ const Dashboard = ({ user }) => {
                     <Icon className="w-5 h-5 text-dark-400" />
                   </div>
                   <h3 className="text-white font-semibold mb-1">{item.title}</h3>
-                  <p className="text-dark-400 text-sm">{item.description}</p>
+                  <p className="hidden lg:block text-dark-400 text-sm">{item.description}</p>
                 </div>
               );
             }
@@ -487,22 +490,23 @@ const Dashboard = ({ user }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex items-center justify-between p-4 bg-dark-800/50 border border-dark-600/50 rounded-xl hover:bg-dark-800 transition-colors group"
+                className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-dark-800/50 border border-dark-600/50 rounded-xl hover:bg-dark-800 transition-colors group min-w-0"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg flex items-center justify-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg flex items-center justify-center">
                     <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <div className="text-left">
-                    <p className="font-medium text-white">{item.title}</p>
-                    <p className="text-xs text-dark-400">{item.description}</p>
+                  <div className="text-left min-w-0">
+                    <p className="font-medium text-white text-sm sm:text-base leading-snug">{item.title}</p>
+                    <p className="hidden lg:block text-xs text-dark-400">{item.description}</p>
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-dark-500 group-hover:text-gold-400 transition-colors" />
+                <ArrowRight className="hidden lg:block w-4 h-4 shrink-0 text-dark-500 group-hover:text-gold-400 transition-colors" />
               </Link>
             );
           })}
         </div>
+      </div>
       </div>
 
       {/* Recent Work Orders */}
