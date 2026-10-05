@@ -2648,13 +2648,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   </div>
                 )}
 
-                {/* Selected Add-ons Table - Blue theme. Admin is an internal portal, so the table
-                    also shows Vendor Cost, XLAND Cost and Margin % for configured services. */}
+                {/* Selected Add-ons Table - Blue theme. Vendor Cost, XLAND Cost and Margin % are not
+                    shown while an estimate is being written; they are read in its view once saved. */}
                 {selectedAddons.length > 0 && (
                   <div>
                     <p className="text-sm font-semibold text-blue-800 mb-2">Services</p>
                     <EstimateDraftServicesTable
-                        internal
                         decode={decodeHtml}
                         items={selectedAddons.map((addon) => ({
                           key: addon.addonId ?? getAddonName(addon),
@@ -3433,7 +3432,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 <div>
                   <p className="text-sm font-semibold text-blue-800 mb-2">Services</p>
                   <EstimateDraftServicesTable
-                      internal
                       decode={decodeHtml}
                       items={directSelectedAddons.map((addon) => ({
                         key: addon.addonId ?? getAddonName(addon),

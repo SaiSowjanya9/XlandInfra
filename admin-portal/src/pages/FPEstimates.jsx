@@ -770,7 +770,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // service carries a category, a quantity and a vendor answer as well as its name, schedule and
   // price, and OK adds all of it as one row. Editing a row reopens the same dialog.
   const renderCustomServices = () => estimateStructure === 'custom'
-    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm" internal
+    ? <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} theme="warm"
         extraRows={catalogAddons} renderExtraActions={catalogRowActions}
         onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
         addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
@@ -1704,7 +1704,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                 <EstimateDraftServicesTable
                     bare
                     warm
-                    internal
                     decode={decodeHtml}
                     items={[
                       ...pkgServices.map((svc, idx) => ({ key: `pkg-${idx}`, row: svc, tag: 'Package' })),
@@ -2040,11 +2039,10 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
                 <div>
                   <p className="text-sm font-semibold text-warm-text mb-2">Services</p>
-                  {/* FP is an internal portal — the table carries the Vendor Cost, XLAND Cost and
-                      Margin % columns the customer-facing views deliberately omit. */}
+                  {/* Vendor Cost, XLAND Cost and Margin % are not shown while an estimate is being
+                      written; they are read in the estimate's view once it is saved. */}
                     <EstimateDraftServicesTable
                       warm
-                      internal
                       decode={decodeHtml}
                       items={[
                         ...estimateForm.selectedAddons.map((id, idx) => ({
