@@ -238,7 +238,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
             <p className="text-sm text-gray-400">Archived estimates will appear here</p>
           </div>
         ) : (
-          <table className="w-full">
+          <table className="list-table w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Estimate ID</th>

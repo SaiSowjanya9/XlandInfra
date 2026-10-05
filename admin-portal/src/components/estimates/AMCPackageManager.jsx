@@ -569,7 +569,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 
                 return (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="list-table w-full">
                       {/* Table Header */}
                       <thead className="bg-slate-50 border-b border-gray-200">
                         <tr>

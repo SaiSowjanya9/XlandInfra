@@ -19,6 +19,42 @@ body {
   font-family: 'Gotham', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* One typography for the list tables -- All Estimates, Archived Estimates, AMC Packages and Add
+   Service -- in every portal, taken from the Add Service table: 11px body, 10px uppercase headings,
+   semibold (never bold) emphasis. Each list had grown its own sizes: text-sm cells, text-lg totals,
+   xs headings in one and 10px in another. A table opts in with `list-table`; the rules only set
+   size, weight and vertical rhythm, so each list keeps its own colours, widths and alignment.
+   Selectors are .list-table plus a class, which outranks the single Tailwind utility they replace. */
+.list-table {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.list-table thead th {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  vertical-align: bottom;
+}
+.list-table tbody td {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.list-table :is(.text-xs, .text-sm, .text-base, .text-lg, .text-xl) {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.list-table .font-bold {
+  font-weight: 600;
+}
+/* Badges and secondary lines stay a step smaller, as in the Add Service table */
+.list-table :is(.text-\[10px\], .text-\[9px\]) {
+  font-size: 10px;
+}
+
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
