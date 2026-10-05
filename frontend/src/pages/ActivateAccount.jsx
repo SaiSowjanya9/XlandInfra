@@ -266,14 +266,14 @@ const ActivateAccount = () => {
                   type={showPasswords.temp ? 'text' : 'password'}
                   value={formData.tempPassword}
                   onChange={(e) => setFormData({ ...formData, tempPassword: e.target.value })}
-                  className="input-field pr-10 font-mono tracking-wider"
+                  className="input-field pr-12 font-mono tracking-wider"
                   placeholder="Enter temporary password from email"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, temp: !showPasswords.temp })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.temp ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -306,14 +306,14 @@ const ActivateAccount = () => {
                   type={showPasswords.new ? 'text' : 'password'}
                   value={formData.newPassword}
                   onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  className="input-field pr-10"
+                  className="input-field pr-12"
                   placeholder="Create a strong password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -339,14 +339,14 @@ const ActivateAccount = () => {
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="input-field pr-10"
+                  className="input-field pr-12"
                   placeholder="Confirm your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center text-dark-400 hover:text-gold-400 transition-colors"
                 >
                   {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
