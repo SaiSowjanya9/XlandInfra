@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Edit2, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import ManpowerFields from './ManpowerFields';
+import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
 import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { TermsConditionsField, EstimateTermsSection } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
@@ -199,9 +200,6 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
   const total = round(netSubtotal + tax);
   const vendorCost = round(rows.reduce((sum, row) => sum + row.vendorCost, 0));
   const operatingCost = round(rows.reduce((sum, row) => sum + row.operatingCost, 0));
-  const actualCost = round(vendorCost + operatingCost);
-  const profit = round(netSubtotal - actualCost);
-  const margin = netSubtotal ? round(profit / netSubtotal * 100) : 0;
   const inputDetails = row => {
     const field = INPUTS[row.pricing_method];
     return field ? `${row.inputs[field[0]]} ${row.unit}` : row.isCustomQuote ? 'Custom Quote' : 'Fixed charge';
@@ -265,9 +263,9 @@ export default function CustomEstimateBuilder({ selectedFp, showToast, onSuccess
           <div><Field label="GST (%)"><input type="number" min="0" max="100" step="0.01" value={gst} onChange={event => setGst(event.target.value)} className={inputClass} /></Field><p className="mt-2 text-right">{money(tax)}</p></div>
           <div className="flex justify-between gap-2 border-t border-slate-100 pt-4 text-sm font-semibold text-green-700"><dt>Grand Total</dt><dd>{money(total)}</dd></div>
         </dl></section>
-        <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="mb-5 text-sm font-semibold text-slate-800">Internal Profit Summary</h2><p className="mb-4 text-[11px] text-slate-400">For internal use only</p><dl className="space-y-4 text-xs text-slate-600">{[
-          ['Total Vendor Cost', money(vendorCost)], ['XLAND Operating Cost', money(operatingCost)], ['Total Actual Cost', money(actualCost)], ['Gross Profit', money(profit)], ['Gross Margin', `${margin}%`]
-        ].map(([label, value]) => <div key={label} className="flex justify-between gap-2"><dt>{label}</dt><dd className="font-semibold">{value}</dd></div>)}</dl></section>
+        <section className="rounded-xl border border-slate-200 bg-white p-5 print:hidden">
+          <EstimateProfitSummaryPanel vendorCost={vendorCost} operatingCost={operatingCost} customerPrice={netSubtotal} />
+        </section>
         <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={event => saveEstimate(event)} disabled={saving || !rows.length || !!editor || !!savedId} className="rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-xs font-semibold text-blue-600 disabled:opacity-50">Save Draft</button><button type="button" onClick={event => saveEstimate(event, true)} disabled={saving || !rows.length || !!editor || !!savedId} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save & Preview Estimate</button></div>
       </aside>
     </fieldset>

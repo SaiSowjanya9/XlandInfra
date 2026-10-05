@@ -30,6 +30,7 @@ import EstimateStructure from '../components/estimates/EstimateStructure';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
+import EstimateProfitSummaryPanel from '../components/estimates/EstimateProfitSummaryPanel';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import * as XLSX from 'xlsx';
@@ -779,23 +780,21 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
   const priceSummary = calculatePriceSummary();
 
-  // Internal profit summary: vendor cost from catalog/custom rows; legacy add-ons have no cost
-  // basis, so their price is treated as cost (zero profit) rather than showing a false margin.
+  // Internal figures. Vendor cost comes from the catalog quotes, the vendor cost typed on a custom
+  // row, and the package's own priced rows. A legacy add-on has no cost basis, so its price is
+  // counted as cost rather than reported as pure margin. Customer price is what XLAND earns --
+  // after the discount, before GST, which is tax collected rather than revenue.
   const calculateProfitSummary = () => {
-    const catalogCost = selectedCatalogAddons.reduce((sum, a) => sum + (Number(a.vendorCost) || 0), 0);
-    const catalogOperating = selectedCatalogAddons.reduce((sum, a) => sum + (Number(a.operatingCost) || 0), 0);
-    const customCost = customServices.reduce((sum, s) => sum + (Number(s.vendorCost) || 0), 0);
-    const addonCost = selectedAddons.reduce((sum, id) => {
+    const sum = (rows, field) => rows.reduce((total, row) => total + (Number(row?.[field]) || 0), 0);
+    const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
+    const addonCost = selectedAddons.reduce((total, id) => {
       const a = addons.find(x => getAddonId(x) === id);
-      return sum + (a ? getAddonPrice(a) : 0);
+      return total + (a ? getAddonPrice(a) : 0);
     }, 0);
-    const vendorCost = catalogCost + customCost + addonCost;
-    const operatingCost = catalogOperating;
-    const actualCost = vendorCost + operatingCost;
-    const customerPrice = priceSummary.totalAmount;
-    const profit = customerPrice - actualCost;
-    return { vendorCost, operatingCost, actualCost, customerPrice, profit,
-      marginPercent: customerPrice ? (profit / customerPrice * 100) : 0 };
+    const vendorCost = sum(selectedCatalogAddons, 'vendorCost') + sum(customServices, 'vendorCost')
+      + (pkg ? sum(getPackageServices(pkg), 'vendorCost') : 0) + addonCost;
+    const operatingCost = sum(selectedCatalogAddons, 'operatingCost');
+    return { vendorCost, operatingCost, customerPrice: priceSummary.subTotal - priceSummary.discountAmount };
   };
   const profitSummary = calculateProfitSummary();
 
@@ -1197,31 +1196,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      {/* Internal Profit Summary - not shown to customers */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Internal Profit Summary</h2>
-          <p className="text-[11px] text-gray-500 mt-0.5">For internal use only</p>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              ['Vendor Cost', profitSummary.vendorCost],
-              ['Operating Cost', profitSummary.operatingCost],
-              ['Actual Cost', profitSummary.actualCost],
-              ['Customer Price', profitSummary.customerPrice],
-              ['Gross Profit', profitSummary.profit],
-              ['Gross Margin', profitSummary.customerPrice ? `${profitSummary.marginPercent.toFixed(2)}%` : '—']
-            ].map(([label, value]) => (
-              <div key={label} className="min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
-                <dt className="truncate text-[11px] text-gray-500" title={label}>{label}</dt>
-                <dd className="mt-1 truncate text-sm font-bold tabular-nums text-gray-900" title={value}>
-                  {typeof value === 'number' ? formatCurrency(value) : value}
-                </dd>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Internal figures - the same four cards as the package form; screen only */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 print:hidden">
+        <EstimateProfitSummaryPanel vendorCost={profitSummary.vendorCost} operatingCost={profitSummary.operatingCost}
+          customerPrice={profitSummary.customerPrice} />
       </div>
 
       {/* Terms & Conditions - the standard clauses, shown but not editable in this portal */}
