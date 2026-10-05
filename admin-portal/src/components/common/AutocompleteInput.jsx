@@ -213,12 +213,21 @@ const AutocompleteInput = ({
     }
   };
 
-  // Handle option selection
-  const handleSelect = (option) => {
+  // Handle option selection. The list closes on the pick and stays closed: the field is often inside
+  // a <label> (the forms' Field wrapper), and a click on a plain option div activates that label,
+  // which hands focus back to the input -- whose onFocus reopened the list at once, so it only
+  // vanished on the next click elsewhere. The click's default is cancelled, so the label never
+  // forwards it, and a focus that still arrives straight after a pick does not reopen.
+  const justPicked = useRef(false);
+  const handleSelect = (option, event) => {
+    event?.preventDefault();
+    justPicked.current = true;
+    setTimeout(() => { justPicked.current = false; }, 0);
     setInputValue(option.label);
     onChange?.(option.value);
     onSelect?.(option);
     setIsOpen(false);
+    setBrowsing(false);
     setHighlightedIndex(-1);
   };
 
@@ -314,7 +323,7 @@ const AutocompleteInput = ({
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          onFocus={() => { setIsOpen(true); setBrowsing(true); }}
+          onFocus={() => { if (justPicked.current) return; setIsOpen(true); setBrowsing(true); }}
           // A field still focused after a pick reopens on a click, rather than needing a key press
           onClick={() => { if (!disabled && !isOpen) { setIsOpen(true); setBrowsing(true); } }}
           onKeyDown={handleKeyDown}
@@ -355,6 +364,9 @@ const AutocompleteInput = ({
       {/* Dropdown */}
       {isOpen && (filteredOptions.length > 0 || offerCustom) && (
         <div
+          // A click anywhere in the list (its padding, the scrollbar) is the list's own, never the
+          // surrounding label's -- which would refocus the input and reopen the list
+          onClick={event => event.preventDefault()}
           className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto ${skin.border}`}
         >
           {/* Save row: the typed value joins the list itself, so it is there the next time too */}
@@ -380,7 +392,9 @@ const AutocompleteInput = ({
             {filteredOptions.map((option, index) => (
               <div
                 key={option.value}
-                onClick={() => handleSelect(option)}
+                // mousedown is cancelled too, so the pick never blurs and refocuses the input
+                onMouseDown={event => event.preventDefault()}
+                onClick={event => handleSelect(option, event)}
                 className={`px-3 py-2 cursor-pointer text-sm flex items-center justify-between gap-2
                   ${index === highlightedIndex || option.value === value ? skin.optionActive : skin.optionHover}
                 `}
