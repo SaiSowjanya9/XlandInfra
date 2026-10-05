@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeStorage } from '../utils/safeStorage';
-import { Building2, FileText, Users, Briefcase, TrendingUp, ArrowUpRight, Clock, CheckCircle2, ClipboardList, RefreshCw, ArrowRight, Star } from 'lucide-react';
+import {
+  Briefcase,
+  Clock,
+  CheckCircle2,
+  ClipboardList,
+  ArrowRight,
+  Star
+} from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { ChartTooltipContent } from '../components/common/ChartTooltip';
 import DateRangeFilter from '../components/common/DateRangeFilter';
@@ -260,59 +267,6 @@ const VendorDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button 
-            onClick={() => navigate('/vendor/vendor-details')}
-            className="flex items-center justify-between p-4 bg-slate-900/50 border border-white/5 rounded-xl hover:bg-slate-900 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-white">View Orders</p>
-                <p className="text-xs text-slate-500">Manage work orders</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
-          </button>
-
-          <button 
-            onClick={() => navigate('/vendor/add-vendor')}
-            className="flex items-center justify-between p-4 bg-slate-900/50 border border-white/5 rounded-xl hover:bg-slate-900 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-white">Add Vendor</p>
-                <p className="text-xs text-slate-500">Register new vendor</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
-          </button>
-
-          <button 
-            onClick={() => navigate('/vendor/clients')}
-            className="flex items-center justify-between p-4 bg-slate-900/50 border border-white/5 rounded-xl hover:bg-slate-900 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-white">Clients</p>
-                <p className="text-xs text-slate-500">Manage clients</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

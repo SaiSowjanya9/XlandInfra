@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Building2, ClipboardList, Clock, CheckCircle2, FileText, Users, 
-  Package, MapPin, Wrench, UserPlus, Activity,
-  RefreshCw, Bell, Settings, UserCheck, Home, X, AlertCircle, Info,
-  QrCode, Download, ChevronDown, Shield, ArrowLeft, ArrowRight, Calendar
+import {
+  Building2,
+  ClipboardList,
+  CheckCircle2,
+  FileText,
+  Users,
+  Wrench,
+  RefreshCw,
+  Bell,
+  X,
+  AlertCircle,
+  Info,
+  QrCode,
+  Download,
+  ChevronDown,
+  Shield,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -485,15 +498,6 @@ const Dashboard = () => {
     { name: 'Rejected', direct: estStatus.direct_rejected || 0, property: estStatus.prop_rejected || 0, color: STATUS_COLORS.Rejected },
   ];
 
-  // Quick Actions
-  const quickActions = [
-    { label: 'Create Estimate', icon: FileText, path: '/employee/estimates' },
-    { label: 'Work Order', icon: ClipboardList, path: '/work-orders' },
-    { label: 'Add Customer', icon: UserPlus, path: '/employee/create-customer' },
-    { label: 'Assign Vendor', icon: UserCheck, path: '/employee/assigned-vendors' },
-    { label: 'Manage AMC', icon: Package, path: '/employee/estimates' },
-    { label: 'Properties', icon: Home, path: '/employee/customer-submissions' },
-  ];
 
   // Show FP selection dropdown if no FP selected
   if (!selectedFp) {
@@ -1158,75 +1162,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button
-              onClick={() => navigate('/employee/work-orders')}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">View Work Orders</p>
-                  <p className="text-xs text-gray-500">Manage all work orders</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={() => navigate('/employee/estimates/list')}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-teal-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">View Estimates</p>
-                  <p className="text-xs text-gray-500">Manage all estimates</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={() => navigate('/employee/customer-submissions')}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">View Properties</p>
-                  <p className="text-xs text-gray-500">Manage all properties</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={() => navigate('/employee/assigned-vendors')}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                  <Wrench className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">View Vendors</p>
-                  <p className="text-xs text-gray-500">Manage all vendors</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
