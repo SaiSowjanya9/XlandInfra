@@ -404,11 +404,11 @@ const Dashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Phones and tablets open on Quick Access and then the stats; a desktop keeps the stats
-          first. Below lg every card is its icon and its name -- the summary lines are desktop only. */}
+      {/* Quick Access comes first and the stats after it, at every screen size, and every card
+          is its icon and its name, with no summary lines (a stat keeps its figure). */}
       <div className="flex flex-col">
       {/* Stats Row - 4 cards */}
-      <div className="order-2 lg:order-1 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="order-2 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <button onClick={() => navigate('/dashboard/work-order')} className="bg-dark-800/50 border border-dark-600/50 rounded-2xl p-3 sm:p-5 hover:bg-dark-800 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -417,7 +417,6 @@ const Dashboard = ({ user }) => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-dark-300 truncate">Total Orders</p>
               <p className="text-2xl font-bold text-white">{stats?.total || 0}</p>
-              <p className="hidden lg:block text-xs text-dark-400">All Work Orders</p>
             </div>
           </div>
         </button>
@@ -430,7 +429,6 @@ const Dashboard = ({ user }) => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-dark-300 truncate">Pending</p>
               <p className="text-2xl font-bold text-white">{Number(stats?.pending) || 0}</p>
-              <p className="hidden lg:block text-xs text-dark-400">Awaiting Action</p>
             </div>
           </div>
         </button>
@@ -443,7 +441,6 @@ const Dashboard = ({ user }) => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-dark-300 truncate">Completed</p>
               <p className="text-2xl font-bold text-white">{stats?.completed || 0}</p>
-              <p className="hidden lg:block text-xs text-dark-400">Successfully Done</p>
             </div>
           </div>
         </button>
@@ -456,14 +453,13 @@ const Dashboard = ({ user }) => {
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-dark-300 truncate">Property</p>
               <p className="text-base sm:text-lg font-bold text-white truncate lg:max-w-[120px]">{user?.propertyName || 'N/A'}</p>
-              <p className="hidden lg:block text-xs text-dark-400">Your Home</p>
             </div>
           </div>
         </button>
       </div>
 
       {/* Quick Access Cards */}
-      <div className="order-1 lg:order-2 mb-8">
+      <div className="order-1 mb-8">
         <h2 className="text-lg font-semibold text-white mb-4">Quick Access</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {menuItems.map((item) => {
@@ -481,7 +477,6 @@ const Dashboard = ({ user }) => {
                     <Icon className="w-5 h-5 text-dark-400" />
                   </div>
                   <h3 className="text-white font-semibold mb-1">{item.title}</h3>
-                  <p className="hidden lg:block text-dark-400 text-sm">{item.description}</p>
                 </div>
               );
             }
@@ -498,10 +493,9 @@ const Dashboard = ({ user }) => {
                   </div>
                   <div className="text-left min-w-0">
                     <p className="font-medium text-white text-sm sm:text-base leading-snug">{item.title}</p>
-                    <p className="hidden lg:block text-xs text-dark-400">{item.description}</p>
                   </div>
                 </div>
-                <ArrowRight className="hidden lg:block w-4 h-4 shrink-0 text-dark-500 group-hover:text-gold-400 transition-colors" />
+                <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-dark-500 group-hover:text-gold-400 transition-colors" />
               </Link>
             );
           })}
