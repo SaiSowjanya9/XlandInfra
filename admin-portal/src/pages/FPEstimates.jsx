@@ -30,6 +30,8 @@ import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import { CapacitySlabSelect } from '../components/estimates/CapacitySlabList';
 import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
+import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from '../utils/packageRows';
+import { capitalizeFirst } from '../utils/text';
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
 import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
@@ -108,7 +110,9 @@ const handleDateInput = (value, setter) => {
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_4rem_6.5rem_4rem]';
+// The description is not a column: it runs the full width of the row underneath, so there is room
+// to read and type it.
+const PACKAGE_ROW_GRID = 'grid-cols-[minmax(10rem,2fr)_6.5rem_9.5rem_9.5rem_4rem_6.5rem_4rem]';
 
 const PROPERTY_TYPE_OPTIONS = [
   { id: 'GC', label: 'Gated Community' },
@@ -3041,18 +3045,26 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => pkgMatchesPropertyType(p, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
+    if (amcPackageNameTaken) { showToast(`A package named "${amcPackageNameTaken.name || amcPackageNameTaken.packageName}" already exists`, 'error'); return; }
     if (!selectedPropertyTypes.length) { showToast('Select at least one property type', 'error'); return; }
     // The price is the sum of the configured services, so it is they that must be priced
     if (totals.price <= 0) { showToast('Add a configured service and its amount so the package has a price', 'error'); return; }
-    const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
+    const validSvc = amcForm.serviceRows.filter(r => String(r.service || '').trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
       const isEditing = !!editingAmcPackage;
-      const url = isEditing ? `/api/fp/amc-packages/${editingAmcPackage}` : '/api/fp/amc-packages';
+      // Full API_BASE URL: a relative one resolves against the admin host in production
+      const url = isEditing ? `${API_BASE}/api/fp/amc-packages/${editingAmcPackage}` : `${API_BASE}/api/fp/amc-packages`;
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, description: amcForm.description || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services: validSvc.map(r => { const parsed = parseInt(r.frequencyCount); return { name: r.service, description: r.description || '', frequency_count: typeof r.frequencyCount === 'number' ? r.frequencyCount : (isNaN(parsed) ? 0 : parsed), frequency_type: r.frequencyType, category: r.category || '', pricingMethod: r.pricingMethod || '', inputValue: r.inputValue, price: r.price, priceOverridden: r.priceOverridden, vendorCost: r.vendorCost, vendorRequired: r.vendorRequired, ...(r.catalogServiceId ? { catalogServiceId: r.catalogServiceId, unit: r.unit, applicablePropertyTypes: r.applicablePropertyTypes, allowFrequencyOverride: r.allowFrequencyOverride, defaultFrequency: r.defaultFrequency, capacitySlabs: r.capacitySlabs, defaultMarkupPercentage: r.defaultMarkupPercentage, defaultVisitsPerYear: r.defaultVisitsPerYear, operatingCost: r.operatingCost, marginPercentage: r.marginPercentage } : {}) }; }), price: totals.price, markup_percentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage), billing_duration: amcForm.billingDuration }) });
-      const result = await res.json();
-      if (res.ok || result.success) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
+      // The FP list reads `name` / `frequency_*`; the shared shape is kept alongside so a package
+      // reads back the same in every portal
+      const services = validSvc.map(r => {
+        const row = packageRowForSave(r);
+        return { ...row, name: row.service, frequency_count: row.frequencyCount, frequency_type: row.frequencyType };
+      });
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName.trim(), description: amcForm.description?.trim() || '', property_type: selectedPropertyTypes[0], property_types: selectedPropertyTypes, services, price: totals.price, markup_percentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage), billing_duration: amcForm.billingDuration }) });
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.success !== false) { showToast(isEditing ? 'AMC Package updated!' : 'AMC Package created!'); resetAmcForm(); loadData(); setAmcActiveTab('all-packages'); }
       else showToast(result.message || 'Failed', 'error');
     } catch (e) { showToast('Failed to save package', 'error'); }
   };
@@ -3078,43 +3090,23 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // figure asked for is the vendor price -- a package is bought here, not sold -- so it lands on
   // the row as its vendor cost and shows in the Internal figures.
   const [customRowOpen, setCustomRowOpen] = useState(false);
-  const packageRowFromDialog = (values) => ({
-    service: String(values.name || '').trim(),
-    description: values.description || '',
-    category: values.category || '',
-    frequencyType: values.frequency_type,
-    frequencyCount: Number(values.frequency_count) || 0,
-    pricingMethod: '',
-    inputValue: values.quantity === '' || values.quantity == null ? '' : Number(values.quantity),
-    vendorRequired: values.vendorRequired,
-    vendorCost: Number(values.price) || 0
-  });
   // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
   // starter row is replaced rather than left above them.
   const handleAddCatalogServices = (rows) => {
     if (!rows.length) return;
     setAmcForm(prev => ({ ...prev, serviceRows: [...prev.serviceRows.filter(row => String(row.service || '').trim() !== ''), ...rows] }));
   };
-  const handleUpdateServiceRow = (i, f, v) => { 
-    const rows = [...amcForm.serviceRows]; 
-    if (f === 'frequencyType') { 
-      const auto = FREQUENCY_COUNT_MAP[v]; 
-      // Custom has no count of its own, so whatever is already typed stays to be edited
-      rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : rows[i].frequencyCount }; 
-    } else if (f === 'frequencyCount') {
-      const parsed = parseInt(v);
-      rows[i][f] = v === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
-    } else if (f === 'price') {
-      // A price typed here stands until the field is cleared, at which point the quote takes over again
-      rows[i] = { ...rows[i], price: v === '' ? undefined : Number(v), priceOverridden: v !== '' };
-    } else {
-      rows[i][f] = v; 
-    }
-    setAmcForm({ ...amcForm, serviceRows: rows }); 
+  // Functional updates on new row objects: assigning into the row React was holding could be undone
+  // by the re-pricing below
+  const handleUpdateServiceRow = (i, f, v) => {
+    const next = f === 'service' || f === 'description' ? capitalizeFirst(v) : v;
+    setAmcForm(prev => ({ ...prev, serviceRows: updatePackageRow(prev.serviceRows, i, f, next, FREQUENCY_COUNT_MAP) }));
   };
   // Any row may go, the last one included: the table is allowed to be empty, and saving already
   // refuses a package with no services.
-  const handleRemoveServiceRow = (i) => { setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
+  const handleRemoveServiceRow = (i) => { setAmcForm(prev => ({ ...prev, serviceRows: prev.serviceRows.filter((_, idx) => idx !== i) })); };
+  // The same package name twice is two entries nobody can tell apart in the estimate's dropdown
+  const amcPackageNameTaken = duplicatePackageName(amcPackages, amcForm.packageName, editingAmcPackage);
 
   // The package's price is what its configured services add up to, so it is derived rather than typed
   // Every row's price follows the package's markup, exactly as a service's own markup prices it
@@ -3131,22 +3123,22 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       let failure = '';
-      const priced = await Promise.all(amcForm.serviceRows.map(async row => {
+      const snapshot = amcForm.serviceRows;
+      const patches = await Promise.all(snapshot.map(async row => {
         const result = await quotePackageRow(row, { apiPath: FP_CATALOG_API, propertyTypes: selectedPropertyTypes, fpId: 'all', token, signal: controller.signal })
           .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
-        if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
-        // A price typed over the quote stands: the quote still refreshes the costs behind it
-        if (result.priced) return { ...row, ...result.priced, ...(row.priceOverridden ? { price: row.price } : {}) };
-        if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
-        return row;
+        if (result.error) { failure = result.error; return { price: undefined, vendorCost: undefined }; }
+        if (result.priced) return result.priced;
+        if (result.cleared) return { price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
+        return null;
       }));
       if (controller.signal.aborted) return;
       setPricingError(failure);
-      // Only write back when a figure actually changed, or this would loop
+      // Applied to the rows as they are now: whatever was typed while the quotes ran is kept, and
+      // nothing is written back when no figure changed, or this would loop
       setAmcForm(prev => {
-        const changed = priced.some((row, index) => row.price !== prev.serviceRows[index]?.price
-          || row.vendorCost !== prev.serviceRows[index]?.vendorCost);
-        return changed ? { ...prev, serviceRows: priced } : prev;
+        const serviceRows = applyRowPatches(prev.serviceRows, snapshot, patches);
+        return serviceRows === prev.serviceRows ? prev : { ...prev, serviceRows };
       });
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -3242,7 +3234,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           {amcPackages.length === 0 ? (
             <EmptyState icon={Package} title="No AMC packages yet" description="Create your first package to get started"
               action={isFPManager ? null : (
-                <button onClick={() => setAmcActiveTab('create')} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-[10px] hover:bg-emerald-800 transition-colors">
+                <button onClick={() => { resetAmcForm(); setAmcActiveTab('create'); }} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-700 rounded-[10px] hover:bg-emerald-800 transition-colors">
                   <Plus className="w-4 h-4" />Create Package
                 </button>
               )} />
@@ -3324,16 +3316,16 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               <button 
                                 onClick={() => {
                                   setEditingAmcPackage(pkg.id);
+                                  // Every row reopens on what it was priced from -- service, method,
+                                  // amount, price -- and the package on its markup. Only the name,
+                                  // description and schedule used to come back, so an edited package
+                                  // had no price and could not be saved again.
                                   setAmcForm({
                                     packageName: decodeHtml(pkg.name) || '',
                                     description: decodeHtml(pkg.description) || '',
-                                    serviceRows: serviceRows.length > 0 ? serviceRows.map(s => ({
-                                      service: decodeHtml(s.name || s.service) || '',
-                                      description: decodeHtml(s.description) || '',
-                                      frequencyCount: s.frequency_count ?? s.frequencyCount ?? 0,
-                                      frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
-                                    })) : [{ service: '', description: '', frequencyCount: 12, frequencyType: 'Monthly' }],
+                                    serviceRows: Array.isArray(serviceRows) ? serviceRows.filter(s => s && typeof s === 'object').map(s => packageRowFromSaved(s, decodeHtml)) : [],
                                     price: pkg.base_price || pkg.price || '',
+                                    markupPercentage: pkg.markupPercentage ?? '',
                                     billingDuration: billingDuration || 'monthly'
                                   });
                                   setSelectedPropertyTypes(getPkgPropertyTypes(pkg));
@@ -3476,9 +3468,25 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <input
                     type="text"
                     value={amcForm.packageName}
-                    onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
+                    onChange={(e) => { const packageName = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, packageName })); }}
                     placeholder="e.g., Gold Package"
-                    className="w-full max-w-md px-4 py-2.5 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                    maxLength={150}
+                    className={`w-full max-w-md px-4 py-2.5 border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent ${amcPackageNameTaken ? 'border-red-300' : 'border-warm-border'}`}
+                  />
+                  {amcPackageNameTaken && <p role="alert" className="mt-1.5 text-xs text-red-600">A package with this name already exists. Choose another name or edit the existing package.</p>}
+                </div>
+
+                {/* What the package covers, as a whole. Saved with the package and shown on its view. */}
+                <div className="mb-6">
+                  <label htmlFor="fp-package-description" className="block text-xs font-medium text-warm-muted mb-1.5">Package Description</label>
+                  <textarea
+                    id="fp-package-description"
+                    rows={3}
+                    maxLength={1000}
+                    value={amcForm.description}
+                    onChange={(e) => { const description = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, description })); }}
+                    placeholder="What this package covers, visit terms, exclusions..."
+                    className="w-full px-4 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                   />
                 </div>
 
@@ -3492,7 +3500,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     {/* Method and Input are separate columns -- one states how the service is
                         priced, the other takes the amount -- so the row sizes its own columns. */}
                     <div className={`grid ${PACKAGE_ROW_GRID} gap-2 px-3 py-2 bg-warm-section rounded-[10px] mb-3`}>
-                      {[['Service', 'text-left'], ['Description', 'text-left'], ['Method', 'text-left'], ['Input', 'text-left'],
+                      {[['Service', 'text-left'], ['Method', 'text-left'], ['Input', 'text-left'],
                         ['Frequency', 'text-left'], ['Visits', 'text-left'], ['Price', 'text-right'], ['Action', 'text-center']].map(([label, align]) => (
                         <div key={label} className={`px-2 ${align}`}>
                           <span className="text-xs font-semibold text-warm-muted uppercase tracking-wider whitespace-nowrap">{label}</span>
@@ -3519,17 +3527,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                               placeholder="e.g., Deep Cleaning"
                               className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                             />
-                          </div>
-                          
-                          {/* Description */}
-                          <div>
-                            <input
-                              type="text"
-                              value={row.description || ''}
-                              onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
-                              placeholder="Service description..."
-                              className="w-full px-2 py-2 border border-warm-border rounded-[10px] text-sm focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
-                            />
+                            {row.category && <p className="mt-1 px-1 text-[11px] text-warm-muted truncate" title={row.category}>{row.category}</p>}
                           </div>
 
                           {/* How the service is priced. A configured service brings its own method,
@@ -3628,10 +3626,24 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="flex justify-center">
                             <button
                               onClick={() => handleRemoveServiceRow(index)}
+                              aria-label={`Remove ${row.service || 'service'}`}
                               className="p-2 rounded-[10px] text-red-500 transition-colors hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                          </div>
+
+                          {/* Description: the full width of the row, so it can be read and typed */}
+                          <div className="col-span-full">
+                            <textarea
+                              rows={2}
+                              maxLength={1000}
+                              value={row.description || ''}
+                              onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
+                              placeholder="Service description — what this service covers in the package"
+                              aria-label={`${row.service || 'Service'} description`}
+                              className="w-full px-3 py-2 border border-warm-border rounded-[10px] text-sm resize-y bg-white focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
+                            />
                           </div>
                         </div>
                       ))}
@@ -3676,7 +3688,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <input
                             id="fp-package-markup" type="number" min="0" max="1000" step="0.01"
                             value={amcForm.markupPercentage ?? ''}
-                            onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
+                            onChange={(e) => { const markupPercentage = e.target.value; setAmcForm(prev => ({ ...prev, markupPercentage })); }}
                             placeholder="None"
                             className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent"
                           />
@@ -3688,7 +3700,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                           <div className="relative">
                             <select
                               value={amcForm.billingDuration}
-                              onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
+                              onChange={(e) => { const billingDuration = e.target.value; setAmcForm(prev => ({ ...prev, billingDuration })); }}
                               className="w-full px-4 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm text-warm-text focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent appearance-none"
                             >
                               {BILLING_DURATIONS.map(duration => (
@@ -4045,7 +4057,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-warm-section p-4 rounded-xl">
                   <p className="text-xs text-warm-muted mb-1">Property Type</p>
-                  <p className="font-semibold text-warm-text">{getPropertyTypeLabel(viewAmcPackage.propertyType)}</p>
+                  {/* Every type the package applies to, not only the first */}
+                  <p className="font-semibold text-warm-text">{(getPkgPropertyTypes(viewAmcPackage).length ? getPkgPropertyTypes(viewAmcPackage) : [viewAmcPackage.propertyType]).map(getPropertyTypeLabel).join(', ')}</p>
                 </div>
                 <div className="bg-warm-section p-4 rounded-xl">
                   <p className="text-xs text-warm-muted mb-1">Billing</p>
@@ -4056,6 +4069,13 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                   <p className="font-bold text-xl text-green-600">{formatCurrency(viewAmcPackage.price || viewAmcPackage.base_price)}</p>
                 </div>
               </div>
+
+              {decodeHtml(viewAmcPackage.description)?.trim() && (
+                <div>
+                  <p className="text-xs text-warm-muted mb-1">Description</p>
+                  <p className="text-sm text-warm-text whitespace-pre-wrap [overflow-wrap:anywhere]">{decodeHtml(viewAmcPackage.description)}</p>
+                </div>
+              )}
 
               {/* Services Included */}
               <div>

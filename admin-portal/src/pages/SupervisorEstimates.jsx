@@ -4,7 +4,9 @@ import { getAuthToken } from '../utils/safeStorage';
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
 import { newEstimateTerms } from '../utils/estimateTerms';
 import EstimateStructure from '../components/estimates/EstimateStructure';
-import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
+import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import {
   FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
@@ -18,6 +20,8 @@ import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
+import { duplicatePackageName, updatePackageRow } from '../utils/packageRows';
+import { capitalizeFirst } from '../utils/text';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
@@ -407,16 +411,62 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   // Switching structure starts the other choice clean. Anything already added belongs to the
   // choice being left -- a package, hand-entered rows, or services picked alongside either -- and
   // carrying it across would put services on the estimate the user never chose in this mode.
+  // Build Custom Services works as it does on the FP and Manager forms: one table, whose Add Service
+  // menu lists Custom above the configured services. Custom opens the hand-entered service dialog;
+  // a configured service is priced by the server. The table stays customer-priced here: the Vendor
+  // Cost, XLAND Cost and Margin % columns are for Admin and FP only.
+  const CATALOG_API = '/api/supervisor/service-catalog';
+  const [catalogAddons, setCatalogAddons] = useState([]);
+  const [editingCatalogAddon, setEditingCatalogAddon] = useState(null);
+  const [customServiceDraft, setCustomServiceDraft] = useState(null);
+  const catalogPropertyType = normalizePropertyType(selectedProperty?.entry_type || selectedProperty?.property_type || directForm?.propertyType || '');
+  // A configured service is priced for a property type, so its price never carries across a change of it
+  useEffect(() => { setCatalogAddons([]); setEditingCatalogAddon(null); }, [catalogPropertyType]);
+  // Adding and editing both come back through here: an edit keeps its addonId and replaces the row
+  const upsertCatalogAddon = (addon) => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId)
+    ? prev.map(item => item.addonId === addon.addonId ? addon : item) : [...prev, addon]);
+  const catalogRowActions = (addon) => (
+    <div className="flex items-center justify-center gap-1">
+      <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></button>
+      <button type="button" onClick={() => setCatalogAddons(prev => prev.filter(item => item.addonId !== addon.addonId))}
+        title={`Remove ${addon.name}`} aria-label={`Remove ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+  );
+  const renderCustomServices = () => (<>
+    <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null}
+      extraRows={catalogAddons} renderExtraActions={catalogRowActions}
+      onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
+      addControl={
+        <ServiceCatalogPicker apiPath={CATALOG_API} propertyType={catalogPropertyType}
+          selectedAddons={catalogAddons} onAdd={upsertCatalogAddon}
+          editing={editingCatalogAddon} onEditClose={() => setEditingCatalogAddon(null)}
+          variant="menu" extraItems={[{ key: 'custom', label: 'Custom', onSelect: () => setCustomServiceDraft({ index: null, row: null }) }]} />
+      } />
+    <CustomServiceDialog open={!!customServiceDraft} editing={customServiceDraft?.row || null} apiPath={CATALOG_API}
+      onClose={() => setCustomServiceDraft(null)}
+      onSubmit={values => {
+        const draft = customServiceDraft;
+        setCustomServices(prev => draft?.index == null
+          ? [...prev, buildCustomService(values)]
+          : prev.map((row, index) => index === draft.index ? buildCustomService(values, row.addonId) : row));
+        setCustomServiceDraft(null);
+      }} />
+  </>);
+
   const changeEstimateStructure = (value) => {
     setEstimateStructure(value);
     setCustomServices([]);
+    setCatalogAddons([]);
+    setEditingCatalogAddon(null);
     setSelectedAddons([]);
     if (value === 'custom') setSelectedAmcPackage('');
   };
 
   // Calculate price summary
   const calculatePriceSummary = () => {
-    let subTotal = customServicesTotal(customServices);
+    let subTotal = customServicesTotal(customServices) + customServicesTotal(catalogAddons);
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += getPackagePrice(pkg);
     selectedAddons.forEach(addonId => {
@@ -442,7 +492,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     }
     // A package estimate needs its package; a custom one needs at least one service instead
     if (estimateStructure === 'package' && !selectedAmcPackage) { showToast('Select AMC Package', 'error'); return; }
-    if (estimateStructure === 'custom' && !customServices.length && !selectedAddons.length) {
+    if (estimateStructure === 'custom' && !customServices.length && !catalogAddons.length && !selectedAddons.length) {
       showToast('Add at least one service', 'error'); return;
     }
 
@@ -526,7 +576,12 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       };
 
       // Hand-entered services travel with the add-ons; they carry their own customer price
-      payload.addons = [...payload.addons, ...customServices];
+      // Configured services travel with the add-ons; the server prices them again before saving
+      payload.addons = [...payload.addons, ...catalogAddons, ...customServices];
+      if (catalogAddons.length && selectedProperty?.id && ['property_based', 'property-based'].includes(payload.estimate_type)) {
+        payload.catalog_property_id = selectedProperty.id;
+        if (selectedProperty.source_table) payload.catalog_property_source = selectedProperty.source_table;
+      }
 
       const res = await fetch(`${API_BASE}/api/supervisor/estimates`, {
         method: 'POST',
@@ -555,6 +610,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     setSelectedAmcPackage('');
     setSelectedAddons([]);
     setCustomServices([]);
+    setCatalogAddons([]);
     setEstimateStructure('package');
     setDiscountPercent('');
     setGstPercent('');
@@ -654,7 +710,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
         <div className="p-6 space-y-4">
           {/* The card header above already reads "Custom Services" */}
-          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} />}
+          {estimateStructure === 'custom' && renderCustomServices()}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;
@@ -1397,9 +1453,10 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
+    if (amcPackageNameTaken) { showToast(`A package named "${amcPackageNameTaken.name || amcPackageNameTaken.packageName}" already exists`, 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
     if (!amcForm.price || parseFloat(amcForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
-    const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
+    const validSvc = amcForm.serviceRows.filter(r => String(r.service || '').trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
       const res = await fetch(`${API_BASE}/api/supervisor/amc-packages`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
@@ -1409,9 +1466,12 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) { showToast('Failed to create package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/supervisor/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
-  const handleUpdateServiceRow = (i, f, v) => { const rows = [...amcForm.serviceRows]; if (f === 'frequencyType') { const auto = FREQUENCY_COUNT_MAP[v]; /* Custom has no count of its own, so what is typed stays */ rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : rows[i].frequencyCount }; } else rows[i][f] = v; setAmcForm({ ...amcForm, serviceRows: rows }); };
-  const handleRemoveServiceRow = (i) => { setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
+  const handleAddServiceRow = () => setAmcForm(prev => ({ ...prev, serviceRows: [...prev.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] }));
+  // Functional updates on new row objects, never an assignment into the row React is holding
+  const handleUpdateServiceRow = (i, f, v) => { const next = f === 'service' || f === 'description' ? capitalizeFirst(v) : v; setAmcForm(prev => ({ ...prev, serviceRows: updatePackageRow(prev.serviceRows, i, f, next, FREQUENCY_COUNT_MAP) })); };
+  const handleRemoveServiceRow = (i) => { setAmcForm(prev => ({ ...prev, serviceRows: prev.serviceRows.filter((_, idx) => idx !== i) })); };
+  // The same package name twice is two entries nobody can tell apart in the estimate's dropdown
+  const amcPackageNameTaken = duplicatePackageName(amcPackages, amcForm.packageName);
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
   const resetAmcForm = () => { setAmcForm({ packageName: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); };
@@ -1635,7 +1695,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                   <input
                     type="text"
                     value={amcForm.packageName}
-                    onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
+                    onChange={(e) => { const packageName = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, packageName })); }}
                     placeholder="e.g., Gold Package"
                     className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                   />

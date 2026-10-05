@@ -3,7 +3,8 @@ import { Check, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
-import { customServiceValues } from './CustomServicesTable';
+import { customServiceValues, customVisitsComplaint } from './CustomServicesTable';
+import { capitalizeFirst } from '../../utils/text';
 import AutocompleteInput from '../common/AutocompleteInput';
 import useServiceCategories from '../../hooks/useServiceCategories';
 
@@ -68,8 +69,9 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
     return [{ label: typed, value: typed }, ...options];
   }, [values.category, categories, canManage]);
 
-  const setField = (field, value) => {
+  const setField = (field, raw) => {
     setProblem('');
+    const value = field === 'name' || field === 'description' ? capitalizeFirst(raw) : raw;
     setValues(prev => {
       const next = { ...prev, [field]: value,
         // The frequency states how many visits a year it means, so the count follows it. Custom is
@@ -108,7 +110,9 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
     if (price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) return setProblem(`Enter a ${priceLabel.toLowerCase()} for this service.`);
     const quantity = Number(values.quantity);
     if (values.quantity !== '' && (!Number.isInteger(quantity) || quantity < 1)) return setProblem('Enter the quantity as a whole number of 1 or more.');
-    onSubmit(values);
+    const visitsIssue = customVisitsComplaint(values);
+    if (visitsIssue) return setProblem(visitsIssue);
+    onSubmit({ ...values, name: String(values.name).trim(), description: String(values.description || '').trim(), category: String(values.category || '').trim() });
   };
 
   const label = `mb-1.5 block text-xs font-medium ${skin.label}`;
@@ -146,7 +150,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
                 one nothing uses yet takes a misspelling out again */}
             <div>
               <AutocompleteInput label="Category" value={values.category} onChange={value => setField('category', value)}
-                options={categoryOptions} placeholder="Type or select category..." allowCustom showAllOnOpen
+                options={categoryOptions} placeholder="Type or select category..." allowCustom showAllOnOpen capitalize
                 onCreateOption={canManage ? createCategory : undefined}
                 onDeleteOption={canManage ? deleteCategory : undefined}
                 inputClassName="text-sm" theme={theme ?? pageTheme} />

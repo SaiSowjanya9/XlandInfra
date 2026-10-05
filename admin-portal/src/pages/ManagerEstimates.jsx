@@ -16,6 +16,8 @@ import {
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
+import { duplicatePackageName, updatePackageRow } from '../utils/packageRows';
+import { capitalizeFirst } from '../utils/text';
 
 const ITEMS_PER_PAGE = 10;
 import { exportEstimateToPDF, exportPackageToPDF, printEstimatePDF } from '../utils/pdfExport';
@@ -25,7 +27,8 @@ import { EstimateInput, PropertyIdInput } from '../components/estimates/Estimate
 import ServiceCatalogList from '../components/estimates/ServiceCatalogList';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
-import CustomServicesTable, { blankCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import EstimateDetailPanel from '../components/estimates/EstimateDetailPanel';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
@@ -972,6 +975,21 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       onEditClose={() => setEditingCatalogAddon(null)}
       inline={inline} variant={variant} extraItems={extraItems} />
   );
+  // A hand-entered service is filled in through the same dialog the FP form uses: `index` is null
+  // for a new row, and editing a row reopens the dialog on it
+  const [customServiceDraft, setCustomServiceDraft] = useState(null);
+  const renderCustomServiceDialog = () => (
+    <CustomServiceDialog open={!!customServiceDraft} editing={customServiceDraft?.row || null}
+      apiPath="/api/manager/service-catalog"
+      onClose={() => setCustomServiceDraft(null)}
+      onSubmit={values => {
+        const draft = customServiceDraft;
+        setCustomServices(prev => draft?.index == null
+          ? [...prev, buildCustomService(values)]
+          : prev.map((row, index) => index === draft.index ? buildCustomService(values, row.addonId) : row));
+        setCustomServiceDraft(null);
+      }} />
+  );
   const catalogRowActions = (addon) => (
     <div className="flex items-center justify-center gap-1">
       <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
@@ -1022,9 +1040,11 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               services: one control for both, instead of a second picker underneath. */}
           {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices}
             extraRows={selectedCatalogAddons} renderExtraActions={catalogRowActions}
+            onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
             addControl={renderCatalogPicker({ variant: 'menu', extraItems: [
-              { key: 'custom', label: 'Custom', onSelect: () => setCustomServices(prev => [...prev, blankCustomService()]) }
+              { key: 'custom', label: 'Custom', onSelect: () => setCustomServiceDraft({ index: null, row: null }) }
             ] })} />}
+          {renderCustomServiceDialog()}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;
@@ -1838,9 +1858,10 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType));
   const handleSaveAmcPackage = async () => {
     if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
+    if (amcPackageNameTaken) { showToast(`A package named "${amcPackageNameTaken.name || amcPackageNameTaken.packageName}" already exists`, 'error'); return; }
     if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
     if (!amcForm.price || parseFloat(amcForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
-    const validSvc = amcForm.serviceRows.filter(r => r.service.trim());
+    const validSvc = amcForm.serviceRows.filter(r => String(r.service || '').trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {
       const res = await fetch(`${API_BASE}/api/manager/amc-packages`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: !isNaN(parseInt(r.frequencyCount)) ? parseInt(r.frequencyCount) : 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
@@ -1850,9 +1871,12 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     } catch (e) { showToast('Failed to create package', 'error'); }
   };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/manager/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm({ ...amcForm, serviceRows: [...amcForm.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] });
-  const handleUpdateServiceRow = (i, f, v) => { const rows = [...amcForm.serviceRows]; if (f === 'frequencyType') { const auto = FREQUENCY_COUNT_MAP[v]; /* Custom has no count of its own, so what is typed stays */ rows[i] = { ...rows[i], [f]: v, frequencyCount: auto !== null ? auto : rows[i].frequencyCount }; } else rows[i][f] = v; setAmcForm({ ...amcForm, serviceRows: rows }); };
-  const handleRemoveServiceRow = (i) => { setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, idx) => idx !== i) }); };
+  const handleAddServiceRow = () => setAmcForm(prev => ({ ...prev, serviceRows: [...prev.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] }));
+  // Functional updates on new row objects, never an assignment into the row React is holding
+  const handleUpdateServiceRow = (i, f, v) => { const next = f === 'service' || f === 'description' ? capitalizeFirst(v) : v; setAmcForm(prev => ({ ...prev, serviceRows: updatePackageRow(prev.serviceRows, i, f, next, FREQUENCY_COUNT_MAP) })); };
+  const handleRemoveServiceRow = (i) => { setAmcForm(prev => ({ ...prev, serviceRows: prev.serviceRows.filter((_, idx) => idx !== i) })); };
+  // The same package name twice is two entries nobody can tell apart in the estimate's dropdown
+  const amcPackageNameTaken = duplicatePackageName(amcPackages, amcForm.packageName);
 
   const getPrice = () => parseFloat(amcForm.price) || 0;
   const resetAmcForm = () => { setAmcForm({ packageName: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); };
@@ -2076,7 +2100,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                   <EstimateInput
                     type="text"
                     value={amcForm.packageName}
-                    onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
+                    onChange={(e) => { const packageName = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, packageName })); }}
                     placeholder="e.g., Gold Package"
                     className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                   />

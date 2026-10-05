@@ -44,6 +44,8 @@ import {
 } from '../../utils/estimateStore';
 import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } from '../../utils/estimatePackageUtils';
 import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
+import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from '../../utils/packageRows';
+import { capitalizeFirst } from '../../utils/text';
 import { PRICING_METHODS, methodLabel } from './AddServicePage';
 import PackageServicePicker from './PackageServicePicker';
 import CustomServiceDialog from './CustomServiceDialog';
@@ -78,7 +80,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // The package's service table sizes its own columns: twelve equal ones could not hold Method and
 // Input separately without squeezing the service name.
-const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(7rem,1.3fr)_minmax(6.5rem,1.2fr)_6.5rem_9.5rem_9.5rem_4rem_6.5rem_4rem]';
+// The description is not a column: it runs the full width of the row underneath, so there is room
+// to read and type it.
+const PACKAGE_ROW_GRID = 'md:grid-cols-[minmax(10rem,2fr)_6.5rem_9.5rem_9.5rem_4rem_6.5rem_4rem]';
 
 const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // Check if user is Operations Manager (restricted access - view only)
@@ -92,8 +96,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   const [filterPropertyType, setFilterPropertyType] = useState('all'); // Filter for All Packages tab
   const [exportingId, setExportingId] = useState(null); // Track PDF export state
   
-  // Edit Modal state
-  const [showEditModal, setShowEditModal] = useState(false);
+  // The package being edited in the create form, or null for a new one
   const [editingPackage, setEditingPackage] = useState(null);
   
   // View Modal state
@@ -170,22 +173,22 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       let failure = '';
-      const priced = await Promise.all(amcForm.serviceRows.map(async row => {
+      const snapshot = amcForm.serviceRows;
+      const patches = await Promise.all(snapshot.map(async row => {
         const result = await quotePackageRow(row, { apiPath: catalogPath, propertyTypes: selectedPropertyTypes, fpId: selectedFp?.id, token, signal: controller.signal })
           .catch(error => (error.name === 'AbortError' ? { skipped: true } : { error: error.message }));
-        if (result.error) { failure = result.error; return { ...row, price: undefined, vendorCost: undefined }; }
-        // A price typed over the quote stands: the quote still refreshes the costs behind it
-        if (result.priced) return { ...row, ...result.priced, ...(row.priceOverridden ? { price: row.price } : {}) };
-        if (result.cleared) return { ...row, price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
-        return row;
+        if (result.error) { failure = result.error; return { price: undefined, vendorCost: undefined }; }
+        if (result.priced) return result.priced;
+        if (result.cleared) return { price: undefined, vendorCost: undefined, operatingCost: undefined, marginPercentage: undefined };
+        return null;
       }));
       if (controller.signal.aborted) return;
       setPricingError(failure);
-      // Only write back when a figure actually changed, or this would loop
+      // Applied to the rows as they are now: whatever was typed while the quotes ran is kept, and
+      // nothing is written back when no figure changed, or this would loop
       setAmcForm(prev => {
-        const changed = priced.some((row, index) => row.price !== prev.serviceRows[index]?.price
-          || row.vendorCost !== prev.serviceRows[index]?.vendorCost);
-        return changed ? { ...prev, serviceRows: priced } : prev;
+        const serviceRows = applyRowPatches(prev.serviceRows, snapshot, patches);
+        return serviceRows === prev.serviceRows ? prev : { ...prev, serviceRows };
       });
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
@@ -214,17 +217,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
   // figure asked for is the vendor price -- a package is bought here, not sold -- so it lands on
   // the row as its vendor cost and shows in the Internal figures.
   const [customRowOpen, setCustomRowOpen] = useState(false);
-  const packageRowFromDialog = (values) => ({
-    service: String(values.name || '').trim(),
-    description: values.description || '',
-    category: values.category || '',
-    frequencyType: values.frequency_type,
-    frequencyCount: Number(values.frequency_count) || 0,
-    pricingMethod: '',
-    inputValue: values.quantity === '' || values.quantity == null ? '' : Number(values.quantity),
-    vendorRequired: values.vendorRequired,
-    vendorCost: Number(values.price) || 0
-  });
 
   // Configured services arrive as ordinary rows, editable afterwards like any typed one. The blank
   // starter row is replaced rather than left above them.
@@ -236,37 +228,17 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     });
   };
 
+  // Functional updates on new row objects: the old version assigned into the row React was holding,
+  // from a copy of the form taken at render time
   const handleUpdateServiceRow = (index, field, value) => {
-    const newRows = [...amcForm.serviceRows];
-    
-    // If frequency type changes, auto-set frequency count
-    if (field === 'frequencyType') {
-      const autoCount = FREQUENCY_COUNT_MAP[value];
-      newRows[index] = {
-        ...newRows[index],
-        [field]: value,
-        // Custom has no count of its own, so whatever is already typed stays to be edited
-        frequencyCount: autoCount !== null ? autoCount : newRows[index].frequencyCount
-      };
-    } else if (field === 'frequencyCount') {
-      // Ensure frequencyCount is stored as a number - handle 0 explicitly
-      const parsed = parseInt(value);
-      const numValue = value === '' ? 0 : (isNaN(parsed) ? 0 : parsed);
-      newRows[index][field] = numValue;
-    } else if (field === 'price') {
-      // A price typed here stands until the field is cleared, at which point the quote takes over again
-      newRows[index] = { ...newRows[index], price: value === '' ? undefined : Number(value), priceOverridden: value !== '' };
-    } else {
-      newRows[index][field] = value;
-    }
-    
-    setAmcForm({ ...amcForm, serviceRows: newRows });
+    const next = field === 'service' || field === 'description' ? capitalizeFirst(value) : value;
+    setAmcForm(prev => ({ ...prev, serviceRows: updatePackageRow(prev.serviceRows, index, field, next, FREQUENCY_COUNT_MAP) }));
   };
 
   // Any row may go, the last one included: the table is allowed to be empty, and saving already
   // refuses a package with no services.
   const handleRemoveServiceRow = (index) => {
-    setAmcForm({ ...amcForm, serviceRows: amcForm.serviceRows.filter((_, i) => i !== index) });
+    setAmcForm(prev => ({ ...prev, serviceRows: prev.serviceRows.filter((_, i) => i !== index) }));
   };
 
   // Form actions
@@ -275,9 +247,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       showToast?.('Please enter a package name', 'error');
       return;
     }
+    if (packageNameTaken) {
+      showToast?.(`A package named "${packageNameTaken.packageName || packageNameTaken.name}" already exists`, 'error');
+      return;
+    }
 
     // Filter out empty service rows
-    const validServices = amcForm.serviceRows.filter(row => row.service.trim());
+    const validServices = amcForm.serviceRows.filter(row => String(row.service || '').trim());
     if (validServices.length === 0) {
       showToast?.('Please add at least one service', 'error');
       return;
@@ -302,29 +278,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         packageName: amcForm.packageName.trim(),
         propertyType: selectedPropertyTypes[0],
         propertyTypes: selectedPropertyTypes,
-        serviceRows: validServices.map(row => {
-          const parsed = parseInt(row.frequencyCount);
-          const count = typeof row.frequencyCount === 'number' ? row.frequencyCount : (isNaN(parsed) ? 0 : parsed);
-          return {
-            service: row.service.trim(),
-            description: row.description || '',
-            frequencyCount: count,
-            frequencyType: row.frequencyType,
-            // What the row was priced from and what it came to, so the package can be read back and
-            // re-priced exactly as it was configured. Price and vendor cost belong to every row: a
-            // hand-typed one states them itself.
-            category: row.category || '', pricingMethod: row.pricingMethod || '', inputValue: row.inputValue,
-            price: row.price, priceOverridden: row.priceOverridden, vendorCost: row.vendorCost,
-            vendorRequired: row.vendorRequired,
-            ...(row.catalogServiceId ? {
-              catalogServiceId: row.catalogServiceId, unit: row.unit, applicablePropertyTypes: row.applicablePropertyTypes,
-              allowFrequencyOverride: row.allowFrequencyOverride, defaultFrequency: row.defaultFrequency,
-              capacitySlabs: row.capacitySlabs, defaultMarkupPercentage: row.defaultMarkupPercentage,
-              defaultVisitsPerYear: row.defaultVisitsPerYear,
-              operatingCost: row.operatingCost, marginPercentage: row.marginPercentage
-            } : {})
-          };
-        }),
+        // What each row was priced from and what it came to, so the package reads back and re-prices
+        // exactly as it was configured
+        serviceRows: validServices.map(packageRowForSave),
         rate: totals.price,
         markupPercentage: amcForm.markupPercentage === '' ? null : Number(amcForm.markupPercentage),
         billingDuration: amcForm.billingDuration,
@@ -349,7 +305,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         const result = await response.json();
         if (result.success) {
           showToast?.(editingPackage ? 'AMC Package updated successfully!' : 'AMC Package created successfully!', 'success');
-          if (editingPackage) setShowEditModal(false);
           resetForm();
           await loadData();
           setActiveTab('all-packages'); // Switch to All Packages tab after creation
@@ -366,6 +321,9 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     }
   };
 
+  // Editing opens the same form a package is created in. The modal it used to open had no Method,
+  // Input or Price columns and no markup, and its own Price box was ignored on save, so a package
+  // could not be edited into the shape it was created in.
   const handleOpenEditModal = (pkg) => {
     setEditingPackage(pkg);
     
@@ -375,24 +333,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     // Load service rows if they exist, otherwise create from services string
     let loadedServiceRows = [];
     if (Array.isArray(pkg.serviceRows) && pkg.serviceRows.length > 0) {
-      loadedServiceRows = pkg.serviceRows.map(row => ({
-        service: decodeHtml(row.service || row.name) || '',
-        description: decodeHtml(row.description) || '',
-        frequencyCount: row.frequency_count ?? row.frequencyCount ?? 1,
-        frequencyType: row.frequency_type || row.frequencyType || 'Monthly',
-        // A row saved from the catalog reopens on the service and amount it was priced from
-        catalogServiceId: row.catalogServiceId ?? row.catalog_service_id,
-        pricingMethod: row.pricingMethod || row.pricing_method,
-        unit: row.unit || '', category: decodeHtml(row.category) || '',
-        // Reopening a Capacity Slab row brings its table back with it
-        capacitySlabs: row.capacitySlabs || row.capacity_slabs,
-        applicablePropertyTypes: row.applicablePropertyTypes || row.applicable_property_types,
-        allowFrequencyOverride: row.allowFrequencyOverride, defaultFrequency: row.defaultFrequency,
-        defaultMarkupPercentage: row.defaultMarkupPercentage, defaultVisitsPerYear: row.defaultVisitsPerYear,
-        inputValue: row.inputValue ?? row.input_value ?? '',
-        price: row.price, vendorCost: row.vendorCost, operatingCost: row.operatingCost,
-        marginPercentage: row.marginPercentage
-      }));
+      // A row saved from the catalog reopens on the service and amount it was priced from
+      loadedServiceRows = pkg.serviceRows.map(row => packageRowFromSaved(row, decodeHtml));
     } else if (typeof pkg.services === 'string' && pkg.services) {
       loadedServiceRows = pkg.services.split(',').map(s => ({
         service: decodeHtml(s.trim()),
@@ -414,14 +356,18 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
       billingDuration: pkg.billingDuration || 'monthly',
       description: decodeHtml(pkg.description) || ''
     });
-    setShowEditModal(true);
+    setActiveTab('create');
   };
 
   const handleCloseEditModal = () => {
-    setShowEditModal(false);
-    setEditingPackage(null);
     resetForm();
+    setActiveTab('all-packages');
   };
+
+  // The same package name twice in one franchise is two entries nobody can tell apart in a dropdown
+  const packageNameTaken = duplicatePackageName(
+    selectedFp?.id && selectedFp.id !== 'all' ? amcPackages.filter(pkg => String(pkg.franchisePartnerId ?? selectedFp.id) === String(selectedFp.id)) : amcPackages,
+    amcForm.packageName, editingPackage?.id ?? editingPackage?.packageId);
 
   const handleDeletePackage = async (pkg) => {
     if (window.confirm('Are you sure you want to delete this AMC package?')) {
@@ -444,7 +390,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
             (p.id !== pkg.id) && (p.packageId !== pkg.packageId)
           ));
           showToast?.('AMC Package deleted', 'success');
-          if (showEditModal) setShowEditModal(false);
+          // Deleting the package open in the form leaves nothing to save it back to
+          if (editingPackage && (editingPackage.id ?? editingPackage.packageId) === (pkg.id ?? pkg.packageId)) handleCloseEditModal();
         } else {
           throw new Error(result.message);
         }
@@ -523,7 +470,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         </div>
         {!isOpsManager && (
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => { resetForm(); setActiveTab('create'); }}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
@@ -765,6 +712,12 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
           what it comes to. */}
       {activeTab === 'create' && (
         <div className="space-y-6">
+          {editingPackage && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+              <p className="text-sm text-amber-800">Editing <span className="font-semibold">{decodeHtml(editingPackage.packageName) || 'package'}</span> <span className="text-amber-600">({editingPackage.packageId})</span></p>
+              <button onClick={handleCloseEditModal} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100">Cancel editing</button>
+            </div>
+          )}
           <div className="space-y-6">
           {/* What the package applies to, before what is in it */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
@@ -816,9 +769,25 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 <input
                   type="text"
                   value={amcForm.packageName}
-                  onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
+                  onChange={(e) => { const packageName = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, packageName })); }}
                   placeholder="e.g., Gold Package"
-                  className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
+                  maxLength={150}
+                  className={`w-full max-w-md px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400 ${packageNameTaken ? 'border-red-300' : 'border-gray-300'}`}
+                />
+                {packageNameTaken && <p role="alert" className="mt-1.5 text-xs text-red-600">A package with this name already exists. Choose another name or edit the existing package.</p>}
+              </div>
+
+              {/* What the package covers, as a whole. Saved with the package and shown on its view. */}
+              <div className="mb-6">
+                <label htmlFor="package-description" className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">Package Description</label>
+                <textarea
+                  id="package-description"
+                  rows={3}
+                  maxLength={1000}
+                  value={amcForm.description}
+                  onChange={(e) => { const description = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, description })); }}
+                  placeholder="What this package covers, visit terms, exclusions..."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm resize-y focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
                 />
               </div>
 
@@ -832,7 +801,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                       service is priced, the other takes the amount -- so the row sizes its own
                       columns rather than dividing twelve of them. */}
                   <div className={`hidden md:grid ${PACKAGE_ROW_GRID} gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-3`}>
-                    {[['Service', 'text-left'], ['Description', 'text-left'], ['Method', 'text-left'], ['Input', 'text-left'],
+                    {[['Service', 'text-left'], ['Method', 'text-left'], ['Input', 'text-left'],
                       ['Frequency', 'text-left'], ['Visits', 'text-left'], ['Price', 'text-right'], ['Action', 'text-center']].map(([label, align]) => (
                       <div key={label} className={`px-2 ${align}`}>
                         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">{label}</span>
@@ -859,17 +828,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                             placeholder="e.g., Deep Cleaning"
                             className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
                           />
-                        </div>
-                        
-                        {/* Description */}
-                        <div>
-                          <input
-                            type="text"
-                            value={row.description || ''}
-                            onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
-                            placeholder="Service description..."
-                            className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
-                          />
+                          {row.category && <p className="mt-1 px-1 text-[11px] text-gray-500 truncate" title={row.category}>{row.category}</p>}
                         </div>
 
                         {/* How the service is priced. A configured service brings its own method, so
@@ -971,10 +930,24 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div className="flex justify-end md:justify-center">
                           <button
                             onClick={() => handleRemoveServiceRow(index)}
+                            aria-label={`Remove ${row.service || 'service'}`}
                             className="p-2 rounded-lg text-red-500 transition-colors hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                        </div>
+
+                        {/* Description: the full width of the row, so it can be read and typed */}
+                        <div className="w-full md:col-span-full">
+                          <textarea
+                            rows={2}
+                            maxLength={1000}
+                            value={row.description || ''}
+                            onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
+                            placeholder="Service description — what this service covers in the package"
+                            aria-label={`${row.service || 'Service'} description`}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-y bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                          />
                         </div>
                       </div>
                     ))}
@@ -1020,7 +993,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <input
                           id="package-markup" type="number" min="0" max="1000" step="0.01"
                           value={amcForm.markupPercentage ?? ''}
-                          onChange={(e) => setAmcForm({ ...amcForm, markupPercentage: e.target.value })}
+                          onChange={(e) => { const markupPercentage = e.target.value; setAmcForm(prev => ({ ...prev, markupPercentage })); }}
                           placeholder="None"
                           className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
                         />
@@ -1032,7 +1005,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                         <div className="relative">
                           <select
                             value={amcForm.billingDuration}
-                            onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
+                            onChange={(e) => { const billingDuration = e.target.value; setAmcForm(prev => ({ ...prev, billingDuration })); }}
                             className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-gray-200 focus:border-gray-400 appearance-none"
                           >
                             {BILLING_DURATIONS.map(duration => (
@@ -1125,246 +1098,6 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
         </div>
       )}
 
-      {/* Edit Package Modal */}
-      {showEditModal && editingPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl shadow-xl max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-                  <Edit className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Edit AMC Package</h3>
-                  <p className="text-sm text-gray-500">{editingPackage.packageId}</p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseEditModal}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-5">
-              {/* Property Type Selection - Evenly distributed */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-3 block">Property Type</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-                  {PROPERTY_TYPE_OPTIONS.map((type) => {
-                    const isSelected = selectedPropertyTypes.includes(type.id);
-                    return (
-                      <button
-                        key={type.id}
-                        onClick={() => setSelectedPropertyTypes(prev => prev.includes(type.id) ? prev.filter(value => value !== type.id) : [...prev, type.id])}
-                        className={`px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg border transition-all duration-200 text-xs sm:text-sm font-medium text-center ${
-                          isSelected
-                            ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
-                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Package Name and Price Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    Package Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={amcForm.packageName}
-                    onChange={(e) => setAmcForm({ ...amcForm, packageName: e.target.value })}
-                    placeholder="e.g., Gold Package"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      Price (₹) <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={amcForm.price}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          setAmcForm({ ...amcForm, price: value });
-                        }}
-                        className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 font-semibold"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      <Calendar className="w-4 h-4 text-slate-500" />
-                      Service Period
-                    </label>
-                    <select
-                      value={amcForm.billingDuration}
-                      onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white"
-                    >
-                      {BILLING_DURATIONS.map(duration => (
-                        <option key={duration.value} value={duration.value}>
-                          {duration.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Service Rows */}
-              <div className="border-t border-gray-100 pt-5">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Service Configuration</h4>
-                  <div className="flex items-center gap-2">
-                    {/* Add Row is for a service typed by hand; Add Service picks a configured one */}
-                    <button
-                      onClick={handleAddServiceRow}
-                      className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-                    >
-                      Add Row
-                    </button>
-                    <button
-                      onClick={() => setShowServicePicker(true)}
-                      className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Add Service
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Table Header */}
-                <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 rounded-lg mb-2">
-                  <div className="col-span-3"><span className="text-xs font-semibold text-gray-600 uppercase">Service</span></div>
-                  <div className="col-span-4"><span className="text-xs font-semibold text-gray-600 uppercase">Description</span></div>
-                  <div className="col-span-2"><span className="text-xs font-semibold text-gray-600 uppercase">Frequency</span></div>
-                  <div className="col-span-2"><span className="text-xs font-semibold text-gray-600 uppercase">Visits</span></div>
-                  <div className="col-span-1"></div>
-                </div>
-                
-                <div className="space-y-2">
-                  {amcForm.serviceRows.map((row, index) => (
-                    <div key={index} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="sm:col-span-3">
-                        <input
-                          type="text"
-                          value={row.service}
-                          onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
-                          placeholder="Service name"
-                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      {/* Description */}
-                      <div className="sm:col-span-4">
-                        <input
-                          type="text"
-                          value={row.description || ''}
-                          onChange={(e) => handleUpdateServiceRow(index, 'description', e.target.value)}
-                          placeholder="Description..."
-                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      {/* Frequency Type - First to trigger auto-calculation */}
-                      <div className="sm:col-span-2">
-                        <select
-                          value={row.frequencyType}
-                          onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                        >
-                          {FREQUENCY_TYPES.map(type => (
-                            <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {/* Visits - Auto-set based on frequency, editable for Other */}
-                      <div className="sm:col-span-2">
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.frequencyCount}
-                          readOnly={!isCustomFrequency(row.frequencyType)}
-                          onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                          className={`w-full px-2 py-2 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
-                        />
-                      </div>
-                      <div className="sm:col-span-1 flex justify-end sm:justify-center">
-                        {/* The last row can go too: the table is allowed to be empty, and saving
-                            already refuses a package with no services */}
-                        <button
-                          onClick={() => handleRemoveServiceRow(index)}
-                          className="p-1.5 rounded text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-
-              {/* Price Summary - LIGHT Design */}
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-                  <div>
-                    <span className="text-gray-500 text-xs">Package</span>
-                    <p className="font-semibold text-gray-800 truncate max-w-[200px]">{amcForm.packageName || 'Not specified'}</p>
-                  </div>
-                  <div className="sm:text-center">
-                    <span className="text-gray-500 text-xs">Services</span>
-                    <p className="font-semibold text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</p>
-                  </div>
-                  <div className="sm:text-right">
-                    <span className="text-gray-500 text-xs">Total Rate</span>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sticky bottom-0">
-              <button
-                onClick={() => handleDeletePackage(editingPackage)}
-                className="px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2 order-last sm:order-first"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-              <div className="flex gap-3 w-full sm:w-auto justify-end">
-                <button
-                  onClick={handleCloseEditModal}
-                  className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSavePackage}
-                  className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* View AMC Package Modal */}
       {viewAmcPackage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -1384,7 +1117,8 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Property Type</p>
-                  <p className="font-semibold text-sm capitalize">{viewAmcPackage.propertyType || 'N/A'}</p>
+                  {/* Every type the package applies to, not only the first */}
+                  <p className="font-semibold text-sm">{getPackagePropertyTypes(viewAmcPackage).map(type => PROPERTY_TYPE_OPTIONS.find(t => t.id === type)?.label || type).join(', ') || 'N/A'}</p>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Billing</p>
@@ -1395,6 +1129,13 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                   <p className="font-bold text-lg text-green-700">₹{(viewAmcPackage.price || viewAmcPackage.rate || 0).toLocaleString()}</p>
                 </div>
               </div>
+
+              {decodeHtml(viewAmcPackage.description)?.trim() && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Description</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap [overflow-wrap:anywhere]">{decodeHtml(viewAmcPackage.description)}</p>
+                </div>
+              )}
 
               {/* Services Included */}
               <div className="border-t border-gray-100 pt-4">

@@ -1,3 +1,5 @@
+import { narrowestRange } from './rangeMatch.js';
+
 export const formatCurrency = (amt) => {
   const num = parseFloat(amt);
   const value = isNaN(num) ? 0 : num;
@@ -197,8 +199,7 @@ export const getServiceRate = (service) => {
     ? '' : [rateAmount(value), ...parts].filter(Boolean).join(' / '));
   if (method === 'capacity_slab') {
     const slabs = snapshot.capacity_slabs || service?.capacity_slabs || [];
-    const slab = Array.isArray(slabs) ? slabs.find(item => Number(inputs.capacity) >= item.capacityFrom
-      && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo)) : null;
+    const slab = narrowestRange(slabs, inputs.capacity, 'capacityFrom', 'capacityTo');
     if (slab) return `${String(slab.name || '').trim() || 'Slab'}: ${slab.capacityFrom} - ${slab.capacityTo === null ? 'above' : slab.capacityTo}${unit ? ` ${unit}` : ''}`;
   }
   if (method === 'manpower') {
@@ -238,7 +239,7 @@ export const getServiceDescription = (service) => {
   else if (unit && unit !== primaryInput) details.push(`Unit: ${unit}`);
   if (method === 'capacity_slab') {
     const slabs = snapshot.capacity_slabs || service?.capacity_slabs;
-    const slab = Array.isArray(slabs) ? slabs.find(item => Number(inputs.capacity) >= item.capacityFrom && (item.capacityTo === null || Number(inputs.capacity) <= item.capacityTo)) : null;
+    const slab = narrowestRange(slabs, inputs.capacity, 'capacityFrom', 'capacityTo');
     if (slab) details.push(`Slab: ${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`);
   }
   if (method === 'manpower') {

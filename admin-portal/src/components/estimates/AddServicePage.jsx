@@ -4,9 +4,12 @@ import { ChevronLeft, Plus, Trash2, Save, Loader2, SlidersHorizontal } from 'luc
 import { useFP } from '../../contexts/FPContext';
 import AutocompleteInput from '../common/AutocompleteInput';
 import useServiceCategories from '../../hooks/useServiceCategories';
+import useServiceUnits from '../../hooks/useServiceUnits';
+import { capitalizeFirst, decodeDeep, sameEntry } from '../../utils/text';
 import { manpowerRangeLabel, previewManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { primaryInputLabel, unitGroupsFor, unitOptionsFor } from '../../utils/estimatePackageUtils';
 import { useSkinClasses } from '../../utils/estimateTheme';
+import { narrowestRange } from '../../utils/rangeMatch';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -89,8 +92,7 @@ const blankSlab = (id) => ({ id, name: '', capacityFrom: '', capacityTo: '', ven
 
 export const findCapacitySlab = (slabs, capacity) => {
   if (capacity == null || String(capacity).trim() === '' || !Number.isInteger(Number(capacity))) return undefined;
-  return slabs?.find(slab => slab.capacityFrom !== '' && Number(capacity) >= Number(slab.capacityFrom) &&
-    (slab.capacityTo === null || (slab.capacityTo !== '' && Number(capacity) <= Number(slab.capacityTo))));
+  return narrowestRange(slabs, capacity, 'capacityFrom', 'capacityTo');
 };
 
 export const getServiceSchedule = (service, capacity, frequency) => {
@@ -164,20 +166,50 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   const [exampleCapacity, setExampleCapacity] = useState('1');
   const [exampleAmount, setExampleAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const setField = (field, value) => {
+  // Typed text starts with a capital; codes and numbers are left as they are. The Category and Unit
+  // boxes capitalise what is typed themselves, so a value picked from their lists stays as listed.
+  const TEXT_FIELDS = ['serviceName', 'description', 'roleDesignation'];
+  const setField = (field, raw) => {
+    const value = TEXT_FIELDS.includes(field) ? capitalizeFirst(raw) : raw;
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'overtimeRatePerHour' && value === '') setExampleOvertime('0');
   };
 
+  // The unit box offers the method's units, those saved services use, and any saved from here
+  const { units, canManage: canManageUnits, error: unitError, createUnit, deleteUnit } =
+    useServiceUnits({ apiPath, fpId: scoped ? undefined : selectedFp?.id, pricingMethod: formData.pricingMethod });
+
+  // The services already in this catalog: a name typed again is flagged before saving, and a role
+  // used on another manpower service is offered back rather than typed out each time
+  const [existingServices, setExistingServices] = useState([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = scoped ? '' : `?${new URLSearchParams({ fpId: selectedFp?.id || 'all' })}`;
+    fetch(`${API_BASE}${apiPath}${query}`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+      .then(response => response.json())
+      .then(result => { if (result?.success && Array.isArray(result.data)) setExistingServices(result.data); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [apiPath, scoped, selectedFp?.id, token]);
+  // Same scope as the save goes to: the FP's own services, or the admin scope being worked in
+  const targetScope = scoped ? 'own' : (service ? service.franchise_partner_id ?? null
+    : selectedFp?.id && selectedFp.id !== 'all' ? Number(selectedFp.id) : null);
+  const duplicateService = formData.serviceName.trim() ? existingServices.find(item => item.id !== service?.id
+    && sameEntry(item.service_name, formData.serviceName)
+    && (targetScope === 'own' ? item.franchise_partner_id != null : (item.franchise_partner_id ?? null) === targetScope)) : null;
+  const roleSuggestions = [...new Set(existingServices.map(item => String(item.role_designation || '').trim()).filter(Boolean))];
+
   useEffect(() => {
     if (!service) return;
+    // Stored text is HTML-escaped; it is edited, and saved again, as typed
+    const saved = decodeDeep(service);
     const fields = { manpowerBasis: 'manpower_basis', ratePerPerson: 'rate_per_person', roleDesignation: 'role_designation', workingHoursPerVisit: 'working_hours_per_visit', overtimeRatePerHour: 'overtime_rate_per_hour', minimumManpower: 'minimum_manpower', serviceName: 'service_name', category: 'category', pricingMethod: 'pricing_method', unit: 'unit', applicablePropertyTypes: 'applicable_property_types', ratePerUnit: 'rate_per_unit', defaultFrequency: 'default_frequency', defaultVisitsPerYear: 'default_visits_per_year', allowFrequencyOverride: 'allow_frequency_override', skipVendorAssignment: 'skip_vendor_assignment', defaultMarkupPercentage: 'default_markup_percentage', description: 'description', monthlyRate: 'monthly_rate', billingPeriod: 'billing_period', periodMonths: 'period_months', fixedPrice: 'fixed_price', ratePerQuantity: 'rate_per_quantity', ratePerCapacity: 'rate_per_capacity' };
-    setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, service[fields[field]] ?? value])),
-      manpowerBasis: service.pricing_method === 'manpower' ? service.manpower_basis ?? 'monthly' : 'per_visit',
-      overtimeRatePerHour: service.overtime_rate_per_hour ?? '' }));
-    setManpowerRanges((service.manpower_ranges || []).map((range, index) => ({ ...range, id: index + 1 })));
-    if (service.capacity_slabs) setCapacitySlabs(service.capacity_slabs.map((slab, index) => {
-      const schedule = getServiceSchedule({ ...service, capacity_slabs: [slab] }, slab.capacityFrom);
+    setFormData(prev => ({ ...Object.fromEntries(Object.entries(prev).map(([field, value]) => [field, saved[fields[field]] ?? value])),
+      manpowerBasis: saved.pricing_method === 'manpower' ? saved.manpower_basis ?? 'monthly' : 'per_visit',
+      overtimeRatePerHour: saved.overtime_rate_per_hour ?? '' }));
+    setManpowerRanges((saved.manpower_ranges || []).map((range, index) => ({ ...range, id: index + 1 })));
+    if (saved.capacity_slabs) setCapacitySlabs(saved.capacity_slabs.map((slab, index) => {
+      const schedule = getServiceSchedule({ ...saved, capacity_slabs: [slab] }, slab.capacityFrom);
       return { ...slab, id: index + 1, defaultFrequency: schedule.frequency, defaultVisitsPerYear: schedule.visits };
     }));
   }, [service]);
@@ -221,7 +253,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
   };
 
   // Update capacity slab
-  const updateCapacitySlab = (id, field, value) => {
+  const updateCapacitySlab = (id, field, raw) => {
+    const value = field === 'name' ? capitalizeFirst(raw) : raw;
     setCapacitySlabs(prev => prev.map(slab => slab.id === id ? { ...slab, [field]: value,
       ...(field === 'defaultFrequency' ? { defaultVisitsPerYear: FREQUENCY_OPTIONS.find(item => item.value === value).defaultVisits } : {}) } : slab));
   };
@@ -279,14 +312,30 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
       setFormError('Select at least one applicable property type.');
       return;
     }
+    if (!formData.description.trim()) {
+      setFormError('Enter a description of the service.');
+      return;
+    }
+    if (!String(formData.unit || '').trim()) {
+      setFormError('Select or add a unit.');
+      return;
+    }
+    if (duplicateService) {
+      setFormError(`A service named "${duplicateService.service_name}" already exists here. Edit that service, or give this one a different name.`);
+      return;
+    }
     setIsSubmitting(true);
     try {
+      // A unit typed but not saved with its Save row is saved now, so the service is never refused
+      // for a unit the user plainly meant to add
+      const listedUnit = units.find(unit => sameEntry(unit.name, formData.unit));
+      const unit = listedUnit ? listedUnit.name : canManageUnits ? (await createUnit(formData.unit.trim())).name : formData.unit.trim();
       const serviceData = {
         service_name: formData.serviceName.trim(),
-        category: formData.category,
+        category: formData.category.trim(),
         ...(scoped ? {} : { franchise_partner_id: service ? service.franchise_partner_id : selectedFp?.id && selectedFp.id !== 'all' ? Number(selectedFp.id) : null }),
         pricing_method: formData.pricingMethod,
-        unit: formData.unit,
+        unit,
         applicable_property_types: formData.applicablePropertyTypes,
         default_frequency: formData.defaultFrequency,
         default_visits_per_year: Number(formData.defaultVisitsPerYear),
@@ -305,6 +354,9 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
         rate_per_capacity: Number(formData.ratePerCapacity),
         // Capacity slabs
         capacity_slabs: formData.pricingMethod === 'capacity_slab' ? capacitySlabs.map(slab => ({
+          // The Slab Name field: the server keeps it, but it was never sent, so a name typed here was
+          // lost on every save
+          name: String(slab.name || '').trim(),
           capacityFrom: Number(slab.capacityFrom),
           capacityTo: slab.capacityTo === null ? null : Number(slab.capacityTo),
           vendorRate: slab.isCustomQuote ? null : Number(slab.vendorRate),
@@ -431,15 +483,18 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             narrow content, while the Capacity Slab table needs the room to show all eight columns */}
         <div className={sk("grid gap-5 xl:grid-cols-4")}>
           {/* Left Column - Main Form */}
-          <section className={sk("overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-3")}>
+          {/* Not overflow-hidden: the Category and Unit lists open inside this card, and clipping
+              cut them off whenever the card was short -- before a pricing method was chosen */}
+          <section className={sk("rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-3")}>
             {/* 1. Basic Information */}
             <div className={sk("p-5 sm:p-6")}>
               <h2 className={sk("mb-5 text-sm font-semibold")}>Basic Information</h2>
               <div className={sk("grid gap-5 sm:grid-cols-2")}>
-                <Field label="Service Name *"><input required maxLength={150} value={formData.serviceName} onChange={event => setField('serviceName', event.target.value)} placeholder="e.g. Generator Maintenance" className={sk(inputClass)} /></Field>
+                <Field label="Service Name *"><input required maxLength={150} value={formData.serviceName} onChange={event => setField('serviceName', event.target.value)} placeholder="e.g. Generator Maintenance" aria-invalid={!!duplicateService} className={sk(`${inputClass} ${duplicateService ? 'border-red-300' : ''}`)} />
+                  {duplicateService && <span role="alert" className={sk("mt-1.5 block text-xs font-normal text-red-600")}>A service with this name already exists here. Edit that one, or choose another name.</span>}</Field>
                 <Field label="Category *">
                   <AutocompleteInput value={formData.category} onChange={value => setField('category', value)} options={categoryChoices}
-                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={100} showAllOnOpen
+                    placeholder="Type or select category" inputClassName="py-2.5" maxResults={100} showAllOnOpen capitalize
                     onCreateOption={canManageCategories ? createCategory : undefined}
                     onDeleteOption={canManageCategories ? deleteCategory : undefined} />
                 </Field>
@@ -466,17 +521,19 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 {/* Unit: the options follow the pricing method and are grouped by unit type, and the
                     first one is selected for the method. A unit saved before its label was withdrawn
                     is kept selectable so editing the service does not silently change it. */}
-                {formData.pricingMethod && <Field label={isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}>
-                  <select value={formData.unit} onChange={event => setField('unit', event.target.value)} className={sk(inputClass)}>
-                    {formData.unit && !unitOptions.includes(formData.unit) &&
-                      <option value={formData.unit}>{formData.unit}{unitOptions.length ? ' (no longer offered)' : ''}</option>}
-                    {unitGroupsFor(formData.pricingMethod).map(group => (
-                      <optgroup key={group.type} label={group.label}>
-                        {group.units.map(unit => <option key={unit}>{unit}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                </Field>}
+                {/* Pick a listed unit, or type a new one and Save it into the list -- the same way the
+                    Category box works -- so it is offered next time on every service of its type */}
+                {formData.pricingMethod && <div className={sk("block min-w-0")}>
+                  <span className={sk("mb-2 block text-xs font-semibold text-slate-700")}>{isCapacityBased || isCapacitySlab ? 'Capacity Unit *' : 'Unit *'}</span>
+                  <AutocompleteInput value={formData.unit} onChange={value => setField('unit', value)}
+                    options={[...(formData.unit && !units.some(unit => sameEntry(unit.name, formData.unit)) && !canManageUnits
+                      ? [{ label: formData.unit, value: formData.unit }] : []),
+                      ...units.map(unit => ({ label: unit.name, value: unit.name, id: unit.id, removable: unit.removable }))]}
+                    placeholder="Type or select unit" inputClassName="py-2.5" maxResults={100} showAllOnOpen capitalize
+                    onCreateOption={canManageUnits ? createUnit : undefined}
+                    onDeleteOption={canManageUnits ? deleteUnit : undefined} />
+                  {unitError && <span className={sk("mt-1 block text-[11px] text-amber-600")}>{unitError}</span>}
+                </div>}
                 {/* Primary Input is derived from the service and its method, never entered, and it
                     travels with the service into estimates, view modals, PDFs and emails */}
                 {formData.pricingMethod && <Field label="Primary Input">
@@ -510,10 +567,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                         : <input aria-label={`Slab ${index + 1} capacity to`} type="number" min={slab.capacityFrom} max={1e9} step="1" required value={slab.capacityTo} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
                     </td>
                     <td className={sk("px-3 py-3")}>
-                      {/* Only the last slab may run to infinity; the others are bounded by the next one */}
-                      {index === capacitySlabs.length - 1
-                        ? <label className={sk("flex items-center gap-2 whitespace-nowrap text-xs text-slate-500")} title="No upper limit: this slab covers every capacity above its start"><input type="checkbox" aria-label={`Slab ${index + 1} has no upper limit`} checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className={sk("accent-blue-600")} />No limit</label>
-                        : <span className={sk("text-slate-300")}>—</span>}
+                      {/* Any slab may run to infinity; slabs may overlap or leave gaps */}
+                      <label className={sk("flex items-center gap-2 whitespace-nowrap text-xs text-slate-500")} title="No upper limit: this slab covers every capacity above its start"><input type="checkbox" aria-label={`Slab ${index + 1} has no upper limit`} checked={slab.capacityTo === null} onChange={event => updateCapacitySlab(slab.id, 'capacityTo', event.target.checked ? null : Number(slab.capacityFrom) + 49)} className={sk("accent-blue-600")} />No limit</label>
                     </td>
                     <td className={sk("px-3 py-3 text-slate-500")}>{formData.unit}</td>
                     <td className={sk("px-3 py-3")}>
@@ -556,7 +611,12 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                 <Toggle label="Do Not Assign Vendor" checked={formData.skipVendorAssignment} onChange={() => setField('skipVendorAssignment', !formData.skipVendorAssignment)} />
               </div>
               {isVisitManpower && <div className={sk("mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3")}>
-                <Field label="Role / Designation (Optional)"><input maxLength={150} value={formData.roleDesignation} onChange={event => setField('roleDesignation', event.target.value)} placeholder="e.g. Housekeeping Staff" className={sk(inputClass)} /></Field>
+                {/* Roles used on other services are offered back as it is typed */}
+                <div className={sk("block min-w-0")}>
+                  <span className={sk("mb-2 block text-xs font-semibold text-slate-700")}>Role / Designation (Optional)</span>
+                  <AutocompleteInput value={formData.roleDesignation} onChange={value => setField('roleDesignation', value)}
+                    options={roleSuggestions} placeholder="e.g. Housekeeping Staff" inputClassName="py-2.5" capitalize />
+                </div>
                 <Field label="Working Hours per Visit *">{numberInput('workingHoursPerVisit', { min: 0.01, max: 24 })}</Field>
                 <Field label="Overtime Rate per Person / Hour (₹)">{numberInput('overtimeRatePerHour', { required: false, max: 1e9 })}</Field>
                 <Field label="Minimum Manpower Required *">{numberInput('minimumManpower', { min: 1, max: 1e6, step: 1 })}</Field>
@@ -578,10 +638,8 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
                         : <input aria-label={`Manpower range ${index + 1} area to`} type="number" min={Math.max(1, Number(range.areaFrom))} max={1e9} step="1" required value={range.areaTo} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.value)} className={sk(`${inputClass} min-w-[100px]`)} />}
                     </td>
                     <td className={sk("px-3 py-3")}>
-                      {/* Only the last range may run to infinity; the others are bounded by the next */}
-                      {index === manpowerRanges.length - 1
-                        ? <label className={sk("flex items-center gap-2 whitespace-nowrap text-slate-500")} title="No upper limit: this range covers every area above its start"><input type="checkbox" aria-label={`Manpower range ${index + 1} has no upper limit`} checked={range.areaTo === null} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.checked ? null : Number(range.areaFrom) + 999)} className={sk("accent-blue-600")} />No limit</label>
-                        : <span className={sk("text-slate-300")}>—</span>}
+                      {/* Any range may run to infinity; ranges may overlap or leave gaps */}
+                      <label className={sk("flex items-center gap-2 whitespace-nowrap text-slate-500")} title="No upper limit: this range covers every area above its start"><input type="checkbox" aria-label={`Manpower range ${index + 1} has no upper limit`} checked={range.areaTo === null} onChange={event => updateManpowerRange(range.id, 'areaTo', event.target.checked ? null : Number(range.areaFrom) + 999)} className={sk("accent-blue-600")} />No limit</label>
                     </td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} recommended minimum`} type="number" min="1" max={1e6} step="1" required value={range.recommendedMin} onChange={event => updateManpowerRange(range.id, 'recommendedMin', event.target.value)} className={sk(`${inputClass} min-w-[90px]`)} /></td>
                     <td className={sk("px-3 py-3")}><input aria-label={`Manpower range ${index + 1} recommended maximum`} type="number" min={Math.max(Number(range.recommendedMin), Number(formData.minimumManpower))} max={1e6} step="1" required value={range.recommendedMax} onChange={event => updateManpowerRange(range.id, 'recommendedMax', event.target.value)} className={sk(`${inputClass} min-w-[90px]`)} /></td>
@@ -635,7 +693,7 @@ const AddServicePage = ({ admin, showToast, onBack, onSave, service, apiPath = '
             </section>
             {/* Description */}
             <section className={sk("rounded-xl border border-slate-200 bg-white shadow-sm p-5")}>
-              <Field label="Description"><textarea value={formData.description} onChange={event => setField('description', event.target.value)} placeholder="Describe the service" rows={6} maxLength={500} className={sk(`${inputClass} resize-y`)} /></Field>
+              <Field label="Description *"><textarea required value={formData.description} onChange={event => setField('description', event.target.value)} placeholder="Describe the service — what is covered, what is billed separately" rows={6} maxLength={500} className={sk(`${inputClass} resize-y`)} /></Field>
               <p className={sk("mt-1 text-right text-xs text-slate-400")}>{formData.description.length}/500</p>
             </section>
             {/* Pricing Preview */}

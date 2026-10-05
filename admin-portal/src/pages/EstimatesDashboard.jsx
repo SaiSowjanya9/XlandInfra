@@ -32,6 +32,7 @@ import DonutChart from '../components/common/DonutChart';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { getAuthToken } from '../utils/safeStorage';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
+import { estimateProfitSummary } from '../utils/estimateProfitSummary';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -319,6 +320,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   // Calculate invoices created (approved estimates) and paid (we'll assume some percentage)
   const funnelInvoicesCreated = funnelApproved;
   const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
+
+  // What the estimates counted in the cards cost and make, on the FP and Manager portals
+  const showProfitSummary = portalType === 'franchise' || portalType === 'manager';
+  const profitSummary = estimateProfitSummary(mainFilteredEstimates);
+  const formatMoney = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
   // Stat cards configuration - matching the reference image exactly with gradient backgrounds
   const statCards = [
@@ -701,6 +707,38 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           );
         })}
       </div>
+
+      {/* Profit & Margin Summary for the estimates counted above, following the same date range.
+          Costed from the pricing snapshot saved with each service -- the same figures the payments
+          dashboard's Cost & Margin panel reports -- and shown on the FP and Manager portals. */}
+      {showProfitSummary && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold text-gray-800">Profit &amp; Margin Summary</h3>
+            <p className="text-[11px] text-gray-500">
+              {profitSummary.costedCount
+                ? `From ${profitSummary.costedCount} costed estimate${profitSummary.costedCount === 1 ? '' : 's'}${startDate || endDate ? ' in the selected period' : ''}`
+                : 'No estimate in this range carries a cost yet'}
+              {profitSummary.uncostedCount > 0 && ` · ${profitSummary.uncostedCount} without costs not included`}
+              {profitSummary.excludedCount > 0 && ` · ${profitSummary.excludedCount} rejected/archived excluded`}
+            </p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              // Read left to right it is the arithmetic: cost plus XLAND's share is the price
+              ['Vendor Cost', formatMoney(profitSummary.actualCost), 'text-gray-900'],
+              ['XLAND Cost (Profit)', formatMoney(profitSummary.profit), profitSummary.profit >= 0 ? 'text-emerald-600' : 'text-red-600'],
+              ['Customer Price', formatMoney(profitSummary.customerPrice), 'text-gray-900'],
+              ['Margin', profitSummary.marginPercent == null ? '—' : `${profitSummary.marginPercent}%`, (profitSummary.marginPercent ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600']
+            ].map(([label, value, tone]) => (
+              <div key={label} className="min-w-0 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                <dt className="truncate text-[11px] text-gray-500" title={label}>{label}</dt>
+                <dd className={`mt-1 truncate text-lg font-bold tabular-nums ${tone}`} title={value}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
 
       {/* Row 1: Estimates by Estimate Type | Estimate Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

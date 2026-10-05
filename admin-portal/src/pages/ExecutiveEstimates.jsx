@@ -4,7 +4,9 @@ import { getAuthToken } from '../utils/safeStorage';
 import { TermsConditionsField, EstimateTermsSection } from '../components/estimates/EstimateTerms';
 import { newEstimateTerms } from '../utils/estimateTerms';
 import EstimateStructure from '../components/estimates/EstimateStructure';
-import CustomServicesTable, { customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServicesTable, { buildCustomService, customServicesTotal } from '../components/estimates/CustomServicesTable';
+import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
+import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer } from 'lucide-react';
 
@@ -309,16 +311,62 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   // Switching structure starts the other choice clean. Anything already added belongs to the
   // choice being left -- a package, hand-entered rows, or services picked alongside either -- and
   // carrying it across would put services on the estimate the user never chose in this mode.
+  // Build Custom Services works as it does on the FP and Manager forms: one table, whose Add Service
+  // menu lists Custom above the configured services. Custom opens the hand-entered service dialog;
+  // a configured service is priced by the server. The table stays customer-priced here: the Vendor
+  // Cost, XLAND Cost and Margin % columns are for Admin and FP only.
+  const CATALOG_API = '/api/executive/service-catalog';
+  const [catalogAddons, setCatalogAddons] = useState([]);
+  const [editingCatalogAddon, setEditingCatalogAddon] = useState(null);
+  const [customServiceDraft, setCustomServiceDraft] = useState(null);
+  const catalogPropertyType = normalizePropertyType(selectedProperty?.entry_type || selectedProperty?.property_type || directForm?.propertyType || '');
+  // A configured service is priced for a property type, so its price never carries across a change of it
+  useEffect(() => { setCatalogAddons([]); setEditingCatalogAddon(null); }, [catalogPropertyType]);
+  // Adding and editing both come back through here: an edit keeps its addonId and replaces the row
+  const upsertCatalogAddon = (addon) => setCatalogAddons(prev => prev.some(item => item.addonId === addon.addonId)
+    ? prev.map(item => item.addonId === addon.addonId ? addon : item) : [...prev, addon]);
+  const catalogRowActions = (addon) => (
+    <div className="flex items-center justify-center gap-1">
+      <button type="button" onClick={() => setEditingCatalogAddon(addon)} title={`Edit ${addon.name}`} aria-label={`Edit ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Edit className="w-4 h-4" /></button>
+      <button type="button" onClick={() => setCatalogAddons(prev => prev.filter(item => item.addonId !== addon.addonId))}
+        title={`Remove ${addon.name}`} aria-label={`Remove ${addon.name}`}
+        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+    </div>
+  );
+  const renderCustomServices = () => (<>
+    <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null}
+      extraRows={catalogAddons} renderExtraActions={catalogRowActions}
+      onEditRow={(row, index) => setCustomServiceDraft({ index, row })}
+      addControl={
+        <ServiceCatalogPicker apiPath={CATALOG_API} propertyType={catalogPropertyType}
+          selectedAddons={catalogAddons} onAdd={upsertCatalogAddon}
+          editing={editingCatalogAddon} onEditClose={() => setEditingCatalogAddon(null)}
+          variant="menu" extraItems={[{ key: 'custom', label: 'Custom', onSelect: () => setCustomServiceDraft({ index: null, row: null }) }]} />
+      } />
+    <CustomServiceDialog open={!!customServiceDraft} editing={customServiceDraft?.row || null} apiPath={CATALOG_API}
+      onClose={() => setCustomServiceDraft(null)}
+      onSubmit={values => {
+        const draft = customServiceDraft;
+        setCustomServices(prev => draft?.index == null
+          ? [...prev, buildCustomService(values)]
+          : prev.map((row, index) => index === draft.index ? buildCustomService(values, row.addonId) : row));
+        setCustomServiceDraft(null);
+      }} />
+  </>);
+
   const changeEstimateStructure = (value) => {
     setEstimateStructure(value);
     setCustomServices([]);
+    setCatalogAddons([]);
+    setEditingCatalogAddon(null);
     setSelectedAddons([]);
     if (value === 'custom') setSelectedAmcPackage('');
   };
 
   // Calculate price summary
   const calculatePriceSummary = () => {
-    let subTotal = customServicesTotal(customServices);
+    let subTotal = customServicesTotal(customServices) + customServicesTotal(catalogAddons);
     const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
     if (pkg) subTotal += getPackagePrice(pkg);
     selectedAddons.forEach(addonId => {
@@ -341,6 +389,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     setSelectedAmcPackage('');
     setSelectedAddons([]);
     setCustomServices([]);
+    setCatalogAddons([]);
     setEstimateStructure('package');
     setDiscountPercent(0);
     setDirectForm({ customerName: '', phone: '', email: '', propertyType: '', propertyName: '', zone: '', city: '', address: '' });
@@ -413,7 +462,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
     if (estimateStructure === 'package' && !selectedAmcPackage) {
       setMessage({ type: 'error', text: 'Select AMC Package' }); return;
     }
-    if (estimateStructure === 'custom' && !customServices.length && !selectedAddons.length) {
+    if (estimateStructure === 'custom' && !customServices.length && !catalogAddons.length && !selectedAddons.length) {
       setMessage({ type: 'error', text: 'Add at least one service' }); return;
     }
     try {
@@ -445,7 +494,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           package_name: amcPackages.find(p => p.id?.toString() === selectedAmcPackage)?.name || '',
           package_price: getPackagePrice(amcPackages.find(p => p.id?.toString() === selectedAmcPackage)),
           // Hand-entered services travel with the add-ons; they carry their own customer price
-          addons: [...selectedAddons.map(id => addons.find(a => getAddonId(a) === id)).filter(Boolean), ...customServices],
+          addons: [...selectedAddons.map(id => addons.find(a => getAddonId(a) === id)).filter(Boolean), ...catalogAddons, ...customServices],
           subtotal: priceSummary.subTotal,
           discount_percent: discountPercent,
           discount_amount: priceSummary.discountAmount,
@@ -455,6 +504,11 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
           includeTerms,
           termsConditions
       };
+      // Configured services are priced again on the server against the property
+      if (catalogAddons.length && selectedProperty?.id && ['property_based', 'property-based'].includes(payload.estimate_type)) {
+        payload.catalog_property_id = selectedProperty.id;
+        if (selectedProperty.source_table) payload.catalog_property_source = selectedProperty.source_table;
+      }
       console.log('Saving estimate payload:', payload);
       const res = await fetch(`${API_BASE}/api/executive/estimates`, {
         method: 'POST',
@@ -740,7 +794,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
         <div className="p-6 space-y-4">
           {/* The card header above already reads "Custom Services" */}
-          {estimateStructure === 'custom' && <CustomServicesTable rows={customServices} onChange={setCustomServices} title={null} />}
+          {estimateStructure === 'custom' && renderCustomServices()}
           {(() => {
             const pkg = amcPackages.find(p => p.id?.toString() === selectedAmcPackage);
             if (!pkg) return null;

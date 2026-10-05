@@ -345,16 +345,23 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                       className={`${inputClass} mt-2`} />
                   </label>
                   : input && <label className={fieldLabel}>{input[1]} ({service.unit}) *<input autoFocus aria-label={`${input[1]} (${service.unit})`} type="number" min={isVisitManpower(service) ? service.minimum_manpower : input[2]} step={input[2]} value={inputs[input[0]] ?? ''} onChange={event => setInput(input[0], event.target.value)} className={`${inputClass} mt-2`} /></label>}
-                <label className={fieldLabel}>Frequency<select disabled={!service.allow_frequency_override || !overrideFrequency || saving} value={inputs.frequency} onChange={event => {
-                  const frequency = event.target.value;
-                  setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
-                }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select>
-                  {service.allow_frequency_override && <span className={`mt-2 flex items-center gap-2 text-xs font-normal ${skin.muted}`}>
-                    <input type="checkbox" checked={overrideFrequency} onChange={event => {
-                      setOverrideFrequency(event.target.checked);
-                      if (!event.target.checked) setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) }));
-                    }} className={skin.control} />Override frequency
-                  </span>}</label>
+                {/* The checkbox has its own label beside the select's. Nested inside the select's
+                    label, a click on "Override frequency" went to the (disabled) select instead,
+                    so the box would not tick and the frequency stayed locked. */}
+                <div>
+                  <label className={fieldLabel}>Frequency<select disabled={!service.allow_frequency_override || !overrideFrequency || saving} value={inputs.frequency} onChange={event => {
+                    const frequency = event.target.value;
+                    setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity, frequency) }));
+                  }} className={`${inputClass} mt-2`}>{FREQUENCY_OPTIONS.map(item => <option key={item.value}>{item.value}</option>)}</select></label>
+                  {service.allow_frequency_override
+                    ? <label className={`mt-2 inline-flex cursor-pointer items-center gap-2 text-xs font-normal ${skin.muted}`}>
+                      <input type="checkbox" checked={overrideFrequency} onChange={event => {
+                        setOverrideFrequency(event.target.checked);
+                        if (!event.target.checked) setInputs(prev => ({ ...prev, ...getServiceSchedule(service, prev.capacity) }));
+                      }} className={skin.control} />Override frequency
+                    </label>
+                    : <p className={`mt-2 text-xs ${skin.faint}`}>This service has a fixed frequency. Turn on Allow Frequency Override on the service to change it here.</p>}
+                </div>
                 <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 ${skin.readOnlyBg}`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}

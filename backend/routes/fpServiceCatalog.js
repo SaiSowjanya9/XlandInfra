@@ -4,7 +4,8 @@ const { requireFPScope, isFranchisePartner } = require('../middleware/fpScope');
 const { validateService, calculateServiceQuote, normalizePropertyType } = require('../utils/servicePricing');
 const { normalizeEstimateService, isManualService, normalizeManualService } = require('../utils/estimateData');
 const { categoryOptions, addCategory, removeCategory } = require('../utils/serviceCategories');
-const { parseService } = require('./serviceCatalog');
+const { unitOptions, addUnit, removeUnit } = require('../utils/serviceUnits');
+const { parseService, clientService, prepareService } = require('./serviceCatalog');
 const router = express.Router();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const handleError = (res, error) => {
@@ -34,8 +35,26 @@ router.use(requireFPScope, (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM service_catalog WHERE scope_id IN (0, ?) ORDER BY created_at DESC, id DESC', [req.catalogFpId]);
-    const services = rows.map(parseService).filter(service => !req.query.propertyType || service.applicable_property_types.includes(normalizePropertyType(req.query.propertyType)));
+    const services = rows.map(clientService).filter(service => !req.query.propertyType || service.applicable_property_types.includes(normalizePropertyType(req.query.propertyType)));
     res.json({ success: true, data: services });
+  } catch (error) { handleError(res, error); }
+});
+
+// The Unit / Capacity Unit box, scoped to this FP exactly as its categories are
+router.get('/units', async (req, res) => {
+  try { res.json({ success: true, data: await unitOptions(pool, req.catalogFpId, req.query.pricing_method), canManage: isFranchisePartner(req.user.role) }); }
+  catch (error) { handleError(res, error); }
+});
+router.post('/units', async (req, res) => {
+  try {
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can add units.', 403);
+    res.status(201).json({ success: true, data: await addUnit(pool, req.catalogFpId, req.body.pricing_method, req.body.name, req.user.id) });
+  } catch (error) { handleError(res, error); }
+});
+router.delete('/units/:id', async (req, res) => {
+  try {
+    if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can delete units.', 403);
+    res.json({ success: true, data: await removeUnit(pool, req.catalogFpId, req.params.id) });
   } catch (error) { handleError(res, error); }
 });
 
@@ -81,17 +100,20 @@ const saveService = async (req, res) => {
   try {
     // FP staff (manager, coordinator, supervisor, executive) may quote from the catalog but not author it
     if (!isFranchisePartner(req.user.role)) fail('Only the franchise partner can configure services.', 403);
-    // The category may be typed rather than chosen, so it is validated as text, not against a list
-    const config = validateService(req.body);
+    let existing = null;
     if (req.params.id) {
-      const [[existing]] = await pool.execute('SELECT id, scope_id FROM service_catalog WHERE id = ?', [req.params.id]);
+      [[existing]] = await pool.execute('SELECT * FROM service_catalog WHERE id = ?', [req.params.id]);
       if (!existing) fail('Service not found.', 404);
       if (Number(existing.scope_id) !== req.catalogFpId) fail('Only services created for your franchise can be edited.', 403);
-      await pool.execute('UPDATE service_catalog SET service_name = ?, configuration = ? WHERE id = ?', [config.service_name, JSON.stringify(config), req.params.id]);
+    }
+    // The category may be typed rather than chosen, so it is validated as text, not against a list
+    const { config, stored } = await prepareService(pool, req.catalogFpId, req.body, existing?.configuration ? parseService(existing) : null);
+    if (req.params.id) {
+      await pool.execute('UPDATE service_catalog SET service_name = ?, configuration = ? WHERE id = ?', [stored.service_name, JSON.stringify(stored), req.params.id]);
       return res.json({ success: true, data: { ...config, id: Number(req.params.id), franchise_partner_id: req.catalogFpId } });
     }
     const [result] = await pool.execute('INSERT INTO service_catalog (service_name, scope_id, configuration, created_by) VALUES (?, ?, ?, ?)',
-      [config.service_name, req.catalogFpId, JSON.stringify(config), req.user.id]);
+      [stored.service_name, req.catalogFpId, JSON.stringify(stored), req.user.id]);
     res.status(201).json({ success: true, data: { ...config, id: result.insertId, franchise_partner_id: req.catalogFpId } });
   } catch (error) { handleError(res, error); }
 };
