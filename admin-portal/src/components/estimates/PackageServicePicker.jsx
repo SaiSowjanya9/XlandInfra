@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { capacityForSlab } from '../../utils/rangeMatch';
 import { Check, Loader2, Search, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { FREQUENCY_COUNT_MAP } from '../../utils/estimateStore';
@@ -62,16 +63,21 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
     onAdd(available.filter(service => picked.includes(service.id)).map(service => {
       const frequencyType = service.default_frequency || 'Monthly';
       // The row keeps what it was picked from, so the package can price it: which service, how it is
-      // priced, and the unit its amount is measured in. The amount itself is typed into the row.
+      // priced, and the unit its amount is measured in. A package row is a template, so it starts
+      // with one unit/area/capacity/person or the first slab already selected rather than asking the
+      // user to type something before any price appears.
+      const defaultInput = service.pricing_method === 'capacity_slab'
+        ? capacityForSlab(service.capacity_slabs, service.capacity_slabs?.find(s => s.capacityFrom != null))
+        : ({ quantity_based: 1, area_based: 1, capacity_based: 1, manpower: 1 }[service.pricing_method] ?? '');
       return { service: service.service_name, description: service.description || '', frequencyType,
         frequencyCount: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0,
         catalogServiceId: service.id, category: service.category || '',
-        pricingMethod: service.pricing_method, unit: service.unit || '',
+        pricingMethod: service.pricing_method, unit: service.unit || '', inputValue: defaultInput,
         // The quote refuses a property type the service does not cover, so the row remembers which
         // ones it does: that is what it is priced against until the package has a type of its own.
         applicablePropertyTypes: service.applicable_property_types || [],
         // A service that forbids a frequency change has its quote refused when the row carries a
-        // different one, so the row keeps the service's own schedule and whether it may be changed
+        // different one, so the row keeps the service's own schedule and whether it may be changed.
         allowFrequencyOverride: service.allow_frequency_override !== false,
         defaultFrequency: frequencyType,
         defaultVisitsPerYear: service.default_visits_per_year ?? FREQUENCY_COUNT_MAP[frequencyType] ?? 0,
@@ -81,8 +87,8 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
           capacitySlabs: service.capacity_slabs || [],
           defaultMarkupPercentage: service.default_markup_percentage,
           defaultVisitsPerYear: service.default_visits_per_year
-        } : {}),
-        allowFrequencyOverride: Boolean(service.allow_frequency_override), inputValue: '' };
+        } : {})
+      };
     }));
     onClose();
   };
