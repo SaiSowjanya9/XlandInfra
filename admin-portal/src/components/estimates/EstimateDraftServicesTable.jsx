@@ -2,7 +2,6 @@ import { Pencil, Trash2 } from 'lucide-react';
 import {
   formatCurrency,
   getAddonName,
-  getAddonPrice,
   getServiceInput,
   getServiceMethodLabel,
   getServiceRate,
@@ -14,7 +13,8 @@ import {
 // The create-estimate services table. One layout for every portal: the category sits under the
 // service name, the measured amount carries the rate or slab band beneath it, and each configured
 // row states its method. `internal` adds Vendor Cost, XLAND Cost and Margin % — only Admin and FP
-// pass it; every other portal gets the same table without the cost columns.
+// pass it; every other portal gets the same table without the cost columns. No service states a
+// price of its own: the estimate is priced as a whole, in the total line and the Price Summary.
 const INPUT_KEYS = {
   quantity_based: 'quantity',
   area_based: 'area',
@@ -63,11 +63,6 @@ const inputSubLine = (service) => {
   return rate && !rate.includes('₹') ? rate : '';
 };
 
-const hasPrice = (service) =>
-  service.price != null || service.totalPrice != null || service.total_price != null
-  || service.calculatedPrice != null || (service.services || []).some(s => s.price != null)
-  || service.catalogServiceId;
-
 export default function EstimateDraftServicesTable({
   items,
   internal = false,
@@ -88,7 +83,7 @@ export default function EstimateDraftServicesTable({
   const totalRowCls = warm
     ? 'bg-warm-section/70 border-warm-border text-warm-text'
     : 'bg-blue-50 border-blue-200 text-blue-800';
-  const colCount = (internal ? 10 : 7) + (hasActions ? 1 : 0);
+  const colCount = (internal ? 9 : 6) + (hasActions ? 1 : 0);
 
   return (
     // `bare` drops the table's own border so it can sit flush inside a card that already frames it —
@@ -108,7 +103,6 @@ export default function EstimateDraftServicesTable({
                   of the draft is still the customer's document, so they are print:hidden */}
               {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Vendor Cost</th>}
               {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">XLAND Cost</th>}
-              <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Customer Price</th>
               {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Margin %</th>}
               {hasActions && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide w-16 print:hidden">Action</th>}
             </tr>
@@ -159,9 +153,6 @@ export default function EstimateDraftServicesTable({
                       </span>
                     </td>
                   )}
-                  <td className="px-3 py-2.5 text-center font-semibold text-emerald-600">
-                    {hasPrice(service) ? formatCurrency(getAddonPrice(service)) : '—'}
-                  </td>
                   {internal && <td className="px-3 py-2.5 text-center font-semibold text-emerald-600 print:hidden">{margin != null ? `${Math.round(margin)}%` : '—'}</td>}
                   {hasActions && (
                     <td className="px-3 py-2.5 text-center print:hidden">
@@ -186,11 +177,14 @@ export default function EstimateDraftServicesTable({
           </tbody>
           {total != null && (
             <tfoot>
-              {/* The figure lands under the Customer Price column, with Margin and Action left empty */}
+              {/* One figure for all the services, across the full width */}
               <tr className={`border-t ${totalRowCls}`}>
-                <td colSpan={internal ? 8 : 6} className="px-4 py-2.5 text-sm font-semibold">{totalLabel}</td>
-                <td className="px-4 py-2.5 text-center font-bold text-gray-900">{formatCurrency(total)}</td>
-                {colCount - (internal ? 9 : 7) > 0 && <td colSpan={colCount - (internal ? 9 : 7)} />}
+                <td colSpan={colCount} className="px-4 py-2.5 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold">{totalLabel}</span>
+                    <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
+                  </div>
+                </td>
               </tr>
             </tfoot>
           )}

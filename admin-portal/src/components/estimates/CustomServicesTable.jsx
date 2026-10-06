@@ -218,25 +218,25 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         <thead>
           <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
             <th className={`${internal ? 'w-[4%]' : 'w-[5%]'} whitespace-nowrap px-3 py-2.5 text-center`}>#</th>
-            <th className={`${internal ? 'w-[12%]' : 'w-[17%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Service</th>
-            <th className={`${internal ? 'w-[13%]' : 'w-[21%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
-            <th className={`${internal ? 'w-[10%]' : 'w-[13%]'} whitespace-nowrap px-3 py-2.5 text-left`} title="What was measured at the property, or the quantity">Input / Details</th>
-            <th className={`${internal ? 'w-[10%]' : 'w-[12%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
-            <th className={`${internal ? 'w-[7%]' : 'w-[9%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
+            <th className={`${internal ? 'w-[14%]' : 'w-[20%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Service</th>
+            <th className={`${internal ? 'w-[16%]' : 'w-[26%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
+            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-left`} title="What was measured at the property, or the quantity">Input / Details</th>
+            <th className={`${internal ? 'w-[11%]' : 'w-[14%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
+            <th className={`${internal ? 'w-[8%]' : 'w-[10%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
             {/* Internal costs and row controls are screen furniture: a browser print of the form
                 keeps only the customer's columns, so they are print:hidden */}
             {internal && <>
-              <th className="w-[10%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
-              <th className="w-[10%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
+              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
               <th className="w-[7%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
             </>}
-            <th className={`${internal ? 'w-[10%]' : 'w-[12%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price</th>
-            <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
+            {/* No price column: the estimate is priced as a whole, in Total Services and the Price Summary */}
+            <th className={`${internal ? 'w-[7%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
           {!rows.length && !extraRows.length && (
-            <tr><td colSpan={internal ? 11 : 8} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
+            <tr><td colSpan={internal ? 10 : 7} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
               No services yet. Use Add Service to add one.
             </td></tr>
           )}
@@ -252,8 +252,11 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                 <input value={edit.values.description} onChange={event => setEditField('description', event.target.value)} onKeyDown={onKeyDown}
                   placeholder="e.g. 4 Lifts, 15,000 Sq Ft" maxLength={255} aria-label="Description" className={inputClass} />
               </td>
-              {/* The quantity is set in the service's dialog; an in-place edit keeps it */}
-              <td className={`${cell} ${skin.muted}`}>{edit.values.quantity ? `Qty ${edit.values.quantity}` : '-'}</td>
+              {/* A hand-typed row's price is still entered, here, though no row shows one once saved */}
+              <td className="px-3 py-2.5">
+                <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
+                  placeholder="Price" aria-label="Customer price" className={`${numberClass} text-center`} />
+              </td>
               <td className="px-3 py-2.5">
                 <select value={edit.values.frequency_type} onChange={event => setEditField('frequency_type', event.target.value)}
                   aria-label="Frequency" className={inputClass}>
@@ -275,10 +278,6 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               {/* The cost cells keep their places in an internal table; an in-place edit never
                   changes them -- the dialog is where cost and markup are set */}
               {internal && <><td className="print:hidden" /><td className="print:hidden" /><td className="print:hidden" /></>}
-              <td className="px-3 py-2.5">
-                <input type="number" min="0" step="0.01" value={edit.values.price} onChange={event => setEditField('price', event.target.value)} onKeyDown={onKeyDown}
-                  placeholder="0" aria-label="Customer price" className={`${numberClass} text-center`} />
-              </td>
               <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
                   <button type="button" onClick={saveEdit} title="Save service" aria-label="Save service"
@@ -311,7 +310,6 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                 <td className={`${cell} text-center print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
                 <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
-              <td className={`${cell} text-center font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               {/* Every row can be amended or taken back off the estimate */}
               <td className="px-3 py-2.5 print:hidden">
                 <div className="flex items-center justify-center gap-1">
@@ -337,16 +335,18 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                 <td className={`${cell} text-center print:hidden`}>{costOr(getServiceXlandCost(row))}</td>
                 <td className={`${cell} text-center print:hidden`}>{marginOr(getServiceMarginPercent(row))}</td>
               </>}
-              <td className={`${cell} text-center font-medium ${skin.strong}`}>{currency(row.totalPrice ?? row.price)}</td>
               <td className="px-3 py-2.5 print:hidden">{renderExtraActions?.(row)}</td>
             </tr>
           ))}
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className={`border-t ${skin.panelFoot}`}>
-            <td colSpan={internal ? 9 : 6} className={`px-3 py-2.5 text-left text-sm font-semibold ${skin.text}`}>Total Services</td>
-            <td className={`px-3 py-2.5 text-center text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
-            <td className="print:hidden" />
+            <td colSpan={internal ? 10 : 7} className={`px-3 py-2.5 text-sm ${skin.text}`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold">Total Services</span>
+                <span className={`font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</span>
+              </div>
+            </td>
           </tr>
         </tfoot>}
       </table>

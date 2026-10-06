@@ -703,16 +703,16 @@ const generateEstimatePDF = async (estimate) => {
       // carries the same padding, a row is as tall as its tallest cell actually measures rather
       // than a guess from character count, and the header repeats when a table crosses a page.
       // Every field of a service the customer is entitled to read has a column: what it is, what it
-      // covers, how often, how many visits and what it costs. No Qty column: the printed and
-      // downloaded estimate dropped it, and the emailed copy must read the same.
+      // covers, how often and how many visits. No Price and no Qty column: no service states a price
+      // of its own -- the estimate is priced as a whole, in Total Services Price and the Price
+      // Summary -- and the printed and downloaded estimate reads the same.
       const TABLE_COLS = [
         { label: '#', width: 22, align: 'left' },
         { label: 'Service', width: 104, align: 'left' },
-        { label: 'Description', width: 178, align: 'left' },
+        { label: 'Description', width: 255, align: 'left' },
         { label: 'Frequency', width: 70, align: 'left' },
         // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
-        { label: 'Visits', width: 44, align: 'right' },
-        { label: 'Price', width: 77, align: 'right' }
+        { label: 'Visits', width: 44, align: 'right' }
       ];
       const CELL_PAD = 8;
       const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
@@ -731,7 +731,7 @@ const generateEstimatePDF = async (estimate) => {
       const drawServicesTable = rows => {
         drawTableHeader();
         rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits), row.price];
+          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits)];
           doc.fontSize(8).font('Helvetica');
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
@@ -747,7 +747,7 @@ const generateEstimatePDF = async (estimate) => {
         y += GAP.row;
       };
 
-      const tableRow = (item, { priced = true } = {}) => ({
+      const tableRow = item => ({
         // The category says what kind of service this is, so it reads under the name rather than
         // among the details in the Description column
         name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
@@ -755,10 +755,7 @@ const generateEstimatePDF = async (estimate) => {
         // Property Types is catalog configuration, not something a customer document states
         details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
-        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
-        // A package's own services are paid for by the package price -- one price for all of them --
-        // so their column says Included, as the portal's view and printed copy do
-        price: priced ? `Rs. ${money(item.totalPrice ?? item.price ?? 0)}` : 'Included'
+        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1
       });
 
       // Only show Services Table for NON-work order estimates
@@ -770,7 +767,7 @@ const generateEstimatePDF = async (estimate) => {
       if (!isWOEstimate && svcList.length > 0) {
         sectionHeading('AMC Package - Services Included');
         // A package's services are covered by the package price, so no per-row price is stated
-        drawServicesTable(svcList.map(item => tableRow(item, { priced: false })));
+        drawServicesTable(svcList.map(item => tableRow(item)));
       }
 
       // Add-ons Table (if any) - ensure it's an array
@@ -793,7 +790,7 @@ const generateEstimatePDF = async (estimate) => {
         if (y + GAP.heading + 20 + firstHeight > pageHeight) { doc.addPage(); y = MARGIN; }
 
         sectionHeading('Services');
-        drawServicesTable(addonList.map(tableRow));
+        drawServicesTable(addonList.map(item => tableRow(item)));
       }
       // Total Services Price is the whole of it -- the package price plus the added services -- so
       // it agrees with the Price Summary's subtotal; it used to leave the package out. A small line

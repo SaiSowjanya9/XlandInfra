@@ -936,17 +936,17 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   if (!Array.isArray(servicesList)) servicesList = [];
 
   /**
-   * A service as the estimate states it: what it is, what it covers, how often, how many visits
-   * and what it costs. The same columns the PDF prints, so the email and its attachment agree.
-   * A package's own services are covered by the package price, so their figure reads "Included".
+   * A service as the estimate states it: what it is, what it covers, how often and how many
+   * visits. The same columns the PDF prints, so the email and its attachment agree. No service
+   * states a price of its own: the estimate is priced as a whole, in Total Services Price and the
+   * Price Summary.
    */
-  const serviceRowsHtml = (list, { priced = true } = {}) => list.map((item, index) => {
+  const serviceRowsHtml = list => list.map((item, index) => {
     const name = emailText(item.name || item.service || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service');
     const category = item.category ? emailText(item.category) : '';
     const details = item.description ? emailText(stripInternalServiceDetails(item.description)) : '';
     const frequency = emailText(String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''));
     const visits = item.frequency_count ?? item.frequencyCount ?? item.visits ?? item.quantity ?? 1;
-    const price = Number(item.price || item.totalPrice || item.calculatedPrice || item.services?.[0]?.price || 0);
     const cell = `padding: 7px 8px; border-bottom: 1px solid ${WARM.border}; font-size: 12px; color: ${WARM.text}; vertical-align: top;`;
     // The cream belongs to the column header alone. Rows are white and told apart by the rule
     // between them: banding them as well made the table the loudest thing in the message.
@@ -960,20 +960,19 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       </td>
       <td style="${cell} width: 80px;">${frequency}</td>
       <td style="${cell} width: 46px; text-align: center;">${visits}</td>
-      <td style="${cell} width: 88px; text-align: right; white-space: nowrap;">${priced ? `Rs. ${money(price)}` : '<span style="color: #6b7280;">Included</span>'}</td>
     </tr>`;
   }).join('');
 
   // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
   const SERVICE_HEAD = `
     <tr>
-      ${['#', 'Service', 'Frequency', 'Visits', 'Price'].map((label, index) => `
+      ${['#', 'Service', 'Frequency', 'Visits'].map((label, index) => `
         <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
           font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
-          text-align: ${index === 3 ? 'center' : index === 4 ? 'right' : 'left'};">${label}</th>`).join('')}
+          text-align: ${index === 3 ? 'center' : 'left'};">${label}</th>`).join('')}
     </tr>`;
 
-  const servicesHtml = serviceRowsHtml(servicesList, { priced: false });
+  const servicesHtml = serviceRowsHtml(servicesList);
 
   // Ensure addons is an array
   let addonsList = addons;
