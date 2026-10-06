@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { formatCurrency, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import { formatCurrency, getAddonPrice, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import EstimateServicesTable from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
@@ -105,6 +105,7 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
   const unitLabel = ['FLAT', 'Flat', 'flat'].includes(propertyType) ? 'Flat Number'
     : ['PLOT', 'Plot', 'plot'].includes(propertyType) ? 'Plot Number' : 'Villa Number';
   const money = value => formatCurrency(value || 0);
+  const packagePrice = Number(estimate.package_price ?? estimate.packagePrice ?? estimate.packageRate) || 0;
 
   return (
     // print-document: a browser print of this view is this document alone -- the rule in
@@ -148,37 +149,17 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
         )}
       </Section>
 
-      {packageName && (
-        <Section title="AMC Package">
-          <div className="bg-white p-4 rounded-lg border border-gray-100">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="font-medium text-sm text-gray-800">{decode(packageName)}</p>
-              <p className="text-sm font-semibold text-gray-800">{money(estimate.package_price || estimate.packagePrice || estimate.packageRate)}</p>
-            </div>
-            {/* Internal viewers read the package's services in the table below with their costs;
-                the compact list is kept for everyone else */}
-            {packageServices.length > 0 && !internal && (
-              <ul className="mt-3 space-y-1">
-                {packageServices.map((service, index) => (
-                  <li key={index} className="flex flex-wrap justify-between gap-2 text-xs text-gray-600">
-                    <span>{decode(service.name || service.service)}</span>
-                    <span className="text-gray-500">{service.frequencyType || service.frequency_type || 'Monthly'} · {service.frequencyCount ?? service.frequency_count ?? 0} visits</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Section>
-      )}
-
-      {/* In the internal view the package's own services sit in the same table as the added
-          services, tagged Package — the layout the create form uses */}
-      {(internal ? packageServices.length > 0 || services.length > 0 : services.length > 0) && (
+      {/* One Services table holds everything the estimate covers: the package's own services,
+          tagged Package and reading "Included" (they are paid for by the package price, not one by
+          one), then the services added to it. Its total is the whole of it -- package price plus
+          the added services -- so it agrees with the Price Summary's subtotal, and the package is
+          named in a small note under it rather than in a section of its own. */}
+      {(packageServices.length > 0 || services.length > 0 || packageName) && (
         <Section title="Services">
           <EstimateServicesTable
-            rows={internal
-              ? [...packageServices.map(s => (typeof s === 'string' ? { name: s, _tag: 'Package' } : { ...s, _tag: 'Package' })), ...services]
-              : services}
+            rows={[...packageServices.map(s => (typeof s === 'string' ? { name: s, _tag: 'Package' } : { ...s, _tag: 'Package' })), ...services]}
+            total={packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0)}
+            note={packageName ? `Includes the AMC package "${decode(packageName)}" at ${money(packagePrice)}${packageServices.length ? `, covering ${packageServices.length} service${packageServices.length === 1 ? '' : 's'}` : ''}.` : null}
             decode={decode}
             internal={internal}
           />

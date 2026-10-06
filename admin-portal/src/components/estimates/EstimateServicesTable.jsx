@@ -62,14 +62,20 @@ const serviceColumns = (decode, internal) => {
     <p className={`whitespace-nowrap text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
+  // A package's own service is paid for by the package price, not on its own: it reads "Included"
+  // rather than ₹0, and has no XLAND cost or margin of its own -- those belong to the package
+  const inPackage = row => row._tag === 'Package';
   const vendor = { label: 'Vendor Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceVendorCost(row)) };
   const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
-    render: row => money(getServiceXlandCost(row)) };
+    render: row => (inPackage(row) ? money(null) : money(getServiceXlandCost(row))) };
   const price = { label: 'Customer Price', head: 'text-center', cell: 'text-center',
-    render: row => <p className="whitespace-nowrap text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p> };
+    render: row => (inPackage(row)
+      ? <p className="whitespace-nowrap text-xs text-warm-muted">Included</p>
+      : <p className="whitespace-nowrap text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p>) };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
+      if (inPackage(row)) return <p className="text-xs text-warm-muted">—</p>;
       const value = getServiceMarginPercent(row);
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
     } };
@@ -78,7 +84,7 @@ const serviceColumns = (decode, internal) => {
     : [number, service, method, input, frequency, visits, price];
 };
 
-export default function EstimateServicesTable({ rows, total, decode = value => value ?? '',
+export default function EstimateServicesTable({ rows, total, note = null, decode = value => value ?? '',
   topRadius = 'rounded-t-lg', bottomRadius = 'rounded-b-lg', internal = false }) {
   const services = (Array.isArray(rows) ? rows : []).map(normalizeServiceRow);
   if (!services.length) return null;
@@ -115,6 +121,12 @@ export default function EstimateServicesTable({ rows, total, decode = value => v
             <td className={`${cell} whitespace-nowrap text-center font-bold text-warm-text`}>{formatCurrency(sum)}</td>
             {internal && <td className={`${cell} print:hidden`} />}
           </tr>
+          {/* A small line under the total, e.g. which AMC package it includes and at what price */}
+          {note && (
+            <tr>
+              <td colSpan={internal ? 10 : 7} className="px-3 pb-2 pt-0 text-[11px] text-warm-muted">{note}</td>
+            </tr>
+          )}
         </tfoot>
       </table>
     </div>
