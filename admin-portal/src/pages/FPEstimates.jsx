@@ -3224,12 +3224,18 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                                       name: s.name || s.service || 'Service',
                                       description: s.description || '',
                                       frequencyCount: s.frequency_count ?? s.frequencyCount ?? 0,
-                                      frequencyType: s.frequency_type || s.frequencyType || 'Monthly'
+                                      frequencyType: s.frequency_type || s.frequencyType || 'Monthly',
+                                      category: s.category || '',
+                                      // The saved vendor cost, for the PDF's INTERNAL figures
+                                      vendorCost: s.vendorCost,
+                                      operatingCost: s.operatingCost
                                     };
                                   }) : [];
                                   const pdfData = {
                                     id: pkg.id,
                                     packageId: pkg.package_code || `PKG-${pkg.id}`,
+                                    packageCode: pkg.package_code,
+                                    propertyTypes: getPkgPropertyTypes(pkg),
                                     packageName: pkg.name,
                                     name: pkg.name,
                                     propertyType: propertyType,
