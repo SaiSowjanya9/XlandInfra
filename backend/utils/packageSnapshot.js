@@ -79,38 +79,83 @@ const packageServiceSnapshot = (row, share = null) => {
 // shows what the package loses on it, rather than a dash that hides it.
 const INPUT_KEY = { quantity_based: 'quantity', area_based: 'area', capacity_based: 'capacity', capacity_slab: 'capacity', manpower: 'personnel' };
 const hasNumber = value => value !== '' && value != null && Number.isFinite(Number(value));
-const catalogVendorCost = async (db, row, packageTypes) => {
+// The catalog service behind a row: by its id, or -- for a row saved without the link -- by name
+// among the services this FP can use (its own and the shared ones).
+const findCatalogService = async (db, row, fpId) => {
+  if (row.catalogServiceId) {
+    const [[byId]] = await db.execute('SELECT * FROM service_catalog WHERE id = ?', [row.catalogServiceId]);
+    if (byId) return byId;
+  }
+  const name = String(row.service || row.name || '').trim();
+  if (!name) return null;
+  const [candidates] = await db.execute('SELECT * FROM service_catalog WHERE scope_id IN (0, ?)', [Number(fpId) || 0]);
+  const { decodeEntities } = require('./htmlEntities');
+  const { parseService } = require('../routes/serviceCatalog');
+  const key = decodeEntities(name).toLowerCase();
+  return (candidates || []).find(candidate => {
+    try { return decodeEntities(String(parseService(candidate).service_name || '')).trim().toLowerCase() === key; } catch { return false; }
+  }) || null;
+};
+
+// Priced from the service's configuration with the row's amount and schedule. Where the row's own
+// figures are refused -- a schedule the service no longer allows, an amount outside today's slabs --
+// it is priced on the service's own schedule, then on its first rated slab, rather than not at all.
+// A row that still cannot be priced is logged with the reason, so the gap is visible in the logs.
+const catalogVendorCost = async (db, row, packageTypes, fpId) => {
   try {
-    const [[found]] = await db.execute('SELECT * FROM service_catalog WHERE id = ?', [row.catalogServiceId]);
-    if (!found) return null;
+    const found = await findCatalogService(db, row, fpId);
+    if (!found) {
+      console.warn(`[package cost] No catalog service found for "${row.service || row.name}" (id ${row.catalogServiceId ?? 'none'})`);
+      return null;
+    }
     const { parseService } = require('../routes/serviceCatalog');
     const { calculateServiceQuote } = require('./servicePricing');
     const service = parseService(found);
     const allowed = Array.isArray(service.applicable_property_types) ? service.applicable_property_types : [];
     const propertyType = (packageTypes || []).find(type => allowed.includes(type)) || allowed[0];
-    const method = row.pricingMethod || service.pricing_method;
-    const quote = calculateServiceQuote(service, {
-      property_type: propertyType, frequency: row.frequencyType, visits: Number(row.frequencyCount),
-      ...(INPUT_KEY[method] && hasNumber(row.inputValue) ? { [INPUT_KEY[method]]: Number(row.inputValue) } : {})
-    }, 'admin');
-    return hasNumber(quote?.vendorCost) ? Number(quote.vendorCost) : null;
-  } catch {
+    const method = service.pricing_method || row.pricingMethod;
+    const key = INPUT_KEY[method];
+    const amount = hasNumber(row.inputValue) ? { [key]: Number(row.inputValue) } : {};
+    const firstSlab = method === 'capacity_slab'
+      ? (service.capacity_slabs || []).find(slab => slab && !slab.isCustomQuote && hasNumber(slab.vendorRate)) : null;
+    const schedule = { frequency: row.frequencyType, visits: Number(row.frequencyCount) };
+    const attempts = [
+      { ...schedule, ...(key ? amount : {}) },
+      { ...(key ? amount : {}) },
+      ...(firstSlab ? [{ ...schedule, capacity: Number(firstSlab.capacityFrom) }, { capacity: Number(firstSlab.capacityFrom) }] : [])
+    ];
+    let reason = '';
+    for (const attempt of attempts) {
+      try {
+        const quote = calculateServiceQuote(service, { property_type: propertyType, ...attempt }, 'admin');
+        if (hasNumber(quote?.vendorCost)) return Number(quote.vendorCost);
+        reason = 'the quote has no vendor cost (custom quote)';
+      } catch (error) {
+        reason = error.message;
+      }
+    }
+    console.warn(`[package cost] Could not price "${row.service || row.name}" from the catalog: ${reason}`);
+    return null;
+  } catch (error) {
+    console.warn(`[package cost] Catalog lookup failed for "${row.service || row.name}": ${error.message}`);
     return null;
   }
 };
 
-const snapshotRows = async (db, stored, packagePrice) => {
+const snapshotRows = async (db, stored, packagePrice, fpId) => {
   const rows = (Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : []).filter(row => row && typeof row === 'object');
   const shares = packageShares(rows, stored && !Array.isArray(stored) ? stored.markup_percentage : null, packagePrice);
   const anyPriced = shares.some(share => share != null);
   const packageTypes = stored && !Array.isArray(stored) ? stored.property_types || (stored.property_type ? [stored.property_type] : []) : [];
   return Promise.all(rows.map(async (row, index) => {
     const snap = packageServiceSnapshot(row, shares[index]);
-    if (snap.vendorCost === undefined && row.catalogServiceId && !hasNumber(row.price)) {
-      const cost = await catalogVendorCost(db, row, packageTypes);
+    // A configured service with no cost on record -- no price saved, or a price typed over -- is
+    // costed from the catalog. Only a row with no price at all is outside the package price (share 0).
+    if (snap.vendorCost === undefined && (row.catalogServiceId || row.pricingMethod)) {
+      const cost = await catalogVendorCost(db, row, packageTypes, fpId);
       if (cost != null) {
         snap.vendorCost = cost;
-        if (anyPriced) snap.packageShare = 0;
+        if (anyPriced && snap.packageShare == null) snap.packageShare = 0;
       }
     }
     return snap;
@@ -123,7 +168,7 @@ const loadPackageSnapshot = async (db, packageId, fpId) => {
   if (!pkg) return null;
   const stored = parse(pkg.services);
   return { name: pkg.name, description: pkg.description || '', price: Number(pkg.price) || 0,
-    billingDuration: stored?.billing_duration || null, services: await snapshotRows(db, stored, pkg.price) };
+    billingDuration: stored?.billing_duration || null, services: await snapshotRows(db, stored, pkg.price, fpId) };
 };
 
 // Express middleware for the estimate create/update routes. `fpOf` reads the caller's FP from the
@@ -169,7 +214,7 @@ const fillPackageServiceDetails = async (db, estimates) => {
           ? await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [est.package_id, est.franchise_partner_id])
           : await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ?', [est.package_id]);
         // Shared out over the price this estimate sold the package at, not today's package price
-        const snaps = await snapshotRows(db, parse(pkg?.services), Number(est.package_price) || pkg?.price);
+        const snaps = await snapshotRows(db, parse(pkg?.services), Number(est.package_price) || pkg?.price, est.franchise_partner_id);
         cache.set(key, new Map(snaps.map(snap => [sameName(snap.name), snap])));
       } catch {
         cache.set(key, new Map());
