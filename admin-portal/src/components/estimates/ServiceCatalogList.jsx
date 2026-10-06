@@ -221,7 +221,8 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
                   : <span className={sk(`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`)}>{methodLabel(service.pricing_method)}</span>}
               </td>
               {/* The input only: the vendor rate has its own column rather than sitting underneath */}
-              <td className={sk(cell)}><p className={sk("line-clamp-2")}>{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
+              {/* Shown in full and wrapped -- a clamp cut "Lift Fully Manual Capacity" to "Lift Fully Manual..." */}
+              <td className={sk(cell)}><p className={sk("break-words")}>{primaryInputLabel(service.service_name, service.pricing_method, service.unit) || '—'}</p></td>
               <td className={sk(cell)}>{service.default_frequency}</td>
               <td className={sk(`${nowrap} text-center`)}>{service.default_visits_per_year}</td>
               <td className={sk(cell)}>{rateSummary(service)}</td>
