@@ -29,7 +29,8 @@ import { normalizeServiceRow } from './EstimateDraftServicesTable';
 // `head`/`cell` carry alignment and print visibility only.
 const serviceColumns = (decode, internal) => {
   const number = { label: '#', head: 'w-10', cell: '',
-    render: (row, index) => <span className="w-5 h-5 bg-warm-accent-soft border border-warm-border text-warm-text text-xs font-bold rounded-full flex items-center justify-center">{index + 1}</span> };
+    // Plain text throughout: no chips, pills or tags -- the user asked for the boxes to go
+    render: (row, index) => <span className="text-xs text-warm-muted">{index + 1}</span> };
   // The category says what kind of service this is, so it reads under the name rather than among
   // the details -- the same place the PDF sets it
   const service = { label: 'Service', head: '', cell: 'min-w-[140px]',
@@ -37,7 +38,7 @@ const serviceColumns = (decode, internal) => {
       <p className="font-medium text-gray-800 text-sm break-words">{decode(getAddonName(row))}</p>
       {row.category && <p className="text-[10px] text-gray-500">{decode(row.category)}</p>}
       {/* A package's own service, folded into the internal table beside the added services */}
-      {row._tag && <span className="mt-0.5 inline-block rounded bg-warm-accent-soft px-1.5 py-px text-[10px] text-warm-muted">{row._tag}</span>}
+      {row._tag && <p className="text-[10px] italic text-warm-muted">{row._tag}</p>}
     </> };
   // What the service covers, as entered on it -- its own description, not the generated pricing
   // segments (those are the Method and Input / Details columns), so nothing reads twice
@@ -49,7 +50,7 @@ const serviceColumns = (decode, internal) => {
   const method = { label: 'Method', head: '', cell: '',
     // A hand-entered service has no configured method, so it says nothing rather than guessing one
     render: row => (getServiceMethodLabel(row)
-      ? <span className="inline-block rounded bg-warm-accent-soft px-2 py-0.5 text-[10px] font-semibold text-warm-text">{getServiceMethodLabel(row)}</span>
+      ? <span className="text-xs text-gray-700">{getServiceMethodLabel(row)}</span>
       : <span className="text-xs text-gray-400">-</span>) };
   const input = { label: 'Input / Details', head: '', cell: 'min-w-[110px]',
     // What was measured at the property -- 4 Lift, 15,000 Sq Ft. The subline is screen-only
