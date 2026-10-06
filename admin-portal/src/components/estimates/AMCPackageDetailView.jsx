@@ -62,6 +62,13 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
   const description = decode(pkg.description).trim();
   const name = decode(pkg.name || pkg.packageName || pkg.package_name) || 'Unnamed Package';
   const figures = internal ? packageInternalSummary(rows, price) : null;
+  // A configured service saved with neither a price nor a vendor cost (its quote never landed) is
+  // sold for nothing and costed at nothing here -- the margin would leave it out and read far too
+  // high (Gold pacakage showed 52% while its Lift costs the vendor 72,000 a year). Such a package
+  // names those services instead of a margin. An On Request service (0 visits) may be free.
+  const blank = value => value === '' || value == null || !Number.isFinite(Number(value));
+  const uncosted = internal ? rows.filter(row => row && typeof row === 'object' && (row.catalogServiceId || row.pricingMethod)
+    && blank(row.vendorCost) && (blank(row.price) || Number(row.price) <= 0) && Number(row.frequencyCount ?? row.frequency_count) !== 0) : [];
   const code = pkg.packageId || pkg.package_code || `PKG-${pkg.id}`;
 
   return (
@@ -157,7 +164,13 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
             </div>
           </div>
 
-          {internal && (figures
+          {internal && uncosted.length > 0 && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 print:hidden">
+              <span className="font-semibold">INTERNAL: </span>
+              {uncosted.map(row => decode(row.service || row.name)).join(', ')} {uncosted.length === 1 ? 'has' : 'have'} no price or vendor cost saved on this package, so {uncosted.length === 1 ? 'it is' : 'they are'} sold for nothing and the package&apos;s margin is not shown. Open the package in Edit, choose {uncosted.length === 1 ? 'its' : 'their'} amount or slab so {uncosted.length === 1 ? 'it is' : 'they are'} priced, and save.
+            </p>
+          )}
+          {internal && !uncosted.length && (figures
             ? <EstimateProfitSummaryPanel vendorCost={figures.vendorCost} operatingCost={figures.operatingCost}
                 customerPrice={figures.customerPrice} className="border-t border-warm-border pt-4" />
             : <p className="border-t border-warm-border pt-4 text-[11px] text-warm-muted print:hidden">
