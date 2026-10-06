@@ -8,6 +8,7 @@ import { calculateEstimateTotal } from '../../utils/estimateStore';
 import { exportEstimateToPDF, printEstimatePDF } from '../../utils/pdfExport';
 import { useEstimatePrint } from '../../utils/useEstimatePrint';
 import EstimateDetailPanel from './EstimateDetailPanel';
+import { shortDivision } from '../../utils/fieldOptionsStore';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -283,7 +284,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-600">
-                        {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) && (estimate.division || '-')}
+                        {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) && (shortDivision(estimate.division) || '-')}
                         {!(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId || estimate.property_id) && '-'}
                       </span>
                     </td>

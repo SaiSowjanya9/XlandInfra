@@ -22,6 +22,7 @@ import {
 } from '../utils/estimateStore';
 import * as XLSX from 'xlsx';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
+import { shortDivision } from '../utils/fieldOptionsStore';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -1045,7 +1046,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                             <tr key={estimate.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(estimate)} title="View details">
                               <td className="py-4 px-4"><button type="button" onClick={() => setViewEstimate(estimate)} className="font-medium text-gray-900 hover:text-blue-600" title="View details">{estimate.estimate_id || `EST-${estimate.id}`}</button></td>
                               <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
-                              <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (estimate.division || estimate.property_division || '-') : '-'}</span></td>
+                              <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (shortDivision(estimate.division || estimate.property_division) || '-') : '-'}</span></td>
                               <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{formatDateIST(estimate.created_at)}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
@@ -1664,7 +1665,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium text-sm">{getPropertyTypeLabel(viewEstimate.property_type)}</p></div>
                   <div><p className="text-xs text-gray-500">Zone</p><p className="font-medium text-sm">{viewEstimate.zone || '-'}</p></div>
                   {(viewEstimate.estimate_type === 'property_based' || viewEstimate.property_id) && viewEstimate.division && (
-                    <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{viewEstimate.division}</p></div>
+                    <div><p className="text-xs text-gray-500">Division</p><p className="font-medium text-sm">{shortDivision(viewEstimate.division)}</p></div>
                   )}
                   <div><p className="text-xs text-gray-500">City</p><p className="font-medium text-sm">{viewEstimate.city || '-'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-gray-500">Address</p><p className="font-medium text-sm">{viewEstimate.address || viewEstimate.property_address || '-'}</p></div>
