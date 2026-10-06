@@ -43,7 +43,7 @@ import {
   getAMCPackageByPropertyType,
 } from '../../utils/estimateStore';
 import { getPackagePropertyTypes, packageMatchesPropertyType, formatCurrency } from '../../utils/estimatePackageUtils';
-import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput } from '../../utils/packageServicePricing';
+import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput, unpricedRows } from '../../utils/packageServicePricing';
 import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from '../../utils/packageRows';
 import { capitalizeFirst } from '../../utils/text';
 import { PRICING_METHODS, methodLabel } from './AddServicePage';
@@ -263,6 +263,12 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
     // The price is the sum of the configured services, so it is they that must be priced
     if (totals.price <= 0) {
       showToast?.('Add a configured service and its amount so the package has a price', 'error');
+      return;
+    }
+    // Every configured service must carry its price, or the package sells it for nothing
+    const unpriced = unpricedRows(amcForm.serviceRows);
+    if (unpriced.length) {
+      showToast?.(`${unpriced.map(row => row.service).join(', ')} ${unpriced.length === 1 ? 'has' : 'have'} no price yet -- choose its amount or slab so it is priced, then save`, 'error');
       return;
     }
 

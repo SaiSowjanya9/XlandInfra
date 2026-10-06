@@ -33,6 +33,14 @@ export const rowInput = (row) => {
 
 export const isPricedRow = (row) => Boolean(row?.catalogServiceId);
 
+// The configured services on a package that have no price yet -- their quote has not landed, or
+// failed. A package saved with one sells it for nothing: Gold pacakage carried a Lift priced at 0
+// that costs the vendor 72,000 a year. The forms refuse to save until every one is priced.
+export const unpricedRows = (rows = []) => (Array.isArray(rows) ? rows : []).filter(row =>
+  isPricedRow(row) && String(row.service || '').trim()
+  && (row.price === '' || row.price == null || !Number.isFinite(Number(row.price)) || Number(row.price) <= 0)
+  && !(Number(row.frequencyCount) === 0));
+
 /**
  * The property type a row is quoted against.
  *
