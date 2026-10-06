@@ -27,7 +27,7 @@ import { normalizeServiceRow } from './EstimateDraftServicesTable';
 // width, too narrow for "Customer Price", and the unwrappable headings ran into one another --
 // "Vendor CostXLAND CostCustomer Price". Table columns size to their headings and contents.
 // `head`/`cell` carry alignment and print visibility only.
-const serviceColumns = (decode, internal) => {
+const serviceColumns = (decode, internal, showTag = true) => {
   const number = { label: '#', head: 'w-10', cell: '',
     // Plain text throughout: no chips, pills or tags -- the user asked for the boxes to go
     render: (row, index) => <span className="text-xs text-warm-muted">{index + 1}</span> };
@@ -38,7 +38,7 @@ const serviceColumns = (decode, internal) => {
       <p className="font-medium text-gray-800 text-sm break-words">{decode(getAddonName(row))}</p>
       {row.category && <p className="text-[10px] text-gray-500">{decode(row.category)}</p>}
       {/* A package's own service, folded into the internal table beside the added services */}
-      {row._tag && <p className="text-[10px] italic text-warm-muted">{row._tag}</p>}
+      {showTag && row._tag && <p className="text-[10px] italic text-warm-muted">{row._tag}</p>}
     </> };
   // What the service covers, as entered on it -- its own description, not the generated pricing
   // segments (those are the Method and Input / Details columns), so nothing reads twice
@@ -114,12 +114,13 @@ const serviceColumns = (decode, internal) => {
     : [number, service, description, input, method, frequency, visits, price];
 };
 
-export default function EstimateServicesTable({ rows, total, note = null, decode = value => value ?? '',
+// `totalLabel` names the footer figure; `showTag` is off where a table holds a package's services alone
+export default function EstimateServicesTable({ rows, total, note = null, totalLabel = 'Total Services Price', showTag = true, decode = value => value ?? '',
   topRadius = 'rounded-t-lg', bottomRadius = 'rounded-b-lg', internal = false }) {
   const services = (Array.isArray(rows) ? rows : []).map(normalizeServiceRow);
   if (!services.length) return null;
   const sum = total ?? services.reduce((value, row) => value + getAddonPrice(row), 0);
-  const columns = serviceColumns(decode, internal);
+  const columns = serviceColumns(decode, internal, showTag);
   const cell = 'px-3 py-2 align-middle';
   return (
     // Scrolls sideways on a narrow screen rather than squeezing the columns; on paper it lays out
@@ -146,7 +147,7 @@ export default function EstimateServicesTable({ rows, total, note = null, decode
           <tr>
             <td colSpan={columns.length} className={cell}>
               <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-warm-text">Total Services Price</span>
+                <span className="font-semibold text-warm-text">{totalLabel}</span>
                 <span className="whitespace-nowrap font-bold text-warm-text">{formatCurrency(sum)}</span>
               </div>
             </td>

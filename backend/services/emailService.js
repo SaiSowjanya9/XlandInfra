@@ -942,7 +942,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
    * states a price of its own: the estimate is priced as a whole, in Total Services Price and the
    * Price Summary.
    */
-  const serviceRowsHtml = list => list.map((item, index) => {
+  // A row is a service, or [service, tag] where the tag marks a package's own service
+  const serviceRowsHtml = list => list.map((entry, index) => {
+    const [item, tag] = Array.isArray(entry) ? entry : [entry, ''];
     const name = emailText(item.name || item.service || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service');
     const category = item.category ? emailText(item.category) : '';
     const details = item.description ? emailText(stripInternalServiceDetails(item.description)) : '';
@@ -957,6 +959,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       <td style="${cell}">
         <strong style="color: #111827;">${name}</strong>
         ${category ? `<br><span style="font-size: 11px; color: #6b7280;">${category}</span>` : ''}
+        ${tag ? `<br><span style="font-size: 10px; font-style: italic; color: #6b7280;">${tag}</span>` : ''}
       </td>
       <!-- The view's order: name, description, what was measured, how it is priced, schedule -->
       <td style="${cell} font-size: 11px; color: #4b5563;">${details || '-'}</td>
@@ -976,7 +979,6 @@ const sendEstimateEmail = async (estimate, actionToken) => {
           text-align: ${index === 6 ? 'center' : 'left'};">${label}</th>`).join('')}
     </tr>`;
 
-  const servicesHtml = serviceRowsHtml(servicesList);
 
   // Ensure addons is an array
   let addonsList = addons;
@@ -989,7 +991,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   }
   if (!Array.isArray(addonsList)) addonsList = [];
 
-  const addonsHtml = serviceRowsHtml(addonsList);
+  // The package's own services and the services added to it, as one table numbered straight
+  // through -- the package's marked "Package" -- as the attached PDF and the printed copy have them
+  const allServicesHtml = serviceRowsHtml([...servicesList.map(item => [item, packageName ? 'Package' : '']), ...addonsList]);
 
   // Calculate expiry date (1 month from now)
   const expiryDate = validUntil ? new Date(validUntil) : new Date();
@@ -1290,9 +1294,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
 
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
-            ${servicesList.length ? servicesTable(servicesHtml, 'AMC Package &mdash; Services Included') : ''}
-            <!-- They are simply services, however they were added, so the heading does not vary -->
-            ${addonsList.length ? servicesTable(addonsHtml, 'Services') : ''}
+            ${servicesList.length || addonsList.length ? servicesTable(allServicesHtml, 'Services') : ''}
             <!-- The whole of it: package price plus added services, so it matches the subtotal -->
             ${(addonsList.length || Number(estimate.packagePrice) > 0) ? `
             <p style="margin: 8px 0 0 0; text-align: right; font-size: 12px; font-weight: 700; color: ${WARM.text};">
