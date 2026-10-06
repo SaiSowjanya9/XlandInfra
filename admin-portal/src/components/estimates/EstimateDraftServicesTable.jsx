@@ -45,17 +45,6 @@ export const normalizeServiceRow = (row) => {
   };
 };
 
-const METHOD_STYLES = {
-  quantity_based: 'bg-blue-50 text-blue-600',
-  area_based: 'bg-teal-50 text-teal-600',
-  capacity_based: 'bg-purple-50 text-purple-600',
-  capacity_slab: 'bg-amber-50 text-amber-600',
-  fixed_price: 'bg-emerald-50 text-emerald-600',
-  fixed_visit_custom: 'bg-orange-50 text-orange-600',
-  manpower: 'bg-rose-50 text-rose-600',
-  custom_quote: 'bg-gray-100 text-gray-500',
-};
-
 // The secondary line under the measured amount. Prices never appear here -- a ₹ rate is a cost
 // and stays out of the field entirely. A capacity slab's band names the bracket the input fell
 // in, which is not a cost, so it can stay.
@@ -129,7 +118,7 @@ export default function EstimateDraftServicesTable({
                   <td className="px-3 py-2.5">
                     <div className={`font-medium ${text}`}>{decodeText(getAddonName(service))}</div>
                     {category && <div className={`text-xs ${muted}`}>{category}</div>}
-                    {item.tag && <span className={`mt-0.5 inline-block px-1.5 py-px text-[10px] rounded ${warm ? 'bg-warm-accent-soft text-warm-muted' : 'bg-gray-100 text-gray-500'}`}>{item.tag}</span>}
+                    {item.tag && <div className={`text-[10px] italic ${muted}`}>{item.tag}</div>}
                   </td>
                   {/* What the service covers, as entered on it; the pricing segments are the next two columns */}
                   <td className={`px-3 py-2.5 text-xs ${muted} max-w-[260px] whitespace-pre-wrap break-words`}>{decodeText(stripInternalServiceDetails(String(service.description ?? ''))).trim() || '-'}</td>
@@ -139,7 +128,7 @@ export default function EstimateDraftServicesTable({
                   </td>
                   <td className="px-3 py-2.5">
                     {getServiceMethodLabel(service)
-                      ? <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${METHOD_STYLES[service.pricing_method] || 'bg-gray-100 text-gray-600'}`}>{getServiceMethodLabel(service)}</span>
+                      ? <span className={`text-xs ${text}`}>{getServiceMethodLabel(service)}</span>
                       : <span className={muted}>-</span>}
                   </td>
                   <td className={`px-3 py-2.5 ${muted}`}>{service.frequency_type}</td>
