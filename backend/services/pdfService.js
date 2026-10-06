@@ -701,15 +701,15 @@ const generateEstimatePDF = async (estimate) => {
       // carries the same padding, a row is as tall as its tallest cell actually measures rather
       // than a guess from character count, and the header repeats when a table crosses a page.
       // Every field of a service the customer is entitled to read has a column: what it is, what it
-      // covers, how often, how many visits, how many of it, and what it costs.
+      // covers, how often, how many visits and what it costs. No Qty column: the printed and
+      // downloaded estimate dropped it, and the emailed copy must read the same.
       const TABLE_COLS = [
         { label: '#', width: 22, align: 'left' },
         { label: 'Service', width: 104, align: 'left' },
-        { label: 'Description', width: 144, align: 'left' },
+        { label: 'Description', width: 178, align: 'left' },
         { label: 'Frequency', width: 70, align: 'left' },
         // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
         { label: 'Visits', width: 44, align: 'right' },
-        { label: 'Qty', width: 34, align: 'right' },
         { label: 'Price (Rs.)', width: 77, align: 'right' }
       ];
       const CELL_PAD = 8;
@@ -729,7 +729,7 @@ const generateEstimatePDF = async (estimate) => {
       const drawServicesTable = rows => {
         drawTableHeader();
         rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits), row.quantity, row.price];
+          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits), row.price];
           doc.fontSize(8).font('Helvetica');
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
@@ -754,12 +754,9 @@ const generateEstimatePDF = async (estimate) => {
         details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
         visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
-        // A service with no quantity of its own -- an area, a capacity, a fixed price -- says so
-        // with a dash rather than inventing a 1
-        quantity: item.quantity == null || item.quantity === '' ? '-' : String(item.quantity),
-        // A package's own services carry no price of their own -- the package has one price for all
-        // of them -- so their column reads as a dash rather than as zero
-        price: priced ? `Rs. ${money(item.totalPrice ?? item.price ?? 0)}` : '-'
+        // A package's own services are paid for by the package price -- one price for all of them --
+        // so their column says Included, as the portal's view and printed copy do
+        price: priced ? `Rs. ${money(item.totalPrice ?? item.price ?? 0)}` : 'Included'
       });
 
       // Only show Services Table for NON-work order estimates

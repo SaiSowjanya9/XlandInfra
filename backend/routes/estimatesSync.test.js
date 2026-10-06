@@ -5,7 +5,8 @@ const addon = { catalogServiceId: 1, name: 'Tank Cleaning', totalPrice: 11700.25
   pricingInputs: { capacity: 10, frequency: 'Half-Yearly', visits: 2 }, pricingSnapshot: { pricing_method: 'capacity_based', unit: 'KL' } };
 const estimate = { estimate_id: 'EST-CUSTOM', estimate_type: 'custom', customer_name: 'Customer', customer_email: 'customer@example.test',
   property_code: 'PROP-1', created_at: '2026-09-16', services: '[]', addons: JSON.stringify([addon]), subtotal: '11700.25',
-  total: '11700.25', total_amount: '11700.25', tax_percentage: 0, tax_amount: 0, discount_percentage: 0, discount_amount: 0 };
+  total: '11700.25', total_amount: '11700.25', tax_percentage: 0, tax_amount: 0, discount_percentage: 0, discount_amount: 0,
+  include_terms: 1, terms_conditions: 'Admin clause.' };
 let delivery;
 const db = { isDbConnected: true, pool: { execute: async sql => {
   if (sql.includes('FROM fp_estimates')) return [[{ ...estimate, estimate_id: 'EST-FP', addons: null, addons_data: JSON.stringify([addon]) }]];
@@ -44,6 +45,10 @@ test('estimate sync keeps both sources and passes saved fields to the email trig
   assert.equal(delivery.total, 11700.25);
   assert.equal(delivery.propertyCode, 'PROP-1');
   assert.equal(delivery.createdAt, '2026-09-16');
+  // The estimate's Terms & Conditions reach the email; no package, so no package price to add
+  assert.equal(delivery.includeTerms, 1);
+  assert.equal(delivery.termsConditions, 'Admin clause.');
+  assert.equal(delivery.packagePrice, 0);
   const status = await (await fetch(`${base}/EST-CUSTOM/status?token=test-token`)).json();
   assert.equal(status.success, true);
   assert.equal(status.data.total, 11700.25);

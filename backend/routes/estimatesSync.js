@@ -642,8 +642,19 @@ router.post('/:estimateId/send', authenticate, requireRole('admin'), async (req,
       villaPlotNumber: est.villa_plot_number,
       // Package info with description
       packageName: est.package_name,
+      // Admin's estimates table keeps no package price column: the package is what the subtotal
+      // holds beyond the added services. Without it the email's Total Services Price left the
+      // package out.
+      packagePrice: est.package_name
+        ? Math.max(0, (parseFloat(est.package_price ?? est.subtotal) || 0)
+          - (est.package_price != null ? 0 : (Array.isArray(addons) ? addons : []).reduce((sum, addon) => sum + (parseFloat(addon.totalPrice ?? addon.price) || 0), 0)))
+        : 0,
       amcPackageDescription: est.amc_package_description || '',
       description: est.description || '',
+      // The estimate's billing period and Terms & Conditions, which the email never received
+      billingDuration: est.billing_duration || est.billingDuration || 'Yearly',
+      includeTerms: est.include_terms,
+      termsConditions: est.terms_conditions,
       // Services with descriptions
       services: packageServices.length > 0 ? packageServices : services,
       addons: addons,

@@ -5142,6 +5142,11 @@ const sendEstimateEmailHandler = async (req, res) => {
         packagePrice: parseFloat(estimate.package_price) || 0,
         amcPackageDescription: estimate.amc_package_description || '',
         description: estimate.description || '',
+        // The estimate's own billing period and Terms & Conditions: without them every email said
+        // "Yearly" and left the clauses out of both the body and the attached PDF
+        billingDuration: estimate.billing_duration || 'Yearly',
+        includeTerms: estimate.include_terms,
+        termsConditions: estimate.terms_conditions,
         // Services with descriptions
         services: packageServices,
         addons: addons,
