@@ -4747,7 +4747,8 @@ router.put('/estimates/:id/archive', requireFPScope, async (req, res) => {
 });
 
 // Update estimate status (FP only)
-router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
+// Shared with the Manager and Admin status routes, which resolve the estimate's FP and hand over
+const updateEstimateStatusHandler = async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ['draft', 'sent', 'approved', 'rejected'];
@@ -4760,6 +4761,25 @@ router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
     }
     
     const normalizedStatus = status.toLowerCase();
+
+    // Moving an estimate into Sent sends it -- every time it moves there, so Sent, back to Draft,
+    // and Sent again emails the customer a second time. The status was only ever saved here, so
+    // the dropdown never sent anything. The send handler marks the estimate Sent itself, and only
+    // once the email has actually gone: a failed send leaves the status as it was.
+    if (normalizedStatus === 'sent') {
+      const [[current]] = await pool.execute(
+        'SELECT id, status, client_email FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
+        [req.params.id, req.fpId]
+      );
+      if (!current) return res.status(404).json({ success: false, message: 'Estimate not found' });
+      if (String(current.status || '').toLowerCase() !== 'sent') {
+        if (!current.client_email) {
+          return res.status(400).json({ success: false, message: 'Add the customer\'s email address before marking this estimate Sent.' });
+        }
+        req.body = { estimateId: current.id, email: current.client_email };
+        return sendEstimateEmailHandler(req, res);
+      }
+    }
     
     // Update the estimate status
     await pool.execute(
@@ -4798,7 +4818,9 @@ router.put('/estimates/:id/status', requireFPScope, async (req, res) => {
     console.error('Update estimate status error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
-});
+};
+router.put('/estimates/:id/status', requireFPScope, updateEstimateStatusHandler);
+router.updateEstimateStatusHandler = updateEstimateStatusHandler;
 
 // Update estimate details (full update for property-based estimates)
 router.put('/estimates/:id', requireFPScope, attachPackageSnapshot(pool), async (req, res) => {

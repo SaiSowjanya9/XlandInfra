@@ -3737,7 +3737,8 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       });
       const result = await res.json();
       if (result.success) {
-        showToast(`Status updated to ${newStatus}`);
+        // Moving to Sent emails the estimate; the server says to whom
+        showToast(newStatus === 'sent' && result.message ? result.message : `Status updated to ${newStatus}`);
         // Update local state immediately for responsive UI
         setEstimates(prev => prev.map(e => e.id === estimateId ? { ...e, status: newStatus } : e));
       } else {
