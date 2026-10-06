@@ -383,7 +383,8 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                     </label>
                     : <p className={`mt-2 text-xs ${skin.faint}`}>This service has a fixed frequency. Turn on Allow Frequency Override on the service to change it here.</p>}
                 </div>
-                <label className={fieldLabel}>Visits Per Year<input type="number" min="1" max="366" step="1" readOnly value={inputs.visits} className={`${inputClass} mt-2 ${skin.readOnlyBg}`} /></label>
+                {/* Visits are entered like any other field: the frequency only proposes a count (0 to 366) */}
+                <label className={fieldLabel}>Visits Per Year<input type="number" min="0" max="366" step="1" value={inputs.visits ?? ''} onChange={event => setInput('visits', event.target.value === '' ? '' : Number(event.target.value))} className={`${inputClass} mt-2`} /></label>
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
               </div>
