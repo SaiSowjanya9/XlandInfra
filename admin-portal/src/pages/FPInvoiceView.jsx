@@ -586,7 +586,8 @@ const FPInvoiceView = ({ user }) => {
                 <p className="font-semibold text-gray-900">{COMPANY_INFO.name}</p>
                 <p className="text-sm text-gray-600">{COMPANY_INFO.address}</p>
                 <p className="text-sm text-gray-600">{COMPANY_INFO.city}</p>
-                <p className="text-sm text-gray-600">Ph: {COMPANY_INFO.phone}</p>
+                {/* A little apart from the address, so the contact details read as their own block */}
+                <p className="mt-2 text-sm text-gray-600">Ph: {COMPANY_INFO.phone}</p>
                 <p className="text-sm text-gray-600">{COMPANY_INFO.email}</p>
               </div>
               <div className="text-right">

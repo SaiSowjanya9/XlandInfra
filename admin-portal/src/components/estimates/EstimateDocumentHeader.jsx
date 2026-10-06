@@ -92,7 +92,7 @@ export default function EstimateDocumentHeader({ estimate, decode = value => val
             {COMPANY.addressLines.map(line => (
               <p key={line} className="text-[11px] leading-relaxed text-gray-600">{line}</p>
             ))}
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-0.5 text-[11px] leading-relaxed text-gray-600">
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-2 text-[11px] leading-relaxed text-gray-600">
               {COMPANY_CONTACT_LINES.map(([kind, value]) => {
                 const Icon = CONTACT_ICONS[kind];
                 return (
