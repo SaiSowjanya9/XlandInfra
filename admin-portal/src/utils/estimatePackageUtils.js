@@ -214,6 +214,41 @@ export const getServiceRate = (service) => {
   return rate(snapshot.vendorRatePerVisit, 'Visit');
 };
 
+/**
+ * A service's Method and Input / Details as the estimate view states them, for the documents the
+ * customer receives -- which carry every column of the view except the internal Vendor Cost, XLAND
+ * Cost and Margin %. Takes a service in any of its saved shapes: an added catalog service
+ * (pricing_method, pricingInputs), or a package service (pricingMethod, inputValue, capacitySlabs).
+ * A package's capacity-slab service was set up by choosing a slab, so it states the slab
+ * ("0 - 3 KL") rather than the point inside it the package stored. No rupee rate is ever returned.
+ */
+export const serviceMethodAndInput = (raw, { isPackage = false } = {}) => {
+  const method = raw?.pricing_method || raw?.pricingMethod || raw?.pricingSnapshot?.pricing_method || '';
+  const key = INPUT_FIELDS[method]?.[0];
+  const row = {
+    ...raw, pricing_method: method, capacity_slabs: raw?.capacity_slabs || raw?.capacitySlabs,
+    pricingInputs: raw?.pricingInputs || raw?.inputs
+      || (key && raw?.inputValue != null && raw.inputValue !== '' ? { [key]: raw.inputValue } : undefined)
+  };
+  let input = getServiceInput(row);
+  const band = method === 'capacity_slab' ? getServiceRate(row) : '';
+  if (band && !band.includes('₹') && (isPackage || !input)) input = band.replace(/^[^:]*:\s*/, '');
+  return { method: METHOD_LABELS[method] || '', input: input || '' };
+};
+
+/**
+ * The description without the segment that restates the measured amount ("Capacity: 10 KL" when
+ * Input / Details already says "10 KL"), so a document does not print it twice.
+ */
+export const withoutInputSegment = (text, input) => {
+  const bare = value => String(value || '').replace(/,/g, '').trim().toLowerCase();
+  const target = bare(input);
+  if (!target || target === '-') return String(text || '');
+  return String(text || '').split('\n').map(line => line.split(' | ')
+    .filter(part => !(/^[A-Za-z ]+:/.test(part.trim()) && bare(part).endsWith(target))).join(' | '))
+    .filter(line => line.trim()).join('\n');
+};
+
 export const getServiceDescription = (service) => {
   if (service?.details) return service.details;
   const snapshot = service?.pricingSnapshot || {};

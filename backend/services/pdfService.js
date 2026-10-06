@@ -703,14 +703,18 @@ const generateEstimatePDF = async (estimate) => {
       // carries the same padding, a row is as tall as its tallest cell actually measures rather
       // than a guess from character count, and the header repeats when a table crosses a page.
       // Every field of a service the customer is entitled to read has a column: what it is, what it
-      // covers, how often and how many visits. No Price and no Qty column: no service states a price
+      // covers, how it is priced and what was measured, how often and how many visits -- every column
+      // of the portal's estimate view except its internal Vendor Cost, XLAND Cost and Margin %. No
+      // Price and no Qty column: no service states a price
       // of its own -- the estimate is priced as a whole, in Total Services Price and the Price
       // Summary -- and the printed and downloaded estimate reads the same.
       const TABLE_COLS = [
         { label: '#', width: 22, align: 'left' },
-        { label: 'Service', width: 104, align: 'left' },
-        { label: 'Description', width: 255, align: 'left' },
-        { label: 'Frequency', width: 70, align: 'left' },
+        { label: 'Service', width: 92, align: 'left' },
+        { label: 'Method', width: 62, align: 'left' },
+        { label: 'Input / Details', width: 84, align: 'left' },
+        { label: 'Description', width: 125, align: 'left' },
+        { label: 'Frequency', width: 66, align: 'left' },
         // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
         { label: 'Visits', width: 44, align: 'right' }
       ];
@@ -731,7 +735,7 @@ const generateEstimatePDF = async (estimate) => {
       const drawServicesTable = rows => {
         drawTableHeader();
         rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.details, row.frequency, String(row.visits)];
+          const cells = [String(index + 1), row.name, row.method, row.input, row.details, row.frequency, String(row.visits)];
           doc.fontSize(8).font('Helvetica');
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
@@ -755,7 +759,9 @@ const generateEstimatePDF = async (estimate) => {
         // Property Types is catalog configuration, not something a customer document states
         details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
-        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1
+        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
+        method: item.method || '-',
+        input: item.input || '-'
       });
 
       // Only show Services Table for NON-work order estimates

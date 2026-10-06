@@ -936,8 +936,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   if (!Array.isArray(servicesList)) servicesList = [];
 
   /**
-   * A service as the estimate states it: what it is, what it covers, how often and how many
-   * visits. The same columns the PDF prints, so the email and its attachment agree. No service
+   * A service as the estimate states it: what it is, how it is priced and what was measured, what
+   * it covers, how often and how many visits -- every column of the portal's view except its
+   * internal Vendor Cost, XLAND Cost and Margin %. The same columns the PDF prints, so the email and its attachment agree. No service
    * states a price of its own: the estimate is priced as a whole, in Total Services Price and the
    * Price Summary.
    */
@@ -958,6 +959,8 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${category ? `<br><span style="font-size: 11px; color: #6b7280;">${category}</span>` : ''}
         ${details ? `<br><span style="font-size: 11px; color: #6b7280;">${details}</span>` : ''}
       </td>
+      <td style="${cell} width: 74px;">${item.method ? emailText(item.method) : '-'}</td>
+      <td style="${cell} width: 80px;">${item.input ? emailText(item.input) : '-'}</td>
       <td style="${cell} width: 80px;">${frequency}</td>
       <td style="${cell} width: 46px; text-align: center;">${visits}</td>
     </tr>`;
@@ -966,10 +969,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
   const SERVICE_HEAD = `
     <tr>
-      ${['#', 'Service', 'Frequency', 'Visits'].map((label, index) => `
+      ${['#', 'Service', 'Method', 'Input / Details', 'Frequency', 'Visits'].map((label, index) => `
         <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
           font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
-          text-align: ${index === 3 ? 'center' : 'left'};">${label}</th>`).join('')}
+          text-align: ${index === 5 ? 'center' : 'left'};">${label}</th>`).join('')}
     </tr>`;
 
   const servicesHtml = serviceRowsHtml(servicesList);
