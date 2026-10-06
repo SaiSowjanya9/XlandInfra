@@ -468,7 +468,9 @@ const drawEstimateLetterhead = (doc, margin, data, { kind = 'estimate' } = {}) =
 };
 
 // Generate Premium PDF with professional design
-const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
+// `forPrint` -- the Print button and Ctrl+P -- leaves out the Method column (the user's call); the
+// downloaded copy and the emailed one keep it
+const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false } = {}) => {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -668,8 +670,18 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     // Uppercase and aligned per column, as the backend's PDF sets them
     // Every column of the estimate view except its internal Vendor Cost, XLAND Cost and Margin %
     // in the view's order: name, description, what was measured, how it is priced, schedule
-    const serviceHead = [['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'METHOD', 'FREQUENCY', 'VISITS']];
-    const serviceColumnStyles = {
+    const serviceHead = [forPrint
+      ? ['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'FREQUENCY', 'VISITS']
+      : ['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'METHOD', 'FREQUENCY', 'VISITS']];
+    // Printed, Description takes the Method column's width
+    const serviceColumnStyles = forPrint ? {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 35, halign: 'left' },
+      2: { cellWidth: 73, halign: 'left' },
+      3: { cellWidth: 28, halign: 'left' },
+      4: { cellWidth: 22, halign: 'center' },
+      5: { cellWidth: 14, halign: 'center' }
+    } : {
       0: { cellWidth: 8, halign: 'center' },
       1: { cellWidth: 33, halign: 'left' },
       2: { cellWidth: 55, halign: 'left' },
@@ -727,7 +739,9 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       // The customer's description: no method, Primary Input or property types (they are ours, or
       // have their own columns), and no restated amount -- as the emailed PDF prints it
       const details = withoutInputSegment(customerServiceDetails(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), category), item.input);
-      return [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
+      return forPrint
+        ? [String(index + 1), name, details || '-', item.input || '-', freqType, String(visits)]
+        : [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
     };
 
     // ===== SERVICES (Skip for Work Order Estimates) =====
@@ -1245,7 +1259,7 @@ export const printEstimatePDF = (estimate) => {
   try {
     const exportData = estimateExportData(estimate);
     if (!exportData) return false;
-    const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true });
+    const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true, forPrint: true });
     if (!doc) return false;
     const url = URL.createObjectURL(doc.output('blob'));
     const frame = document.createElement('iframe');
