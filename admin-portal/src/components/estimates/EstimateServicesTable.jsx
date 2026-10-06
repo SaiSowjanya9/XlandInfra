@@ -91,16 +91,15 @@ const serviceColumns = (decode, internal) => {
   const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(priced(row) ? getServiceXlandCost(priced(row)) : null) };
   // Customer Price, in the estimate view only -- the create screens, PDFs and emails list no
-  // per-service price. A package's own service shows its share of the package price where that is
-  // known (internal views), and otherwise reads "Included", since the package price covers it.
+  // per-service price. A package's own service states its share of the package price (worked out
+  // on the server; ₹0 for a service the package price does not cover). Never "Included": a figure,
+  // or a dash where none is on record.
   const price = { label: 'Customer Price', head: 'text-center', cell: 'text-center',
     render: row => {
-      if (inPackage(row)) {
-        return internal && row.packageShare != null
-          ? <p className="whitespace-nowrap text-xs font-semibold text-gray-800">{formatCurrency(row.packageShare)}</p>
-          : <p className="whitespace-nowrap text-xs text-warm-muted">Included</p>;
-      }
-      return <p className="whitespace-nowrap text-xs font-semibold text-gray-800">{formatCurrency(getAddonPrice(row))}</p>;
+      const value = inPackage(row) ? row.packageShare : getAddonPrice(row);
+      return value == null
+        ? <p className="text-xs text-warm-muted">—</p>
+        : <p className="whitespace-nowrap text-xs font-semibold text-gray-800">{formatCurrency(value)}</p>;
     } };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
