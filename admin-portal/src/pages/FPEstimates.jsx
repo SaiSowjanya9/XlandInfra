@@ -1359,6 +1359,195 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   };
 
   // CREATE ESTIMATE - Both Property-Based and Direct-Based available for FP Manager
+  // Everything from Estimate Structure down to Save, for both the property-based and the direct
+  // estimate: one section, so a change made to one flow is made to the other. Only the property
+  // or customer details above it differ between the two.
+  const renderEstimateBody = () => (
+    <>
+      {/* Estimate Structure: package or hand-entered services */}
+      {renderStructure(
+        <div className="min-w-0 w-full">
+          <label className="block text-xs font-medium text-warm-muted mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
+          {/* Unchosen reads as a placeholder, not as a value */}
+          <select
+            value={estimateForm.selectedPackage}
+            onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
+            className={`w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white ${estimateForm.selectedPackage ? 'text-warm-text' : 'text-warm-muted'}`}
+          >
+            <option value="" className="text-warm-muted">Select a package</option>
+            {(() => {
+              const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm.propertyType;
+              const searchType = normalizePropertyType(propertyType);
+              const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
+              if (!searchType) return <option disabled>{selectedProperty ? 'Select property first' : 'Select property type first'}</option>;
+              if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
+              return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>);
+            })()}
+          </select>
+        </div>
+      )}
+
+      {/* Services: the package's own, plus anything added here */}
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+        <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+          <h2 className="text-base font-semibold text-warm-text">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          {renderCustomServices()}
+
+          {/* Package Details Card */}
+          {(() => {
+            const pkg = getSelectedPackage();
+            if (!pkg) return null;
+            const services = pkg.parsedServices || [];
+            let svcData = pkg.services;
+            if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
+            const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
+            return (
+              <div className="border border-warm-border rounded-xl overflow-hidden bg-warm-section/60">
+                <div className="px-5 py-3 flex items-center gap-3">
+                  <Package className="w-5 h-5 text-warm-accent-hover" />
+                  <span className="font-semibold text-warm-text">{decodeHtml(pkg.name)}</span>
+                  <span className="px-2 py-0.5 bg-warm-text text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
+                </div>
+                <table className="w-full text-sm bg-white">
+                  <thead>
+                    <tr className="border-y border-warm-border/70">
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[43%]">Description</th>
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[20%]">Frequency</th>
+                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Visits</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-warm-border/70">
+                    {services.length > 0 ? services.map((svc, idx) => {
+                      const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
+                      const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
+                      return (
+                        <tr key={idx} className="align-top">
+                          <td className="px-3 py-2.5 text-warm-text font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
+                          <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
+                          <td className="px-3 py-2.5 text-warm-muted">{freqType}</td>
+                          <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
+                        </tr>
+                      );
+                    }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-warm-muted">No services in package</td></tr>}
+                  </tbody>
+                </table>
+                <div className="px-5 py-3 bg-warm-accent-soft border-t border-warm-border/70">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-warm-text">Total Package Price</span>
+                    <span className="text-lg font-bold text-warm-text">{formatCurrency(pkg.price)}</span>
+                  </div>
+                  <div className="text-xs text-warm-muted mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
+              from the Custom Services table's own Add Service menu */}
+
+          {/* Services Table - Only show when services selected. The table stands on its own
+              border: a labelled box around it would squeeze the columns into the scroller. */}
+          {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
+            <div>
+              <p className="text-sm font-semibold text-warm-text mb-2">Services</p>
+              {/* Vendor Cost, XLAND Cost and Margin % are not shown while an estimate is being
+                  written; they are read in the estimate's view once it is saved. */}
+                <EstimateDraftServicesTable
+                  warm
+                  decode={decodeHtml}
+                  items={[
+                    ...estimateForm.selectedAddons.map((id, idx) => ({
+                      key: `addon-${idx}`,
+                      row: addons.find(a => a.id == id || a.id === parseInt(id)) || {},
+                      tag: 'Service',
+                      onRemove: () => setEstimateForm({ ...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx) }),
+                    })),
+                    ...tableCatalogAddons.map((addon) => ({
+                      key: `catalog-${addon.addonId}`, row: addon, tag: 'Configured',
+                      onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
+                    })),
+                  ]}
+                  total={estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal}
+                />
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Price Summary -- shown for a package and for custom services alike */}
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+        <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+          <h2 className="text-base font-semibold text-warm-text">Price Summary</h2>
+        </div>
+        <div className="p-6">
+          {(() => {
+            const pricing = calculatePricing();
+            return (
+              <div className="max-w-md ml-auto space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-warm-muted">Sub Total</span>
+                  <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-warm-muted">Discount (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="h-9 w-20 px-2 border border-warm-border rounded-[8px] text-sm text-center focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" min="0" max="100" />
+                    <span className="text-warm-muted">- {formatCurrency(pricing.discountAmt)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-warm-muted">GST (%)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="h-9 w-20 px-2 border border-warm-accent bg-warm-accent-soft rounded-[8px] text-sm text-center text-warm-text" placeholder="0" />
+                    <span className="text-warm-muted">+ {formatCurrency(pricing.gstAmt)}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center bg-warm-text text-white px-4 py-3 rounded-[10px] mt-4">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* Notes - Under Price Summary */}
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+        <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
+          <h2 className="text-base font-semibold text-warm-text">Notes</h2>
+        </div>
+        <div className="p-6">
+          <textarea 
+            value={estimateForm.description} 
+            onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
+            placeholder="Add any additional notes for this estimate..."
+            className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[100px]"
+          />
+        </div>
+      </div>
+
+      {/* Terms & Conditions - included by default, and the text travels with the estimate */}
+      <TermsConditionsField theme="warm" include={includeTerms} onIncludeChange={setIncludeTerms}
+        terms={termsConditions} onTermsChange={setTermsConditions} />
+
+      {/* Footer Note */}
+      <div className="text-xs text-warm-muted border-t border-warm-border pt-4">
+        * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3">
+        <button onClick={handleBackFromEstimate} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
+        <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-[10px] text-sm font-medium transition-colors ${savingEstimate ? "bg-warm-border cursor-not-allowed" : "bg-emerald-700 hover:bg-emerald-800"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
+      </div>
+    </>
+  );
+
   const renderCreateEstimate = () => (
     <div className="space-y-6">
       {/* Back Arrow - Show when estimate type is selected */}
@@ -1662,137 +1851,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               </div>
             )}
 
-            {/* Estimate Structure: package or hand-entered services */}
-            {renderStructure(
-              // Stacked, so it lines up with the configured-service dropdown beside it
-              <div className="min-w-0 w-full">
-                <label htmlFor="estimate-amc-package" className="block text-xs font-medium text-warm-muted mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
-                {/* Unchosen reads as a placeholder, not as a value */}
-                <select
-                  id="estimate-amc-package"
-                  value={estimateForm.selectedPackage}
-                  onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value})}
-                  className={`w-full min-w-0 px-3 py-2.5 border border-warm-border rounded-[10px] text-sm bg-white ${estimateForm.selectedPackage ? 'text-warm-text' : 'text-warm-muted'}`}
-                >
-                  <option value="" className="text-warm-muted">Select a package</option>
-                  {(() => {
-                    const propertyType = selectedProperty?.property_type || selectedProperty?.entry_type || selectedProperty?.entryType || estimateForm?.propertyType;
-                    const searchType = normalizePropertyType(propertyType);
-                    const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
-                    if (!searchType) return <option disabled>Select property first</option>;
-                    if (filteredPkgs.length === 0) return <option disabled>No packages for {propertyType}</option>;
-                    return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>);
-                  })()}
-                </select>
-              </div>
-            )}
-            {renderCustomServices()}
-
-            {/* Services - package services + added services in one table */}
-            <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-              <div className="bg-warm-section px-6 py-4 border-b border-warm-border flex flex-col sm:flex-row sm:items-center gap-3">
-                <h3 className="text-sm font-semibold text-warm-text">Services ({pkgServices.length + selectedAddonRows.length + tableCatalogAddons.length})</h3>
-              </div>
-              {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
-                  from the Custom Services table's own Add Service menu */}
-              {pkgServices.length === 0 && selectedAddonRows.length === 0 && tableCatalogAddons.length === 0 ? (
-                <div className="py-10 text-center text-sm text-warm-muted">Select an AMC package to see its services, or add services individually</div>
-              ) : (
-                /* FP is an internal portal, so the table also shows Vendor Cost, XLAND Cost and
-                   Margin % — the same columns the customer-facing views deliberately omit. The
-                   table is bare: the card already frames it, a second border would just squeeze
-                   the columns into the horizontal scroller. */
-                <EstimateDraftServicesTable
-                    bare
-                    warm
-                    decode={decodeHtml}
-                    items={[
-                      ...pkgServices.map((svc, idx) => ({ key: `pkg-${idx}`, row: svc, tag: 'Package' })),
-                      ...selectedAddonRows.map(({ addon, idx }) => ({
-                        key: `addon-${idx}`, row: addon, tag: 'Service',
-                        onRemove: () => setEstimateForm({ ...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, j) => j !== idx) }),
-                      })),
-                      ...tableCatalogAddons.map((addon) => ({
-                        key: `catalog-${addon.addonId}`, row: addon, tag: 'Configured',
-                        onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
-                      })),
-                    ]}
-                    total={(selectedAddonRows.length > 0 || tableCatalogAddons.length > 0) ? addonsTotal + tableCatalogAddonsTotal : null}
-                  />
-              )}
-            </div>
-
-            {/* Notes */}
-            <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-              <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
-                <h3 className="text-sm font-semibold text-warm-text">Notes</h3>
-              </div>
-              <div className="p-6">
-                <textarea
-                  value={estimateForm.description}
-                  onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                  placeholder="Add a note for this estimate..."
-                  className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[90px]"
-                />
-              </div>
-            </div>
-
-            {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-            <TermsConditionsField theme="warm" include={includeTerms} onIncludeChange={setIncludeTerms}
-              terms={termsConditions} onTermsChange={setTermsConditions} />
           </div>
 
-          {/* Pricing and the package's own details run along the bottom, full width -- a side
-              rail squeezed the form and made the page taller than it needed to be */}
-          <div className={`grid grid-cols-1 gap-4 items-start ${selectedPkg ? 'xl:grid-cols-2' : ''}`}>
-            <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
-              <h3 className="text-sm font-semibold text-warm-text mb-4">Pricing Summary</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-warm-muted">Package Price</span><span className="font-medium text-warm-text">{formatCurrency(pkgPrice)}</span></div>
-                <div className="flex justify-between"><span className="text-warm-muted">Services</span><span className="font-medium text-warm-text">{formatCurrency(addonsTotal)}</span></div>
-                <div className="flex justify-between border-t border-warm-border/70 pt-3"><span className="text-warm-muted">Service Subtotal</span><span className="font-semibold text-warm-text">{formatCurrency(pricing.subtotal)}</span></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-warm-muted">Discount (%)</span>
-                  <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="h-9 w-20 px-2 border border-warm-border rounded-[8px] text-sm text-right focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" min="0" max="100" />
-                </div>
-                <div className="flex justify-between"><span className="text-warm-muted">Discount Amount</span><span className="text-red-600">- {formatCurrency(pricing.discountAmt)}</span></div>
-                <div className="flex justify-between items-center border-t border-warm-border/70 pt-3">
-                  <span className="text-warm-muted">GST (%)</span>
-                  <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="h-9 w-20 px-2 border border-warm-accent bg-warm-accent-soft rounded-[8px] text-sm text-right text-warm-text" placeholder="0" />
-                </div>
-                <div className="flex justify-between"><span className="text-warm-muted">GST Amount</span><span className="text-warm-text">+ {formatCurrency(pricing.gstAmt)}</span></div>
-                <div className="mt-2 rounded-xl bg-warm-accent-soft border border-warm-accent/50 px-4 py-3">
-                  <p className="text-xs font-semibold text-warm-accent-hover">Grand Total (Incl. GST)</p>
-                  <p className="text-xl font-bold text-warm-text">{formatCurrency(pricing.total)}</p>
-                </div>
-              </div>
-            </div>
-
-            {selectedPkg && (
-              <div className="bg-white rounded-xl border border-warm-border shadow-warm p-6">
-                <h3 className="text-sm font-semibold text-warm-text mb-4">Package Details</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Billing</span><span className="font-medium text-warm-text capitalize text-right">{String(billingDuration).replace('-', ' ')} Billing</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Package Price</span><span className="font-medium text-warm-text">{formatCurrency(pkgPrice)}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Services Included</span><span className="font-medium text-warm-text">{pkgServices.length}</span></div>
-                  <div className="flex justify-between gap-3"><span className="text-warm-muted">Applicable For</span><span className="font-medium text-warm-text text-right">{getPropertyTypeLabel(getPkgPropertyType(selectedPkg))}</span></div>
-                  {selectedPkg.description && (
-                    <div className="pt-1">
-                      <p className="text-warm-muted mb-1">Description</p>
-                      <p className="text-xs text-warm-text leading-relaxed break-words">{decodeHtml(selectedPkg.description)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button onClick={handleBackFromEstimate} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
-            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-[10px] text-sm font-medium text-white transition-colors ${savingEstimate ? 'bg-warm-border cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}>{savingEstimate ? 'Saving...' : 'Save'}</button>
-          </div>
+          {renderEstimateBody()}
         </div>
         );
       })()}
@@ -1952,188 +2013,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
 
-          {/* Estimate Structure: package or hand-entered services */}
-          {renderStructure(
-            <div className="min-w-0 w-full">
-              <label className="block text-xs font-medium text-warm-muted mb-1.5">Select AMC Package <span className="text-red-500">*</span></label>
-              {/* Unchosen reads as a placeholder, not as a value */}
-              <select
-                value={estimateForm.selectedPackage}
-                onChange={(e) => setEstimateForm({...estimateForm, selectedPackage: e.target.value, selectedAddons: []})}
-                className={`w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white ${estimateForm.selectedPackage ? 'text-warm-text' : 'text-warm-muted'}`}
-              >
-                <option value="" className="text-warm-muted">Select a package</option>
-                {(() => {
-                  const searchType = normalizePropertyType(estimateForm.propertyType);
-                  const filteredPkgs = searchType ? amcPackages.filter(pkg => pkgMatchesPropertyType(pkg, searchType)) : [];
-                  if (!searchType) return <option disabled>Select property type first</option>;
-                  if (searchType && filteredPkgs.length === 0) return <option disabled>No packages for {estimateForm.propertyType}</option>;
-                  return filteredPkgs.map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>);
-                })()}
-              </select>
-            </div>
-          )}
-
-          {/* Services: the package's own, plus anything added here */}
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
-              <h2 className="text-base font-semibold text-warm-text">{estimateStructure === 'custom' ? 'Custom Services' : 'AMC Package'}</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {renderCustomServices()}
-
-              {/* Package Details Card */}
-              {(() => {
-                const pkg = getSelectedPackage();
-                if (!pkg) return null;
-                const services = pkg.parsedServices || [];
-                let svcData = pkg.services;
-                if (typeof svcData === 'string') { try { svcData = JSON.parse(svcData); } catch(e) { svcData = {}; } }
-                const billingDuration = svcData?.billing_duration || pkg.billing_duration || 'monthly';
-                return (
-                  <div className="border border-warm-border rounded-xl overflow-hidden bg-warm-section/60">
-                    <div className="px-5 py-3 flex items-center gap-3">
-                      <Package className="w-5 h-5 text-warm-accent-hover" />
-                      <span className="font-semibold text-warm-text">{decodeHtml(pkg.name)}</span>
-                      <span className="px-2 py-0.5 bg-warm-text text-white text-xs rounded font-mono">{pkg.package_code || `AMC-${pkg.id}`}</span>
-                    </div>
-                    <table className="w-full text-sm bg-white">
-                      <thead>
-                        <tr className="border-y border-warm-border/70">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[22%]">Service</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[43%]">Description</th>
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-warm-muted uppercase w-[20%]">Frequency</th>
-                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-warm-muted uppercase w-[15%]">Visits</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-warm-border/70">
-                        {services.length > 0 ? services.map((svc, idx) => {
-                          const freqType = svc.frequencyType || svc.frequency_type || 'Monthly';
-                          const visits = svc.frequency_count ?? svc.frequencyCount ?? (FREQUENCY_COUNT_MAP?.[freqType] ?? 0);
-                          return (
-                            <tr key={idx} className="align-top">
-                              <td className="px-3 py-2.5 text-warm-text font-medium">{decodeHtml(svc.service || svc.name) || '-'}</td>
-                              <td className={`px-3 py-2.5 text-warm-muted text-xs break-words whitespace-normal text-center`}>{decodeHtml(svc.description)?.trim() || '-'}</td>
-                              <td className="px-3 py-2.5 text-warm-muted">{freqType}</td>
-                              <td className="px-3 py-2.5 text-center text-warm-muted">{visits}</td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={4} className="px-3 py-3 text-center text-warm-muted">No services in package</td></tr>}
-                      </tbody>
-                    </table>
-                    <div className="px-5 py-3 bg-warm-accent-soft border-t border-warm-border/70">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-warm-text">Total Package Price</span>
-                        <span className="text-lg font-bold text-warm-text">{formatCurrency(pkg.price)}</span>
-                      </div>
-                      <div className="text-xs text-warm-muted mt-1">Service Period: <span className="capitalize whitespace-nowrap">{billingDuration?.replace('-', ' ')}</span></div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Package mode shows the picker on the Estimate Structure row; custom mode offers it
-                  from the Custom Services table's own Add Service menu */}
-
-              {/* Services Table - Only show when services selected. The table stands on its own
-                  border: a labelled box around it would squeeze the columns into the scroller. */}
-              {(estimateForm.selectedAddons.length > 0 || tableCatalogAddons.length > 0) && (
-                <div>
-                  <p className="text-sm font-semibold text-warm-text mb-2">Services</p>
-                  {/* Vendor Cost, XLAND Cost and Margin % are not shown while an estimate is being
-                      written; they are read in the estimate's view once it is saved. */}
-                    <EstimateDraftServicesTable
-                      warm
-                      decode={decodeHtml}
-                      items={[
-                        ...estimateForm.selectedAddons.map((id, idx) => ({
-                          key: `addon-${idx}`,
-                          row: addons.find(a => a.id == id || a.id === parseInt(id)) || {},
-                          tag: 'Service',
-                          onRemove: () => setEstimateForm({ ...estimateForm, selectedAddons: estimateForm.selectedAddons.filter((_, i) => i !== idx) }),
-                        })),
-                        ...tableCatalogAddons.map((addon) => ({
-                          key: `catalog-${addon.addonId}`, row: addon, tag: 'Configured',
-                          onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
-                        })),
-                      ]}
-                      total={estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal}
-                    />
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Price Summary - Only show when package selected */}
-          {estimateForm.selectedPackage && (
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
-              <h2 className="text-base font-semibold text-warm-text">Price Summary</h2>
-            </div>
-            <div className="p-6">
-              {(() => {
-                const pricing = calculatePricing();
-                return (
-                  <div className="max-w-md ml-auto space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-warm-muted">Sub Total</span>
-                      <span className="font-medium">{formatCurrency(pricing.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-warm-muted">Discount (%)</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.discount} onChange={(e) => setEstimateForm({...estimateForm, discount: parseFloat(e.target.value) || 0})} className="h-9 w-20 px-2 border border-warm-border rounded-[8px] text-sm text-center focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20" min="0" max="100" />
-                        <span className="text-warm-muted">- {formatCurrency(pricing.discountAmt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-warm-muted">GST (%)</span>
-                      <div className="flex items-center gap-2">
-                        <input type="number" value={estimateForm.gst} onChange={(e) => setEstimateForm({...estimateForm, gst: e.target.value === '' ? '' : parseFloat(e.target.value)})} className="h-9 w-20 px-2 border border-warm-accent bg-warm-accent-soft rounded-[8px] text-sm text-center text-warm-text" placeholder="0" />
-                        <span className="text-warm-muted">+ {formatCurrency(pricing.gstAmt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center bg-warm-text text-white px-4 py-3 rounded-[10px] mt-4">
-                      <span className="font-medium">Total Amount</span>
-                      <span className="text-lg font-bold">{formatCurrency(pricing.total)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-          )}
-
-          {/* Notes - Under Price Summary */}
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
-            <div className="bg-warm-section px-6 py-4 border-b border-warm-border">
-              <h2 className="text-base font-semibold text-warm-text">Notes</h2>
-            </div>
-            <div className="p-6">
-              <textarea 
-                value={estimateForm.description} 
-                onChange={(e) => setEstimateForm({...estimateForm, description: e.target.value})}
-                placeholder="Add any additional notes for this estimate..."
-                className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm resize-y min-h-[100px]"
-              />
-            </div>
-          </div>
-
-          {/* Terms & Conditions - included by default, and the text travels with the estimate */}
-          <TermsConditionsField theme="warm" include={includeTerms} onIncludeChange={setIncludeTerms}
-            terms={termsConditions} onTermsChange={setTermsConditions} />
-
-          {/* Footer Note */}
-          <div className="text-xs text-warm-muted border-t border-warm-border pt-4">
-            * Currency: INR (₹) | GST applied on total | Fields marked with * are mandatory
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setEstimateType(null)} className="px-6 py-2.5 bg-white border border-warm-border rounded-[10px] text-sm font-medium text-warm-muted hover:bg-warm-section transition-colors">Back</button>
-            <button onClick={handleSaveEstimate} disabled={savingEstimate} className={`px-6 py-2.5 rounded-[10px] text-sm font-medium transition-colors ${savingEstimate ? "bg-warm-border cursor-not-allowed" : "bg-emerald-700 hover:bg-emerald-800"} text-white`}>{savingEstimate ? "Saving..." : "Save"}</button>
-          </div>
+          {renderEstimateBody()}
         </div>
       )}
 
