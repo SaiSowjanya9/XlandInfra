@@ -58,3 +58,26 @@ test('each package service carries its share of the package price, and a cost wh
   assert.equal(packageServiceSnapshot({ service: 'Lift', price: 97200, priceOverridden: true }).vendorCost, undefined);
   assert.equal(packageServiceSnapshot({ service: 'Lift', price: 97200 }, 136080).packageShare, 136080);
 });
+
+test('a configured service saved on the package with no price still states its cost, and what the package loses on it', async () => {
+  const lift = { pricing_method: 'capacity_slab', applicable_property_types: ['GC', 'VILLA', 'APT'], unit: 'Persons', default_markup_percentage: 35,
+    default_frequency: 'Monthly', default_visits_per_year: 12, allow_frequency_override: true, allow_manual_visits: true,
+    capacity_slabs: [{ name: 'Small', capacityFrom: 0, capacityTo: 3, vendorRate: 6000, isCustomQuote: false }, { name: 'Large', capacityFrom: 3, capacityTo: null, vendorRate: 8000, isCustomQuote: false }] };
+  const stored = { markup_percentage: 35, property_types: ['GC', 'VILLA', 'PLOT', 'FLAT', 'APT'], serviceRows: [
+    { service: 'Lift Fully Manual', catalogServiceId: 7, pricingMethod: 'capacity_slab', inputValue: 0, frequencyType: 'Monthly', frequencyCount: 12, price: '' },
+    { service: 'Deep Cleaning', catalogServiceId: 8, pricingMethod: 'area_based', inputValue: 1000, frequencyType: 'Yearly', frequencyCount: 1, price: 4000, vendorCost: 4000 }
+  ] };
+  const db = { execute: async (sql, params) => {
+    if (sql.includes('FROM fp_amc_packages')) return [[{ services: JSON.stringify(stored), price: 5400 }]];
+    if (sql.includes('FROM service_catalog')) { assert.deepEqual(params, [7]); return [[{ id: 7, configuration: JSON.stringify(lift), scope_id: 0 }]]; }
+    throw new Error(`Unexpected SQL: ${sql}`);
+  } };
+  const estimate = { package_id: 3, franchise_partner_id: 8, package_price: 5400,
+    package_services: [{ name: 'Lift Fully Manual' }, { name: 'Deep Cleaning' }] };
+  await fillPackageServiceDetails(db, [estimate]);
+  const [liftRow, cleaning] = estimate.package_services;
+  assert.equal(liftRow.vendorCost, 72000, '6,000 a visit, 12 visits, from the catalog');
+  assert.equal(liftRow.packageShare, 0, 'the package price does not include it');
+  assert.equal(cleaning.packageShare, 5400, 'the package price is all Deep Cleaning\'s');
+  assert.equal(cleaning.vendorCost, 4000);
+});
