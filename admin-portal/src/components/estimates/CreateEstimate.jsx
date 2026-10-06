@@ -23,7 +23,7 @@ import {
 } from '../../utils/estimateStore';
 
 import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
-import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType, getAddonName } from '../../utils/estimatePackageUtils';
+import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType, getAddonName, getServiceInput } from '../../utils/estimatePackageUtils';
 import EstimateDraftServicesTable from './EstimateDraftServicesTable';
 
 // Subcategory options for services
@@ -4079,8 +4079,9 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                       <tr>
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[8%]">#</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-[20%]">Service</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[40%]">Description</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[20%]">Frequency</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[30%]">Description</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-[14%]">Input / Details</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[16%]">Frequency</th>
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-[12%]">Visits</th>
                       </tr>
                     </thead>
@@ -4091,6 +4092,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                             <td className="px-3 py-2 text-sm text-center">{idx + 1}</td>
                             <td className="px-3 py-2 text-sm font-medium">{svc.name}</td>
                             <td className="px-3 py-2 text-xs text-gray-500 break-words whitespace-normal text-center">{decodeHtml(svc.description || addon.description) || '-'}</td>
+                            <td className="px-3 py-2 text-sm text-gray-700 break-words">{getServiceInput(addon) || '-'}</td>
                             <td className="px-3 py-2 text-sm text-center">{svc.frequencyType || 'Monthly'}</td>
                             <td className="px-3 py-2 text-sm text-center">{svc.frequency || 1}</td>
                           </tr>
@@ -4099,9 +4101,17 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     </tbody>
                     <tfoot className="bg-gray-50 border-t border-gray-200">
                       <tr>
-                        <td colSpan={4} className="px-3 py-2 text-sm font-semibold text-gray-700">Total Services Price</td>
-                        <td className="px-3 py-2 text-sm font-bold text-gray-800 text-right">₹{getAddonsTotal().toLocaleString()}</td>
+                        <td colSpan={5} className="px-3 py-2 text-sm font-semibold text-gray-700">Total Services Price</td>
+                        {/* The whole of it, package price included, as the estimate view totals it */}
+                        <td className="px-3 py-2 text-sm font-bold text-gray-800 text-right">₹{((selectedPackage ? getNormalizedPackagePrice(selectedPackage) : 0) + getAddonsTotal()).toLocaleString()}</td>
                       </tr>
+                      {selectedPackage && (
+                        <tr>
+                          <td colSpan={6} className="px-3 pb-2 pt-0 text-right text-[11px] text-gray-500">
+                            Includes the AMC package &ldquo;{decodeHtml(getPackageName(selectedPackage))}&rdquo; at ₹{getNormalizedPackagePrice(selectedPackage).toLocaleString()}.
+                          </td>
+                        </tr>
+                      )}
                     </tfoot>
                   </table>
                 </div>
