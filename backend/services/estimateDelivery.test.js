@@ -47,12 +47,12 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
   assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
   // Every field of the service has its own column in the attachment. No Qty: the printed and
-  // downloaded estimate dropped it, and the emailed copy reads the same. The price
-  // column says "Rs." like every figure under it: PDFKit's built-in Helvetica has no rupee glyph,
-  // so a ₹ in the heading printed as a stray mark.
+  // downloaded estimate dropped it, and the emailed copy reads the same. The price column is
+  // headed plain "Price": every figure under it already says "Rs." (PDFKit's built-in Helvetica
+  // has no rupee glyph, so a ₹ would print as a stray mark).
   // Compared without case: a column heading is drawn in caps on the cream header bar
   const headings = texts.map(text => text.toUpperCase());
-  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Price (Rs.)']) {
+  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Price']) {
     assert.ok(headings.includes(heading.toUpperCase()), `pdf column: ${heading}`);
   }
   assert.ok(!headings.includes('QTY'), 'no Qty column');

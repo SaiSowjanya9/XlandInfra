@@ -710,7 +710,7 @@ const generateEstimatePDF = async (estimate) => {
         { label: 'Frequency', width: 70, align: 'left' },
         // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
         { label: 'Visits', width: 44, align: 'right' },
-        { label: 'Price (Rs.)', width: 77, align: 'right' }
+        { label: 'Price', width: 77, align: 'right' }
       ];
       const CELL_PAD = 8;
       const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
@@ -1021,7 +1021,7 @@ const generateInvoicePDF = async (invoice) => {
             { label: 'Frequency', width: 78 },
             { label: 'Visits', width: 44, align: 'right' },
             { label: 'Qty', width: 34, align: 'right' },
-            { label: 'Amount (Rs.)', width: 114, align: 'right' }
+            { label: 'Amount', width: 114, align: 'right' }
           ],
           rows: items.map((item, index) => {
             const name = stripInternalServiceDetails(decodeHtml(String(item.description || item.name || item.serviceName || item.service_name || 'Service')));
