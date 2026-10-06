@@ -37,8 +37,9 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.match(pdfText, /PROP-TEST/);
   assert.match(pdfText, /Saved address/);
   assert.doesNotMatch(pdfText, /9123.45|876.54|vendorCost|pricingSnapshot|operating_cost/);
-  // What the customer reads of a service: its category and what was measured at their property
-  for (const text of ['Water Management', 'Capacity: 10 KL']) {
+  // What the customer reads of a service: its category, how it is priced and what was measured at
+  // their property -- every column of the portal's view but the internal costs
+  for (const text of ['Water Management', 'Capacity Based', '10 KL']) {
     assert.ok(mail.html.includes(text), `email: ${text}`);
     assert.ok(pdfText.includes(text), `pdf: ${text}`);
   }
@@ -58,8 +59,10 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.ok(!headings.includes('QTY'), 'no Qty column');
   assert.ok(!headings.includes('PRICE'), 'no per-service Price column');
   assert.ok(texts.includes('Rs. 11,700.25'), 'the estimate is still priced, in its summary');
-  // How it is priced, the derived input and the types the service is configured for are ours
-  for (const text of ['Capacity Based', 'Primary Input', 'Property Types']) {
+  // The derived input label and the types the service is configured for are ours. The measured
+  // amount has its own Input / Details column, so the description does not repeat it.
+  assert.ok(!texts.some(text => /Capacity: 10 KL/.test(text)), 'pdf: the amount is not repeated in the description');
+  for (const text of ['Primary Input', 'Property Types']) {
     assert.ok(!mail.html.includes(text), `email leaked: ${text}`);
     assert.ok(!pdfText.includes(text), `pdf leaked: ${text}`);
   }
@@ -81,7 +84,7 @@ test('manpower email and PDF show the selected range, personnel and overtime wit
   }, 'test-token');
   assert.equal(result.success, true);
   const pdfText = texts.join('\n');
-  for (const text of ['Housekeeping Staff', 'Personnel: 2 Persons', '1500 Sq Ft', '1001–2000 Sq Ft', 'Overtime Hours: 1']) {
+  for (const text of ['Housekeeping Staff', 'Manpower', '2 Persons', '1500 Sq Ft', '1001–2000 Sq Ft', 'Overtime Hours: 1']) {
     assert.ok(mail.html.includes(text), text);
     assert.ok(pdfText.includes(text), text);
   }

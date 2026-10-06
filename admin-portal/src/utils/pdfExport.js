@@ -1,7 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails, getPackagePropertyTypes, getPropertyTypeLabel } from './estimatePackageUtils';
+import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails, getPackagePropertyTypes, getPropertyTypeLabel, serviceMethodAndInput, withoutInputSegment } from './estimatePackageUtils';
 import { billToParty } from './estimateStore';
 import { estimateTermsLines } from './estimateTerms';
 import { packageInternalSummary } from './packageServicePricing';
@@ -666,13 +666,16 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     // column; the user asked for both to go. `priced` still marks an estimate, whose total is shown.
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
-    const serviceHead = [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
+    // Every column of the estimate view except its internal Vendor Cost, XLAND Cost and Margin %
+    const serviceHead = [['#', 'SERVICE', 'METHOD', 'INPUT / DETAILS', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
     const serviceColumnStyles = {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 40, halign: 'left' },
-      2: { cellWidth: 82, halign: 'left' },
-      3: { cellWidth: 32, halign: 'center' },
-      4: { cellWidth: 16, halign: 'center' }
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 33, halign: 'left' },
+      2: { cellWidth: 22, halign: 'left' },
+      3: { cellWidth: 26, halign: 'left' },
+      4: { cellWidth: 55, halign: 'left' },
+      5: { cellWidth: 22, halign: 'center' },
+      6: { cellWidth: 14, halign: 'center' }
     };
     // Drawn in the cream skin the portal uses -- warm section header, warm rules, figures in warm
     // text -- for an estimate and a package alike
@@ -719,8 +722,8 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
         category].filter(Boolean).join('\n');
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
-      const details = withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category);
-      return [String(index + 1), name, details || '-', freqType, String(visits)];
+      const details = withoutInputSegment(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), item.input);
+      return [String(index + 1), name, item.method || '-', item.input || '-', details || '-', freqType, String(visits)];
     };
 
     if (!isWorkOrder && services.length > 0) {
@@ -1029,7 +1032,8 @@ const estimateExportData = (estimate) => {
             frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
             description: s.description || '',
             category: s.category || '',
-            quantity: s.quantity ?? null
+            quantity: s.quantity ?? null,
+            ...serviceMethodAndInput(s, { isPackage: true })
           }));
         }
       } catch (e) { debug('[PDF] package_services parse error:', e); }
@@ -1043,7 +1047,8 @@ const estimateExportData = (estimate) => {
         frequencyType: s.frequencyType || 'Monthly',
         description: s.description || '',
         category: s.category || '',
-        quantity: s.quantity ?? null
+        quantity: s.quantity ?? null,
+        ...serviceMethodAndInput(s, { isPackage: true })
       }));
     }
     // A stored estimate keeps its package rows under services_data -- the same field
@@ -1060,7 +1065,8 @@ const estimateExportData = (estimate) => {
             frequencyType: s.frequencyType || s.frequency_type || 'Monthly',
             description: s.description || '',
             category: s.category || '',
-            quantity: s.quantity ?? null
+            quantity: s.quantity ?? null,
+            ...serviceMethodAndInput(s, { isPackage: true })
           }));
         }
       } catch (e) { debug('[PDF] services_data parse error:', e); }
@@ -1070,7 +1076,8 @@ const estimateExportData = (estimate) => {
       services = estimate.serviceRows.filter(sr => sr.service || sr.name).map(sr => ({
         name: sr.service || sr.name || 'Service',
         frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
-        frequencyType: sr.frequencyType || 'Monthly'
+        frequencyType: sr.frequencyType || 'Monthly',
+        ...serviceMethodAndInput(sr, { isPackage: true })
       }));
     }
     // PRIORITY 3: Check services array (from database or form)
@@ -1085,7 +1092,8 @@ const estimateExportData = (estimate) => {
             frequencyType: inner.frequencyType || inner.frequency_type || 'Monthly',
             description: getServiceDescription(inner),
             category: inner.category || '',
-            quantity: inner.quantity ?? null
+            quantity: inner.quantity ?? null,
+            ...serviceMethodAndInput(inner)
           }));
         }
         // Handle addon/service structure
@@ -1095,7 +1103,8 @@ const estimateExportData = (estimate) => {
           frequencyType: s.frequencyType || s.frequency_type || s.billingType || s.billing || 'Monthly',
           description: getServiceDescription(s),
           category: s.category || '',
-          quantity: s.quantity ?? null
+          quantity: s.quantity ?? null,
+          ...serviceMethodAndInput(s)
         };
       }).flat();
     }
@@ -1136,7 +1145,8 @@ const estimateExportData = (estimate) => {
       description: getServiceDescription(item),
       category: item.category || item.service_category || '',
       quantity: item.quantity ?? item.pricingInputs?.quantity ?? null,
-      price: getAddonPrice(item)
+      price: getAddonPrice(item),
+      ...serviceMethodAndInput(item)
     });
 
     // Try addons array first
@@ -1287,6 +1297,7 @@ export const exportPackageToPDF = (pkg) => {
     if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
       services = pkg.serviceRows.map(sr => ({
         name: sr.service || sr.name || sr.serviceType || 'Service',
+        ...serviceMethodAndInput(sr, { isPackage: true }),
         category: sr.category || '',
         description: sr.description || '',
         frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
@@ -1300,6 +1311,7 @@ export const exportPackageToPDF = (pkg) => {
         if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
           services = parsed.serviceRows.map(sr => ({
             name: sr.service || sr.name || sr.serviceType || 'Service',
+            ...serviceMethodAndInput(sr, { isPackage: true }),
             category: sr.category || '',
             description: sr.description || '',
             frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,

@@ -52,12 +52,25 @@ const stripInternalServiceDetails = text => String(text ?? '').split('\n')
   }).join(' | '))
   .join('\n');
 
+const withoutInputSegment = (text, input) => {
+  const bare = value => String(value || '').replace(/,/g, '').trim().toLowerCase();
+  const target = bare(input);
+  if (!target) return String(text || '');
+  return String(text || '').split('\n').map(line => line.split(' | ')
+    .filter(part => !(/^[A-Za-z ]+:/.test(part.trim()) && bare(part).endsWith(target))).join(' | '))
+    .filter(line => line.trim()).join('\n');
+};
+
 const normalizeEstimateService = value => {
   const row = value && typeof value === 'object' ? value : { price: typeof value === 'number' ? value : 0, name: typeof value === 'string' ? value : 'Service' };
   const snapshot = parse(row.pricingSnapshot) || {};
-  const inputs = parse(row.pricingInputs) || row.inputs || snapshot.inputs || {};
+  // A copy: a package service's amount is added below, and the stored row must not change
+  const inputs = { ...(parse(row.pricingInputs) || row.inputs || snapshot.inputs || {}) };
   const inner = list(row.services)[0] || {};
   const method = first(row.pricing_method, row.pricingMethod, snapshot.pricing_method);
+  // A package service stores its amount as inputValue rather than among pricing inputs
+  const packageInputKey = { quantity_based: 'quantity', area_based: 'area', capacity_based: 'capacity', capacity_slab: 'capacity', manpower: 'personnel' }[method];
+  if (packageInputKey && inputs[packageInputKey] == null && row.inputValue != null && row.inputValue !== '') inputs[packageInputKey] = row.inputValue;
   const unit = first(row.unit, snapshot.unit, '');
   const rawFrequency = first(row.frequencyType, row.frequency_type, inputs.frequency, snapshot.frequency, inner.frequencyType, inner.frequency_type,
     typeof row.frequency === 'string' && !Number.isFinite(Number(row.frequency)) ? row.frequency : undefined, 'One-time');
@@ -88,8 +101,10 @@ const normalizeEstimateService = value => {
   if (hasAmount) parts.push(`${inputField[1]}: ${Number(inputs[inputField[0]])}${unit ? ` ${unit}` : ''}`);
   // The unit rides along with the amount; on its own it still has to be stated
   else if (unit && unit !== primaryInput) parts.push(`Unit: ${unit}`);
+  let slabBand = '';
   if (method === 'capacity_slab') {
-    const slab = narrowestRange(firstList(snapshot.capacity_slabs, row.capacity_slabs), Number(inputs.capacity), 'capacityFrom', 'capacityTo');
+    const slab = narrowestRange(firstList(snapshot.capacity_slabs, row.capacity_slabs, row.capacitySlabs), Number(inputs.capacity), 'capacityFrom', 'capacityTo');
+    if (slab) slabBand = `${slab.capacityFrom} - ${slab.capacityTo === null ? 'above' : slab.capacityTo}${unit ? ` ${unit}` : ''}`;
     if (slab) parts.push(`Slab: ${slab.capacityFrom}${slab.capacityTo === null ? '+' : `–${slab.capacityTo}`}${unit ? ` ${unit}` : ''}`);
   }
   if (method === 'manpower') {
@@ -119,12 +134,19 @@ const normalizeEstimateService = value => {
   // How many of it: typed on a hand-entered service, one of the pricing inputs on a Quantity Based
   // catalog service. Either way a customer document states it in its own column.
   const quantity = first(row.quantity, inputs.quantity);
+  // Method and Input / Details, as the estimate view states them -- every column of the view but
+  // the internal costs reaches the customer's documents. The amount reads as the view prints it
+  // ("1,500 Sq Ft"), a hand-entered row's quantity as "Qty n".
+  const inputText = hasAmount ? `${Number(inputs[inputField[0]]).toLocaleString('en-IN')}${unit ? ` ${unit}` : ''}`
+    : (quantity !== undefined && Number(quantity) > 0 ? `Qty ${Number(quantity).toLocaleString('en-IN')}` : '');
   return { ...row, name, category, propertyTypeLabels: propertyTypes,
     quantity: quantity === undefined || !Number.isFinite(Number(quantity)) ? undefined : Number(quantity),
     primaryInput, markupPercentage: markupPercentage == null ? undefined : amount(markupPercentage),
     // The staff portals read `details`; anything the customer sees reads `customerDetails`, which
     // leaves out the category because that is printed with the service name instead
-    description, details, customerDetails: customerServiceDetails(details, category), serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
+    methodLabel: METHODS[method] || '', inputText, slabBand,
+    // The measured amount has its own column, so its "Capacity: 10 KL" segment is not repeated
+    description, details, customerDetails: withoutInputSegment(customerServiceDetails(details, category), inputText), serviceDetails, pricing_method: method, unit, frequencyType, frequency_type: frequencyType,
     frequencyCount, frequency_count: frequencyCount, price, totalPrice: price };
 };
 
@@ -162,14 +184,19 @@ const customerEstimateData = source => {
   const row = normalizeEstimateData(source);
   // The category travels beside the name, not inside the description: it says what kind of service
   // this is, so a customer document prints it under the service rather than among its details
-  const service = item => ({ name: item.name, category: item.category, quantity: item.quantity, description: item.customerDetails, frequencyType: item.frequencyType,
-    frequencyCount: item.frequencyCount, frequency_type: item.frequencyType, frequency_count: item.frequencyCount, price: item.price, totalPrice: item.totalPrice });
+  // Method and Input / Details travel too; the internal Vendor Cost, XLAND Cost and Margin % never
+  // do. A package's capacity-slab service states its slab, as the view does.
+  const service = (item, isPackage = false) => ({ name: item.name, category: item.category, quantity: item.quantity, description: item.customerDetails, frequencyType: item.frequencyType,
+    frequencyCount: item.frequencyCount, frequency_type: item.frequencyType, frequency_count: item.frequencyCount, price: item.price, totalPrice: item.totalPrice,
+    // A copy already prepared for the customer (the email's, handed on to its PDF) keeps its own
+    method: item.methodLabel || item.method || '',
+    input: (isPackage && item.pricing_method === 'capacity_slab' && item.slabBand) || item.inputText || item.slabBand || item.input || '' });
   const result = Object.fromEntries(['estimateId', 'estimateType', 'customerName', 'customerEmail', 'customerPhone', 'propertyName', 'propertyType', 'propertyCode',
     'zone', 'division', 'city', 'address', 'subtotal', 'total', 'validUntil', 'createdAt', 'description', 'packagePrice', 'gstPercent', 'discountAmount',
     'isWorkOrderEstimate', 'workOrderId', 'workOrderCategory', 'workOrderSubcategory', 'workOrderDescription', 'workOrderPriority', 'workOrderStatus'].map(key => [key, row[key]]));
   for (const [camel, snake] of [['numberOfBlocks', 'number_of_blocks'], ['totalUnits', 'total_units'], ['towerName', 'tower_name'], ['blockNumber', 'block_number'],
     ['villaPlotNumber', 'villa_plot_number'], ['blockNames', 'block_names'], ['unitsPerBlock', 'units_per_block'], ['packageName', 'package_name'], ['amcPackageDescription', 'amc_package_description'], ['billingDuration', 'billing_duration']]) result[camel] = first(row[camel], row[snake]);
-  return { ...result, services: (row.packageServices.length ? row.packageServices : row.services).map(service), addons: row.addons.map(service),
+  return { ...result, services: (row.packageServices.length ? row.packageServices : row.services).map(item => service(item, !!row.packageServices.length)), addons: row.addons.map(item => service(item)),
     discount: amount(first(source.discountPercent, source.discount_percent, source.discount_percentage, source.discount)), tax: row.gstAmount,
     // Terms travel with the customer copy, so the PDF prints what the creator chose to include
     includeTerms: row.includeTerms, termsConditions: row.termsConditions };

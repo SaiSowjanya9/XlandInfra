@@ -41,7 +41,9 @@ test('customer delivery drops internal snapshots but retains safe service inform
     services: [], total: 11960.25, tax_percentage: 0, action_token: 'private-token', internalCost: 9200,
     customer_email: 'customer@example.test', property_code: 'PROP-1', created_at: '2026-09-16' });
   assert.equal(estimate.addons[0].frequencyCount, 4);
-  assert.match(estimate.addons[0].description, /75 KVA/);
+  // The measured amount reaches the customer in its own Input / Details field, with the method
+  assert.match(estimate.addons[0].input, /75 KVA/);
+  assert.ok(estimate.addons[0].method);
   assert.equal(estimate.total, 11960.25);
   assert.equal(estimate.gstPercent, 0);
   assert.equal(estimate.propertyCode, 'PROP-1');
