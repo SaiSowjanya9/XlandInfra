@@ -3,7 +3,7 @@ import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
-import { getServiceMarginPercent, getServiceVendorCost, getServiceXlandCost } from '../../utils/estimatePackageUtils';
+import { getServiceInput, getServiceMarginPercent, getServiceRate, getServiceVendorCost, getServiceXlandCost, primaryInputLabel } from '../../utils/estimatePackageUtils';
 import { capitalizeFirst, decodeEntities } from '../../utils/text';
 
 // Services typed in by hand, for an estimate built without an AMC package. These are not catalog
@@ -26,6 +26,17 @@ const inlineInput = skin => `w-full rounded-lg border border-transparent bg-tran
 // Spinners add a second box inside the cell, which is the clutter this row is meant to be free of
 const noSpinner = '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 const iconButton = 'rounded-lg p-1.5 transition-colors focus:outline-none focus:ring-2';
+// Input / Details, as the Add Service list and the package-mode table state it: what was measured
+// at the property ("190 Sq Ft", "10 KL", "1 Guard"), or a hand-entered row's quantity, and under it
+// the slab band a capacity fell in. A rupee rate is a cost and never appears here. A service with
+// nothing measured -- a fixed price per visit -- names its input the way the Add Service list does.
+const inputDetails = row => {
+  const snapshot = row?.pricingSnapshot || {};
+  const amount = getServiceInput(row)
+    || primaryInputLabel(row?.name, row?.pricing_method || row?.pricingMethod || snapshot.pricing_method, row?.unit || snapshot.unit);
+  const band = getServiceRate(row);
+  return { amount, band: band && !band.includes('₹') ? band : '' };
+};
 
 // The row an estimate carries. It keeps the shape of a configured-service add-on so the existing
 // service tables, view modals and PDFs render it without knowing where it came from, and `services`
@@ -93,6 +104,16 @@ export const customVisitsComplaint = values => {
   if (!isCustomFrequency(values.frequency_type)) return '';
   const visits = Number(values.frequency_count);
   return Number.isInteger(visits) && visits >= 1 && visits <= 366 ? '' : 'Enter the visits per year for a Custom frequency (1 to 366).';
+};
+
+const InputDetailsCell = ({ row, cell, skin }) => {
+  const { amount, band } = inputDetails(row);
+  return (
+    <td className={`${cell} break-words`}>
+      {amount || <span className={skin.muted}>-</span>}
+      {band && <span className={`mt-0.5 block text-[11px] ${skin.muted}`}>{band}</span>}
+    </td>
+  );
 };
 
 // `title` is null where the hosting card already names the section, so the heading is never shown
@@ -193,28 +214,29 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
           table keeps a minimum width and scrolls inside this wrapper, so a narrow form column
           makes the row scroll rather than pushing two headings into each other. */}
       <div className="overflow-x-auto">
-      <table className={`w-full table-fixed ${internal ? 'min-w-[1080px]' : 'min-w-[820px]'}`}>
+      <table className={`w-full table-fixed ${internal ? 'min-w-[1180px]' : 'min-w-[920px]'}`}>
         <thead>
           <tr className={`border-b text-xs font-semibold uppercase tracking-wide ${skin.headRow}`}>
             <th className={`${internal ? 'w-[4%]' : 'w-[5%]'} whitespace-nowrap px-3 py-2.5 text-center`}>#</th>
-            <th className={`${internal ? 'w-[14%]' : 'w-[20%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Service</th>
-            <th className={`${internal ? 'w-[15%]' : 'w-[24%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
-            <th className={`${internal ? 'w-[11%]' : 'w-[14%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
-            <th className={`${internal ? 'w-[8%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
+            <th className={`${internal ? 'w-[12%]' : 'w-[17%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Service</th>
+            <th className={`${internal ? 'w-[13%]' : 'w-[21%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Description</th>
+            <th className={`${internal ? 'w-[10%]' : 'w-[13%]'} whitespace-nowrap px-3 py-2.5 text-left`} title="What was measured at the property, or the quantity">Input / Details</th>
+            <th className={`${internal ? 'w-[10%]' : 'w-[12%]'} whitespace-nowrap px-3 py-2.5 text-left`}>Frequency</th>
+            <th className={`${internal ? 'w-[7%]' : 'w-[9%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Visits per year">Visits</th>
             {/* Internal costs and row controls are screen furniture: a browser print of the form
                 keeps only the customer's columns, so they are print:hidden */}
             {internal && <>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
-              <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
-              <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
+              <th className="w-[10%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="What the vendor charges for this service">Vendor Cost</th>
+              <th className="w-[10%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
+              <th className="w-[7%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
             </>}
-            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price</th>
+            <th className={`${internal ? 'w-[10%]' : 'w-[12%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price</th>
             <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
           </tr>
         </thead>
         <tbody className={`divide-y ${skin.rowDivide}`}>
           {!rows.length && !extraRows.length && (
-            <tr><td colSpan={internal ? 10 : 7} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
+            <tr><td colSpan={internal ? 11 : 8} className={`px-3 py-8 text-center text-sm ${skin.faint}`}>
               No services yet. Use Add Service to add one.
             </td></tr>
           )}
@@ -228,8 +250,10 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               </td>
               <td className="px-3 py-2.5">
                 <input value={edit.values.description} onChange={event => setEditField('description', event.target.value)} onKeyDown={onKeyDown}
-                  placeholder="e.g. 4 Lifts, 15,000 Sq Ft" maxLength={255} aria-label="Input / details" className={inputClass} />
+                  placeholder="e.g. 4 Lifts, 15,000 Sq Ft" maxLength={255} aria-label="Description" className={inputClass} />
               </td>
+              {/* The quantity is set in the service's dialog; an in-place edit keeps it */}
+              <td className={`${cell} ${skin.muted}`}>{edit.values.quantity ? `Qty ${edit.values.quantity}` : '-'}</td>
               <td className="px-3 py-2.5">
                 <select value={edit.values.frequency_type} onChange={event => setEditField('frequency_type', event.target.value)}
                   aria-label="Frequency" className={inputClass}>
@@ -271,14 +295,15 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
                 {decodeEntities(row.name)}
                 {/* Category, quantity and a job arranged without a vendor sit under the name: they
                     belong to the row but do not each earn a column of their own */}
-                {(row.category || row.quantity || row.skip_vendor_assignment) && (
+                {(row.category || row.skip_vendor_assignment) && (
                   <span className={`mt-0.5 block text-[11px] font-normal ${skin.muted}`}>
-                    {[decodeEntities(row.category), row.quantity ? `Qty ${row.quantity}` : '', row.skip_vendor_assignment ? 'No vendor' : '']
+                    {[decodeEntities(row.category), row.skip_vendor_assignment ? 'No vendor' : '']
                       .filter(Boolean).join(' · ')}
                   </span>
                 )}
               </td>
               <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{decodeEntities(row.description) || '-'}</td>
+              <InputDetailsCell row={row} cell={cell} skin={skin} />
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
@@ -304,6 +329,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <td className={`${cell} text-center ${skin.muted}`}>{rows.length + index + 1}</td>
               <td className={`${cell} break-words font-medium ${skin.strong}`}>{decodeEntities(row.name)}</td>
               <td className={`${cell} break-words text-xs ${skin.muted} ${row.description ? 'text-left' : 'text-center'}`}>{decodeEntities(row.description) || '-'}</td>
+              <InputDetailsCell row={row} cell={cell} skin={skin} />
               <td className={cell}>{row.frequency_type}</td>
               <td className={`${cell} text-center`}>{row.frequency_count}</td>
               {internal && <>
@@ -318,7 +344,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
         </tbody>
         {(rows.length > 0 || extraRows.length > 0) && <tfoot>
           <tr className={`border-t ${skin.panelFoot}`}>
-            <td colSpan={internal ? 8 : 5} className={`px-3 py-2.5 text-left text-sm font-semibold ${skin.text}`}>Total Services</td>
+            <td colSpan={internal ? 9 : 6} className={`px-3 py-2.5 text-left text-sm font-semibold ${skin.text}`}>Total Services</td>
             <td className={`px-3 py-2.5 text-center text-sm font-bold ${skin.strong}`}>{currency(customServicesTotal(rows) + customServicesTotal(extraRows))}</td>
             <td className="print:hidden" />
           </tr>
