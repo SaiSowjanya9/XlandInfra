@@ -15,15 +15,34 @@ const parse = value => {
   try { return JSON.parse(value); } catch { return null; }
 };
 
+// How the service is priced and what was entered for it -- the method, the amount (a capacity, an
+// area, a headcount), its unit and, for a capacity slab, the slab bands -- so the estimate's view
+// states Method and Input / Details for a package's services as it does for an added one. These
+// were dropped, which left both columns blank for every package service. A slab keeps its name and
+// range only: its rate is the vendor's price, and the estimate carries no per-service price.
+const slabBands = slabs => (Array.isArray(slabs) ? slabs : [])
+  .filter(slab => slab && slab.capacityFrom != null)
+  .map(slab => ({ name: slab.name || '', capacityFrom: slab.capacityFrom, capacityTo: slab.capacityTo ?? null }));
+
 const packageServiceSnapshot = row => {
   const vendorCost = Number(row?.vendorCost);
+  const operatingCost = Number(row?.operatingCost);
+  const slabs = slabBands(row?.capacitySlabs || row?.capacity_slabs);
+  const method = row?.pricingMethod || row?.pricing_method || '';
+  const input = row?.inputValue ?? row?.input_value;
   return {
     name: row?.service || row?.name || 'Service',
     description: row?.description || '',
     ...(row?.category ? { category: row.category } : {}),
     frequencyType: row?.frequencyType || row?.frequency_type || 'Monthly',
     frequencyCount: Number(row?.frequencyCount ?? row?.frequency_count ?? 0) || 0,
-    ...(Number.isFinite(vendorCost) && vendorCost >= 0 && row?.vendorCost !== '' && row?.vendorCost != null ? { vendorCost } : {})
+    ...(method ? { pricingMethod: method } : {}),
+    ...(input !== undefined && input !== null && input !== '' ? { inputValue: input } : {}),
+    ...(row?.unit ? { unit: row.unit } : {}),
+    ...(slabs.length ? { capacitySlabs: slabs } : {}),
+    ...(row?.catalogServiceId ? { catalogServiceId: row.catalogServiceId } : {}),
+    ...(Number.isFinite(vendorCost) && vendorCost >= 0 && row?.vendorCost !== '' && row?.vendorCost != null ? { vendorCost } : {}),
+    ...(Number.isFinite(operatingCost) && operatingCost > 0 ? { operatingCost } : {})
   };
 };
 
@@ -59,4 +78,48 @@ const attachPackageSnapshot = (db, fpOf = req => req.fpId || req.franchisePartne
   }
 };
 
-module.exports = { attachPackageSnapshot, loadPackageSnapshot, packageServiceSnapshot };
+// Estimates saved before the snapshot kept a service's method, amount and unit hold their package's
+// services without them, so the view showed dashes. When a list is read, any such service is
+// completed from its package -- matched by name, filling only what is missing, never overwriting
+// what the estimate saved. Rows are changed in place and keep the type package_services came in.
+const sameName = value => String(value || '').trim().toLowerCase();
+const fillPackageServiceDetails = async (db, estimates) => {
+  const wanting = (Array.isArray(estimates) ? estimates : []).filter(est => {
+    if (!est?.package_id || !est.package_services) return false;
+    const services = parse(est.package_services);
+    return Array.isArray(services) && services.some(service => service && typeof service === 'object' && !service.pricingMethod);
+  });
+  const cache = new Map();
+  for (const est of wanting) {
+    const key = `${est.package_id}:${est.franchise_partner_id ?? ''}`;
+    if (!cache.has(key)) {
+      try {
+        const [[pkg]] = est.franchise_partner_id != null
+          ? await db.execute('SELECT services FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [est.package_id, est.franchise_partner_id])
+          : await db.execute('SELECT services FROM fp_amc_packages WHERE id = ?', [est.package_id]);
+        const stored = parse(pkg?.services);
+        const rows = Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : [];
+        cache.set(key, new Map(rows.filter(row => row && typeof row === 'object').map(row => {
+          const snap = packageServiceSnapshot(row);
+          return [sameName(snap.name), snap];
+        })));
+      } catch {
+        cache.set(key, new Map());
+      }
+    }
+    const byName = cache.get(key);
+    if (!byName.size) continue;
+    const wasString = typeof est.package_services === 'string';
+    const services = parse(est.package_services).map(service => {
+      const match = service && typeof service === 'object' ? byName.get(sameName(service.name || service.service)) : null;
+      if (!match) return service;
+      const filled = { ...service };
+      for (const [field, value] of Object.entries(match)) if (filled[field] === undefined || filled[field] === null || filled[field] === '') filled[field] = value;
+      return filled;
+    });
+    est.package_services = wasString ? JSON.stringify(services) : services;
+  }
+  return estimates;
+};
+
+module.exports = { attachPackageSnapshot, loadPackageSnapshot, packageServiceSnapshot, fillPackageServiceDetails };

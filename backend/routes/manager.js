@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const { attachPackageSnapshot } = require('../utils/packageSnapshot');
+const { attachPackageSnapshot, fillPackageServiceDetails } = require('../utils/packageSnapshot');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, canEmailEstimate, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -2549,7 +2549,8 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       
       console.log(`Manager ${managerId} (FP: ${franchisePartnerId}) - Found ${estimates.length} FP estimates`);
     }
-    
+    // Older estimates' package services lack their method and amount; complete them from the package
+    await fillPackageServiceDetails(pool, estimates);
     res.json({ success: true, data: estimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Error fetching manager estimates:', error);
