@@ -29,7 +29,7 @@ import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateStructure from '../components/estimates/EstimateStructure';
 import PackageServicePicker from '../components/estimates/PackageServicePicker';
 import { CapacitySlabSelect } from '../components/estimates/CapacitySlabList';
-import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput } from '../utils/packageServicePricing';
+import { applyPackageMarkup, hasMarkup, packageTotals, quotePackageRow, rowInput, unpricedRows } from '../utils/packageServicePricing';
 import { applyRowPatches, duplicatePackageName, packageRowForSave, packageRowFromDialog, packageRowFromSaved, updatePackageRow } from '../utils/packageRows';
 import { capitalizeFirst } from '../utils/text';
 import { PRICING_METHODS, methodLabel } from '../components/estimates/AddServicePage';
@@ -2930,6 +2930,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (!selectedPropertyTypes.length) { showToast('Select at least one property type', 'error'); return; }
     // The price is the sum of the configured services, so it is they that must be priced
     if (totals.price <= 0) { showToast('Add a configured service and its amount so the package has a price', 'error'); return; }
+    // Every configured service must carry its price, or the package sells it for nothing
+    const unpriced = unpricedRows(amcForm.serviceRows);
+    if (unpriced.length) { showToast(`${unpriced.map(r => r.service).join(', ')} ${unpriced.length === 1 ? 'has' : 'have'} no price yet -- choose its amount or slab so it is priced, then save`, 'error'); return; }
     const validSvc = amcForm.serviceRows.filter(r => String(r.service || '').trim());
     if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
     try {

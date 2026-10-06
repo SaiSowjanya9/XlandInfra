@@ -107,3 +107,15 @@ test('the package price is what its priced services add up to', () => {
   });
   assert.equal(packageTotals().price, 0);
 });
+
+test('a package cannot be saved with a configured service that has no price', async () => {
+  const { unpricedRows } = await import('./packageServicePricing.js');
+  const rows = [
+    { service: 'Lift Fully Manual', catalogServiceId: 7, price: '', frequencyCount: 12 },
+    { service: 'Deep Cleaning', catalogServiceId: 8, price: 4000, frequencyCount: 1 },
+    { service: 'Electrical Service Visit', catalogServiceId: 9, price: 0, frequencyCount: 0 },
+    { service: 'Typed row', price: '' }
+  ];
+  assert.deepEqual(unpricedRows(rows).map(row => row.service), ['Lift Fully Manual'],
+    'an On Request (0 visits) service may be free, and a typed row has no quote to wait for');
+});
