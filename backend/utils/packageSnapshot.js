@@ -72,10 +72,49 @@ const packageServiceSnapshot = (row, share = null) => {
   };
 };
 
-const snapshotRows = (stored, packagePrice) => {
+// A configured service saved on the package with no price -- its quote never landed, as happened
+// to rows added before they were priced on adding -- still costs the vendor what the catalog says.
+// Its cost is read from the service's own configuration with the row's amount and schedule, so the
+// estimate states it. The package price does not include it, so its share is 0: the view then
+// shows what the package loses on it, rather than a dash that hides it.
+const INPUT_KEY = { quantity_based: 'quantity', area_based: 'area', capacity_based: 'capacity', capacity_slab: 'capacity', manpower: 'personnel' };
+const hasNumber = value => value !== '' && value != null && Number.isFinite(Number(value));
+const catalogVendorCost = async (db, row, packageTypes) => {
+  try {
+    const [[found]] = await db.execute('SELECT * FROM service_catalog WHERE id = ?', [row.catalogServiceId]);
+    if (!found) return null;
+    const { parseService } = require('../routes/serviceCatalog');
+    const { calculateServiceQuote } = require('./servicePricing');
+    const service = parseService(found);
+    const allowed = Array.isArray(service.applicable_property_types) ? service.applicable_property_types : [];
+    const propertyType = (packageTypes || []).find(type => allowed.includes(type)) || allowed[0];
+    const method = row.pricingMethod || service.pricing_method;
+    const quote = calculateServiceQuote(service, {
+      property_type: propertyType, frequency: row.frequencyType, visits: Number(row.frequencyCount),
+      ...(INPUT_KEY[method] && hasNumber(row.inputValue) ? { [INPUT_KEY[method]]: Number(row.inputValue) } : {})
+    }, 'admin');
+    return hasNumber(quote?.vendorCost) ? Number(quote.vendorCost) : null;
+  } catch {
+    return null;
+  }
+};
+
+const snapshotRows = async (db, stored, packagePrice) => {
   const rows = (Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : []).filter(row => row && typeof row === 'object');
   const shares = packageShares(rows, stored && !Array.isArray(stored) ? stored.markup_percentage : null, packagePrice);
-  return rows.map((row, index) => packageServiceSnapshot(row, shares[index]));
+  const anyPriced = shares.some(share => share != null);
+  const packageTypes = stored && !Array.isArray(stored) ? stored.property_types || (stored.property_type ? [stored.property_type] : []) : [];
+  return Promise.all(rows.map(async (row, index) => {
+    const snap = packageServiceSnapshot(row, shares[index]);
+    if (snap.vendorCost === undefined && row.catalogServiceId && !hasNumber(row.price)) {
+      const cost = await catalogVendorCost(db, row, packageTypes);
+      if (cost != null) {
+        snap.vendorCost = cost;
+        if (anyPriced) snap.packageShare = 0;
+      }
+    }
+    return snap;
+  }));
 };
 
 const loadPackageSnapshot = async (db, packageId, fpId) => {
@@ -84,7 +123,7 @@ const loadPackageSnapshot = async (db, packageId, fpId) => {
   if (!pkg) return null;
   const stored = parse(pkg.services);
   return { name: pkg.name, description: pkg.description || '', price: Number(pkg.price) || 0,
-    billingDuration: stored?.billing_duration || null, services: snapshotRows(stored, pkg.price) };
+    billingDuration: stored?.billing_duration || null, services: await snapshotRows(db, stored, pkg.price) };
 };
 
 // Express middleware for the estimate create/update routes. `fpOf` reads the caller's FP from the
@@ -130,7 +169,7 @@ const fillPackageServiceDetails = async (db, estimates) => {
           ? await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [est.package_id, est.franchise_partner_id])
           : await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ?', [est.package_id]);
         // Shared out over the price this estimate sold the package at, not today's package price
-        const snaps = snapshotRows(parse(pkg?.services), Number(est.package_price) || pkg?.price);
+        const snaps = await snapshotRows(db, parse(pkg?.services), Number(est.package_price) || pkg?.price);
         cache.set(key, new Map(snaps.map(snap => [sameName(snap.name), snap])));
       } catch {
         cache.set(key, new Map());
