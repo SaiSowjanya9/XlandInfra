@@ -28,21 +28,21 @@ import { normalizeServiceRow } from './EstimateDraftServicesTable';
 // "Vendor CostXLAND CostCustomer Price". Table columns size to their headings and contents.
 // `head`/`cell` carry alignment and print visibility only.
 const serviceColumns = (decode, internal, showTag = true) => {
-  const number = { label: '#', head: 'w-10', cell: '',
+  const number = { label: '#', head: '', cell: '',
     // Plain text throughout: no chips, pills or tags -- the user asked for the boxes to go
     render: (row, index) => <span className="text-xs text-warm-muted">{index + 1}</span> };
   // The category says what kind of service this is, so it reads under the name rather than among
   // the details -- the same place the PDF sets it
-  const service = { label: 'Service', head: '', cell: 'min-w-[140px]',
+  const service = { label: 'Service', head: '', cell: '',
     render: row => <>
-      <p className="font-medium text-gray-800 text-sm break-words">{decode(getAddonName(row))}</p>
+      <p className="font-medium text-gray-800 text-xs break-words">{decode(getAddonName(row))}</p>
       {row.category && <p className="text-[10px] text-gray-500">{decode(row.category)}</p>}
       {/* A package's own service, folded into the internal table beside the added services */}
       {showTag && row._tag && <p className="text-[10px] italic text-warm-muted">{row._tag}</p>}
     </> };
   // What the service covers, as entered on it -- its own description, not the generated pricing
   // segments (those are the Method and Input / Details columns), so nothing reads twice
-  const description = { label: 'Description', head: '', cell: 'min-w-[160px] max-w-[260px]',
+  const description = { label: 'Description', head: '', cell: '',
     render: row => {
       const text = decode(stripInternalServiceDetails(String(row.description ?? ''))).trim();
       return <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">{text || '-'}</p>;
@@ -53,7 +53,7 @@ const serviceColumns = (decode, internal, showTag = true) => {
     render: row => (getServiceMethodLabel(row)
       ? <span className="text-xs text-gray-700">{getServiceMethodLabel(row)}</span>
       : <span className="text-xs text-gray-400">-</span>) };
-  const input = { label: 'Input / Details', head: '', cell: 'min-w-[110px]',
+  const input = { label: 'Input / Details', head: '', cell: '',
     // What was measured at the property -- 4 Lift, 15,000 Sq Ft. The subline is screen-only
     // (print:hidden keeps a browser print clean): a slab band names the bracket the input fell in
     // for everyone, while a ₹ rate is the vendor's price and shows to internal viewers only.
@@ -72,11 +72,11 @@ const serviceColumns = (decode, internal, showTag = true) => {
       </>;
     } };
   const frequency = { label: 'Frequency', head: 'text-center', cell: 'text-center',
-    render: row => <p className="text-sm text-warm-text">{row.frequency_type || row.frequencyType || 'Monthly'}</p> };
+    render: row => <p className="text-xs text-warm-text">{row.frequency_type || row.frequencyType || 'Monthly'}</p> };
   const visits = { label: 'Visits / Year', head: 'text-center', cell: 'text-center',
-    render: row => <p className="text-sm text-warm-text font-semibold">{row.frequency_count ?? row.frequencyCount ?? 1}</p> };
+    render: row => <p className="text-xs text-warm-text font-semibold">{row.frequency_count ?? row.frequencyCount ?? 1}</p> };
   const money = (value, cls = 'text-gray-700') =>
-    <p className={`whitespace-nowrap text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
+    <p className={`text-[11px] tabular-nums ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
   // A package's own service is sold as part of the package, so its XLAND Cost and Margin % are read
@@ -100,7 +100,7 @@ const serviceColumns = (decode, internal, showTag = true) => {
       const value = inPackage(row) ? row.packageShare : getAddonPrice(row);
       return value == null
         ? <p className="text-xs text-warm-muted">—</p>
-        : <p className="whitespace-nowrap text-xs font-semibold text-gray-800">{formatCurrency(value)}</p>;
+        : <p className="text-[11px] font-semibold tabular-nums text-gray-800">{formatCurrency(value)}</p>;
     } };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
@@ -115,6 +115,13 @@ const serviceColumns = (decode, internal, showTag = true) => {
     : [number, service, description, input, method, frequency, visits, price];
 };
 
+// Each column's share of the table's width, per layout; each set adds up to 100
+const COLUMN_SHARE = {
+  internal: { '#': 3, Service: 12, Description: 17, 'Input / Details': 11, Method: 8, Frequency: 8, 'Visits / Year': 6,
+    'Vendor Cost': 9, 'XLAND Cost': 9, 'Customer Price': 9, 'Margin %': 8 },
+  plain: { '#': 4, Service: 16, Description: 28, 'Input / Details': 14, Method: 10, Frequency: 10, 'Visits / Year': 7, 'Customer Price': 11 }
+};
+
 // `totalLabel` names the footer figure; `showTag` is off where a table holds a package's services alone
 export default function EstimateServicesTable({ rows, total, note = null, totalLabel = 'Total Services Price', showTag = true, decode = value => value ?? '',
   topRadius = 'rounded-t-lg', bottomRadius = 'rounded-b-lg', internal = false }) {
@@ -122,17 +129,20 @@ export default function EstimateServicesTable({ rows, total, note = null, totalL
   if (!services.length) return null;
   const sum = total ?? services.reduce((value, row) => value + getAddonPrice(row), 0);
   const columns = serviceColumns(decode, internal, showTag);
-  const cell = 'px-3 py-2 align-middle';
+  const cell = 'px-2 py-2 align-middle break-words';
   return (
     // Scrolls sideways on a narrow screen rather than squeezing the columns; on paper it lays out
     // in full, with the internal cost cells hidden
-    <div className={`overflow-x-auto print:overflow-visible border border-warm-border ${topRadius} ${bottomRadius}`}>
-      <table className="w-full border-collapse">
+    // The table fits its card: every column has a fixed share of the width and its text wraps, so
+    // there is no sideways scroller and nothing is cut off (the user asked for the scroller to go)
+    <div className={`overflow-hidden border border-warm-border ${topRadius} ${bottomRadius}`}>
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
         <thead className="bg-warm-section">
           <tr>
             {columns.map(column => (
               <th key={column.label} scope="col"
-                className={`${cell} whitespace-nowrap text-xs font-semibold text-warm-muted ${/text-(right|center)/.test(column.head) ? '' : 'text-left'} ${column.head}`}>{column.label}</th>
+                className={`${cell} break-words text-[11px] font-semibold leading-tight text-warm-muted ${/text-(right|center)/.test(column.head) ? '' : 'text-left'} ${column.head}`}>{column.label}</th>
             ))}
           </tr>
         </thead>
