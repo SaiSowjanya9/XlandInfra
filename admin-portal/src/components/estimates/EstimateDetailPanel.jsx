@@ -149,21 +149,36 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
         )}
       </Section>
 
-      {/* One Services table holds everything the estimate covers: the package's own services,
-          tagged Package and reading "Included" (they are paid for by the package price, not one by
-          one), then the services added to it. Its total is the whole of it -- package price plus
-          the added services -- so it agrees with the Price Summary's subtotal, and the package is
-          named in a small note under it rather than in a section of its own. */}
-      {(packageServices.length > 0 || services.length > 0 || packageName) && (
-        <Section title="Services">
+      {/* The view lists the package's own services and the added services as two blocks -- the
+          AMC Package, at its price, then the Services, at theirs -- with Total Services Price (the
+          two together, which is the Price Summary's subtotal) under both. The customer's documents
+          list them as one table instead (the user's call). Package rows keep their _tag, which is
+          how the cost columns know to read them against their share of the package price. */}
+      {packageServices.length > 0 && (
+        <Section title={packageName ? `AMC Package - ${decode(packageName)}` : 'AMC Package - Services Included'}>
           <EstimateServicesTable
-            rows={[...packageServices.map(s => (typeof s === 'string' ? { name: s, _tag: 'Package' } : { ...s, _tag: 'Package' })), ...services]}
-            total={packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0)}
-            note={packageName ? `Includes the AMC package "${decode(packageName)}" at ${money(packagePrice)}${packageServices.length ? `, covering ${packageServices.length} service${packageServices.length === 1 ? '' : 's'}` : ''}.` : null}
+            rows={packageServices.map(s => (typeof s === 'string' ? { name: s, _tag: 'Package' } : { ...s, _tag: 'Package' }))}
+            total={packagePrice} totalLabel="AMC Package Price" showTag={false}
             decode={decode}
             internal={internal}
           />
         </Section>
+      )}
+      {services.length > 0 && (
+        <Section title="Services">
+          <EstimateServicesTable
+            rows={services}
+            total={services.reduce((sum, row) => sum + getAddonPrice(row), 0)} totalLabel="Services Total"
+            decode={decode}
+            internal={internal}
+          />
+        </Section>
+      )}
+      {(packageServices.length > 0 || services.length > 0 || packageName) && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-warm-border bg-warm-section px-3 py-2.5">
+          <span className="font-semibold text-warm-text">Total Services Price</span>
+          <span className="whitespace-nowrap font-bold text-warm-text">{money(packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0))}</span>
+        </div>
       )}
 
       {/* The card carries its own Price Summary caption, so the section is not headed again */}

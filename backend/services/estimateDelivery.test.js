@@ -165,6 +165,10 @@ test('a property-based package estimate emails the same totals, package note, bi
     assert.match(text, /Clause one\.[\s\S]*Clause two\./, `${where}: carries the estimate's Terms & Conditions`);
   }
   assert.match(html, /Half yearly/, 'the estimate\'s own billing period, not a default Yearly');
+  // The package's services and the added ones are one table, the package's marked Package
+  assert.doesNotMatch(html, /AMC Package &mdash; Services Included/, 'email: one services table');
+  assert.doesNotMatch(pdf, /AMC Package - Services Included/, 'pdf: one services table');
+  assert.match(html, /Deep Cleaning<\/strong>[\s\S]{0,300}Package/, 'email: a package service is marked Package');
   assert.doesNotMatch(pdf, /^QTY$/m, 'the emailed PDF has no Qty column, like the printed one');
 });
 

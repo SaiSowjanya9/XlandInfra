@@ -752,11 +752,12 @@ const generateEstimatePDF = async (estimate) => {
         y += GAP.row;
       };
 
-      const tableRow = item => ({
+      // `tag` marks a package's own service in the combined table, under its name and category
+      const tableRow = (item, tag = '') => ({
         // The category says what kind of service this is, so it reads under the name rather than
         // among the details in the Description column
         name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
-          decodeHtml(item.category || '')].filter(Boolean).join('\n'),
+          decodeHtml(item.category || ''), tag].filter(Boolean).join('\n'),
         // Property Types is catalog configuration, not something a customer document states
         details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
         frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
@@ -771,11 +772,6 @@ const generateEstimatePDF = async (estimate) => {
       
       // Billing is stated in the letterhead strip, so it is not repeated here
 
-      if (!isWOEstimate && svcList.length > 0) {
-        sectionHeading('AMC Package - Services Included');
-        // A package's services are covered by the package price, so no per-row price is stated
-        drawServicesTable(svcList.map(item => tableRow(item)));
-      }
 
       // Add-ons Table (if any) - ensure it's an array
       // Skip for Work Order Estimates - they don't have add-ons
@@ -789,15 +785,18 @@ const generateEstimatePDF = async (estimate) => {
       }
       if (!Array.isArray(addonList)) addonList = [];
       // Skip for Work Order Estimates
-      if (!isWOEstimate && addonList.length > 0) {
+      // The package's own services and the services added to it are one table, numbered straight
+      // through -- the package's marked "Package" under their name -- as the printed copy has them
+      const tableRows = [...svcList.map(item => tableRow(item, packageName ? 'Package' : '')), ...addonList.map(item => tableRow(item))];
+      if (!isWOEstimate && tableRows.length > 0) {
         // The heading and its first row stay together rather than splitting across a page
         doc.fontSize(8).font('Helvetica');
-        const firstRow = tableRow(addonList[0]);
+        const firstRow = tableRows[0];
         const firstHeight = Math.max(24, doc.heightOfString(firstRow.details, { width: cellWidth(2) }) + CELL_PAD * 2);
         if (y + GAP.heading + 20 + firstHeight > pageHeight) { doc.addPage(); y = MARGIN; }
 
         sectionHeading('Services');
-        drawServicesTable(addonList.map(item => tableRow(item)));
+        drawServicesTable(tableRows);
       }
       // Total Services Price is the whole of it -- the package price plus the added services -- so
       // it agrees with the Price Summary's subtotal; it used to leave the package out. A small line

@@ -717,45 +717,36 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
         return trimmed.slice(String(category).length).replace(/^\s*\|\s*/, '').trim();
       }).filter(Boolean).join('\n');
     };
-    const serviceRow = (item, index) => {
+    // `tag` marks a package's own service in the combined table, under its name and category
+    const serviceRow = (item, index, tag = '') => {
       const category = decodeHtml(String(item.category || ''));
       const name = [decodeHtml(String(item.name || item.service || item.serviceName || item.service_name || 'Service')),
-        category].filter(Boolean).join('\n');
+        category, tag].filter(Boolean).join('\n');
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
       const details = withoutInputSegment(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), item.input);
       return [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
     };
 
-    if (!isWorkOrder && services.length > 0) {
+    // ===== SERVICES (Skip for Work Order Estimates) =====
+    // An estimate lists its package's own services and the services added to it as one table,
+    // numbered straight through -- the package's marked "Package" under their name -- with Total
+    // Services Price and the package note beneath. A package export lists its services alone.
+    const addedServices = Array.isArray(data.addons) ? data.addons : [];
+    const tableRows = priced
+      ? [...services.map(service => [service, 'Package']), ...addedServices.map(addon => [addon, ''])]
+      : services.map(service => [service, '']);
+    if (!isWorkOrder && tableRows.length > 0) {
       doc.setTextColor(...heading);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(priced ? 'AMC PACKAGE - SERVICES INCLUDED' : 'SERVICES INCLUDED', margin, y);
+      doc.text(priced ? 'SERVICES' : 'SERVICES INCLUDED', margin, y);
       y += 8;
 
       autoTable(doc, {
         startY: y,
         head: serviceHead,
-        body: services.map((service, index) => serviceRow(service, index)),
-        ...serviceTableStyles
-      });
-
-      y = doc.lastAutoTable.finalY + 6;
-    }
-
-    // ===== SERVICES TABLE (Skip for Work Order Estimates) =====
-    if (!isWorkOrder && data.addons && data.addons.length > 0) {
-      doc.setTextColor(...heading);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('SERVICES', margin, y);
-      y += 8;
-
-      autoTable(doc, {
-        startY: y,
-        head: serviceHead,
-        body: data.addons.map((addon, index) => serviceRow(addon, index)),
+        body: tableRows.map(([item, tag], index) => serviceRow(item, index, tag)),
         ...serviceTableStyles
       });
 
