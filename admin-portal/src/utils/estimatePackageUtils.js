@@ -237,6 +237,26 @@ export const serviceMethodAndInput = (raw, { isPackage = false } = {}) => {
 };
 
 /**
+ * A service's description as a customer document prints it: without the segments a generated
+ * description carries that are ours or have columns of their own -- the category (printed under
+ * the name), the pricing method (the Method column), the derived "Primary Input" and the property
+ * types the service is configured for. Mirrors customerServiceDetails in
+ * backend/utils/estimateData.js, so the downloaded PDF reads as the emailed one does: it printed
+ * "Capacity Slab | Primary Input: Lift Fully Manual Capacity" under the description.
+ */
+const INTERNAL_SEGMENT = /^(Primary Input|Property Types)\s*:/;
+export const customerServiceDetails = (text, category = '') => {
+  const methods = new Set(Object.values(METHOD_LABELS));
+  const own = String(category ?? '').trim();
+  return String(text ?? '').split('\n')
+    .map(line => line.split(' | ').filter(part => {
+      const segment = part.trim();
+      return segment && segment !== own && !methods.has(segment) && !INTERNAL_SEGMENT.test(segment);
+    }).join(' | '))
+    .filter(line => line.trim()).join('\n');
+};
+
+/**
  * The description without the segment that restates the measured amount ("Capacity: 10 KL" when
  * Input / Details already says "10 KL"), so a document does not print it twice.
  */

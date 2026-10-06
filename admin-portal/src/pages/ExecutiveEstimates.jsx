@@ -12,6 +12,7 @@ import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, P
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
+import usePrintShortcut from '../hooks/usePrintShortcut';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
 import EstimateDocumentHeader from '../components/estimates/EstimateDocumentHeader';
@@ -207,6 +208,8 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [gstPercent, setGstPercent] = useState('');
   const [viewEstimate, setViewEstimate] = useState(null);
+  // Ctrl+P prints the open estimate's document, as its Print button does
+  usePrintShortcut(viewEstimate ? () => { if (!printEstimatePDF(viewEstimate)) window.print(); } : null);
   // Terms & Conditions: the standard clauses. Editing them belongs to Admin, Operations Manager
   // and FP, so an Executive estimate carries the default wording and the card is read-only
   const { includeTerms, termsConditions } = newEstimateTerms();

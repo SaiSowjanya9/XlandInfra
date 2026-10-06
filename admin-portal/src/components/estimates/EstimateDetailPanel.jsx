@@ -7,6 +7,7 @@ import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
 import { shortDivision } from '../../utils/fieldOptionsStore';
+import usePrintShortcut from '../../hooks/usePrintShortcut';
 
 /**
  * The estimate's internal figures, over everything it covers: every package service and added
@@ -117,7 +118,9 @@ const blockEntries = (estimate) => {
   return keys.map(key => [names[key] || `Block ${key}`, units[key] ?? 0]);
 };
 
-export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', status = null, internal = false }) {
+// `onPrint` -- the caller's Print -- also answers Ctrl+P while this estimate is open
+export default function EstimateDetailPanel({ estimate, decode = value => value ?? '', status = null, internal = false, onPrint = null }) {
+  usePrintShortcut(onPrint);
   if (!estimate) return null;
   const services = getEstimateAddons(estimate);
   const packageName = estimate.package_name || estimate.packageName;

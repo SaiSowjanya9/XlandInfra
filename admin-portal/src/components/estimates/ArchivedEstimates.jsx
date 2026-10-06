@@ -194,7 +194,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml}
+          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml} onPrint={() => handlePrintEstimate(detailEstimate)}
             internal={['admin', 'operations_manager'].includes(admin?.role)} />
         </div>
       </div>
