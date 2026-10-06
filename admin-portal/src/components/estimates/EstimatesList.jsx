@@ -18,6 +18,7 @@ import { getServiceDescription, hasCatalogServices } from '../../utils/estimateP
 import EstimateDetailPanel from './EstimateDetailPanel';
 import * as XLSX from 'xlsx';
 import { getAuthToken } from '../../utils/safeStorage';
+import { shortDivision } from '../../utils/fieldOptionsStore';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -953,7 +954,7 @@ const EstimatesList = ({
                     <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
                       <span className="text-sm text-gray-600">
                         {(estimate.estimateType === 'property-based' || estimate.estimateType === 'property_based' || estimate.propertyId) 
-                          ? (estimate.division || estimate.property_division || '-') 
+                          ? (shortDivision(estimate.division || estimate.property_division) || '-') 
                           : '-'}
                       </span>
                     </td>

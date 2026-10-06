@@ -4,6 +4,7 @@ import EstimateServicesTable from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
+import { shortDivision } from '../../utils/fieldOptionsStore';
 
 /**
  * Everything a saved estimate holds, shown as the full-screen view behind an Estimate ID. Clicking
@@ -121,7 +122,7 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
             ['Type', getPropertyTypeLabel(propertyType)],
             ['Property ID', estimate.property_code || estimate.propertyCode],
             ['Zone', estimate.zone],
-            ['Division', estimate.division],
+            ['Division', shortDivision(estimate.division)],
             ['City', estimate.city],
             ['Tower / Building', decode(estimate.tower_name || estimate.towerName)],
             ['Block Number', estimate.block_number || estimate.blockNumber],
