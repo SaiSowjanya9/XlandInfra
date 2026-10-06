@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { formatCurrency, getPackagePropertyTypes, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import { decodeEntities } from '../../utils/text';
+import { packageInternalSummary } from '../../utils/packageServicePricing';
+import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
 
 /**
  * An AMC package opened from the AMC Packages list, in place of the list -- inside the portal, with
@@ -34,7 +36,10 @@ const packageBilling = pkg => {
   return String(pkg?.billingDuration || pkg?.billing_duration || stored?.billing_duration || 'yearly').replace('-', ' ');
 };
 
-export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back to AMC Packages', actions = null }) {
+// `internal` -- only for the portals allowed internal figures (Admin, Operations Manager, FP,
+// Manager) -- adds the package's INTERNAL panel under its price summary: the same four figures the
+// create form showed when the package was made, from what was saved with it.
+export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back to AMC Packages', actions = null, internal = false }) {
   // Escape returns to the list like the Back button. Opening a package brings its top into view,
   // since the row clicked may have been far down the list.
   const topRef = useRef(null);
@@ -56,6 +61,7 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
   const gst = price * gstPercent / 100;
   const description = decode(pkg.description).trim();
   const name = decode(pkg.name || pkg.packageName || pkg.package_name) || 'Unnamed Package';
+  const figures = internal ? packageInternalSummary(rows, price) : null;
   const code = pkg.packageId || pkg.package_code || `PKG-${pkg.id}`;
 
   return (
@@ -146,6 +152,13 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
               <div className="flex items-center justify-between border-t border-warm-border pt-3"><span className="font-bold text-warm-text">Total</span><span className="text-xl font-bold text-green-600">{formatCurrency(price + gst)}</span></div>
             </div>
           </div>
+
+          {internal && (figures
+            ? <EstimateProfitSummaryPanel vendorCost={figures.vendorCost} operatingCost={figures.operatingCost}
+                customerPrice={figures.customerPrice} className="border-t border-warm-border pt-4" />
+            : <p className="border-t border-warm-border pt-4 text-[11px] text-warm-muted print:hidden">
+                INTERNAL: this package was saved before its services carried a vendor cost, so there are no internal figures to show. Open it in Edit and save it once to record them.
+              </p>)}
         </div>
       </div>
     </section>

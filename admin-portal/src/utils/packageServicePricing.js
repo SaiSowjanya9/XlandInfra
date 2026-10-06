@@ -134,6 +134,26 @@ export const applyPackageMarkup = (rows = [], markup) =>
  * the name the rest of the pricing UI uses, so vendor cost plus XLAND cost (plus any operating
  * cost) comes to exactly the package price.
  */
+/**
+ * A saved package's internal figures, for its view and its PDF -- the same four the create form
+ * shows: Annual Vendor Cost, XLAND Cost, Customer Price, Margin. Every saved row keeps the vendor
+ * cost it was priced on, and the package keeps the price it sells for, so nothing is re-quoted:
+ * vendor cost is the rows' sum, the customer price is the saved package price, and XLAND cost is
+ * the difference. A package saved before rows carried a vendor cost has nothing to go on, so it
+ * returns null rather than reporting the whole price as margin.
+ */
+export const packageInternalSummary = (rows = [], price) => {
+  const costed = (Array.isArray(rows) ? rows : []).filter(row =>
+    row && row.vendorCost !== '' && row.vendorCost != null && Number.isFinite(Number(row.vendorCost)));
+  if (!costed.length) return null;
+  const vendorCost = round2(costed.reduce((sum, row) => sum + Number(row.vendorCost), 0));
+  const operatingCost = round2(costed.reduce((sum, row) => sum + (Number(row.operatingCost) || 0), 0));
+  const customerPrice = round2(Number(price) || 0);
+  const xlandCost = round2(customerPrice - vendorCost - operatingCost);
+  return { vendorCost, operatingCost, customerPrice, xlandCost,
+    marginPercent: customerPrice ? round2(xlandCost / customerPrice * 100) : null };
+};
+
 export const packageTotals = (rows = [], markup) => {
   const withMarkup = hasMarkup(markup) ? applyPackageMarkup(rows, markup) : rows;
   const priced = withMarkup.filter(row => Number.isFinite(Number(row?.price)));

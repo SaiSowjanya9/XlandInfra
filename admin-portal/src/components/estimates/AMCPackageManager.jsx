@@ -482,7 +482,7 @@ const AMCPackageManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
       {/* All AMC Packages Tab - With Property Type Filter */}
       {/* A package opens here, in place of the list, as an estimate does in All Estimates */}
-      {activeTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} />}
+      {activeTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} internal />}
       {activeTab === 'all-packages' && !viewAmcPackage && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">

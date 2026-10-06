@@ -3070,7 +3070,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* All Packages Tab */}
       {/* A package opens here, in place of the list, as an estimate does in All Estimates */}
-      {amcActiveTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={closeViewPackage} />}
+      {amcActiveTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={closeViewPackage} internal />}
       {amcActiveTab === 'all-packages' && !viewAmcPackage && (
         <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
           <div className="px-6 py-4 border-b border-warm-border">
