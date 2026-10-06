@@ -5,9 +5,10 @@ import { normalizeServiceRow } from './EstimateDraftServicesTable';
 
 /**
  * The services on a saved estimate: what the service is, how it was priced, what was measured at
- * the property, its schedule, and the customer's price.
+ * the property and its schedule. No service states a price of its own: the estimate is priced as a
+ * whole, in the Total Services Price line under the table and the Price Summary.
  *
- * **The customer's price is the only money in it unless `internal` is set.** With `internal`, the
+ * **There is no money in it unless `internal` is set.** With `internal`, the
  * table adds Vendor Cost, XLAND Cost and Margin % and states the rate under the measured input —
  * the same columns the create form's draft table shows. Only Admin, Operations Manager and FP may
  * see them, so `internal` is passed only from those portals' detail views; Manager, Coordinator,
@@ -62,17 +63,13 @@ const serviceColumns = (decode, internal) => {
     <p className={`whitespace-nowrap text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
-  // A package's own service is paid for by the package price, not on its own: it reads "Included"
-  // rather than ₹0, and has no XLAND cost or margin of its own -- those belong to the package
+  // A package's own service is paid for by the package price, not on its own: it has no XLAND cost
+  // or margin of its own -- those belong to the package
   const inPackage = row => row._tag === 'Package';
   const vendor = { label: 'Vendor Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceVendorCost(row)) };
   const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => (inPackage(row) ? money(null) : money(getServiceXlandCost(row))) };
-  const price = { label: 'Customer Price', head: 'text-center', cell: 'text-center',
-    render: row => (inPackage(row)
-      ? <p className="whitespace-nowrap text-xs text-warm-muted">Included</p>
-      : <p className="whitespace-nowrap text-xs text-gray-800 font-semibold">{formatCurrency(getAddonPrice(row))}</p>) };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
       if (inPackage(row)) return <p className="text-xs text-warm-muted">—</p>;
@@ -80,8 +77,8 @@ const serviceColumns = (decode, internal) => {
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
     } };
   return internal
-    ? [number, service, method, input, frequency, visits, vendor, xland, price, margin]
-    : [number, service, method, input, frequency, visits, price];
+    ? [number, service, method, input, frequency, visits, vendor, xland, margin]
+    : [number, service, method, input, frequency, visits];
 };
 
 export default function EstimateServicesTable({ rows, total, note = null, decode = value => value ?? '',
@@ -111,20 +108,20 @@ export default function EstimateServicesTable({ rows, total, note = null, decode
             </tr>
           ))}
         </tbody>
-        {/* The figure sits in the Customer Price column. The label spans the six columns every
-            view has; the internal cost cells either side are their own cells, so when print hides
-            them the total still lands under the price. */}
+        {/* One figure for all the services, across the full width */}
         <tfoot className="bg-warm-section">
           <tr>
-            <td colSpan={6} className={`${cell} font-semibold text-warm-text`}>Total Services Price</td>
-            {internal && <td colSpan={2} className={`${cell} print:hidden`} />}
-            <td className={`${cell} whitespace-nowrap text-center font-bold text-warm-text`}>{formatCurrency(sum)}</td>
-            {internal && <td className={`${cell} print:hidden`} />}
+            <td colSpan={columns.length} className={cell}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-warm-text">Total Services Price</span>
+                <span className="whitespace-nowrap font-bold text-warm-text">{formatCurrency(sum)}</span>
+              </div>
+            </td>
           </tr>
           {/* A small line under the total, e.g. which AMC package it includes and at what price */}
           {note && (
             <tr>
-              <td colSpan={internal ? 10 : 7} className="px-3 pb-2 pt-0 text-[11px] text-warm-muted">{note}</td>
+              <td colSpan={columns.length} className="px-3 pb-2 pt-0 text-right text-[11px] text-warm-muted">{note}</td>
             </tr>
           )}
         </tfoot>

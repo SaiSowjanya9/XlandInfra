@@ -661,22 +661,13 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     const isWorkOrder = data.isWorkOrderEstimate || data.estimate_type === 'work_order' || data.estimateType === 'work_order' || data.workOrderId;
     const services = data.services || data.packageServices || [];
     
-    // Both service lists share one renderer, and an estimate's carries a Price column. There is no
-    // Qty column -- the user asked for it to go. A package's own services are covered by the
-    // package price, so their Price cell reads as a dash rather than as zero.
+    // Both service lists share one renderer. No service states a price of its own -- the estimate
+    // is priced as a whole, in Total Services Price and the Price Summary -- and there is no Qty
+    // column; the user asked for both to go. `priced` still marks an estimate, whose total is shown.
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
-    const serviceHead = priced
-      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'PRICE']]
-      : [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
-    const serviceColumnStyles = priced ? {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 36, halign: 'left' },
-      2: { cellWidth: 68, halign: 'left' },
-      3: { cellWidth: 26, halign: 'center' },
-      4: { cellWidth: 14, halign: 'center' },
-      5: { cellWidth: 26, halign: 'right' }
-    } : {
+    const serviceHead = [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
+    const serviceColumnStyles = {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 40, halign: 'left' },
       2: { cellWidth: 82, halign: 'left' },
@@ -722,18 +713,14 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
         return trimmed.slice(String(category).length).replace(/^\s*\|\s*/, '').trim();
       }).filter(Boolean).join('\n');
     };
-    const serviceRow = (item, index, { charged = true } = {}) => {
+    const serviceRow = (item, index) => {
       const category = decodeHtml(String(item.category || ''));
       const name = [decodeHtml(String(item.name || item.service || item.serviceName || item.service_name || 'Service')),
         category].filter(Boolean).join('\n');
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
       const details = withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category);
-      const row = [String(index + 1), name, details || '-', freqType, String(visits)];
-      if (!priced) return row;
-      // A package's own service is paid for by the package price, as the estimate view says too
-      row.push(charged ? formatCurrency(getAddonPrice(item)) : 'Included');
-      return row;
+      return [String(index + 1), name, details || '-', freqType, String(visits)];
     };
 
     if (!isWorkOrder && services.length > 0) {
@@ -746,7 +733,7 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       autoTable(doc, {
         startY: y,
         head: serviceHead,
-        body: services.map((service, index) => serviceRow(service, index, { charged: false })),
+        body: services.map((service, index) => serviceRow(service, index)),
         ...serviceTableStyles
       });
 
