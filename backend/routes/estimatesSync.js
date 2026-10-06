@@ -58,6 +58,8 @@ router.get('/', authenticate, adminOnly, async (req, res) => {
         [isArchived ? 1 : 0]
       );
       fpEstimates = fpEst;
+      // Older estimates' package services lack their method and amount; complete them from the package
+      await require('../utils/packageSnapshot').fillPackageServiceDetails(pool, fpEstimates);
     } catch (e) { console.log('FP estimates fetch:', e.message); }
     
     // Combine both tables

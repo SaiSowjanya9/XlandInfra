@@ -49,6 +49,12 @@ const serviceColumns = (decode, internal) => {
     // for everyone, while a ₹ rate is the vendor's price and shows to internal viewers only.
     render: row => {
       const sub = getServiceRate(row);
+      // A package's capacity-slab service was set up by choosing a slab, not by entering a capacity:
+      // its stored amount is only a point inside that slab, so the slab itself is what it states --
+      // "0 - 3 KL", as the package form shows it
+      if (row._tag === 'Package' && row.pricing_method === 'capacity_slab' && sub && !sub.includes('₹')) {
+        return <p className="text-xs text-gray-700 break-words">{sub.replace(/^[^:]*:\s*/, '')}</p>;
+      }
       const showSub = sub && (!sub.includes('₹') || internal);
       return <>
         <p className="text-xs text-gray-700 break-words">{getServiceInput(row) || '-'}</p>

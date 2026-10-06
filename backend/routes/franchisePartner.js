@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const { attachPackageSnapshot } = require('../utils/packageSnapshot');
+const { attachPackageSnapshot, fillPackageServiceDetails } = require('../utils/packageSnapshot');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
@@ -4286,6 +4286,8 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     query += ' ORDER BY fe.created_at DESC';
 
     const [estimates] = await pool.execute(query, params);
+    // Older estimates' package services lack their method and amount; complete them from the package
+    await fillPackageServiceDetails(pool, estimates);
 
     // Get FP's name to use for estimates with email as creator name
     let fpContactName = 'Franchise Partner';
