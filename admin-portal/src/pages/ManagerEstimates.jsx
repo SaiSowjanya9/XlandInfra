@@ -2401,7 +2401,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal />
+        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal onPrint={() => handlePrintEstimate(estimate)} />
       </div>
     </div>
   );

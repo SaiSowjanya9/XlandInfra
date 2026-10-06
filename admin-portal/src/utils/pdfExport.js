@@ -1,7 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails, getPackagePropertyTypes, getPropertyTypeLabel, serviceMethodAndInput, withoutInputSegment } from './estimatePackageUtils';
+import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails, getPackagePropertyTypes, getPropertyTypeLabel, serviceMethodAndInput, withoutInputSegment, customerServiceDetails } from './estimatePackageUtils';
 import { billToParty } from './estimateStore';
 import { estimateTermsLines } from './estimateTerms';
 import { packageInternalSummary } from './packageServicePricing';
@@ -724,7 +724,9 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
         category, tag].filter(Boolean).join('\n');
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
-      const details = withoutInputSegment(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), item.input);
+      // The customer's description: no method, Primary Input or property types (they are ours, or
+      // have their own columns), and no restated amount -- as the emailed PDF prints it
+      const details = withoutInputSegment(customerServiceDetails(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), category), item.input);
       return [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
     };
 

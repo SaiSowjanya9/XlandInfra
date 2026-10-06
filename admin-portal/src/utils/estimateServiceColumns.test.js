@@ -61,3 +61,9 @@ test('a service states the rate it was priced at, per pricing method', () => {
   assert.equal(rate({ pricing_method: 'custom_quote', pricingSnapshot: { vendorRatePerVisit: 2500 } }), '₹2,500 / Visit');
   assert.equal(rate({ customService: true, name: 'Hand entered', quantity: 2 }), '');
 });
+
+test('a customer document drops the method, Primary Input and category from a service description', async () => {
+  const { customerServiceDetails } = await import('./estimatePackageUtils.js');
+  assert.equal(customerServiceDetails('Inspection, lubrication.\nCapacity Slab | Primary Input: Lift Fully Manual Capacity', 'Lifts'), 'Inspection, lubrication.');
+  assert.equal(customerServiceDetails('Lifts | Area: 10 Sq Ft | Property Types: GC, APT', 'Lifts'), 'Area: 10 Sq Ft');
+});

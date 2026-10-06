@@ -706,7 +706,7 @@ const EstimatesList = ({
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Admin and Operations Manager are internal roles — the services table also shows
               Vendor Cost, XLAND Cost and Margin %, matching the backend's margin gate. */}
-          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml}
+          <EstimateDetailPanel estimate={detailEstimate} decode={decodeHtml} onPrint={() => handlePrintEstimate(detailEstimate)}
             internal={['admin', 'operations_manager'].includes(admin?.role)} />
         </div>
       </div>

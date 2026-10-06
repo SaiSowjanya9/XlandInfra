@@ -25,6 +25,7 @@ import { capitalizeFirst } from '../utils/text';
 
 const ITEMS_PER_PAGE = 10;
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
+import usePrintShortcut from '../hooks/usePrintShortcut';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
 import { getServiceDescription } from '../utils/estimatePackageUtils';
 import EstimateServicesTable from '../components/estimates/EstimateServicesTable';
@@ -209,6 +210,8 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
+  // Ctrl+P prints the open estimate's document, as its Print button does
+  usePrintShortcut(viewEstimate ? () => { if (!printEstimatePDF(viewEstimate)) window.print(); } : null);
   // Terms & Conditions: the standard clauses. Editing them belongs to Admin, Operations Manager
   // and FP, so a Coordinator estimate carries the default wording and the card is read-only
   const { includeTerms, termsConditions } = newEstimateTerms();

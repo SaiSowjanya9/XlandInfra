@@ -3862,7 +3862,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
       <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
         {/* FP is internal — the services table also shows Vendor Cost, XLAND Cost and Margin % */}
-        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal />
+        <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal onPrint={() => handlePrintEstimate(estimate)} />
       </div>
     </div>
   );
