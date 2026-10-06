@@ -519,7 +519,7 @@ router.delete('/:estimateId', authenticate, requireRole('admin'), async (req, re
 });
 
 // SEND estimate email to customer
-router.post('/:estimateId/send', authenticate, requireRole('admin'), async (req, res) => {
+const sendAdminEstimateHandler = async (req, res) => {
   try {
     if (!db.isDbConnected) {
       return res.status(503).json({ success: false, message: 'Database not connected' });
@@ -702,6 +702,45 @@ router.post('/:estimateId/send', authenticate, requireRole('admin'), async (req,
     }
   } catch (error) {
     console.error('Send estimate email error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+router.post('/:estimateId/send', authenticate, requireRole('admin'), sendAdminEstimateHandler);
+
+// Change an estimate's status from the Admin list. The list's dropdown called a route that did not
+// exist, so no status change was saved. Moving an estimate into Sent emails it to the customer --
+// every time it moves there, so Sent, Draft, Sent sends it twice -- and the status is only set once
+// the email has gone. An FP-owned estimate is handed to the FP status handler, which does the same.
+const STATUS_VALUES = { draft: 'Draft', sent: 'Sent', approved: 'Approved', rejected: 'Rejected' };
+router.put('/:estimateId/status', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    if (!db.isDbConnected) return res.status(503).json({ success: false, message: 'Database not connected' });
+    const status = String(req.body?.status || '').toLowerCase();
+    if (!STATUS_VALUES[status]) return res.status(400).json({ success: false, message: 'Invalid status. Must be one of: draft, sent, approved, rejected' });
+    const { estimateId } = req.params;
+    const pool = db.pool;
+    const [[own]] = await pool.execute('SELECT id, status FROM estimates WHERE estimate_id = ? AND is_active = 1', [estimateId]);
+    if (!own) {
+      const [[fpEstimate]] = await pool.execute('SELECT id, franchise_partner_id FROM fp_estimates WHERE estimate_id = ?', [estimateId]);
+      if (!fpEstimate) return res.status(404).json({ success: false, message: 'Estimate not found' });
+      req.fpId = fpEstimate.franchise_partner_id;
+      req.params.id = fpEstimate.id;
+      req.body = { status };
+      return require('./franchisePartner').updateEstimateStatusHandler(req, res);
+    }
+    if (status === 'sent' && String(own.status || '').toLowerCase() !== 'sent') return sendAdminEstimateHandler(req, res);
+    await pool.execute('UPDATE estimates SET status = ? WHERE id = ?', [STATUS_VALUES[status], own.id]);
+    let invoiceResult = null;
+    if (status === 'approved') {
+      try {
+        invoiceResult = await require('../services/invoiceService').generateInvoiceFromEstimate(own.id, req.user?.id || null, 'regular');
+      } catch (invoiceError) {
+        console.error('Failed to auto-generate invoice:', invoiceError.message);
+      }
+    }
+    res.json({ success: true, status, message: invoiceResult?.invoiceId ? `Status updated to approved and invoice ${invoiceResult.invoiceId} created` : 'Status updated successfully' });
+  } catch (error) {
+    console.error('Update estimate status error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

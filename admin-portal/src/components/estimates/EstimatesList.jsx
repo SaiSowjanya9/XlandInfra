@@ -415,16 +415,18 @@ const EstimatesList = ({
   };
 
   // Handle estimate status change
-  const handleStatusChange = async (estimateId, newStatus) => {
+  // By estimate code: the list holds Admin's own estimates and FP ones, whose numeric ids overlap.
+  // Moving an estimate into Sent emails it to the customer, every time.
+  const handleStatusChange = async (estimate, newStatus) => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/estimates/${estimateId}/status`, {
+      const response = await fetch(`${API_BASE}/api/estimates-sync/${encodeURIComponent(estimate.estimateId || estimate.estimate_id)}/status`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
       const result = await response.json();
       if (result.success) {
-        showToast(`Status updated to ${STATUS_LABELS[newStatus] || newStatus}`);
+        showToast(newStatus === 'sent' && result.message ? result.message : `Status updated to ${STATUS_LABELS[newStatus] || newStatus}`);
         onRefresh();
       } else {
         showToast(result.message || 'Failed to update status', 'error');
@@ -1002,7 +1004,7 @@ const EstimatesList = ({
                         <div className="relative inline-block">
                           <select
                             value={(estimate.status || 'draft').toLowerCase()}
-                            onChange={(e) => handleStatusChange(estimate.id, e.target.value)}
+                            onChange={(e) => handleStatusChange(estimate, e.target.value)}
                             className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${STATUS_STYLES[estimate.status] || 'bg-gray-100 text-gray-700'}`}
                           >
                             <option value="draft" className="bg-white text-gray-900">Draft</option>

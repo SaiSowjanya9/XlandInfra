@@ -2576,6 +2576,27 @@ router.post('/estimates/send-email', requireManagerScope, async (req, res) => {
   }
 });
 
+// Change an estimate's status. The Manager list's status dropdown called this and it did not
+// exist, so no status change was saved. Scoped as sending is; the FP handler does the rest,
+// including emailing the customer whenever the estimate moves into Sent.
+router.put('/estimates/:id/status', requireManagerScope, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    const creator = getCreatorIdentifier(req);
+    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'manager'), creator);
+    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.managerId, role: 'manager',
+      creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
+      return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
+    }
+    req.fpId = req.franchisePartnerId;
+    return require('./franchisePartner').updateEstimateStatusHandler(req, res);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to update the estimate status.' });
+  }
+});
+
 // Create estimate - dual-tag with manager_id AND franchise_partner_id
 router.post('/estimates', requireManagerScope, attachPackageSnapshot(pool), require('./managerServiceCatalog').validatePackageEstimate, async (req, res) => {
   try {

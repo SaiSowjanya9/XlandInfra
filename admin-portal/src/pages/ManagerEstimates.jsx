@@ -2347,7 +2347,8 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
       });
       const result = await res.json();
       if (result.success) {
-        showToast(`Status updated to ${getStatusLabel(newStatus)}`);
+        // Moving to Sent emails the estimate; the server says to whom
+        showToast(newStatus === 'sent' && result.message ? result.message : `Status updated to ${getStatusLabel(newStatus)}`);
         loadData();
       } else {
         showToast(result.message || 'Failed to update status', 'error');
