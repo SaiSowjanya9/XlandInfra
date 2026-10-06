@@ -264,8 +264,10 @@ const drawLetterhead = (doc, margin, { party = {}, meta = [] } = {}) => {
     companyRight = Math.max(companyRight, textLeft + doc.widthOfString(line));
     lineY += 10;
   });
+  // The contact line sits a little apart from the address, so the two read as separate blocks
+  lineY += 5;
 
-  // The one contact line, directly under the address
+  // The one contact line, under the address
   doc.fontSize(7);
   let contactX = textLeft;
   contactItems.forEach(item => {

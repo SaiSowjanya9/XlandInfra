@@ -336,7 +336,9 @@ const drawEstimateLetterhead = (doc, margin, data, { kind = 'estimate' } = {}) =
     companyRight = Math.max(companyRight, textLeft + doc.getTextWidth(line));
     lineY += 3.6;
   });
-  // The one contact line, directly under the address
+  // The contact line sits a little apart from the address, so the two read as separate blocks
+  lineY += 1.6;
+  // The one contact line, under the address
   doc.setFontSize(7);
   let contactX = textLeft;
   contactItems.forEach(item => {

@@ -939,9 +939,10 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </tr>`).join('')}
                     <!-- The phone, the email and the website share a single line beneath the
                          address, each behind its own icon. Stacked, the three of them made the
-                         block six lines deep for what is one thought: how to reach us. -->
+                         block six lines deep for what is one thought: how to reach us. A little
+                         space parts it from the address above. -->
                     <tr>
-                      <td style="padding-top: 3px;">
+                      <td style="padding-top: 8px;">
                         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
                           ${COMPANY_CONTACT_LINES.map(([kind, value], index) => `
                           ${index ? '<td style="width: 12px;"></td>' : ''}
