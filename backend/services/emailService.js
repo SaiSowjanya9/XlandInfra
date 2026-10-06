@@ -1288,10 +1288,15 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             ${workOrderHtml}
             ${servicesList.length ? servicesTable(servicesHtml, 'AMC Package &mdash; Services Included') : ''}
             <!-- They are simply services, however they were added, so the heading does not vary -->
-            ${addonsList.length ? servicesTable(addonsHtml, 'Services') + `
+            ${addonsList.length ? servicesTable(addonsHtml, 'Services') : ''}
+            <!-- The whole of it: package price plus added services, so it matches the subtotal -->
+            ${(addonsList.length || Number(estimate.packagePrice) > 0) ? `
             <p style="margin: 8px 0 0 0; text-align: right; font-size: 12px; font-weight: 700; color: ${WARM.text};">
-              Total Services Price: Rs. ${money(addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}
-            </p>` : ''}
+              Total Services Price: Rs. ${money((Number(estimate.packagePrice) || 0) + addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}
+            </p>${packageName && Number(estimate.packagePrice) > 0 ? `
+            <p style="margin: 2px 0 0 0; text-align: right; font-size: 11px; color: ${WARM.muted};">
+              Includes the AMC package &ldquo;${emailText(packageName)}&rdquo; at Rs. ${money(Number(estimate.packagePrice))}.
+            </p>` : ''}` : ''}
 
             <!-- Price Summary, against the right edge as it is on the PDF -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 18px;">

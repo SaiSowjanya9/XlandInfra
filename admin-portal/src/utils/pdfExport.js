@@ -740,7 +740,8 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       const details = withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category);
       const row = [String(index + 1), name, details || '-', freqType, String(visits)];
       if (!priced) return row;
-      row.push(charged ? formatCurrency(getAddonPrice(item)) : '-');
+      // A package's own service is paid for by the package price, as the estimate view says too
+      row.push(charged ? formatCurrency(getAddonPrice(item)) : 'Included');
       return row;
     };
 
@@ -779,14 +780,29 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       y = doc.lastAutoTable.finalY + 6;
     }
 
-    if (!isWorkOrder && data.addons?.length) {
-      if (y + 12 > pageHeight) { doc.addPage(); y = 20; }
+    // Total Services Price is the whole of it: the package price plus the added services, so it
+    // agrees with the Price Summary's subtotal. It used to count the added services alone, which
+    // printed Rs. 3,42,384 above a subtotal of Rs. 3,87,384. A small line under it names the
+    // package, as the estimate view does.
+    const packagePrice = Number(data.packagePrice) || 0;
+    if (priced && !isWorkOrder && (data.addons?.length || services.length || packagePrice)) {
+      if (y + 18 > pageHeight) { doc.addPage(); y = 20; }
+      const addonsTotal = data.addonsTotal ?? (data.addons || []).reduce((sum, addon) => sum + getAddonPrice(addon), 0);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...heading);
       doc.text('Total Services Price', margin, y);
-      doc.text(formatCurrency(data.addonsTotal ?? data.addons.reduce((sum, addon) => sum + getAddonPrice(addon), 0)), pageWidth - margin, y, { align: 'right' });
-      y += 8;
+      doc.text(formatCurrency(packagePrice + addonsTotal), pageWidth - margin, y, { align: 'right' });
+      y += 5;
+      if (data.packageName && packagePrice) {
+        const count = services.length;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...warmMuted);
+        doc.text(`Includes the AMC package "${decodeHtml(String(data.packageName))}" at ${formatCurrency(packagePrice)}${count ? `, covering ${count} service${count === 1 ? '' : 's'}` : ''}.`, margin, y);
+        y += 4;
+      }
+      y += 4;
     }
 
     // ===== PRICE SUMMARY (Plain, right-aligned) =====
@@ -1125,6 +1141,8 @@ const estimateExportData = (estimate) => {
       estimateId: estimate.estimateId || estimate.estimate_id || estimate.id || 'EST-' + Date.now(),
       estimateType: estimate.estimateType || estimate.estimate_type || (estimate.propertyId || estimate.property_id ? 'property-based' : 'direct'),
       packageName: estimate.packageName || estimate.package_name,
+      // The package's price belongs in Total Services Price beside the added services
+      packagePrice: parseFloat(estimate.packagePrice ?? estimate.package_price ?? estimate.packageRate) || 0,
       amcPackageDescription: estimate.amc_package_description || estimate.amcPackageDescription || '',
       propertyId: estimate.propertyId || estimate.property_id,
       // The code the property is known by, named in BILL TO beside the customer

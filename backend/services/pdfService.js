@@ -795,11 +795,21 @@ const generateEstimatePDF = async (estimate) => {
 
         sectionHeading('Services');
         drawServicesTable(addonList.map(tableRow));
-
-        if (y + 20 > pageHeight) { doc.addPage(); y = MARGIN; }
+      }
+      // Total Services Price is the whole of it -- the package price plus the added services -- so
+      // it agrees with the Price Summary's subtotal; it used to leave the package out. A small line
+      // under it names the package, as the portal's estimate view and printed copy do.
+      const pkgPrice = Number(packagePrice) || 0;
+      if (!isWOEstimate && (addonList.length > 0 || pkgPrice > 0)) {
+        if (y + 30 > pageHeight) { doc.addPage(); y = MARGIN; }
         const addonsTotal = addonList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0);
         doc.fontSize(9).font('Helvetica-Bold').fillColor(navy)
-           .text(`Total Services Price: Rs. ${money(addonsTotal)}`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
+           .text(`Total Services Price: Rs. ${money(pkgPrice + addonsTotal)}`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
+        if (packageName && pkgPrice > 0) {
+          y += 13;
+          doc.fontSize(7).font('Helvetica').fillColor('#6B7280')
+             .text(`Includes the AMC package "${decodeHtml(String(packageName))}" at Rs. ${money(pkgPrice)}.`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
+        }
         y += GAP.section;
       }
 
