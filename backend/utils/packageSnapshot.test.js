@@ -81,3 +81,23 @@ test('a configured service saved on the package with no price still states its c
   assert.equal(cleaning.packageShare, 5400, 'the package price is all Deep Cleaning\'s');
   assert.equal(cleaning.vendorCost, 4000);
 });
+
+test('a package row saved without its catalog link is found by name, and priced even when its schedule is refused', async () => {
+  const lift = { service_name: 'Lift Fully Manual', pricing_method: 'capacity_slab', applicable_property_types: ['GC', 'VILLA', 'APT'], unit: 'KL',
+    default_markup_percentage: 35, default_frequency: 'Monthly', default_visits_per_year: 12, allow_frequency_override: false, allow_manual_visits: false,
+    capacity_slabs: [{ name: 'Small', capacityFrom: 0, capacityTo: 3, vendorRate: 6000, isCustomQuote: false }] };
+  // No catalogServiceId, the unit it was saved with, and a frequency the service no longer allows
+  const stored = { markup_percentage: 35, property_types: ['GC'], serviceRows: [
+    { service: 'Lift Fully Manual', pricingMethod: 'capacity_slab', unit: 'Persons', inputValue: 0, frequencyType: 'Quarterly', frequencyCount: 4, price: '' },
+    { service: 'Deep Cleaning', price: 4000, vendorCost: 4000, frequencyType: 'Yearly', frequencyCount: 1 }
+  ] };
+  const db = { execute: async (sql, params) => {
+    if (sql.includes('FROM fp_amc_packages')) return [[{ services: JSON.stringify(stored), price: 5400 }]];
+    if (sql.includes('FROM service_catalog WHERE scope_id IN')) { assert.deepEqual(params, [8]); return [[{ id: 7, configuration: JSON.stringify(lift), scope_id: 0 }]]; }
+    throw new Error(`Unexpected SQL: ${sql}`);
+  } };
+  const estimate = { package_id: 3, franchise_partner_id: 8, package_price: 5400, package_services: [{ name: 'Lift Fully Manual' }, { name: 'Deep Cleaning' }] };
+  await fillPackageServiceDetails(db, [estimate]);
+  assert.equal(estimate.package_services[0].vendorCost, 72000, 'priced on the service\'s own schedule: 6,000 x 12');
+  assert.equal(estimate.package_services[0].packageShare, 0);
+});
