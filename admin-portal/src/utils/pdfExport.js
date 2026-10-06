@@ -1,7 +1,7 @@
 // Professional PDF Export using jsPDF - Direct Download, No Print Dialog
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails } from './estimatePackageUtils';
+import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails, getPackagePropertyTypes, getPropertyTypeLabel } from './estimatePackageUtils';
 import { billToParty } from './estimateStore';
 import { estimateTermsLines } from './estimateTerms';
 import { packageInternalSummary } from './packageServicePricing';
@@ -238,7 +238,10 @@ const drawContactIcon = (doc, kind, x, y, size) => {
   }
 };
 
-const drawEstimateLetterhead = (doc, margin, data) => {
+// `kind` is 'estimate' or 'package'. A package is billed to nobody, so its card names the package
+// -- what it covers and how many services -- and its strip reads Package No., Date, Billing, Services.
+const drawEstimateLetterhead = (doc, margin, data, { kind = 'estimate' } = {}) => {
+  const isPackage = kind === 'package';
   const pageWidth = doc.internal.pageSize.getWidth();
   const gold = [201, 162, 39];
   const labelGray = [107, 114, 128];
@@ -353,15 +356,19 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   // A gated community or an apartment estimate is billed to the property, so its name takes the
   // headline and the customer drops to a Contact line; a villa, flat or plot is billed to the
   // person and the property stays a row. billToParty decides.
-  const billedTo = billToParty(data);
-  const rows = [
+  const serviceCount = (data.services || []).length;
+  const billedTo = isPackage ? { name: data.packageName || 'AMC Package' } : billToParty(data);
+  const rows = (isPackage ? [
+    ['Applies To', data.propertyTypeLabel || data.propertyType],
+    ['Services', serviceCount ? String(serviceCount) : '']
+  ] : [
     ['Contact', billedTo.contact],
     ['Phone', data.customerPhone],
     ['Email', data.customerEmail],
     ['Property', billedTo.property],
     ['Prop ID', data.propertyCode],
     ['City', data.city]
-  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  ]).filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   doc.setFontSize(7);
   const widestValue = rows.reduce((width, [, value]) => Math.max(width, doc.getTextWidth(decodeHtml(String(value)))), 0);
@@ -395,7 +402,7 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.5);
   doc.setTextColor(138, 109, 18);
-  doc.text('BILL TO', boxX + 4, logoY + 3.7, { charSpace: 0.6 });
+  doc.text(isPackage ? 'AMC PACKAGE' : 'BILL TO', boxX + 4, logoY + 3.7, { charSpace: 0.6 });
 
   let rowY = logoY + capHeight + 4.5;
   doc.setFontSize(9.5);
@@ -431,12 +438,18 @@ const drawEstimateLetterhead = (doc, margin, data) => {
   const estimateType = String(data.estimateType || data.estimate_type || '-').replace(/_/g, ' ');
   const stripWidth = pageWidth - margin * 2;
   const fieldWidth = (stripWidth - 12) / 4;
-  const fields = [
+  const billingLabel = billing.charAt(0).toUpperCase() + billing.slice(1).replace('-', ' ');
+  const fields = (isPackage ? [
+    ['PACKAGE NO.', String(data.packageCode || data.packageId || data.estimateId || '-')],
+    ['DATE', formatDate(data.createdAt)],
+    ['BILLING', billingLabel],
+    ['SERVICES', String(serviceCount)]
+  ] : [
     ['ESTIMATE NO.', String(data.estimateId || data.packageId || '-')],
     ['DATE', formatDate(data.createdAt)],
     ['TYPE', estimateType.charAt(0).toUpperCase() + estimateType.slice(1)],
-    ['BILLING', billing.charAt(0).toUpperCase() + billing.slice(1).replace('-', ' ')]
-  ].map(([label, value], index) => [label, value, margin + 6 + index * fieldWidth, fieldWidth - 4]);
+    ['BILLING', billingLabel]
+  ]).map(([label, value], index) => [label, value, margin + 6 + index * fieldWidth, fieldWidth - 4]);
   fields.forEach(([label, value, x, width]) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(5.5);
@@ -471,39 +484,14 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     const borderLight = [229, 231, 235];     // Gray-200
     const gold = [180, 144, 52];             // Professional gold
     const { section: warmSection, border: warmBorder, accent: warmAccent, text: warmText, muted: warmMuted } = WARM;
-    // An estimate's headings read in warm text; a package export keeps the navy it had
-    const heading = type === 'estimate' ? warmText : navy;
+    // An estimate and a package are one house style: the letterhead, warm headings, cream tables
+    const warm = type === 'estimate' || type === 'package';
+    const heading = warm ? warmText : navy;
 
     // ===== HEADER =====
-    // An estimate gets the letterhead -- company left, BILL TO right, document strip under both.
-    // A package export keeps the centred brand strip and its own ID / date row.
-    let y;
-    if (type === 'estimate') {
-      y = drawEstimateLetterhead(doc, margin, data);
-    } else {
-      y = drawPDFHeader(doc, margin);
-      const metaY = y + 4;
-      doc.setFontSize(7);
-      doc.setTextColor(107, 114, 128); // gray-500
-      doc.text('PACKAGE NO.', margin, metaY);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(17, 24, 39); // gray-900
-      const estId = String(data.estimateId || data.packageId || 'N/A');
-      doc.text(estId.length > 25 ? estId.substring(0, 25) + '...' : estId, margin, metaY + 5);
-
-      const col2X = margin + 80;
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(107, 114, 128);
-      doc.text('DATE', col2X, metaY);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(17, 24, 39);
-      doc.text(formatDate(data.createdAt), col2X, metaY + 5);
-
-      y += 18;
-    }
+    // The letterhead -- company left, the card facing it right, the document strip under both. An
+    // estimate's card is BILL TO; a package's names the package, since it is billed to nobody.
+    let y = drawEstimateLetterhead(doc, margin, data, { kind: type === 'package' ? 'package' : 'estimate' });
 
     // ===== PROPERTY DETAILS (Plain, stacked vertically) =====
     if (type !== 'package') {
@@ -638,9 +626,9 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       doc.text('PACKAGE DESCRIPTION', margin, y);
       y += 6;
       
-      // Cream on an estimate, like the panel the backend's PDF draws; grey on a package export
-      doc.setFillColor(...(type === 'estimate' ? warmSection : cardBg));
-      doc.setDrawColor(...(type === 'estimate' ? warmBorder : borderLight));
+      // Cream, like the panel the backend's PDF draws
+      doc.setFillColor(...(warm ? warmSection : cardBg));
+      doc.setDrawColor(...(warm ? warmBorder : borderLight));
       const descLines = doc.splitTextToSize(String(data.amcPackageDescription), pageWidth - margin * 2 - 8);
       // Allow full description - up to 80 height and 20 lines
       const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 80);
@@ -653,8 +641,8 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       y += descBoxH + 4;
     }
 
-    // Billing is stated in the header strip on an estimate; a package export still names it here
-    if (type !== 'estimate') {
+    // Billing is stated in the letterhead's strip on an estimate and a package alike
+    if (!warm) {
       const billingValue = data.billing_duration || data.billingDuration || 'Yearly';
       const formattedBilling = billingValue.charAt(0).toUpperCase() + billingValue.slice(1).replace('-', ' ');
       doc.setFontSize(9);
@@ -678,7 +666,7 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     // Uppercase and aligned per column, as the backend's PDF sets them
     const serviceHead = priced
       ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'PRICE']]
-      : [['#', 'Service', 'Description', 'Frequency', 'Visits']];
+      : [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
     const serviceColumnStyles = priced ? {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 36, halign: 'left' },
@@ -687,15 +675,15 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       4: { cellWidth: 14, halign: 'center' },
       5: { cellWidth: 26, halign: 'right' }
     } : {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 38, halign: 'left' },
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 40, halign: 'left' },
       2: { cellWidth: 82, halign: 'left' },
       3: { cellWidth: 32, halign: 'center' },
       4: { cellWidth: 16, halign: 'center' }
     };
-    // An estimate's tables are drawn in the cream skin the portal uses -- warm section header,
-    // warm rules, figures in warm text. A package export keeps the slate header it had.
-    const serviceTableStyles = priced ? {
+    // Drawn in the cream skin the portal uses -- warm section header, warm rules, figures in warm
+    // text -- for an estimate and a package alike
+    const serviceTableStyles = warm ? {
       margin: { left: margin, right: margin },
       styles: { fontSize: 7, cellPadding: 2, lineColor: warmBorder, lineWidth: 0.2, halign: 'center', overflow: 'linebreak', cellWidth: 'wrap' },
       headStyles: { fillColor: warmSection, textColor: warmMuted, fontStyle: 'bold', fontSize: 6.5, lineColor: warmBorder },
@@ -1310,6 +1298,7 @@ export const exportPackageToPDF = (pkg) => {
     if (pkg.serviceRows && Array.isArray(pkg.serviceRows)) {
       services = pkg.serviceRows.map(sr => ({
         name: sr.service || sr.name || sr.serviceType || 'Service',
+        category: sr.category || '',
         description: sr.description || '',
         frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
         frequencyType: sr.frequencyType || 'Monthly',
@@ -1322,6 +1311,7 @@ export const exportPackageToPDF = (pkg) => {
         if (parsed.serviceRows && Array.isArray(parsed.serviceRows)) {
           services = parsed.serviceRows.map(sr => ({
             name: sr.service || sr.name || sr.serviceType || 'Service',
+            category: sr.category || '',
             description: sr.description || '',
             frequencyCount: sr.frequencyCount ?? sr.frequency ?? 1,
             frequencyType: sr.frequencyType || 'Monthly',
@@ -1372,7 +1362,13 @@ export const exportPackageToPDF = (pkg) => {
       packageId: pkg.packageId || pkg.id || 'PKG-' + Date.now(),
       estimateId: pkg.packageId || pkg.id || 'PKG-' + Date.now(),
       packageName: pkg.packageName || pkg.name || 'AMC Package',
+      packageCode: pkg.packageCode || pkg.package_code || pkg.packageId,
       propertyType: pkg.propertyType || 'General',
+      // Every type the package covers, named in full on the letterhead's card
+      propertyTypeLabel: (() => {
+        const types = Array.isArray(pkg.propertyTypes) && pkg.propertyTypes.length ? pkg.propertyTypes : getPackagePropertyTypes(pkg);
+        return (types || []).map(getPropertyTypeLabel).filter(Boolean).join(', ');
+      })(),
       propertyId: pkg.propertyId,
       zone: pkg.zone || pkg.zoneName,
       division: pkg.division || pkg.divisionName,
