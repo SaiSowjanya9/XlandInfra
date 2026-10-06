@@ -677,7 +677,7 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
     const serviceHead = priced
-      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'PRICE (RS.)']]
+      ? [['#', 'SERVICE', 'DESCRIPTION', 'FREQUENCY', 'VISITS', 'PRICE']]
       : [['#', 'Service', 'Description', 'Frequency', 'Visits']];
     const serviceColumnStyles = priced ? {
       0: { cellWidth: 10, halign: 'center' },

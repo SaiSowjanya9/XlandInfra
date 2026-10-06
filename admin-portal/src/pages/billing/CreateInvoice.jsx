@@ -759,10 +759,10 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase py-3 px-2">Description</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-20">UOM</th>
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-16">Qty</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Rate (₹)</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Discount (₹)</th>
+                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Rate</th>
+                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Discount</th>
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-16">Tax %</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-28">Amount (₹)</th>
+                    <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-28">Amount</th>
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-20">Action</th>
                   </tr>
                 </thead>

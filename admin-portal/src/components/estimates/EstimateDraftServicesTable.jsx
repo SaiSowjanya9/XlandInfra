@@ -106,9 +106,9 @@ export default function EstimateDraftServicesTable({
               <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Visits / Year</th>
               {/* Cost columns and the Action cell are internal screen furniture: a browser print
                   of the draft is still the customer's document, so they are print:hidden */}
-              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Vendor Cost (₹)</th>}
-              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">XLAND Cost (₹)</th>}
-              <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Customer Price (₹)</th>
+              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Vendor Cost</th>}
+              {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">XLAND Cost</th>}
+              <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Customer Price</th>
               {internal && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide print:hidden">Margin %</th>}
               {hasActions && <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide w-16 print:hidden">Action</th>}
             </tr>

@@ -967,7 +967,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
   const SERVICE_HEAD = `
     <tr>
-      ${['#', 'Service', 'Frequency', 'Visits', 'Price (Rs.)'].map((label, index) => `
+      ${['#', 'Service', 'Frequency', 'Visits', 'Price'].map((label, index) => `
         <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
           font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
           text-align: ${index === 3 ? 'center' : index === 4 ? 'right' : 'left'};">${label}</th>`).join('')}

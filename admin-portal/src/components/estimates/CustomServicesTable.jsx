@@ -208,7 +208,7 @@ export default function CustomServicesTable({ rows = [], onChange, title = 'Cust
               <th className="w-[11%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="The markup in rupees: customer price minus vendor cost">XLAND Cost</th>
               <th className="w-[8%] whitespace-nowrap px-3 py-2.5 text-center print:hidden" title="XLAND cost as a share of the customer price">Margin %</th>
             </>}
-            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price (₹)</th>
+            <th className={`${internal ? 'w-[11%]' : 'w-[15%]'} whitespace-nowrap px-3 py-2.5 text-center`} title="Customer price in rupees">Price</th>
             <th className={`${internal ? 'w-[7%]' : 'w-[11%]'} whitespace-nowrap px-3 py-2.5 text-center print:hidden`}>Action</th>
           </tr>
         </thead>
