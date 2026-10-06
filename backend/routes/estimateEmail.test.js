@@ -4,7 +4,8 @@ let smtpSuccess = false;
 let delivered = false;
 let updates = 0;
 const estimate = { id: 1, estimate_id: 'EST-FP', franchise_partner_id: 8, client_name: 'Customer', client_email: 'customer@example.test',
-  property_name: 'Property', property_type: 'APT', package_services: '[]', addons_data: '[]', subtotal: 123.45, total_amount: 123.45, gst_percent: 0 };
+  property_name: 'Property', property_type: 'APT', package_services: '[]', addons_data: '[]', subtotal: 123.45, total_amount: 123.45, gst_percent: 0,
+  package_name: 'GC Test', package_price: 45000, billing_duration: 'half-yearly', include_terms: 1, terms_conditions: 'Clause one.' };
 const pool = { execute: async (sql, params = []) => {
   if (sql.startsWith('SHOW COLUMNS')) return [[{ Field: 'exists' }]];
   if (sql.includes('FROM fp_addons')) return [[]];
@@ -18,6 +19,12 @@ require.cache[require.resolve('../services/emailService')] = { exports: {
   sendEstimateEmail: async data => {
   assert.equal(data.gstPercent, 0);
   assert.equal(data.total, 123.45);
+  // What the email states beyond the figures: the package price for Total Services Price, and the
+  // estimate's own billing period and Terms & Conditions -- all three used to be left behind
+  assert.equal(data.packagePrice, 45000);
+  assert.equal(data.billingDuration, 'half-yearly');
+  assert.equal(data.includeTerms, 1);
+  assert.equal(data.termsConditions, 'Clause one.');
   delivered = smtpSuccess;
   return { success: smtpSuccess, error: smtpSuccess ? undefined : 'Simulated SMTP failure' };
 } } };

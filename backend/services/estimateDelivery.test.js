@@ -46,17 +46,17 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   // follows the name immediately; in the PDF the Service cell is drawn with both.
   assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
   assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
-  // Every field of the service has its own column in the attachment, quantity included. The price
+  // Every field of the service has its own column in the attachment. No Qty: the printed and
+  // downloaded estimate dropped it, and the emailed copy reads the same. The price
   // column says "Rs." like every figure under it: PDFKit's built-in Helvetica has no rupee glyph,
   // so a ₹ in the heading printed as a stray mark.
   // Compared without case: a column heading is drawn in caps on the cream header bar
   const headings = texts.map(text => text.toUpperCase());
-  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Qty', 'Price (Rs.)']) {
+  for (const heading of ['Service', 'Description', 'Frequency', 'Visits', 'Price (Rs.)']) {
     assert.ok(headings.includes(heading.toUpperCase()), `pdf column: ${heading}`);
   }
+  assert.ok(!headings.includes('QTY'), 'no Qty column');
   assert.ok(texts.includes('Rs. 11,700.25'), 'the service price is on its own row');
-  // A capacity-priced service has no quantity of its own, and says so rather than showing 1
-  assert.ok(texts.includes('-'), 'no quantity reads as a dash');
   // How it is priced, the derived input and the types the service is configured for are ours
   for (const text of ['Capacity Based', 'Primary Input', 'Property Types']) {
     assert.ok(!mail.html.includes(text), `email leaked: ${text}`);
@@ -129,4 +129,50 @@ test('PDF generation failure does not send a customer email without its attachme
   const result = await sendEstimateEmail({ estimateId: 'EST-FAILED', customerEmail: 'customer@example.test', total: 100 }, 'test-token');
   assert.equal(result.success, false);
   assert.equal(mail, null);
+});
+
+// What the portal's view and printed copy show must reach the customer's email and its PDF too.
+const captureEstimate = async (t, estimate) => {
+  const texts = [];
+  const originalText = PDFDocument.prototype.text;
+  PDFDocument.prototype.text = function (text, ...args) { texts.push(String(text)); return originalText.call(this, text, ...args); };
+  t.after(() => { PDFDocument.prototype.text = originalText; });
+  const result = await sendEstimateEmail(estimate, 'test-action-token');
+  assert.equal(result.success, true);
+  return { html: mail.html, pdf: texts.join('\n') };
+};
+
+test('a property-based package estimate emails the same totals, package note, billing and terms as the portal', async t => {
+  const { html, pdf } = await captureEstimate(t, {
+    estimateId: 'EST-PKG', estimateType: 'property_based', customerName: 'Charan', customerEmail: 'customer@example.test',
+    propertyName: 'SS property', propertyType: 'GC', propertyCode: 'GC-1', packageName: 'GC Test', packagePrice: 45000,
+    billingDuration: 'half-yearly', includeTerms: 1, termsConditions: 'Clause one.\nClause two.',
+    services: [{ name: 'Deep Cleaning', frequencyType: 'Monthly', frequencyCount: 12 }, { name: 'Pest Control', frequencyType: 'Quarterly', frequencyCount: 4 }],
+    addons: [{ name: 'Security Support', totalPrice: 336000, frequency_type: 'Monthly', frequency_count: 12 },
+      { name: 'Common Area Cleaning', totalPrice: 6384, frequency_type: 'Monthly', frequency_count: 12 }],
+    subtotal: 387384, total: 387384, tax: 0, gstPercent: 0
+  });
+  for (const [where, text] of [['email', html], ['PDF', pdf]]) {
+    assert.match(text, /Total Services Price: Rs\. 3,87,384/, `${where}: the total includes the package price`);
+    assert.doesNotMatch(text, /Total Services Price: Rs\. 3,42,384/, `${where}: not the added services alone`);
+    assert.match(text, /Includes the AMC package (&ldquo;|")GC Test(&rdquo;|") at Rs\. 45,000/, `${where}: names the package beneath the total`);
+    assert.match(text, /Included/, `${where}: a package's own service reads Included`);
+    assert.match(text, /Clause one\.[\s\S]*Clause two\./, `${where}: carries the estimate's Terms & Conditions`);
+  }
+  assert.match(html, /Half yearly/, 'the estimate\'s own billing period, not a default Yearly');
+  assert.doesNotMatch(pdf, /^QTY$/m, 'the emailed PDF has no Qty column, like the printed one');
+});
+
+test('a direct custom estimate emails its total and terms, with no package note', async t => {
+  const { html, pdf } = await captureEstimate(t, {
+    estimateId: 'EST-DIRECT', estimateType: 'direct', customerName: 'Sai', customerEmail: 'customer@example.test', propertyType: 'VILLA',
+    includeTerms: true, termsConditions: 'Direct clause.',
+    addons: [{ name: 'Plumbing Service Visit', totalPrice: 3000, frequency_type: 'On Request', frequency_count: 0 }],
+    subtotal: 3000, total: 3000, tax: 0, gstPercent: 0
+  });
+  for (const [where, text] of [['email', html], ['PDF', pdf]]) {
+    assert.match(text, /Total Services Price: Rs\. 3,000/, `${where}: total`);
+    assert.doesNotMatch(text, /Includes the AMC package/, `${where}: no package, no note`);
+    assert.match(text, /Direct clause\./, `${where}: terms`);
+  }
 });

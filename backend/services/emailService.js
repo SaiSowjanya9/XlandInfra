@@ -938,7 +938,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   /**
    * A service as the estimate states it: what it is, what it covers, how often, how many visits
    * and what it costs. The same columns the PDF prints, so the email and its attachment agree.
-   * A package's own services are covered by the package price, so their figure reads as a dash.
+   * A package's own services are covered by the package price, so their figure reads "Included".
    */
   const serviceRowsHtml = (list, { priced = true } = {}) => list.map((item, index) => {
     const name = emailText(item.name || item.service || item.serviceName || item.service_name || item.services?.[0]?.name || 'Service');
@@ -960,7 +960,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       </td>
       <td style="${cell} width: 80px;">${frequency}</td>
       <td style="${cell} width: 46px; text-align: center;">${visits}</td>
-      <td style="${cell} width: 88px; text-align: right; white-space: nowrap;">${priced ? `Rs. ${money(price)}` : '&ndash;'}</td>
+      <td style="${cell} width: 88px; text-align: right; white-space: nowrap;">${priced ? `Rs. ${money(price)}` : '<span style="color: #6b7280;">Included</span>'}</td>
     </tr>`;
   }).join('');
 
