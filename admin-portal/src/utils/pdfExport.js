@@ -667,13 +667,14 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
     // Every column of the estimate view except its internal Vendor Cost, XLAND Cost and Margin %
-    const serviceHead = [['#', 'SERVICE', 'METHOD', 'INPUT / DETAILS', 'DESCRIPTION', 'FREQUENCY', 'VISITS']];
+    // in the view's order: name, description, what was measured, how it is priced, schedule
+    const serviceHead = [['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'METHOD', 'FREQUENCY', 'VISITS']];
     const serviceColumnStyles = {
       0: { cellWidth: 8, halign: 'center' },
       1: { cellWidth: 33, halign: 'left' },
-      2: { cellWidth: 22, halign: 'left' },
+      2: { cellWidth: 55, halign: 'left' },
       3: { cellWidth: 26, halign: 'left' },
-      4: { cellWidth: 55, halign: 'left' },
+      4: { cellWidth: 22, halign: 'left' },
       5: { cellWidth: 22, halign: 'center' },
       6: { cellWidth: 14, halign: 'center' }
     };
@@ -723,7 +724,7 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
       const details = withoutInputSegment(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), item.input);
-      return [String(index + 1), name, item.method || '-', item.input || '-', details || '-', freqType, String(visits)];
+      return [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
     };
 
     if (!isWorkOrder && services.length > 0) {

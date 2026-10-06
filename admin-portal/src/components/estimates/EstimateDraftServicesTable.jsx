@@ -8,6 +8,7 @@ import {
   getServiceVendorCost,
   getServiceXlandCost,
   getServiceMarginPercent,
+  stripInternalServiceDetails,
 } from '../../utils/estimatePackageUtils';
 
 // The create-estimate services table. One layout for every portal: the category sits under the
@@ -83,7 +84,7 @@ export default function EstimateDraftServicesTable({
   const totalRowCls = warm
     ? 'bg-warm-section/70 border-warm-border text-warm-text'
     : 'bg-blue-50 border-blue-200 text-blue-800';
-  const colCount = (internal ? 9 : 6) + (hasActions ? 1 : 0);
+  const colCount = (internal ? 10 : 7) + (hasActions ? 1 : 0);
 
   return (
     // `bare` drops the table's own border so it can sit flush inside a card that already frames it —
@@ -95,8 +96,9 @@ export default function EstimateDraftServicesTable({
             <tr className={`border-b ${headingCls}`}>
               <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide w-8">#</th>
               <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Service</th>
-              <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Method</th>
+              <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Description</th>
               <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Input / Details</th>
+              <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Method</th>
               <th className="px-3 py-2.5 text-left text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Frequency</th>
               <th className="px-3 py-2.5 text-center text-[11px] whitespace-nowrap font-semibold uppercase tracking-wide">Visits / Year</th>
               {/* Cost columns and the Action cell are internal screen furniture: a browser print
@@ -129,14 +131,16 @@ export default function EstimateDraftServicesTable({
                     {category && <div className={`text-xs ${muted}`}>{category}</div>}
                     {item.tag && <span className={`mt-0.5 inline-block px-1.5 py-px text-[10px] rounded ${warm ? 'bg-warm-accent-soft text-warm-muted' : 'bg-gray-100 text-gray-500'}`}>{item.tag}</span>}
                   </td>
+                  {/* What the service covers, as entered on it; the pricing segments are the next two columns */}
+                  <td className={`px-3 py-2.5 text-xs ${muted} max-w-[260px] whitespace-pre-wrap break-words`}>{decodeText(stripInternalServiceDetails(String(service.description ?? ''))).trim() || '-'}</td>
+                  <td className="px-3 py-2.5">
+                    <div className={`font-semibold ${text}`}>{input}</div>
+                    {sub && <div className={`text-xs ${muted} print:hidden`}>{sub}</div>}
+                  </td>
                   <td className="px-3 py-2.5">
                     {getServiceMethodLabel(service)
                       ? <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${METHOD_STYLES[service.pricing_method] || 'bg-gray-100 text-gray-600'}`}>{getServiceMethodLabel(service)}</span>
                       : <span className={muted}>-</span>}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className={`font-semibold ${text}`}>{input}</div>
-                    {sub && <div className={`text-xs ${muted} print:hidden`}>{sub}</div>}
                   </td>
                   <td className={`px-3 py-2.5 ${muted}`}>{service.frequency_type}</td>
                   <td className={`px-3 py-2.5 text-center ${muted}`}>{visits}</td>

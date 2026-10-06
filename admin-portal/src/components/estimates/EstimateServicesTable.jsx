@@ -1,4 +1,4 @@
-import { formatCurrency, getAddonName, getAddonPrice, getServiceInput,
+import { formatCurrency, getAddonName, getAddonPrice, getServiceInput, stripInternalServiceDetails,
   getServiceMethodLabel, getServiceRate, getServiceVendorCost, getServiceXlandCost,
   getServiceMarginPercent } from '../../utils/estimatePackageUtils';
 import { normalizeServiceRow } from './EstimateDraftServicesTable';
@@ -38,6 +38,13 @@ const serviceColumns = (decode, internal) => {
       {/* A package's own service, folded into the internal table beside the added services */}
       {row._tag && <span className="mt-0.5 inline-block rounded bg-warm-accent-soft px-1.5 py-px text-[10px] text-warm-muted">{row._tag}</span>}
     </> };
+  // What the service covers, as entered on it -- its own description, not the generated pricing
+  // segments (those are the Method and Input / Details columns), so nothing reads twice
+  const description = { label: 'Description', head: '', cell: 'min-w-[160px] max-w-[260px]',
+    render: row => {
+      const text = decode(stripInternalServiceDetails(String(row.description ?? ''))).trim();
+      return <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">{text || '-'}</p>;
+    } };
   const method = { label: 'Method', head: '', cell: '',
     // A hand-entered service has no configured method, so it says nothing rather than guessing one
     render: row => (getServiceMethodLabel(row)
@@ -88,8 +95,10 @@ const serviceColumns = (decode, internal) => {
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
     } };
   return internal
-    ? [number, service, method, input, frequency, visits, vendor, xland, margin]
-    : [number, service, method, input, frequency, visits];
+    // One order for every list of an estimate's services, here and in its PDFs and emails:
+    // name, description, what was measured, how it is priced, schedule, then the internal costs
+    ? [number, service, description, input, method, frequency, visits, vendor, xland, margin]
+    : [number, service, description, input, method, frequency, visits];
 };
 
 export default function EstimateServicesTable({ rows, total, note = null, decode = value => value ?? '',

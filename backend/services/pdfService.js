@@ -710,10 +710,11 @@ const generateEstimatePDF = async (estimate) => {
       // Summary -- and the printed and downloaded estimate reads the same.
       const TABLE_COLS = [
         { label: '#', width: 22, align: 'left' },
+        // The view's order: name, description, what was measured, how it is priced, schedule
         { label: 'Service', width: 92, align: 'left' },
-        { label: 'Method', width: 62, align: 'left' },
-        { label: 'Input / Details', width: 84, align: 'left' },
         { label: 'Description', width: 125, align: 'left' },
+        { label: 'Input / Details', width: 84, align: 'left' },
+        { label: 'Method', width: 62, align: 'left' },
         { label: 'Frequency', width: 66, align: 'left' },
         // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
         { label: 'Visits', width: 44, align: 'right' }
@@ -735,7 +736,7 @@ const generateEstimatePDF = async (estimate) => {
       const drawServicesTable = rows => {
         drawTableHeader();
         rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.method, row.input, row.details, row.frequency, String(row.visits)];
+          const cells = [String(index + 1), row.name, row.details, row.input, row.method, row.frequency, String(row.visits)];
           doc.fontSize(8).font('Helvetica');
           const height = Math.max(24, ...cells.map((text, column) =>
             doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));

@@ -957,11 +957,12 @@ const sendEstimateEmail = async (estimate, actionToken) => {
       <td style="${cell}">
         <strong style="color: #111827;">${name}</strong>
         ${category ? `<br><span style="font-size: 11px; color: #6b7280;">${category}</span>` : ''}
-        ${details ? `<br><span style="font-size: 11px; color: #6b7280;">${details}</span>` : ''}
       </td>
-      <td style="${cell} width: 74px;">${item.method ? emailText(item.method) : '-'}</td>
-      <td style="${cell} width: 80px;">${item.input ? emailText(item.input) : '-'}</td>
-      <td style="${cell} width: 80px;">${frequency}</td>
+      <!-- The view's order: name, description, what was measured, how it is priced, schedule -->
+      <td style="${cell} font-size: 11px; color: #4b5563;">${details || '-'}</td>
+      <td style="${cell} width: 76px;">${item.input ? emailText(item.input) : '-'}</td>
+      <td style="${cell} width: 70px;">${item.method ? emailText(item.method) : '-'}</td>
+      <td style="${cell} width: 70px;">${frequency}</td>
       <td style="${cell} width: 46px; text-align: center;">${visits}</td>
     </tr>`;
   }).join('');
@@ -969,10 +970,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
   const SERVICE_HEAD = `
     <tr>
-      ${['#', 'Service', 'Method', 'Input / Details', 'Frequency', 'Visits'].map((label, index) => `
+      ${['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'].map((label, index) => `
         <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
           font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
-          text-align: ${index === 5 ? 'center' : 'left'};">${label}</th>`).join('')}
+          text-align: ${index === 6 ? 'center' : 'left'};">${label}</th>`).join('')}
     </tr>`;
 
   const servicesHtml = serviceRowsHtml(servicesList);
