@@ -1950,7 +1950,7 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* All Packages Tab */}
       {/* A package opens here, in place of the list, as an estimate does in All Estimates */}
-      {amcActiveTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} />}
+      {amcActiveTab === 'all-packages' && viewAmcPackage && <AMCPackageDetailView pkg={viewAmcPackage} onClose={() => setViewAmcPackage(null)} internal />}
       {amcActiveTab === 'all-packages' && !viewAmcPackage && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">

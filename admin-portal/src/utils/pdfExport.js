@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { getEstimateAddons, getAddonPrice, getServiceDescription, stripInternalServiceDetails } from './estimatePackageUtils';
 import { billToParty } from './estimateStore';
 import { estimateTermsLines } from './estimateTerms';
+import { packageInternalSummary } from './packageServicePricing';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } from './companyInfo';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
 
@@ -891,6 +892,48 @@ const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
 
     y += sumHeight + 8;
 
+    // ===== INTERNAL (package PDF only) =====
+    // The four figures the package form shows -- Annual Vendor Cost, XLAND Cost, Customer Price,
+    // Margin -- in four cells under the price summary. Only a package export carries them: an
+    // estimate's PDF goes to the customer and never states a cost.
+    const internal = type === 'package' ? data.internalSummary : null;
+    if (internal) {
+      if (y + 24 > pageHeight) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...slate);
+      doc.text('INTERNAL', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...lightText);
+      doc.text('(not shown to customers)', margin + doc.getTextWidth('INTERNAL') + 2, y);
+      y += 3;
+      const cells = [
+        ['Annual Vendor Cost', formatCurrency(internal.vendorCost)],
+        ['XLAND Cost', formatCurrency(internal.xlandCost)],
+        ['Customer Price', formatCurrency(internal.customerPrice)],
+        ['Margin', internal.marginPercent == null ? '-' : `${internal.marginPercent}%`]
+      ];
+      const gap = 3;
+      const cellW = (pageWidth - margin * 2 - gap * (cells.length - 1)) / cells.length;
+      const cellH = 13;
+      cells.forEach(([label, value], index) => {
+        const x = margin + index * (cellW + gap);
+        doc.setDrawColor(...borderLight);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(x, y, cellW, cellH, 1.5, 1.5, 'S');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...lightText);
+        doc.text(label, x + 3, y + 4.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        const negative = label === 'Margin' && internal.xlandCost < 0;
+        doc.setTextColor(...(label === 'Margin' ? (negative ? [220, 38, 38] : [5, 150, 105]) : darkText));
+        doc.text(value, x + 3, y + 10);
+      });
+      y += cellH + 8;
+    }
+
     // ===== NOTES (Plain) =====
     // Measured whole like the terms below: jsPDF never paginates a drawn block, so without the
     // upfront check an overflowing note ran under the footer instead of onto a fresh page.
@@ -1318,6 +1361,12 @@ export const exportPackageToPDF = (pkg) => {
     }
 
     const totalPrice = parseFloat(pkg.rate || pkg.totalPrice || pkg.totalRate || pkg.price || 0);
+    // The rows as saved, with the vendor cost each was priced on, for the INTERNAL section
+    let savedRows = Array.isArray(pkg.serviceRows) && pkg.serviceRows.length ? pkg.serviceRows : [];
+    if (!savedRows.length) {
+      const stored = typeof pkg.services === 'string' ? (() => { try { return JSON.parse(pkg.services); } catch { return null; } })() : pkg.services;
+      savedRows = Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored.filter(s => s && typeof s === 'object') : [];
+    }
 
     const exportData = {
       packageId: pkg.packageId || pkg.id || 'PKG-' + Date.now(),
@@ -1339,7 +1388,10 @@ export const exportPackageToPDF = (pkg) => {
       subtotal: totalPrice,
       discount: parseFloat(pkg.discount || 0),
       totalPrice: totalPrice,
-      createdAt: pkg.createdAt || new Date().toISOString()
+      createdAt: pkg.createdAt || new Date().toISOString(),
+      // Vendor cost, XLAND cost, customer price, margin -- a package PDF is downloaded by the
+      // internal portals that price packages, never sent to a customer
+      internalSummary: packageInternalSummary(savedRows, totalPrice)
     };
 
     generatePDF(exportData, 'package', `AMC-Package-${(exportData.packageName).replace(/\s+/g, '-')}.pdf`);

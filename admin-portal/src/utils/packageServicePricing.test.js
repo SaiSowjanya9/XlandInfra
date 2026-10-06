@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { METHOD_INPUTS, applyPackageMarkup, packageTotals, quotePropertyType, rowInput, rowPriceWithMarkup } from './packageServicePricing.js';
+import { METHOD_INPUTS, applyPackageMarkup, packageInternalSummary, packageTotals, quotePropertyType, rowInput, rowPriceWithMarkup } from './packageServicePricing.js';
+
+test('a saved package states the internal figures it was created with', () => {
+  // Rs 6,000 of vendor cost sold at Rs 8,400: XLAND keeps Rs 2,400, a 28.57% margin
+  const rows = [{ service: 'Lift', vendorCost: 4000 }, { service: 'Cleaning', vendorCost: '2000' }, { service: 'Typed, no cost' }];
+  assert.deepEqual(packageInternalSummary(rows, 8400),
+    { vendorCost: 6000, operatingCost: 0, customerPrice: 8400, xlandCost: 2400, marginPercent: 28.57 });
+  // Saved before rows carried a vendor cost: nothing to report, rather than 100% margin
+  assert.equal(packageInternalSummary([{ service: 'Lift' }], 8400), null);
+  assert.equal(packageInternalSummary([], 8400), null);
+});
 
 /**
  * An AMC package is priced by its services rather than by a figure typed into it, so these are the
