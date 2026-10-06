@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { formatCurrency, getPackagePropertyTypes, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import { formatCurrency, getPackagePropertyTypes, getPropertyTypeLabel, serviceMethodAndInput } from '../../utils/estimatePackageUtils';
 import { decodeEntities } from '../../utils/text';
 import { packageInternalSummary } from '../../utils/packageServicePricing';
 import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
@@ -112,10 +112,11 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
             <p className="mb-3 text-sm font-semibold text-warm-text">Services Included ({rows.length})</p>
             {rows.length ? (
               <div className="overflow-x-auto rounded-xl border border-warm-border">
-                <table className="w-full min-w-[640px] border-collapse text-sm">
+                <table className="w-full min-w-[760px] border-collapse text-sm">
                   <thead className="bg-warm-section">
                     <tr>
-                      {['#', 'Service', 'Description', 'Frequency', 'Visits'].map(label => (
+                      {/* One order for every list of services: name, description, what was measured, how it is priced, schedule */}
+                      {['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'].map(label => (
                         <th key={label} scope="col" className={`px-4 py-3 text-xs font-semibold text-warm-muted ${label === 'Frequency' || label === 'Visits' ? 'text-center' : 'text-left'}`}>{label}</th>
                       ))}
                     </tr>
@@ -123,6 +124,7 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
                   <tbody className="divide-y divide-warm-border/60 bg-white">
                     {rows.map((service, index) => {
                       const category = decode(service.category);
+                      const { method, input } = serviceMethodAndInput(service, { isPackage: true });
                       return (
                         <tr key={index} className="align-top">
                           <td className="px-4 py-3">
@@ -133,6 +135,8 @@ export default function AMCPackageDetailView({ pkg, onClose, backLabel = 'Back t
                             {category && <p className="text-[11px] text-warm-muted">{category}</p>}
                           </td>
                           <td className="px-4 py-3 text-warm-muted whitespace-pre-wrap [overflow-wrap:anywhere]">{decode(service.description).trim() || '-'}</td>
+                          <td className="px-4 py-3 text-warm-text [overflow-wrap:anywhere]">{input || '-'}</td>
+                          <td className="px-4 py-3 text-warm-muted">{method || '-'}</td>
                           <td className="px-4 py-3 text-center text-warm-text">{service.frequency_type || service.frequencyType || 'Monthly'}</td>
                           <td className="px-4 py-3 text-center font-medium text-warm-text">{service.frequency_count ?? service.frequencyCount ?? service.visits ?? 0}</td>
                         </tr>
