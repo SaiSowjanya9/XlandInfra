@@ -257,6 +257,14 @@ const startServer = async () => {
         console.error(`Could not add the Terms & Conditions columns to ${table}; estimates will not carry terms until this is fixed:`, error.message);
       }
     }
+    // portal_notifications predates the columns its readers filter on (role_type broke every
+    // customer notifications request); add whatever is missing
+    try {
+      const added = await require('./utils/portalNotificationsSchema').ensurePortalNotificationsSchema(pool);
+      if (added.length) console.log(`✅ portal_notifications: added ${added.join(', ')}`);
+    } catch (error) {
+      console.error('Could not bring portal_notifications up to date; notifications may fail until this is fixed:', error.message);
+    }
     console.log('✅ Database mode: Connected');
     console.log('✅ QR Management System initialized');
     // Start work order cleanup scheduler (auto-delete closed/cancelled after 30 days)
