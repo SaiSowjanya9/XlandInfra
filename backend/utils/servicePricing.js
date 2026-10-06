@@ -214,7 +214,8 @@ const calculateServiceQuote = (config, input = {}, role) => {
   if (!config.allow_frequency_override && frequency !== defaultFrequency) fail('Frequency override is disabled for this service.');
   const defaultVisits = frequency === defaultFrequency ? configuredVisits : ALL_FREQUENCIES[frequency];
   const visits = input.visits === undefined ? defaultVisits : visitsFor(frequency, input.visits, 'Visits');
-  if (!config.allow_manual_visits && visits !== defaultVisits) fail('Manual visits are disabled for this service.');
+  // Visits are entered like any other field on an estimate (the user's call): the frequency and the
+  // service only propose the count, so a changed count is priced rather than refused
   const inputs = { property_type: propertyType, frequency, visits };
   let vendorCost;
   // 'custom_quote' and 'fixed_visit_custom' are retired: no new service can be saved with them,

@@ -51,7 +51,8 @@ test('fixed-price reference charges per visit with markup on vendor and operatin
   assert.equal(quote(fixed, { markup_percentage: 0 }).profit, 0);
   assert.equal(quote(fixed, { capacity: 75, area: 10000, quantity: 5 }).vendorCost, 12000);
   assert.throws(() => quote({ ...fixed, allow_frequency_override: false }, { frequency: 'Quarterly' }), /frequency override/i);
-  assert.throws(() => quote(fixed, { visits: 5 }), /manual visits/i);
+  // A changed visit count is priced, not refused: visits are entered like any other field
+  assert.equal(quote(fixed, { visits: 5 }).inputs.visits, 5);
 });
 
 test('quantity-based camera reference applies rate times quantity times visits', () => {
@@ -68,7 +69,8 @@ test('quantity-based camera reference applies rate times quantity times visits',
   assert.equal(quote(camera, { quantity: 10, markup_percentage: 0 }).totalPrice, 10000);
   for (const quantity of [undefined, '', 0, -1, 1.5, Infinity]) assert.throws(() => quote(camera, { quantity }), /quantity/i);
   assert.throws(() => quote({ ...camera, allow_frequency_override: false }, { quantity: 10, frequency: 'Monthly' }), /frequency override/i);
-  assert.throws(() => quote(camera, { quantity: 10, visits: 5 }), /manual visits/i);
+  // A changed visit count is priced, not refused: visits are entered like any other field
+  assert.equal(quote(camera, { quantity: 10, visits: 5 }).inputs.visits, 5);
   for (const unit of [...unitOptionsFor('quantity_based'), 'Units', 'Lifts', 'Pumps', 'Tanks']) assert.equal(quote({ ...camera, unit }, { quantity: 10 }).vendorCost, 10000, unit);
 });
 
@@ -413,7 +415,8 @@ test('capacity-based reference multiplies rate by capacity and visits, not capac
   assert.equal(quote(capacityService, { capacity: 10, frequency: 'Quarterly' }).vendorCost, 18000);
   assert.equal(quote({ ...capacityService, allow_manual_visits: true }, { capacity: 10, visits: 3 }).vendorCost, 13500);
   assert.throws(() => quote({ ...capacityService, allow_frequency_override: false }, { capacity: 10, frequency: 'Yearly' }), /frequency override/i);
-  assert.throws(() => quote(capacityService, { capacity: 10, visits: 3 }), /manual visits/i);
+  // A changed visit count is priced, not refused: visits are entered like any other field
+  assert.equal(quote(capacityService, { capacity: 10, visits: 3 }).inputs.visits, 3);
   for (const capacity of [undefined, '', 0, -1, Infinity]) assert.throws(() => quote(capacityService, { capacity }), /capacity/i);
   for (const unit of ['KL', 'Liters', 'KVA', 'KW']) {
     assert.equal(quote({ ...capacityService, unit }, { capacity: 2.5 }).vendorCost, 2250);
@@ -424,7 +427,8 @@ test('frequency defaults and overrides determine visits without double multiplyi
   assert.equal(quote({}, { frequency: 'Quarterly' }).visits, 4);
   assert.equal(quote({}, { frequency: 'Every 2 Months' }).vendorCost, 600);
   assert.throws(() => quote({ allow_frequency_override: false }, { frequency: 'Yearly' }), /frequency override/i);
-  assert.throws(() => quote({}, { visits: 5 }), /manual visits/i);
+  // A changed visit count is priced, not refused: visits are entered like any other field
+  assert.equal(quote({}, { visits: 5 }).inputs.visits, 5);
   assert.equal(quote({ allow_manual_visits: true, default_visits_per_year: 7 }).visits, 7);
   assert.equal(quote({ allow_manual_visits: true }, { visits: 5 }).vendorCost, 500);
 });
@@ -470,7 +474,8 @@ test('generator slabs apply the matching rate and slab-specific frequency and vi
   assert.equal(quote(generator, { capacity: 75, frequency: 'Yearly' }).vendorCost, 2300);
   assert.equal(quote({ ...generator, allow_frequency_override: false }, { capacity: 75 }).frequency, 'Quarterly');
   assert.throws(() => quote({ ...generator, allow_frequency_override: false }, { capacity: 75, frequency: 'Monthly' }), /frequency override/i);
-  assert.throws(() => quote(generator, { capacity: 75, visits: 12 }), /manual visits/i);
+  // A changed visit count is priced, not refused: visits are entered like any other field
+  assert.equal(quote(generator, { capacity: 75, visits: 12 }).inputs.visits, 12);
   assert.equal(quote({ ...generator, allow_manual_visits: true }, { capacity: 75, visits: 5 }).vendorCost, 11500);
   const manual = { ...generator, allow_manual_visits: true, capacity_slabs: [{ capacityFrom: 0, capacityTo: 100, vendorRate: 100, defaultFrequency: 'Quarterly', defaultVisitsPerYear: 7 }] };
   assert.equal(quote(manual, { capacity: 75 }).visits, 7);
