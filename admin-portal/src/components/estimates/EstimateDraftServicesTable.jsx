@@ -126,15 +126,12 @@ export default function EstimateDraftServicesTable({
                 || '-';
               const sub = inputSubLine(service);
               const category = service.category || service.service_category;
-              const code = service.service_code || service.serviceCode
-                || (service.catalogServiceId ? `SER-${String(service.catalogServiceId).padStart(3, '0')}` : '');
               const visits = service.frequency_count ?? service.frequencyCount ?? '-';
               return (
                 <tr key={item.key ?? idx} className="bg-white">
                   <td className={`px-3 py-2.5 text-center ${muted}`}>{idx + 1}</td>
                   <td className="px-3 py-2.5">
                     <div className={`font-medium ${text}`}>{decodeText(getAddonName(service))}</div>
-                    {code && <div className={`text-xs ${muted}`}>{code}</div>}
                     {category && <div className={`text-xs ${muted}`}>{category}</div>}
                     {item.tag && <span className={`mt-0.5 inline-block px-1.5 py-px text-[10px] rounded ${warm ? 'bg-warm-accent-soft text-warm-muted' : 'bg-gray-100 text-gray-500'}`}>{item.tag}</span>}
                   </td>
