@@ -69,17 +69,22 @@ const serviceColumns = (decode, internal) => {
     <p className={`whitespace-nowrap text-xs ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
-  // A package's own service is paid for by the package price, not on its own: it has no XLAND cost
-  // or margin of its own -- those belong to the package
+  // A package's own service is sold as part of the package, so its XLAND Cost and Margin % are read
+  // against its share of the package price (`packageShare`, worked out on the server from the
+  // package's rows and markup, and adding up to the package price). With no share or no vendor cost
+  // on record there is nothing to work from, and it says so with a dash.
   const inPackage = row => row._tag === 'Package';
+  const priced = row => (inPackage(row)
+    ? (row.packageShare == null ? null : { ...row, price: row.packageShare, totalPrice: row.packageShare, marginPercentage: undefined })
+    : row);
   const vendor = { label: 'Vendor Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
     render: row => money(getServiceVendorCost(row)) };
   const xland = { label: 'XLAND Cost', head: 'text-right print:hidden', cell: 'text-right print:hidden',
-    render: row => (inPackage(row) ? money(null) : money(getServiceXlandCost(row))) };
+    render: row => money(priced(row) ? getServiceXlandCost(priced(row)) : null) };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
-      if (inPackage(row)) return <p className="text-xs text-warm-muted">—</p>;
-      const value = getServiceMarginPercent(row);
+      if (!priced(row)) return <p className="text-xs text-warm-muted">—</p>;
+      const value = getServiceMarginPercent(priced(row));
       return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
     } };
   return internal

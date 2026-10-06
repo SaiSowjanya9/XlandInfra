@@ -44,3 +44,17 @@ test('an estimate saved before that is completed from its package, without overw
   assert.equal(cleaning.pricingMethod, undefined, 'a hand-typed service has nothing to fill');
   assert.equal(cleaning.frequencyType, 'Monthly');
 });
+
+test('each package service carries its share of the package price, and a cost where one can be known', () => {
+  const { packageShares } = require('./packageSnapshot');
+  // Rows priced at the vendor's figure (4000, 2000), a 40% markup, and a price typed over (1000):
+  // 5600 + 2800 + 1000 = 9400, scaled to the 9400 the package sells for
+  assert.deepEqual(packageShares([{ price: 4000 }, { price: 2000 }, { price: 1000, priceOverridden: true }], 40, 9400), [5600, 2800, 1000]);
+  // Scaled so the shares add up to what the package sells for
+  assert.deepEqual(packageShares([{ price: 100 }, { price: 300 }], 0, 800), [200, 600]);
+  assert.deepEqual(packageShares([{ service: 'typed, no price' }], 0, 500), [null]);
+  // A row saved without a vendor cost cost what it was priced at -- unless its price was typed over
+  assert.equal(packageServiceSnapshot({ service: 'Lift', price: 97200 }).vendorCost, 97200);
+  assert.equal(packageServiceSnapshot({ service: 'Lift', price: 97200, priceOverridden: true }).vendorCost, undefined);
+  assert.equal(packageServiceSnapshot({ service: 'Lift', price: 97200 }, 136080).packageShare, 136080);
+});

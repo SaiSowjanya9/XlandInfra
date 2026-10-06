@@ -24,8 +24,33 @@ const slabBands = slabs => (Array.isArray(slabs) ? slabs : [])
   .filter(slab => slab && slab.capacityFrom != null)
   .map(slab => ({ name: slab.name || '', capacityFrom: slab.capacityFrom, capacityTo: slab.capacityTo ?? null }));
 
-const packageServiceSnapshot = row => {
-  const vendorCost = Number(row?.vendorCost);
+// A package row is priced at the vendor's figure until a markup or a typed price changes it, so a row
+// saved without a vendor cost, and whose price was not typed over, cost what it was priced at.
+const rowVendorCost = row => {
+  if (row?.vendorCost !== '' && row?.vendorCost != null && Number.isFinite(Number(row.vendorCost))) return Number(row.vendorCost);
+  const price = Number(row?.price);
+  return !row?.priceOverridden && Number.isFinite(price) && price >= 0 && row?.price !== '' && row?.price != null ? price : NaN;
+};
+
+// Each service's share of the package price, for the internal XLAND Cost and Margin % columns: the
+// row's price with the package markup (a typed-over price is not marked up), scaled so the shares
+// add up to exactly what the package sells for. Internal only -- no customer document projects it,
+// and the customer still buys the package at its one price.
+const packageShares = (rows, markup, packagePrice) => {
+  const factor = 1 + (Number(markup) || 0) / 100;
+  const priced = rows.map(row => {
+    const price = Number(row?.price);
+    if (!Number.isFinite(price) || price < 0 || row?.price === '' || row?.price == null) return null;
+    return row?.priceOverridden ? price : price * factor;
+  });
+  const sum = priced.reduce((total, value) => total + (value || 0), 0);
+  const target = Number(packagePrice);
+  const scale = sum > 0 && Number.isFinite(target) && target > 0 ? target / sum : 1;
+  return priced.map(value => (value == null ? null : Math.round(value * scale * 100) / 100));
+};
+
+const packageServiceSnapshot = (row, share = null) => {
+  const vendorCost = rowVendorCost(row);
   const operatingCost = Number(row?.operatingCost);
   const slabs = slabBands(row?.capacitySlabs || row?.capacity_slabs);
   const method = row?.pricingMethod || row?.pricing_method || '';
@@ -41,9 +66,16 @@ const packageServiceSnapshot = row => {
     ...(row?.unit ? { unit: row.unit } : {}),
     ...(slabs.length ? { capacitySlabs: slabs } : {}),
     ...(row?.catalogServiceId ? { catalogServiceId: row.catalogServiceId } : {}),
-    ...(Number.isFinite(vendorCost) && vendorCost >= 0 && row?.vendorCost !== '' && row?.vendorCost != null ? { vendorCost } : {}),
-    ...(Number.isFinite(operatingCost) && operatingCost > 0 ? { operatingCost } : {})
+    ...(Number.isFinite(vendorCost) && vendorCost >= 0 ? { vendorCost } : {}),
+    ...(Number.isFinite(operatingCost) && operatingCost > 0 ? { operatingCost } : {}),
+    ...(share != null ? { packageShare: share } : {})
   };
+};
+
+const snapshotRows = (stored, packagePrice) => {
+  const rows = (Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : []).filter(row => row && typeof row === 'object');
+  const shares = packageShares(rows, stored && !Array.isArray(stored) ? stored.markup_percentage : null, packagePrice);
+  return rows.map((row, index) => packageServiceSnapshot(row, shares[index]));
 };
 
 const loadPackageSnapshot = async (db, packageId, fpId) => {
@@ -51,9 +83,8 @@ const loadPackageSnapshot = async (db, packageId, fpId) => {
     'SELECT id, name, description, base_price AS price, services FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [packageId, fpId]);
   if (!pkg) return null;
   const stored = parse(pkg.services);
-  const rows = Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : [];
   return { name: pkg.name, description: pkg.description || '', price: Number(pkg.price) || 0,
-    billingDuration: stored?.billing_duration || null, services: rows.map(packageServiceSnapshot) };
+    billingDuration: stored?.billing_duration || null, services: snapshotRows(stored, pkg.price) };
 };
 
 // Express middleware for the estimate create/update routes. `fpOf` reads the caller's FP from the
@@ -87,22 +118,20 @@ const fillPackageServiceDetails = async (db, estimates) => {
   const wanting = (Array.isArray(estimates) ? estimates : []).filter(est => {
     if (!est?.package_id || !est.package_services) return false;
     const services = parse(est.package_services);
-    return Array.isArray(services) && services.some(service => service && typeof service === 'object' && !service.pricingMethod);
+    return Array.isArray(services) && services.some(service => service && typeof service === 'object'
+      && (!service.pricingMethod || service.packageShare == null || service.vendorCost == null));
   });
   const cache = new Map();
   for (const est of wanting) {
-    const key = `${est.package_id}:${est.franchise_partner_id ?? ''}`;
+    const key = `${est.package_id}:${est.franchise_partner_id ?? ''}:${est.package_price ?? ''}`;
     if (!cache.has(key)) {
       try {
         const [[pkg]] = est.franchise_partner_id != null
-          ? await db.execute('SELECT services FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [est.package_id, est.franchise_partner_id])
-          : await db.execute('SELECT services FROM fp_amc_packages WHERE id = ?', [est.package_id]);
-        const stored = parse(pkg?.services);
-        const rows = Array.isArray(stored?.serviceRows) ? stored.serviceRows : Array.isArray(stored) ? stored : [];
-        cache.set(key, new Map(rows.filter(row => row && typeof row === 'object').map(row => {
-          const snap = packageServiceSnapshot(row);
-          return [sameName(snap.name), snap];
-        })));
+          ? await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ? AND franchise_partner_id = ?', [est.package_id, est.franchise_partner_id])
+          : await db.execute('SELECT services, base_price AS price FROM fp_amc_packages WHERE id = ?', [est.package_id]);
+        // Shared out over the price this estimate sold the package at, not today's package price
+        const snaps = snapshotRows(parse(pkg?.services), Number(est.package_price) || pkg?.price);
+        cache.set(key, new Map(snaps.map(snap => [sameName(snap.name), snap])));
       } catch {
         cache.set(key, new Map());
       }
@@ -122,4 +151,4 @@ const fillPackageServiceDetails = async (db, estimates) => {
   return estimates;
 };
 
-module.exports = { attachPackageSnapshot, loadPackageSnapshot, packageServiceSnapshot, fillPackageServiceDetails };
+module.exports = { attachPackageSnapshot, loadPackageSnapshot, packageServiceSnapshot, packageShares, fillPackageServiceDetails };
