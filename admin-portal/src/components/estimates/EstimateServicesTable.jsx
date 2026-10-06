@@ -47,7 +47,8 @@ const serviceColumns = (decode, internal, showTag = true) => {
       const text = decode(stripInternalServiceDetails(String(row.description ?? ''))).trim();
       return <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">{text || '-'}</p>;
     } };
-  const method = { label: 'Method', head: '', cell: '',
+  // Screen only: a print leaves the pricing method out (the user's call)
+  const method = { label: 'Method', head: 'print:hidden', cell: 'print:hidden',
     // A hand-entered service has no configured method, so it says nothing rather than guessing one
     render: row => (getServiceMethodLabel(row)
       ? <span className="text-xs text-gray-700">{getServiceMethodLabel(row)}</span>
