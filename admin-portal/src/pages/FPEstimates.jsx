@@ -41,6 +41,7 @@ import EmptyState from '../components/common/EmptyState';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 import { shortDivision } from '../utils/fieldOptionsStore';
+import EstimateStatCards from '../components/estimates/EstimateStatCards';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -3895,22 +3896,14 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-warm-accent" /></div>
               <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p></div>
             </div>
-            <div className="flex items-center gap-3 shrink-0 overflow-x-auto">
-              <button onClick={loadData} className="p-2.5 bg-white border border-warm-border rounded-[10px] hover:bg-warm-accent-soft transition-colors shrink-0" title="Refresh">
-                <RefreshCw className={`w-5 h-5 text-warm-accent ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              {/* The retired add-on count is gone with its list; configured services are counted on their own panel */}
-              {[
-                { label: 'Active Estimates', value: filteredEstimates.length, tone: 'bg-warm-success border-[#CFEBDD] text-emerald-700' },
-                { label: 'AMC Packages', value: filteredAmcPackages.length, tone: 'bg-warm-info border-[#D8E2FA] text-indigo-600' },
-                { label: 'Archived', value: archivedEstimates.length, tone: 'bg-warm-warning border-[#F3E2B3] text-amber-700' }
-              ].map(card => (
-                <div key={card.label} className={`shrink-0 w-[108px] h-[62px] rounded-xl border flex flex-col items-center justify-center ${card.tone}`}>
-                  <p className="text-xl font-bold leading-none">{card.value}</p>
-                  <p className="mt-1 text-[11px] font-medium text-warm-muted whitespace-nowrap">{card.label}</p>
-                </div>
-              ))}
-            </div>
+            {/* The retired add-on count is gone with its list; configured services are counted on their own panel */}
+            <EstimateStatCards
+              active={filteredEstimates.length}
+              amc={filteredAmcPackages.length}
+              archived={archivedEstimates.length}
+              onRefresh={loadData}
+              refreshing={loading}
+            />
           </div>
         </div>
       </div>
