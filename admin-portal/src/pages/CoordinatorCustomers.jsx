@@ -4,6 +4,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import CategorySelection from '../components/common/CategorySelection';
 import {
   Users,
+  UserPlus,
   Plus,
   Search,
   RefreshCw,
@@ -90,6 +91,7 @@ const COUNTRY_CODES = [
 
 // Import division functions from fieldOptionsStore
 import { getDivisions, addDivision as addDivisionToStore } from '../utils/fieldOptionsStore';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -544,19 +546,12 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   if (activeView === 'list' && !selectedCategory) {
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-            <p className="text-gray-500 mt-1">{filteredCustomers.length} customers</p>
-          </div>
-          <button
-            onClick={() => setActiveView('add')}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Users} title="Customers" subtitle={`${filteredCustomers.length} customers`}>
+          <button onClick={() => setActiveView('add')} className={HEADER_ACTION_CLASS}>
             Add Customer
           </button>
-        </div>
+        </PageHeader>
 
         {/* Search */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -664,19 +659,12 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   if (activeView === 'add' && !selectedCategory) {
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setActiveView('list')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Customer" subtitle="Customer Creation Module">
+          <button onClick={() => setActiveView('list')} className={HEADER_GHOST_CLASS}>
+            <ChevronLeft className="w-4 h-4" /> Back
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-500 mt-1">Customer Creation Module</p>
-          </div>
-        </div>
+        </PageHeader>
 
         {/* Message */}
         {message.text && (
@@ -701,20 +689,12 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
   if (selectedCategory && !selectedEntryType) {
     return (
       <div className="space-y-6">
-        {/* Header with Back to Categories */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-500 mt-1">Customer Creation Module</p>
-          </div>
-          <button
-            onClick={goBack}
-            className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Categories
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Customer" subtitle="Customer Creation Module">
+          <button onClick={goBack} className={HEADER_GHOST_CLASS}>
+            <ChevronLeft className="w-4 h-4" /> Back to Categories
           </button>
-        </div>
+        </PageHeader>
 
         {/* Entry Type Selection */}
         <div className="bg-white rounded-xl border border-gray-100 p-8">
@@ -772,21 +752,13 @@ const CoordinatorCustomers = ({ user, defaultTab = 'list' }) => {
 
     return (
       <div className="space-y-6">
-        {/* Header with Back button */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Create Customer</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {entryTypeInfo?.name} • Complete all required fields
-            </p>
-          </div>
-          <button
-            onClick={goBack}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
-          >
-            ← Back
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Create Customer"
+          subtitle={`${entryTypeInfo?.name || ''} • Complete all required fields`}>
+          <button onClick={goBack} className={HEADER_GHOST_CLASS}>
+            <ChevronLeft className="w-4 h-4" /> Back
           </button>
-        </div>
+        </PageHeader>
 
         {/* Form Container */}
         <div className="max-w-3xl">

@@ -24,6 +24,7 @@ import {
   UserCheck,
   Filter,
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import { useFP } from '../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -373,10 +374,8 @@ const AssignedVendors = ({ user }) => {
   if (isAdmin && !selectedFp) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Assigned Vendors</h1>
-          <p className="text-gray-500 mt-1">Select a Franchise Partner to view vendor assignments</p>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserCheck} title="Assigned Vendors" subtitle="Select a Franchise Partner to view vendor assignments" />
         <div className="bg-gray-50 rounded-2xl p-12 text-center">
           <UserCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
@@ -412,15 +411,9 @@ const AssignedVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Header with FP Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Assigned Vendors</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {serviceAssignments.length} assignments
-            {isAdmin && selectedFp ? (selectedFp.id === 'all' ? ' (All FPs)' : ` for ${selectedFp.companyName}`) : ''}
-          </p>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates — FP switcher rides inside */}
+      <PageHeader icon={UserCheck} title="Assigned Vendors"
+        subtitle={`${serviceAssignments.length} assignments${isAdmin && selectedFp ? (selectedFp.id === 'all' ? ' (All FPs)' : ` for ${selectedFp.companyName}`) : ''}`}>
         <div className="flex items-center gap-3">
           {/* FP Switcher (Admin only) */}
           {isAdmin && (
@@ -475,7 +468,7 @@ const AssignedVendors = ({ user }) => {
             Refresh
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">

@@ -7,8 +7,10 @@ import {
   ClipboardList,
   RefreshCw,
   ArrowRight,
-  MapPin
+  MapPin,
+  LayoutDashboard,
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartTooltipContent } from '../components/common/ChartTooltip';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
@@ -220,15 +222,10 @@ const ExecutiveDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats Cards - Single Row Layout */}
-      <div className="flex items-center justify-between gap-4 flex-nowrap overflow-x-auto">
-        <div className="flex items-center gap-6 flex-nowrap">
-          <div className="shrink-0 min-w-max">
-            <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap">
-              Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!
-            </h1>
-            <p className="text-gray-500 mt-1 whitespace-nowrap">Here's what's happening with your assigned areas today.</p>
-          </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={LayoutDashboard}
+        title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!`}
+        subtitle="Here's what's happening with your assigned areas today.">
           <div className="flex items-center gap-3 flex-nowrap">
             <button onClick={() => navigate('/executive/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
@@ -279,7 +276,6 @@ const ExecutiveDashboard = ({ user }) => {
               </div>
             </button>
           </div>
-        </div>
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -290,7 +286,7 @@ const ExecutiveDashboard = ({ user }) => {
           onRefresh={() => fetchDashboard(false)}
           showRefreshButton={true}
         />
-      </div>
+      </PageHeader>
 
       {/* Properties Overview Chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">

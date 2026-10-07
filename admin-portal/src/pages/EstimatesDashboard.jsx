@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Wrench
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import { 
   PieChart, 
   Pie, 
@@ -648,27 +649,21 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   return (
     <div className="p-4 space-y-4 bg-gray-50 min-h-screen">
-      {/* Header with Date Range Picker and Refresh */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Estimates Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Overview of all your estimates</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={endDate}
-            onDateChange={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-              setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-              setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
-            }}
-            onRefresh={() => fetchEstimates(true)}
-            showRefreshButton={true}
-          />
-        </div>
-      </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={FileText} title="Estimates Dashboard" subtitle="Overview of all your estimates">
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+            setStartDateDisplay(start ? new Date(start + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+            setEndDateDisplay(end ? new Date(end + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/') : '');
+          }}
+          onRefresh={() => fetchEstimates(true)}
+          showRefreshButton={true}
+        />
+      </PageHeader>
 
       {/* Stat Cards Row - 7 cards matching reference */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">

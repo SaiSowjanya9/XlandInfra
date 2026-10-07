@@ -7,6 +7,7 @@ import {
   UserPlus, CheckCircle, XCircle, MapPin, AlertCircle,
   Landmark, Percent, Send, Key, Loader2, RefreshCw
 } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { USER_ROLES } from '../utils/userStore';
@@ -404,21 +405,15 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Header */}
+      {/* The shared section header, as on Work Orders and Estimates */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="text-gray-500 mt-1">Manage employee accounts and permissions</p>
-          </div>
-          <button
-            onClick={() => handleOpenModal()}
-            className="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2 transition-colors"
-          >
-            <UserPlus className="w-5 h-5" />
+        <PageHeader icon={Users} title="User Management"
+          subtitle="Manage employee accounts and permissions">
+          <button onClick={() => handleOpenModal()} className={HEADER_ACTION_CLASS}>
+            <UserPlus className="w-4 h-4" />
             Add New User
           </button>
-        </div>
+        </PageHeader>
       </div>
 
       {/* Stats Cards */}

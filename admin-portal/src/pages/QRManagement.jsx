@@ -7,6 +7,7 @@ import {
   RefreshCw, Eye, EyeOff, Calendar, Clock, MapPin,
   TrendingUp, X, Check, AlertCircle, Repeat
 } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -259,35 +260,26 @@ const QRManagement = () => {
       {/* Header */}
       <div className="border-b border-gray-200 bg-white/80 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
         <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-md">
-                <QrCode className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  QR Management System
-                </h1>
-                <p className="text-gray-500 text-sm">XLAND INFRA Dynamic QR Ecosystem</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
+          {/* The shared section header, as on Work Orders and Estimates */}
+          <PageHeader icon={QrCode} title="QR Management System"
+            subtitle="XLAND INFRA Dynamic QR Ecosystem">
+            <button
+              onClick={() => { fetchOverview(); fetchQRCodes(); if (selectedQR) fetchAnalytics(selectedQR.id); }}
+              className={`${HEADER_GHOST_CLASS} !px-2.5`}
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+            {!isOpsManager && (
               <button
-                onClick={() => { fetchOverview(); fetchQRCodes(); if (selectedQR) fetchAnalytics(selectedQR.id); }}
-                className={`p-2.5 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-all ${refreshing ? 'animate-spin' : ''}`}
+                onClick={() => setShowCreateModal(true)}
+                className={HEADER_ACTION_CLASS}
               >
-                <RefreshCw className="w-4 h-4 text-gray-500" />
+                <Plus className="w-4 h-4" />
+                Create QR
               </button>
-              {!isOpsManager && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 rounded-xl text-white font-medium hover:bg-indigo-700 transition-all shadow-md"
-                >
-                  Create QR
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </PageHeader>
 
           {/* Tab Navigation */}
           <div className="flex gap-1 mt-4">

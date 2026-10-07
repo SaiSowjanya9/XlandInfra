@@ -23,6 +23,7 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Service Types - shared with Add Vendor section
@@ -295,47 +296,43 @@ const FPVendors = ({ user }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">{statusFilteredVendors.length} total vendors</p>
-        </div>
-        <div className="flex items-center gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Store} title="Vendor Details"
+        subtitle={`${statusFilteredVendors.length} total vendors`}>
+        <button
+          onClick={fetchVendors}
+          className={`${HEADER_GHOST_CLASS} !px-2.5`}
+          title="Refresh"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+        {selectedVendors.length > 0 && (
           <button
-            onClick={fetchVendors}
-            className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Refresh"
+            onClick={handleBulkArchive}
+            disabled={archivingSelected}
+            className="flex items-center gap-2 h-10 px-4 rounded-[10px] bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+            title="Archive Selected Vendors"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+            <Archive className="w-4 h-4" />
+            <span>{archivingSelected ? 'Archiving...' : `Archive (${selectedVendors.length})`}</span>
           </button>
-          {selectedVendors.length > 0 && (
-            <button
-              onClick={handleBulkArchive}
-              disabled={archivingSelected}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400"
-              title="Archive Selected Vendors"
-            >
-              <Archive className="w-4 h-4" />
-              <span>{archivingSelected ? 'Archiving...' : `Archive (${selectedVendors.length})`}</span>
-            </button>
-          )}
-          <button
-            onClick={exportAllVendors}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-            title="Export All Vendors"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export All</span>
-          </button>
-          <button
-            onClick={() => navigate('/fp/vendors/add')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <span>Add Vendor</span>
-          </button>
-        </div>
-      </div>
+        )}
+        <button
+          onClick={exportAllVendors}
+          className={HEADER_GHOST_CLASS}
+          title="Export All Vendors"
+        >
+          <Download className="w-4 h-4" />
+          <span>Export All</span>
+        </button>
+        <button
+          onClick={() => navigate('/fp/vendors/add')}
+          className={HEADER_ACTION_CLASS}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Vendor</span>
+        </button>
+      </PageHeader>
 
       {/* Main Content */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

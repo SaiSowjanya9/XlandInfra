@@ -31,6 +31,9 @@ export const STAT_TONES = {
 // Gold, 40px tall, 10px radius — the one filled control on the page
 export const HEADER_ACTION_CLASS = 'shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-[10px] bg-[#B5812A] hover:bg-[#9C6E22] text-white text-sm font-semibold transition-colors disabled:opacity-50';
 
+// Its quiet sibling for back and refresh buttons — same height, sand border, no fill
+export const HEADER_GHOST_CLASS = 'shrink-0 inline-flex items-center gap-1.5 h-10 px-3 rounded-[10px] border border-[#E8DFC9] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-[#F6EBD1] transition-colors';
+
 export const PageHeaderStat = ({ icon: Icon = FileText, tone = 'primary', label, value }) => {
   const { circle, color } = STAT_TONES[tone] || STAT_TONES.primary;
   return (

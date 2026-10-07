@@ -15,6 +15,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
 import VendorAssignmentModal from '../components/VendorAssignmentModal';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { useFP } from '../contexts/FPContext';
@@ -683,12 +684,8 @@ const Properties = () => {
   if (!selectedCategory) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
-            <p className="text-gray-600 mt-1">View and manage onboarded properties</p>
-          </div>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Building2} title="Properties" subtitle="View and manage onboarded properties" />
 
         <CategorySelection categories={PROPERTY_CATEGORIES} onSelect={setSelectedCategory} />
       </div>
@@ -711,36 +708,26 @@ const Properties = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Back to Categories"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Properties</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {properties.length} total properties
-            </p>
-          </div>
-        </div>
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 mt-3 sm:mt-0">
-          {/* Export All Button */}
-          <button
-            onClick={exportAllProperties}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
-            title="Export All Properties"
-          >
-            <Download className="w-4 h-4" />
-            Export All
-          </button>
-          {/* Notification Bell */}
-          <div className="relative">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Building2} title="Properties" subtitle={`${properties.length} total properties`}>
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={HEADER_GHOST_CLASS}
+          title="Back to Categories"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        {/* Export All Button */}
+        <button
+          onClick={exportAllProperties}
+          className={HEADER_ACTION_CLASS}
+          title="Export All Properties"
+        >
+          <Download className="w-4 h-4" />
+          Export All
+        </button>
+        {/* Notification Bell */}
+        <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -786,8 +773,7 @@ const Properties = () => {
             </>
           )}
           </div>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Tabs + Filters Bar */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

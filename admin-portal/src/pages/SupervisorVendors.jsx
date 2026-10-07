@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -131,16 +132,13 @@ const SupervisorVendors = ({ user }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-amber-600 text-sm">{statusFilteredVendors.length} total vendors</p>
-        </div>
-        <button onClick={fetchVendors} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh">
-          <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Store} title="Vendor Details"
+        subtitle={`${statusFilteredVendors.length} total vendors`}>
+        <button onClick={fetchVendors} className={`${HEADER_GHOST_CLASS} !px-2.5`} title="Refresh">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
-      </div>
+      </PageHeader>
 
       {message.text && (
         <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>

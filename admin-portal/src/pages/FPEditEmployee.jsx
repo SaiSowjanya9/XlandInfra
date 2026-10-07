@@ -5,7 +5,9 @@ import {
   Loader2,
   ArrowLeft,
   Save,
+  UserCog,
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -123,18 +125,13 @@ const FPEditEmployee = ({ user }) => {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate('/fp/employees')}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Edit Employee</h1>
-          <p className="text-gray-500 text-sm mt-1">Update employee information</p>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="mb-6">
+        <PageHeader icon={UserCog} title="Edit Employee" subtitle="Update employee information">
+          <button onClick={() => navigate('/fp/employees')} className={HEADER_GHOST_CLASS}>
+            <ArrowLeft className="w-4 h-4" /> Back to Employees
+          </button>
+        </PageHeader>
       </div>
 
       {/* Message */}

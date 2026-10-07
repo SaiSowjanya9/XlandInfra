@@ -19,6 +19,7 @@ import {
   Edit2,
   AtSign,
 } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
@@ -204,24 +205,19 @@ const FPEmployees = ({ user }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Employee Details</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {employees.length} employees • Manage and view all registered employees
-          </p>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Users} title="Employee Details"
+        subtitle={`${employees.length} employees • Manage and view all registered employees`}>
         {!isFPManager && (
           <button
             onClick={() => navigate('/fp/employees/add')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+            className={HEADER_ACTION_CLASS}
           >
             <UserPlus className="w-4 h-4" />
             Add Employee
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
