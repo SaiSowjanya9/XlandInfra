@@ -721,19 +721,22 @@ const SupervisorCustomers = ({ user, defaultTab = 'list' }) => {
             <p className="text-gray-500 mt-1">Choose the type of customer data you want to enter</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-3xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 max-w-3xl mx-auto">
             {ENTRY_TYPES.map((entry) => {
               const Icon = entry.icon;
               return (
                 <button
                   key={entry.id}
                   onClick={() => handleSelectEntryType(entry.id)}
-                  className="flex flex-col items-center p-4 md:p-5 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
+                  className="flex flex-col items-center justify-start px-1.5 py-4 md:py-5 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
                 >
                   <div className={`w-11 h-11 md:w-12 md:h-12 ${entry.color} rounded-xl flex items-center justify-center mb-2 md:mb-3`}>
                     <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
-                  <p className="font-medium text-gray-900 text-xs md:text-sm text-center leading-tight">{entry.name}</p>
+                  {/* One line, always: "Gated Community" wrapping made that tile taller than
+                      the other four. The narrow padding is what keeps it on one line at the
+                      tightest width the five columns ever get (lg, with the sidebar out). */}
+                  <p className="font-medium text-gray-900 text-xs text-center leading-tight whitespace-nowrap">{entry.name}</p>
                 </button>
               );
             })}

@@ -8,6 +8,7 @@ import { TermsConditionsField, EstimateTermsSection } from './EstimateTerms';
 import { newEstimateTerms } from '../../utils/estimateTerms';
 import { decodeEntities } from '../../utils/text';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
+import { resolveVisits, sanitizeVisits } from '../../utils/visitsPerYear';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, propertyTypeLabel, serviceOptionLabel } from './AddServicePage';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -121,7 +122,9 @@ const ServiceEditor = ({ services, vendors, property, initialRow, onSave, onCanc
             </label>
             : <p className="mt-1.5 text-[11px] text-slate-400">Fixed by the service. Turn on Allow Frequency Override on the service to change it.</p>}
         </div>
-        <Field label="Visits Per Year"><input type="number" min="0" max="366" step="1" readOnly={!service.allow_frequency_override || !overrideFrequency} value={inputs.visits ?? ''} onChange={event => updateInput('visits', event.target.value === '' ? '' : Number(event.target.value))} className={`${inputClass} ${!service.allow_frequency_override || !overrideFrequency ? 'cursor-not-allowed bg-slate-50' : ''}`} /><span className="mt-1 block text-[10px] font-normal text-slate-400">{!service.allow_frequency_override || !overrideFrequency ? 'Set by the frequency. Tick Override frequency to change it.' : 'Filled from the frequency; change it if needed'}</span></Field>
+        {/* Digits only, like the picker's: a number box takes "n", "e" and "-" and reports no
+            value for them, which priced the service on no visits at all */}
+        <Field label="Visits Per Year"><input type="text" inputMode="numeric" readOnly={!service.allow_frequency_override || !overrideFrequency} value={inputs.visits ?? ''} onChange={event => updateInput('visits', sanitizeVisits(event.target.value))} onBlur={event => updateInput('visits', resolveVisits(event.target.value, getServiceSchedule(service, inputs.capacity, inputs.frequency).visits))} className={`${inputClass} ${!service.allow_frequency_override || !overrideFrequency ? 'cursor-not-allowed bg-slate-50' : ''}`} /><span className="mt-1 block text-[10px] font-normal text-slate-400">{!service.allow_frequency_override || !overrideFrequency ? 'Set by the frequency. Tick Override frequency to change it.' : 'Filled from the frequency; change it if needed'}</span></Field>
         {service.pricing_method === 'fixed_visit_custom' && <Field label="One-off Custom Work Cost (₹)"><input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => updateInput('custom_work_cost', event.target.value)} className={inputClass} /></Field>}
         {(service.pricing_method === 'custom_quote' || quote?.requiresCustomQuote || inputs.custom_quote !== undefined) && <Field label="Total Vendor Quote for Service Period (₹) *"><input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => updateInput('custom_quote', event.target.value)} className={inputClass} /></Field>}
         <Field label="XLAND Operating Cost (Annual) (₹)"><input type="number" min="0" step="0.01" value={inputs.operating_cost} onChange={event => updateInput('operating_cost', event.target.value)} className={inputClass} /></Field>
