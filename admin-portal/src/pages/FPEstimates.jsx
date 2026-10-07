@@ -1917,6 +1917,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     options={zoneOptions}
                     placeholder="Type or select zone..."
                     allowCustom={true}
+                    showAllOnOpen={true}
                     inputClassName="text-sm"
                     theme="warm"
                   />
@@ -1929,6 +1930,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                     options={cityOptions}
                     placeholder="Type or select city..."
                     allowCustom={true}
+                    showAllOnOpen={true}
                     inputClassName="text-sm"
                     theme="warm"
                   />

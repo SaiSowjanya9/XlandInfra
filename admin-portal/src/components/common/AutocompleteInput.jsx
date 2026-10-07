@@ -431,14 +431,24 @@ const AutocompleteInput = ({
         </div>
       )}
 
-      {/* No results message. With a save row on offer the dropdown above is already showing it. */}
-      {isOpen && inputValue && filteredOptions.length === 0 && !offerCustom && (
+      {/* No results message. With a save row on offer the dropdown above is already showing it.
+          The empty-list case matters just as much: an opened field with nothing behind it used to
+          show a void, which read as broken rather than empty. */}
+      {isOpen && filteredOptions.length === 0 && !offerCustom && (inputValue || normalizedOptions.length === 0) && (
         <div className={`absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg ${skin.border}`}>
           <div className={`px-3 py-2 text-sm ${skin.muted}`}>
-            {allowCustom ? (
-              <span>No matches found. Press Enter to use "<strong>{inputValue}</strong>"</span>
+            {inputValue ? (
+              allowCustom ? (
+                <span>No matches found. Press Enter to use "<strong>{inputValue}</strong>"</span>
+              ) : (
+                <span>No matches found</span>
+              )
             ) : (
-              <span>No matches found</span>
+              allowCustom ? (
+                <span>No saved options yet — type a name and press Enter to use it</span>
+              ) : (
+                <span>No options</span>
+              )
             )}
           </div>
         </div>
