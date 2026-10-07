@@ -7,6 +7,7 @@ import {
   ArrowRight, Eye, ListChecks, PlayCircle, Lock
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import PageHeader from '../../components/common/PageHeader';
 import { 
   generateScheduleDates, 
   formatSchedulesForDisplay, 
@@ -1529,23 +1530,19 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
         </div>
       )}
       
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Schedule Property</h1>
-            <nav className="text-xs sm:text-sm text-gray-500 hidden md:block">
-              Home › Scheduling › Pending Property Schedules › <span className="text-gray-900">Schedule Property</span>
-            </nav>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={goBack} className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden xs:inline">Back to Pending Schedules</span>
-              <span className="xs:hidden">Back</span>
-            </button>
-          </div>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-4 sm:px-6 pt-4">
+        <PageHeader
+          icon={CalendarDays}
+          title="Schedule Property"
+          subtitle="Home › Scheduling › Pending Property Schedules › Schedule Property"
+        >
+          <button onClick={goBack} className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden xs:inline">Back to Pending Schedules</span>
+            <span className="xs:hidden">Back</span>
+          </button>
+        </PageHeader>
       </div>
 
       

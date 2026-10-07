@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
+  IndianRupee,
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -30,6 +31,7 @@ import { collectionTrendBuckets } from '../../utils/collectionTrend';
 import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -597,16 +599,11 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Payments Dashboard</h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              {selectedFp ? `Viewing payments for ${selectedFp.name}` : 'Overview of all payments and collections'}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-4 sm:px-6 pt-6">
+        <PageHeader icon={IndianRupee} title="Payments Dashboard"
+          subtitle={selectedFp ? `Viewing payments for ${selectedFp.name}` : 'Overview of all payments and collections'}>
+          <>
             {/* FP Selector */}
             <div className="relative">
               <button
@@ -662,8 +659,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               onRefresh={fetchDashboardData}
               showRefreshButton={false}
             />
-          </div>
-        </div>
+          </>
+        </PageHeader>
       </div>
 
       <div className="p-4 sm:p-6">

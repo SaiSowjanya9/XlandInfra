@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1122,23 +1123,17 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">All Schedules</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              View all schedule occurrences across properties
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-6 pt-6">
+        <PageHeader icon={CalendarDays} title="All Schedules" subtitle="View all schedule occurrences across properties">
+          <>
             {permissions.canCreate && (
               <button
                 onClick={() => {
                   const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : portalType === 'coordinator' ? '/coordinator' : portalType === 'supervisor' ? '/supervisor' : '/employee';
                   navigate(`${basePath}/schedules/pending`);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+                className={HEADER_ACTION_CLASS}
               >
                 <Plus className="w-4 h-4" />
                 New Schedule
@@ -1147,7 +1142,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             {permissions.canReschedule && (
               <button
                 onClick={openRescheduleModal}
-                className="px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors"
+                className="h-10 px-4 bg-white border border-[#E8DFC9] text-[#111827] text-sm font-medium rounded-[10px] hover:bg-[#FEF3E2] flex items-center gap-2 transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Reschedule
@@ -1156,13 +1151,13 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
             <button
               onClick={() => fetchSchedules(true)}
               disabled={refreshing}
-              className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              className="h-10 px-4 bg-white border border-[#E8DFC9] text-[#111827] text-sm font-medium rounded-[10px] hover:bg-[#FEF3E2] flex items-center gap-2 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-          </div>
-        </div>
+          </>
+        </PageHeader>
       </div>
 
       <div className="p-6">

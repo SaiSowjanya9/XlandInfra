@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, Search, Filter, ChevronLeft, ChevronRight,
+  Calendar, CalendarDays, Clock, Search, Filter, ChevronLeft, ChevronRight,
   Plus, Eye, RefreshCw, CheckCircle, AlertCircle, X, Settings
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -290,16 +291,10 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Home &gt; Scheduling &gt; Calendar
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-6 pt-6">
+        <PageHeader icon={CalendarDays} title="Calendar" subtitle="Home › Scheduling › Calendar">
+          <>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -313,13 +308,13 @@ const ScheduleCalendarView = ({ portalType = 'admin' }) => {
                 const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : portalType === 'coordinator' ? '/coordinator' : portalType === 'supervisor' ? '/supervisor' : '/employee';
                 navigate(`${basePath}/schedules/pending`);
               }}
-              className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              className={HEADER_ACTION_CLASS}
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               New Schedule
             </button>
-          </div>
-        </div>
+          </>
+        </PageHeader>
       </div>
 
       {/* Filters Bar */}

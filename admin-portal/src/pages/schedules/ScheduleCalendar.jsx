@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, ChevronLeft, ChevronRight, Search, Bell,
+  Calendar, CalendarDays, ChevronLeft, ChevronRight, Search, Bell,
   CheckCircle, Clock, AlertCircle, XCircle, RefreshCw, X,
   MapPin, User, Building2, Wrench, Truck, Phone, Mail, FileText
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -426,28 +427,24 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Calendar</h1>
-            <p className="text-sm text-gray-500">Home › Scheduling › Calendar</p>
-          </div>
-          <div className="flex items-center gap-4">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-6 pt-6">
+        <PageHeader icon={CalendarDays} title="Calendar" subtitle="Home › Scheduling › Calendar">
+          <>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by Property, Vendor, Work Order..."
-                className="pl-10 pr-4 py-2 w-80 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 h-10 w-80 border border-[#E8DFC9] rounded-[10px] text-sm bg-white focus:outline-none focus:border-[#B5812A]"
               />
             </div>
-            <button className="relative p-2 hover:bg-gray-100 rounded-lg">
-              <Bell className="w-5 h-5 text-gray-600" />
+            <button className="relative h-10 w-10 bg-white border border-[#E8DFC9] rounded-[10px] hover:bg-[#FEF3E2] flex items-center justify-center">
+              <Bell className="w-5 h-5 text-[#B5812A]" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">12</span>
             </button>
-          </div>
-        </div>
+          </>
+        </PageHeader>
       </div>
 
       {/* Filters Bar - Responsive */}

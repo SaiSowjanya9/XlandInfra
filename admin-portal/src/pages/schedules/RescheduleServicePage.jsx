@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Clock, Search, Filter, ChevronLeft, ChevronRight,
+  Calendar, CalendarClock, Clock, Search, Filter, ChevronLeft, ChevronRight,
   Eye, RefreshCw, CheckCircle, AlertCircle, Info, X, XCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -370,16 +371,10 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Rescheduled Requests</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Home &gt; Scheduling &gt; Rescheduled Requests
-            </p>
-          </div>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-6 pt-6">
+        <PageHeader icon={CalendarClock} title="Rescheduled Requests"
+          subtitle="Home › Scheduling › Rescheduled Requests" />
       </div>
 
       <div className="p-6">

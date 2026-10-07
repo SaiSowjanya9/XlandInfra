@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, ChevronLeft, ChevronRight, Eye, RefreshCw, 
-  XCircle, RotateCcw, X, Calendar, Clock, User, Building2, Download
+  XCircle, RotateCcw, X, Calendar, CalendarX, Clock, User, Building2, Download
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -237,34 +238,29 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
 
   return (
     <div className="min-h-screen bg-warm-page p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cancelled Schedules</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            View all cancelled service schedules and their cancellation details
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={CalendarX} title="Cancelled Schedules"
+        subtitle="View all cancelled service schedules and their cancellation details" className="mb-6">
+        <>
           {permissions.canExport && (
             <button
               onClick={handleExport}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm"
+              className="h-10 px-4 bg-white border border-[#E8DFC9] rounded-[10px] hover:bg-[#FEF3E2] flex items-center gap-2 text-sm font-medium text-[#111827]"
               title="Export"
             >
-              <Download className="w-4 h-4 text-gray-600" />
+              <Download className="w-4 h-4" />
               Export
             </button>
           )}
           <button
             onClick={fetchCancelledSchedules}
-            className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+            className="h-10 w-10 bg-white border border-[#E8DFC9] rounded-[10px] hover:bg-[#FEF3E2] flex items-center justify-center"
             title="Refresh"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 text-[#B5812A] ${loading ? 'animate-spin' : ''}`} />
           </button>
-        </div>
-      </div>
+        </>
+      </PageHeader>
 
       {/* Stats Cards - Responsive */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
