@@ -176,6 +176,13 @@ fetch('/api/manager/dashboard', { ... });
   with the colour in the icon only — green `Circle` for Active Estimates, amber `Package` for AMC
   Packages, `PlusCircle` for Add Service and `Database` for Archived. A count passed as `undefined`
   is left out (FP has no Add Service card). Change the component, never a copy in a page.
+- **The header around those cards is the same card in every portal too**: `bg-warm-section border
+  border-warm-border rounded-xl shadow-warm px-5 py-4`, a `bg-warm-accent-soft` tile with a
+  `text-warm-accent` `FileText`, the title in `text-warm-text` and the strapline in `text-warm-muted`
+  — FP's header, now also Manager's, Coordinator's, Supervisor's and Executive's. The white
+  full-width band those four used is gone, so the tab bar beneath is a card as well rather than a
+  second band butted against the first. This is the one place the warm skin is deliberately used
+  outside the FP portal.
 
 ## Half-Yearly Payments
 

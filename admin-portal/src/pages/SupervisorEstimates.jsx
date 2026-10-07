@@ -1933,12 +1933,14 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   return (
     <div className="min-h-screen bg-warm-page">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
-              <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
+      {/* The Estimates header reads the same in every portal: the cream section card, the tan
+          icon tile, and the shared stat cards on the right */}
+      <div className="max-w-7xl mx-auto px-6 pt-6">
+        <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-warm-accent" /></div>
+              <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p></div>
             </div>
             <EstimateStatCards
               active={filteredEstimates.length}
@@ -1953,8 +1955,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       </div>
       
       {/* Tab Bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 pt-4">
+        <div className="bg-white border border-warm-border rounded-xl shadow-warm px-4">
           <div className="flex items-center gap-1 py-3">
             <button onClick={() => navigate('/supervisor/estimates')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${defaultTab === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
               <List className="w-4 h-4" />All Estimates
