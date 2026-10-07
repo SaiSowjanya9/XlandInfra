@@ -184,6 +184,16 @@ fetch('/api/manager/dashboard', { ... });
   second band butted against the first. This is the one place the warm skin is deliberately used
   outside the FP portal.
 
+## Customer Portal — Payments & Invoices
+
+- **One list, filtered; not a tab per invoice kind.** `frontend/src/pages/Payment.jsx` opens on
+  **All Invoices** with a select to narrow to AMC or Work Order. The two tabs it replaced defaulted
+  to AMC, so a customer whose only unpaid invoice was a work order saw an empty-looking page — and
+  the Total Invoices / Pending / Total Paid cards count the *displayed* invoices, so those figures
+  had been reporting one kind while presenting themselves as the account total.
+- A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
+  kinds share one list, and the icon is what tells them apart.
+
 ## Half-Yearly Payments
 
 - **A payment is either the whole balance or exactly half of it.** The AMC policy offers one split

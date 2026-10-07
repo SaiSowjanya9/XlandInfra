@@ -9,6 +9,8 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  Filter,
   X,
   RefreshCw,
   Building2,
@@ -1078,7 +1080,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
 
 // Main Payment Component
 const Payment = () => {
-  const [activeTab, setActiveTab] = useState('amc');
+  // 'all' by default: the page opens on everything the customer owes
+  const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1170,8 +1173,18 @@ const Payment = () => {
   // Filter invoices by type
   const amcInvoices = invoices.filter(inv => inv.invoiceType === 'estimate' || inv.invoiceType === 'manual' || !inv.invoiceType);
   const workOrderInvoices = invoices.filter(inv => inv.invoiceType === 'work_order');
+  // One list of everything owed, narrowed by choice rather than split in two by default: a tab
+  // per kind hid half the invoices behind a click, and the totals above counted only the half on
+  // screen — a customer with an unpaid work order read "Pending ₹0" while standing on AMC.
+  const INVOICE_FILTERS = [
+    { value: 'all', label: 'All Invoices', count: invoices.length },
+    { value: 'amc', label: 'AMC Invoices', count: amcInvoices.length },
+    { value: 'workorder', label: 'Work Order Invoices', count: workOrderInvoices.length }
+  ];
 
-  const displayedInvoices = activeTab === 'amc' ? amcInvoices : workOrderInvoices;
+  const displayedInvoices = invoiceFilter === 'amc' ? amcInvoices
+    : invoiceFilter === 'workorder' ? workOrderInvoices
+    : invoices;
 
   // Stats calculations
   const totalPending = displayedInvoices
@@ -1233,41 +1246,25 @@ const Payment = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('amc')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            activeTab === 'amc'
-              ? 'bg-gold-600/20 text-gold-400 border border-gold-500/30'
-              : 'bg-dark-800/50 text-dark-300 border border-dark-600 hover:text-white hover:border-dark-500'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          AMC Invoices
-          <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'amc' ? 'bg-gold-500/20' : 'bg-dark-700'
-          }`}>
-            {amcInvoices.length}
-          </span>
-        </button>
-        
-        <button
-          onClick={() => setActiveTab('workorder')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            activeTab === 'workorder'
-              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-              : 'bg-dark-800/50 text-dark-300 border border-dark-600 hover:text-white hover:border-dark-500'
-          }`}
-        >
-          <Briefcase className="w-4 h-4" />
-          Work Order Invoices
-          <span className={`px-2 py-0.5 rounded-full text-xs ${
-            activeTab === 'workorder' ? 'bg-blue-500/20' : 'bg-dark-700'
-          }`}>
-            {workOrderInvoices.length}
-          </span>
-        </button>
+      {/* One list, narrowed by a filter rather than split across tabs */}
+      <div className="flex items-center gap-3 mb-6">
+        <label htmlFor="invoice-filter" className="sr-only">Show invoices</label>
+        <div className="relative">
+          <Filter className="w-4 h-4 text-dark-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <select
+            id="invoice-filter"
+            value={invoiceFilter}
+            onChange={(e) => setInvoiceFilter(e.target.value)}
+            className="appearance-none pl-9 pr-9 py-2.5 rounded-xl bg-dark-800/50 border border-dark-600 text-white font-medium hover:border-dark-500 focus:outline-none focus:border-gold-500/50 transition-colors"
+          >
+            {INVOICE_FILTERS.map(option => (
+              <option key={option.value} value={option.value} className="bg-dark-800">
+                {option.label} ({option.count})
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="w-4 h-4 text-dark-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
 
         <button
           onClick={fetchInvoices}
@@ -1305,7 +1302,9 @@ const Payment = () => {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <FileText className="w-12 h-12 text-dark-500 mx-auto mb-3" />
-              <p className="text-dark-300">No {activeTab === 'amc' ? 'AMC' : 'Work Order'} invoices found</p>
+              <p className="text-dark-300">
+                No {invoiceFilter === 'amc' ? 'AMC ' : invoiceFilter === 'workorder' ? 'work order ' : ''}invoices found
+              </p>
               <p className="text-dark-500 text-sm mt-1">Invoices will appear here once generated</p>
             </div>
           </div>
@@ -1315,6 +1314,7 @@ const Payment = () => {
               const isPaid = invoice.status === 'paid' || invoice.balanceAmount <= 0;
               const isOverdue = invoice.status === 'overdue' || (invoice.dueDate && new Date(invoice.dueDate) < new Date() && !isPaid);
               const StatusIcon = STATUS_CONFIG[invoice.status]?.icon || FileText;
+              const isWorkOrder = invoice.invoiceType === 'work_order';
 
               return (
                 <div
@@ -1323,11 +1323,12 @@ const Payment = () => {
                   onClick={() => fetchInvoiceDetails(invoice.id)}
                 >
                   <div className="flex items-center gap-4">
-                    {/* Invoice Icon */}
+                    {/* Invoice Icon. Read from the invoice itself, not from the filter: on All
+                        the two kinds sit in one list, and the icon is what tells them apart. */}
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      activeTab === 'workorder' ? 'bg-blue-500/20' : 'bg-gold-600/20'
+                      isWorkOrder ? 'bg-blue-500/20' : 'bg-gold-600/20'
                     }`}>
-                      {activeTab === 'workorder' ? (
+                      {isWorkOrder ? (
                         <Briefcase className="w-6 h-6 text-blue-400" />
                       ) : (
                         <FileText className="w-6 h-6 text-gold-400" />
