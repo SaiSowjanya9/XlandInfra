@@ -120,6 +120,15 @@ Mistakes that fail silently and have each already broken live endpoints:
   service still does (`priceCustomEstimate`, and the Manager's `quoteEstimate`).
 - The Override Frequency checkbox must not sit inside the Frequency select's `<label>`: a click on
   its text activates the label's first control — the disabled select — so the box never ticks.
+- **Visits Per Year takes digits, not `type="number"`.** Once Override frequency unlocks the box, a
+  number input accepts `n`, `e`, `-`, `+` and `.` and then reports `value` as `''` for all of them,
+  so the field displayed text the component never saw and the service was quoted on no visits —
+  or the quote failed with "Visits must be a valid number" over a field that looked filled in. Use
+  `utils/visitsPerYear.js`: `sanitizeVisits` on change (digits, capped at 366) and `resolveVisits`
+  on blur, with `getServiceSchedule(...).visits` as the fallback, so clearing it restores the
+  frequency's own count and a 0 survives only for On Request. Both dialogs that offer the field —
+  `ServiceCatalogPicker` and `CustomEstimateBuilder` — go through it. Regression test:
+  `node --test admin-portal/src/utils/visitsPerYear.test.js`.
 
 ## AMC Package Rows
 
@@ -152,6 +161,13 @@ fetch('/api/manager/dashboard', { ... });
 ## Dashboard UI
 
 - Keep dashboard summary cards equal in width and height in a single row, with consistent icon sizing, spacing, and label/count alignment. On narrow screens, scroll the card row instead of wrapping cards or overflowing the page. Keep date, notification, and refresh controls compact on the row below.
+- **An Add Customer entry-type tile keeps its name on one line.** "Gated Community" wrapped to two,
+  which made that one tile taller than the other four and left the row ragged. The label is
+  `text-xs … whitespace-nowrap` and the tile is padded `px-1.5 py-4 md:py-5` — the narrow sides are
+  what keep the longest name on one line at the tightest width the five columns ever get (lg, where
+  the sidebar takes 288px). The six copies of this picker — `CreateCustomer`, `FPCustomers`,
+  `ManagerCustomers`, `CoordinatorCustomers`, `SupervisorCustomers`, `ExecutiveCustomers` — are
+  identical markup and must be changed together.
 
 ## Warm Beige UI System
 

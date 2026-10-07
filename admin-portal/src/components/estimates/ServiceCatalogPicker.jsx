@@ -7,6 +7,7 @@ import CapacitySlabList, { CapacitySlabSelect } from './CapacitySlabList';
 import { isVisitManpower, suggestedManpower } from '../../utils/manpowerPricing';
 import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import { resolveVisits, sanitizeVisits } from '../../utils/visitsPerYear';
 import useScrollLock from '../../hooks/useScrollLock';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -387,8 +388,13 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                     frequency is ticked, and is then editable -- changing the frequency still refills it */}
                 {(() => {
                   const visitsLocked = !service.allow_frequency_override || !overrideFrequency || saving;
-                  return <label className={fieldLabel}>Visits Per Year<input type="number" min="0" max="366" step="1" readOnly={visitsLocked} value={inputs.visits ?? ''}
-                    onChange={event => setInput('visits', event.target.value === '' ? '' : Number(event.target.value))}
+                  // A whole count of visits, nothing else: a number box accepts "n", "e" and "-"
+                  // and then reports no value at all, so it displayed text this never saw and the
+                  // service was priced on no visits. Blurring it empty puts the frequency's own
+                  // count back rather than asking the server to price a blank.
+                  return <label className={fieldLabel}>Visits Per Year<input type="text" inputMode="numeric" readOnly={visitsLocked} value={inputs.visits ?? ''}
+                    onChange={event => setInput('visits', sanitizeVisits(event.target.value))}
+                    onBlur={event => setInput('visits', resolveVisits(event.target.value, getServiceSchedule(service, inputs.capacity, inputs.frequency).visits))}
                     title={visitsLocked ? 'Set by the frequency. Tick Override frequency to change it.' : undefined}
                     className={`${inputClass} mt-2 ${visitsLocked ? `cursor-not-allowed ${skin.readOnlyBg}` : ''}`} /></label>;
                 })()}
