@@ -23,6 +23,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -225,13 +226,10 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payment Links</h1>
-          <p className="text-sm text-gray-500 mt-1">Track online payment links for invoices (auto-generated when invoice is sent)</p>
-        </div>
-        <div className="flex gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Link2} title="Payment Links"
+        subtitle="Track online payment links for invoices (auto-generated when invoice is sent)">
+        <>
           {/* FP Selector - Only for Admin Portal */}
           {isAdminPortal && (
             <div className="relative">
@@ -284,20 +282,20 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
           )}
           <button
             onClick={fetchPaymentLinks}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 h-10 px-4 bg-white border border-[#E8DFC9] rounded-[10px] text-sm font-medium text-[#111827] hover:bg-[#FEF3E2] transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <button
             onClick={exportToExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 h-10 px-4 bg-white border border-[#E8DFC9] rounded-[10px] text-sm font-medium text-[#111827] hover:bg-[#FEF3E2] transition-colors"
           >
             <Download className="w-4 h-4" />
             Export
           </button>
-        </div>
-      </div>
+        </>
+      </PageHeader>
 
       {/* Stats Cards - Responsive */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

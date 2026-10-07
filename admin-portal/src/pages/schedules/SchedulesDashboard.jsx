@@ -12,6 +12,7 @@ import {
 import DonutChart from '../../components/common/DonutChart';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { 
   SCHEDULE_STATUS_COLORS, 
   PROPERTY_TYPE_COLORS, 
@@ -420,13 +421,9 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Scheduling Dashboard</h1>
-          <p className="text-sm text-gray-500">Home &gt; Scheduling &gt; Dashboard</p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={CalendarDays} title="Scheduling Dashboard" subtitle="Home › Scheduling › Dashboard">
+        <>
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
@@ -509,23 +506,23 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           {/* Refresh Button */}
           <button 
             onClick={fetchSchedules}
-            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 bg-white"
+            className="h-10 w-10 border border-[#E8DFC9] rounded-[10px] hover:bg-[#FEF3E2] bg-white flex items-center justify-center"
             title="Refresh data"
           >
-            <RefreshCw className="w-5 h-5 text-gray-600" />
+            <RefreshCw className="w-5 h-5 text-[#B5812A]" />
           </button>
           
           {/* New Schedule Button */}
           <button
             onClick={() => navigate(`${getBasePath()}/schedules/pending`)}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+            className={HEADER_ACTION_CLASS}
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">New Schedule</span>
             <span className="sm:hidden">New</span>
           </button>
-        </div>
-      </div>
+        </>
+      </PageHeader>
 
       {/* Stat Cards - Responsive grid with consistent heights */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">

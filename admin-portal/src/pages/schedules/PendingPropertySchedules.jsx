@@ -38,6 +38,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import VendorAssignmentModal from '../../components/VendorAssignmentModal';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -444,20 +445,10 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pending Property Schedules</h1>
-          <nav className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-            <Link to={portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '/'} className="hover:text-blue-600">Home</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>Scheduling</span>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900">Pending Property Schedules</span>
-          </nav>
-        </div>
-        
-        <div className="flex items-center gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={CalendarClock} title="Pending Property Schedules"
+        subtitle="Home › Scheduling › Pending Property Schedules">
+        <>
           {/* Date Range */}
           <DateRangeFilter
             startDate={startDate}
@@ -467,11 +458,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
           />
           
           {/* Notification Bell */}
-          <button className="relative p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-            <Bell className="w-5 h-5 text-gray-500" />
+          <button className="relative h-10 w-10 bg-white border border-[#E8DFC9] rounded-[10px] hover:bg-[#FEF3E2] transition-colors flex items-center justify-center">
+            <Bell className="w-5 h-5 text-[#B5812A]" />
           </button>
-        </div>
-      </div>
+        </>
+      </PageHeader>
 
       {/* Stats Cards - Responsive */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

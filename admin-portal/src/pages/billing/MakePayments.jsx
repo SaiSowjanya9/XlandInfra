@@ -26,8 +26,10 @@ import {
   MapPin,
   ChevronDown,
   Users,
+  IndianRupee,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import PageHeader from '../../components/common/PageHeader';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import { formatPlanDate, halfPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { useFP } from '../../contexts/FPContext';
@@ -767,16 +769,15 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
     return (
       <div className="min-h-screen bg-warm-page">
-        {/* Header */}
-        <div className="bg-white px-6 py-5">
-          <div className="max-w-5xl mx-auto flex items-center gap-4">
-            <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Review & Confirm Payment</h1>
-              <p className="text-sm text-gray-500">Please review all payment details before confirming</p>
-            </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <div className="px-6 pt-6">
+          <div className="max-w-5xl mx-auto">
+            <PageHeader icon={IndianRupee} title="Review & Confirm Payment"
+              subtitle="Please review all payment details before confirming">
+              <button onClick={handleBack} className="inline-flex items-center gap-1.5 h-10 px-3 rounded-[10px] border border-[#E8DFC9] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-[#F6EBD1] transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+            </PageHeader>
           </div>
         </div>
 
@@ -1132,15 +1133,15 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   if (currentStep === 2 && selectedInvoice) {
     return (
       <div className="min-h-screen bg-warm-page">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-5xl mx-auto flex items-center gap-4">
-            <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
-              <p className="text-sm text-gray-500">Complete your payment securely</p>
-            </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <div className="px-6 pt-6">
+          <div className="max-w-5xl mx-auto">
+            <PageHeader icon={IndianRupee} title="Make Payment"
+              subtitle="Complete your payment securely">
+              <button onClick={handleBack} className="inline-flex items-center gap-1.5 h-10 px-3 rounded-[10px] border border-[#E8DFC9] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-[#F6EBD1] transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+            </PageHeader>
           </div>
         </div>
         <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount}
@@ -1682,20 +1683,16 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   // ==================== STEP 1: PAYMENT METHOD SELECTION ====================
   return (
     <div className="min-h-screen bg-warm-page">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <div className="px-6 pt-6">
+        <div className="max-w-4xl mx-auto">
+          <PageHeader icon={IndianRupee} title="Make Payment"
+            subtitle="Choose a payment method and complete your payment">
+            <button onClick={handleBack} className="inline-flex items-center gap-1.5 h-10 px-3 rounded-[10px] border border-[#E8DFC9] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-[#F6EBD1] transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back
             </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Make Payment</h1>
-              <p className="text-sm text-gray-500">Choose a payment method and complete your payment</p>
-            </div>
-          </div>
-          {/* FP Selector - Only for Admin Portal */}
-          {isAdminPortal && (
+            {/* FP Selector - Only for Admin Portal */}
+            {isAdminPortal && (
             <div className="relative">
               <button
                 onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
@@ -1743,7 +1740,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-          )}
+            )}
+          </PageHeader>
         </div>
       </div>
 

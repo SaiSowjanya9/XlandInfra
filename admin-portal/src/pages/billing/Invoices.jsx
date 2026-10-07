@@ -33,6 +33,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -706,16 +707,9 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     <div className="min-h-screen bg-warm-page">
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Header Card */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Invoices</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Home &gt; Billing & Payments &gt; Invoices
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Receipt} title="Invoices" subtitle="Home › Billing & Payments › Invoices" className="mb-4">
+            <>
               {/* FP Selector - Only for Admin Portal */}
               {isAdminPortal && (
                 <div className="relative">
@@ -780,7 +774,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               {/* Export All Button */}
               <button
                 onClick={exportToExcel}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 h-10 px-4 bg-white border border-[#E8DFC9] text-[#111827] rounded-[10px] text-sm font-medium hover:bg-[#FEF3E2] transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export All
@@ -788,15 +782,14 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
               {activeTab === 'manual' && (
                 <button
                   onClick={() => navigate(`/${portalType === 'admin' ? 'employee' : portalType}/billing/create-invoice`)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  className={HEADER_ACTION_CLASS}
                 >
                   <Plus className="w-4 h-4" />
                   Create Invoice
                 </button>
               )}
-            </div>
-          </div>
-        </div>
+            </>
+        </PageHeader>
 
         {/* Invoice Type Tabs - Below Header */}
         <div className="flex gap-2 mb-4">

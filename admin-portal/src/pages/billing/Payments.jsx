@@ -37,6 +37,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import * as XLSX from 'xlsx';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -2857,25 +2858,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Header Card */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Payments
-              </h1>
-              <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                <Home className="w-3.5 h-3.5" />
-                <span>Home</span>
-                <ChevronRightIcon className="w-3.5 h-3.5" />
-                <span>Billing & Payments</span>
-                <ChevronRightIcon className="w-3.5 h-3.5" />
-                <span className="text-gray-700">
-                  Payments
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={IndianRupee} title="Payments" subtitle="Home › Billing & Payments › Payments" className="mb-4">
+            <>
               {/* FP Selector - Only for Admin Portal */}
               {isAdminPortal && (
                 <div className="relative">
@@ -2938,14 +2923,13 @@ const Payments = ({ user, portalType = 'admin' }) => {
               </div>
               <button
                 onClick={exportToExcel}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className={HEADER_ACTION_CLASS}
               >
                 <Download className="w-4 h-4" />
                 Export All
               </button>
-            </div>
-          </div>
-        </div>
+            </>
+        </PageHeader>
 
         {/* All Payments Content */}
         {/* Stats Cards - Responsive */}

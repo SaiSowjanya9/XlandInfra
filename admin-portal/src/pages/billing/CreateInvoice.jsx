@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -485,29 +486,26 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <div className="flex items-center gap-4">
+      {/* The shared section header, as on Work Orders and Estimates — kept sticky over the long form */}
+      <div className="sticky top-0 z-10 bg-warm-page px-6 pt-4 pb-3">
+        <div className="max-w-6xl mx-auto">
+          <PageHeader icon={FileText} title="Create New Invoice"
+            subtitle="Fill in the details to generate an invoice">
             <button
               onClick={() => navigate(`${getBasePath()}/billing/invoices`)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-[10px] border border-[#E8DFC9] text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-[#F6EBD1] transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-4 h-4" /> Back
             </button>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Create New Invoice</h1>
-              <p className="text-sm text-gray-500">Fill in the details to generate an invoice</p>
-            </div>
-          </div>
-          <button
-            onClick={handleCreateInvoice}
-            disabled={loading}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 font-medium"
-          >
-            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-            Create Invoice
-          </button>
+            <button
+              onClick={handleCreateInvoice}
+              disabled={loading}
+              className={HEADER_ACTION_CLASS}
+            >
+              {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+              Create Invoice
+            </button>
+          </PageHeader>
         </div>
       </div>
 
