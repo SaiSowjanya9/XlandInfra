@@ -383,8 +383,15 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
                     </label>
                     : <p className={`mt-2 text-xs ${skin.faint}`}>This service has a fixed frequency. Turn on Allow Frequency Override on the service to change it here.</p>}
                 </div>
-                {/* Visits are entered like any other field: the frequency only proposes a count (0 to 366) */}
-                <label className={fieldLabel}>Visits Per Year<input type="number" min="0" max="366" step="1" value={inputs.visits ?? ''} onChange={event => setInput('visits', event.target.value === '' ? '' : Number(event.target.value))} className={`${inputClass} mt-2`} /></label>
+                {/* Locked with the frequency: it follows the frequency (Half Yearly -> 2) until Override
+                    frequency is ticked, and is then editable -- changing the frequency still refills it */}
+                {(() => {
+                  const visitsLocked = !service.allow_frequency_override || !overrideFrequency || saving;
+                  return <label className={fieldLabel}>Visits Per Year<input type="number" min="0" max="366" step="1" readOnly={visitsLocked} value={inputs.visits ?? ''}
+                    onChange={event => setInput('visits', event.target.value === '' ? '' : Number(event.target.value))}
+                    title={visitsLocked ? 'Set by the frequency. Tick Override frequency to change it.' : undefined}
+                    className={`${inputClass} mt-2 ${visitsLocked ? `cursor-not-allowed ${skin.readOnlyBg}` : ''}`} /></label>;
+                })()}
                 {service.pricing_method === 'fixed_visit_custom' && <label className={fieldLabel}>One-off Custom Work Cost (₹)<input type="number" min="0" step="0.01" value={inputs.custom_work_cost} onChange={event => setInput('custom_work_cost', event.target.value)} className={`${inputClass} mt-2`} /></label>}
                 {requiresQuote && <label className={fieldLabel}>Total Vendor Quote for Service Period (₹) *<input type="number" min="0.01" step="0.01" value={inputs.custom_quote ?? ''} onChange={event => setInput('custom_quote', event.target.value)} className={`${inputClass} mt-2`} /></label>}
               </div>
