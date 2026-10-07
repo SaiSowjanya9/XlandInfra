@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   FileText, Plus, List, Package, PlusCircle, Archive, Check, X, AlertCircle,
-  ChevronDown, RefreshCw, Users
+  ChevronDown, Users
 } from 'lucide-react';
 
 import CreateEstimate from '../components/estimates/CreateEstimate';
@@ -14,6 +14,7 @@ import AddServicePage from '../components/estimates/AddServicePage';
 import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder';
 import ArchivedEstimates from '../components/estimates/ArchivedEstimates';
 import { useFP } from '../contexts/FPContext';
+import EstimateStatCards from '../components/estimates/EstimateStatCards';
 
 import {
   fetchEstimates, fetchAMCPackages, fetchAddons
@@ -216,19 +217,21 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
       {/* Content Container - Single consistent wrapper */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header Card - Aligned with content below */}
-        <div className={`bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4 ${defaultTab === 'add-service' ? 'hidden' : ''}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <FileText className="w-6 h-6 text-indigo-600" />
+        {/* The Estimates header reads the same in every portal: the cream section card, the tan
+            icon tile, and the shared stat cards on the right */}
+        <div className={`bg-warm-section rounded-xl border border-warm-border shadow-warm px-5 py-4 mb-4 ${defaultTab === 'add-service' ? 'hidden' : ''}`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0">
+                <FileText className="w-6 h-6 text-warm-accent" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1>
-                <p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1>
+                <p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 shrink-0">
               {/* FP Switcher - Show on all tabs */}
               <div className="relative">
                 <button
@@ -273,34 +276,14 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
                 )}
               </div>
               
-              {/* Refresh Button */}
-              <button
-                onClick={handleRefresh}
-                className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Refresh"
-              >
-                <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              
-              {/* Quick Stats */}
-              <div className="flex gap-6">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800">{stats.estimates}</p>
-                  <p className="text-xs text-gray-500">Active Estimates</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800">{stats.amcPackages}</p>
-                  <p className="text-xs text-gray-500">AMC Packages</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800">{stats.addons}</p>
-                  <p className="text-xs text-gray-500">Add Service</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-800">{stats.archived}</p>
-                  <p className="text-xs text-gray-500">Archived</p>
-                </div>
-              </div>
+              <EstimateStatCards
+                active={stats.estimates}
+                amc={stats.amcPackages}
+                services={stats.addons}
+                archived={stats.archived}
+                onRefresh={handleRefresh}
+                refreshing={loading}
+              />
             </div>
           </div>
         </div>
