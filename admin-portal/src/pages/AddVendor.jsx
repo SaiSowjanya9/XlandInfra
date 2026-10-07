@@ -19,6 +19,7 @@ import {
   X,
   Clock
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
@@ -315,18 +316,13 @@ const AddVendor = ({ admin }) => {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate('/employee')}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4 text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Truck} title="Add New Vendor"
+        subtitle="Register a new service provider in the system">
+        <button onClick={() => navigate('/employee')} className={HEADER_GHOST_CLASS}>
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
-        <h1 className="text-2xl font-semibold text-gray-900">Add New Vendor</h1>
-        <p className="text-gray-500 text-sm mt-1">Register a new service provider in the system</p>
-      </div>
+      </PageHeader>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Service Information */}

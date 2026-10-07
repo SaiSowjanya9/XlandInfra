@@ -7,6 +7,7 @@ import {
   FileText, Store, Package, Shield, RefreshCw, Edit2, Truck, RotateCcw, Save,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const ITEMS_PER_PAGE = 10;
 import { getProperties, deleteProperty, getNotifications, markAllNotificationsRead } from '../utils/propertyStore';
@@ -822,11 +823,8 @@ const CustomerSubmissions = () => {
   if (!selectedCategory) {
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">View and manage customer properties</p>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Building2} title="Property Management" subtitle="View and manage customer properties" />
 
         {/* Category Selection Card */}
         <div className="bg-gray-50 rounded-2xl p-12">
@@ -868,19 +866,13 @@ const CustomerSubmissions = () => {
   if (!selectedFp) {
     return (
       <div className="space-y-8 p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => { setSelectedCategory(null); setProperties([]); }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Building2} title="Property Management - Residential"
+          subtitle="Select a franchise partner to view properties">
+          <button onClick={() => { setSelectedCategory(null); setProperties([]); }} className={HEADER_GHOST_CLASS}>
+            <ArrowLeft className="w-4 h-4" /> Back
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Property Management - Residential</h1>
-            <p className="text-gray-500 mt-1">Select a franchise partner to view properties</p>
-          </div>
-        </div>
+        </PageHeader>
 
         {/* Selection Card */}
         <div className="flex flex-col items-center justify-center min-h-[400px] bg-gray-50 rounded-xl p-8">
@@ -967,17 +959,9 @@ const CustomerSubmissions = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {getViewingLabel()} • {properties.length} properties
-          </p>
-        </div>
-        
-        {/* FP Switcher + Notification - Top Right */}
-        <div className="flex items-center gap-3">
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Building2} title="Property Management"
+        subtitle={`${getViewingLabel()} • ${properties.length} properties`}>
           {/* FP Dropdown */}
           <div className="relative">
             <button
@@ -1079,8 +1063,7 @@ const CustomerSubmissions = () => {
               </>
             )}
           </div>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Tabs + Filters Bar */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

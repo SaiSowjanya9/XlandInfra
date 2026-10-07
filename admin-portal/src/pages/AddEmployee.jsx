@@ -8,7 +8,9 @@ import {
   X,
   MapPin,
   Info,
+  UserPlus,
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
@@ -239,16 +241,16 @@ const AddEmployee = ({ admin }) => {
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       {/* Modal-style Card - Centered like FP Portal */}
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-gray-100">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-900">Add Employee</h1>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Employee" subtitle="Register a new team member" className="m-4 mb-0">
           <button
             onClick={() => navigate('/employee/employee-details')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className={`${HEADER_GHOST_CLASS} !px-2.5`}
+            title="Close"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-4 h-4" />
           </button>
-        </div>
+        </PageHeader>
 
         {errors.general && (
           <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">

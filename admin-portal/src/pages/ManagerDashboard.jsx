@@ -15,8 +15,10 @@ import {
   X,
   AlertTriangle,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  LayoutDashboard,
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
@@ -567,15 +569,11 @@ const ManagerDashboard = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats Cards - Single Row Layout */}
+      {/* The shared section header, as on Work Orders and Estimates */}
       <div className="flex flex-col gap-4 overflow-visible">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="shrink-0 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 break-words">
-              Welcome, {user?.firstName || user?.name?.split(' ')[0] || 'Manager'}!
-            </h1>
-            <p className="text-gray-500 mt-1 break-words">Here's what's happening with your managed areas today.</p>
-          </div>
+        <PageHeader icon={LayoutDashboard}
+          title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Manager'}!`}
+          subtitle="Here's what's happening with your managed areas today.">
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Main Date Range Picker */}
             <DateRangeFilter
@@ -696,7 +694,7 @@ const ManagerDashboard = ({ user }) => {
               <RefreshCw className="w-5 h-5 text-gray-600" />
             </button>
           </div>
-        </div>
+        </PageHeader>
         <DashboardStatCards cards={[
           { label: 'Properties', value: realTimeStats.properties, to: '/manager/properties', icon: Building2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' },
           { label: 'Vendors', value: realTimeStats.vendors, to: '/manager/vendors', icon: Store, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' },

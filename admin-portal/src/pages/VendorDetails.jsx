@@ -7,6 +7,7 @@ import {
   Settings, Flame, ArrowUpDown, Droplets, Trash, Waves,
   FileCheck, Edit3, Save, CheckSquare, Square, Archive
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 
@@ -456,10 +457,8 @@ const VendorDetails = () => {
   if (!selectedFp) {
     return (
       <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 mt-1">Select a Franchise Partner to view vendors</p>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Truck} title="Vendor Details" subtitle="Select a Franchise Partner to view vendors" />
         <div className="bg-gray-50 rounded-2xl p-12 text-center">
           <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Select Franchise Partner</h2>
@@ -491,12 +490,9 @@ const VendorDetails = () => {
         </div>
       )}
 
-      {/* Header with FP Switcher */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-gray-500 text-sm mt-1">{vendors.filter(v => v.status !== 'deleted' && v.status !== 'inactive' && v.is_active !== 0 && v.is_active !== false).length} total vendors</p>
-        </div>
+      {/* The shared section header, as on Work Orders and Estimates — FP switcher and controls ride inside */}
+      <PageHeader icon={Truck} title="Vendor Details"
+        subtitle={`${vendors.filter(v => v.status !== 'deleted' && v.status !== 'inactive' && v.is_active !== 0 && v.is_active !== false).length} total vendors`}>
         <div className="flex items-center gap-3">
           {/* FP Switcher */}
           <div className="relative">
@@ -609,7 +605,7 @@ const VendorDetails = () => {
             )}
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Filters Bar */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

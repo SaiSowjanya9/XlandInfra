@@ -4,6 +4,7 @@ import {
   ClipboardList,
   CheckCircle2,
   FileText,
+  LayoutDashboard,
   Users,
   Wrench,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
   ArrowLeft,
   ArrowRight
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
@@ -614,13 +616,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Header with Main Date Filter */}
-        <div className="flex flex-col gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800">Operations Dashboard</h1>
-            <p className="text-gray-500 text-sm">Real-time overview for {selectedFp.companyName || 'All FPs'}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 self-end w-fit max-w-full">
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={LayoutDashboard} title="Operations Dashboard"
+          subtitle={`Real-time overview for ${selectedFp.companyName || 'All FPs'}`}>
+          <div className="flex flex-wrap items-center gap-2 w-fit max-w-full">
             {/* Main Date Range Picker - Prominent Position */}
             <DateRangeFilter
               startDate={startDate}
@@ -774,7 +773,7 @@ const Dashboard = () => {
               )}
             </div>
           </div>
-        </div>
+        </PageHeader>
 
         {/* First Stats Row - 5 KPI Cards with Real-Time Data */}
         <div className="flex flex-wrap gap-3">

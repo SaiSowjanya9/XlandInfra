@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -303,29 +304,25 @@ const ManagerVendors = ({ user }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Vendor Details</h1>
-          <p className="text-blue-600 text-sm">{getActiveVendorCount()} total vendors</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchVendors}
-            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-            title="Refresh"
-          >
-            <RefreshCw className="w-5 h-5 text-gray-600" />
-          </button>
-          {/* Add Vendor - Navigate to Add Vendor page */}
-          <button
-            onClick={() => navigate('/manager/vendors/add')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <span>Add Vendor</span>
-            </button>
-        </div>
-      </div>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Store} title="Vendor Details"
+        subtitle={`${getActiveVendorCount()} total vendors`}>
+        <button
+          onClick={fetchVendors}
+          className={`${HEADER_GHOST_CLASS} !px-2.5`}
+          title="Refresh"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+        {/* Add Vendor - Navigate to Add Vendor page */}
+        <button
+          onClick={() => navigate('/manager/vendors/add')}
+          className={HEADER_ACTION_CLASS}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Vendor</span>
+        </button>
+      </PageHeader>
 
       {/* Message */}
       {message.text && (

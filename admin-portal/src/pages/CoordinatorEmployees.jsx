@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import PageHeader from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -313,19 +314,15 @@ const CoordinatorEmployees = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Employee Zone Management</h1>
-        <p className="text-gray-500 mt-1">
-          View team zone assignments • <span className="text-teal-600 font-medium">{totalEmployees} employees</span>
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={MapPin} title="Employee Zone Management"
+        subtitle={`View team zone assignments • ${totalEmployees} employees`} />
+      {isFPCoordinator && (
+        <p className="text-sm text-orange-600 flex items-center gap-1">
+          <AlertCircle className="w-4 h-4" />
+          Zone assignments are managed by your Franchise Partner
         </p>
-        {isFPCoordinator && (
-          <p className="text-sm text-orange-600 mt-1 flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            Zone assignments are managed by your Franchise Partner
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Stats Cards */}
       <div className="flex flex-wrap gap-3">

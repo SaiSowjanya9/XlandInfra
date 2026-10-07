@@ -8,7 +8,9 @@ import {
   Key,
   MapPin,
   ChevronDown,
+  UserPlus,
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
@@ -231,16 +233,16 @@ const FPAddEmployee = ({ user }) => {
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-gray-100">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-semibold text-gray-900">Add Employee</h1>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Employee" subtitle="Register a new team member" className="m-4 mb-0">
           <button
             onClick={() => navigate('/fp/employees')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className={`${HEADER_GHOST_CLASS} !px-2.5`}
+            title="Close"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-4 h-4" />
           </button>
-        </div>
+        </PageHeader>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {errors.general && (

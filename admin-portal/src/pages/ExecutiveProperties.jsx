@@ -35,6 +35,7 @@ import {
   Calendar,
   Download
 } from 'lucide-react';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
@@ -538,11 +539,8 @@ const ExecutiveProperties = ({ user }) => {
   if (!selectedCategory) {
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500 mt-1">View and manage created customers</p>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={Building2} title="Property Management" subtitle="View and manage created customers" />
 
         {/* Message */}
         {message.text && (
@@ -576,20 +574,13 @@ const ExecutiveProperties = ({ user }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-          title="Back to categories"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={Building2} title="Property Management"
+        subtitle={`${properties.length} total customers`}>
+        <button onClick={() => setSelectedCategory(null)} className={HEADER_GHOST_CLASS}>
+          <ArrowLeft className="w-4 h-4" /> Back to Categories
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Management</h1>
-          <p className="text-gray-500">{properties.length} total customers</p>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Message */}
       {message.text && (

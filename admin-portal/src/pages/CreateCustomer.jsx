@@ -15,6 +15,7 @@ import {
   MapPin,
   FileText,
   Users,
+  UserPlus,
   Layers,
   Grid3X3,
   Lock,
@@ -36,6 +37,7 @@ import StateSelect from '../components/common/StateSelect';
 import GPSLocationCapture from '../components/common/GPSLocationCapture';
 import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
+import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 
 // Property Type options
 const PROPERTY_TYPES = {
@@ -611,13 +613,8 @@ const CreateCustomer = ({ admin }) => {
 
     return (
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-500 mt-1">Customer Creation Module</p>
-          </div>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Customer" subtitle="Customer Creation Module" />
 
         {/* Category Selection Card */}
         <CategorySelection categories={CATEGORIES} onSelect={handleSelectCategory} />
@@ -629,18 +626,12 @@ const CreateCustomer = ({ admin }) => {
   if (!selectedEntryType) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Customer Creation Module</p>
-          </div>
-          <button
-            onClick={handleBackToCategories}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            ← Back to Categories
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Customer" subtitle="Customer Creation Module">
+          <button onClick={handleBackToCategories} className={HEADER_GHOST_CLASS}>
+            <ChevronLeft className="w-4 h-4" /> Back to Categories
           </button>
-        </div>
+        </PageHeader>
 
         {/* Same tile design as the FP portal's entry-type picker, so every portal's Add
             Customer screen is identical */}
@@ -679,12 +670,8 @@ const CreateCustomer = ({ admin }) => {
   if (submitted) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Customer</h1>
-            <p className="text-gray-600 mt-1">Customer Creation Module</p>
-          </div>
-        </div>
+        {/* The shared section header, as on Work Orders and Estimates */}
+        <PageHeader icon={UserPlus} title="Add Customer" subtitle="Customer Creation Module" />
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Success Banner */}
@@ -1590,21 +1577,13 @@ const CreateCustomer = ({ admin }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Create Customer</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {entryTypeInfo?.name} • Complete all required fields
-          </p>
-        </div>
-        <button
-          onClick={handleBackToEntryTypes}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md transition-colors text-sm"
-        >
-          ← Back
+      {/* The shared section header, as on Work Orders and Estimates */}
+      <PageHeader icon={UserPlus} title="Create Customer"
+        subtitle={`${entryTypeInfo?.name || ''} • Complete all required fields`}>
+        <button onClick={handleBackToEntryTypes} className={HEADER_GHOST_CLASS}>
+          <ChevronLeft className="w-4 h-4" /> Back
         </button>
-      </div>
+      </PageHeader>
 
       {/* Single Form Container */}
       <div className="max-w-3xl">
