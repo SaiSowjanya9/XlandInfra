@@ -9,6 +9,7 @@ import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer } from 'lucide-react';
+import EstimateStatCards from '../components/estimates/EstimateStatCards';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
@@ -972,15 +973,14 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div><h1 className="text-2xl font-bold text-gray-900">Estimates / AMC Management</h1><p className="text-gray-500 mt-1">Create estimates and view AMC packages</p></div>
-        <div className="flex items-center gap-4">
-          <button onClick={fetchData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
-            <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{amcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{addons.length}</p><p className="text-xs text-gray-500">Add Service</p></div>
-          <div className="text-center"><p className="text-xl font-bold text-gray-900">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
-        </div>
+        <EstimateStatCards
+          active={filteredEstimates.length}
+          amc={amcPackages.length}
+          services={addons.length}
+          archived={archivedEstimates.length}
+          onRefresh={fetchData}
+          refreshing={loading}
+        />
       </div>
 
       {message.text && (

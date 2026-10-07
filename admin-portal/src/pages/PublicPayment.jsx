@@ -15,6 +15,7 @@ import {
   Lock,
   Clock
 } from 'lucide-react';
+import { formatPlanDate, halfPaymentPlan } from '../utils/halfPayment';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
@@ -251,6 +252,9 @@ const PublicPayment = () => {
   const [blockRetryAfter, setBlockRetryAfter] = useState(0);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [submittedPaymentDetails, setSubmittedPaymentDetails] = useState(null);
+  // Paying the first of the two half-yearly instalments instead of the whole balance. Off unless
+  // the customer asks for it: the full amount is what the invoice is for.
+  const [payHalf, setPayHalf] = useState(false);
 
   // Bank details for bank transfer
   const bankDetails = {
@@ -266,6 +270,12 @@ const PublicPayment = () => {
     upiId: 'xlandinfra@hdfcbank',
     qrCodeUrl: null // Will be generated
   };
+
+  // The half-yearly split, where the balance can carry one. A null plan is what keeps the option
+  // off an invoice too small to halve, rather than offering an instalment the gateway would refuse.
+  const balanceDue = parseFloat(invoice?.balanceAmount ?? invoice?.totalAmount ?? 0) || 0;
+  const halfPlan = halfPaymentPlan(balanceDue);
+  const amountToPay = payHalf && halfPlan ? halfPlan.firstAmount : balanceDue;
 
   // Check if CAPTCHA is required on initial load
   useEffect(() => {
@@ -362,22 +372,26 @@ const PublicPayment = () => {
 
   const handleProceedToPay = async () => {
     setProcessing(true);
+    // The server works the figure out from the balance; this only says which of the two it is
+    const portion = payHalf && halfPlan ? 'half' : 'full';
     
     try {
       if (selectedMethod === 'razorpay') {
-        // Redirect to Razorpay payment link
-        if (invoice.paymentLink) {
+        // The invoice's stored link is for the whole balance, so it is only reused for a full
+        // payment. An instalment asks for a link of its own.
+        if (invoice.paymentLink && portion === 'full') {
           window.location.href = invoice.paymentLink;
         } else {
-          // Create payment link if not exists
-          const response = await fetch(`${API_BASE}/api/razorpay/create-payment-link`, {
+          const response = await fetch(`${API_BASE}/api/razorpay/public/payment-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ invoiceId: invoice.invoiceId })
+            body: JSON.stringify({ invoiceId: invoice.invoiceId, token, portion })
           });
           const result = await response.json();
           if (result.success && result.data?.paymentLink) {
             window.location.href = result.data.paymentLink;
+          } else {
+            setError(result.message || 'Failed to start the payment. Please try again.');
           }
         }
       } else {
@@ -388,15 +402,18 @@ const PublicPayment = () => {
           body: JSON.stringify({
             invoiceId: invoice.invoiceId,
             token,
-            paymentMethod: selectedMethod
+            paymentMethod: selectedMethod,
+            portion
           })
         });
         const result = await response.json();
         
-        // Show success screen for verification pending payments
+        // Show success screen for verification pending payments. The amount shown is the one the
+        // server recorded, not this page's arithmetic.
         setSubmittedPaymentDetails({
           referenceId: result.data?.referenceId || `REF-${Date.now()}`,
-          amount: invoice.balanceAmount || invoice.totalAmount,
+          amount: result.data?.amount ?? amountToPay,
+          plan: result.data?.plan || null,
           invoiceId: invoice.invoiceId,
           method: selectedMethod,
           instructions: result.data?.instructions
@@ -581,6 +598,14 @@ const PublicPayment = () => {
                 <span className="text-gray-500 text-sm">Amount</span>
                 <span className="font-semibold text-gray-900">{formatCurrency(submittedPaymentDetails.amount)}</span>
               </div>
+              {/* An instalment says so on the receipt screen, with what is still owed and when */}
+              {submittedPaymentDetails.plan && (
+                <p className="text-xs text-gray-500 leading-snug">
+                  First of two half-yearly payments. The remaining{' '}
+                  {formatCurrency(submittedPaymentDetails.plan.secondAmount)} is due by{' '}
+                  {formatPlanDate(submittedPaymentDetails.plan.secondDueDate)}.
+                </p>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Payment Method</span>
                 <span className="font-semibold text-gray-900">{methodLabels[submittedPaymentDetails.method] || submittedPaymentDetails.method}</span>
@@ -659,7 +684,33 @@ const PublicPayment = () => {
               <p className="text-xs text-gray-500 mb-1">Total Amount</p>
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(invoice?.totalAmount)}</p>
               <p className="text-xs text-gray-500 mt-2">Due Amount</p>
-              <p className="text-lg font-bold text-red-600">{formatCurrency(invoice?.balanceAmount || invoice?.totalAmount)}</p>
+              <p className="text-lg font-bold text-red-600">{formatCurrency(balanceDue)}</p>
+              {/* The half-yearly option sits here, in the summary, as a plain link-sized control:
+                  the full amount is what the invoice asks for, and a panel of radio buttons at the
+                  top of the page advertises paying less than that. */}
+              {halfPlan && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPayHalf(!payHalf)}
+                    aria-pressed={payHalf}
+                    className={`text-xs font-medium px-2 py-1 rounded-md border transition-colors ${
+                      payHalf
+                        ? 'border-gray-300 bg-gray-100 text-gray-700'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {payHalf ? 'Paying 50% — pay full instead' : 'Pay 50% now'}
+                  </button>
+                  {payHalf && (
+                    <p className="text-[11px] text-gray-500 mt-1 leading-snug max-w-[13rem] ml-auto">
+                      Paying {formatCurrency(halfPlan.firstAmount)} now. The remaining{' '}
+                      {formatCurrency(halfPlan.secondAmount)} is due by {formatPlanDate(halfPlan.secondDueDate)},
+                      30 days before the next 6-month service period starts on {formatPlanDate(halfPlan.nextPeriodStart)}.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -962,7 +1013,7 @@ const PublicPayment = () => {
               ) : (
                 <Lock className="w-5 h-5" />
               )}
-              <span>Proceed to Pay</span>
+              <span>Proceed to Pay {formatCurrency(amountToPay)}</span>
             </div>
             <span className="text-xs font-normal opacity-80 flex items-center gap-1">
               <Lock className="w-3 h-3" /> Secure Payment

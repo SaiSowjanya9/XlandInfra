@@ -24,6 +24,7 @@ const {
   hashIP
 } = require('../utils/paymentSecurity');
 const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
+const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
@@ -74,7 +75,9 @@ const getFPScope = (req) => {
 // ============================================
 router.post('/create-payment-link', authenticate, canManagePayments, paymentLinkLimiter, fraudDetectionMiddleware, async (req, res) => {
   try {
-    const { invoiceId } = req.body;
+    // 'half' pays the first of the two half-yearly instalments. Anything else is the full balance,
+    // which is what every existing caller asks for by sending no portion at all.
+    const { invoiceId, portion } = req.body;
 
     if (!razorpay) {
       return res.status(500).json({
@@ -110,60 +113,107 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
       return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
     }
 
-    // Check if payment link already exists and is not expired
-    if (invoice.razorpay_payment_link_id && invoice.payment_link_status === 'created') {
-      const expiresAt = new Date(invoice.payment_link_expires_at);
-      if (expiresAt > new Date()) {
-        return res.json({
-          success: true,
-          message: 'Payment link already exists',
-          data: {
-            paymentLink: invoice.payment_link,
-            shortUrl: invoice.razorpay_short_url,
-            expiresAt: invoice.payment_link_expires_at,
-            status: invoice.payment_link_status
-          }
-        });
+    const result = await createInvoicePaymentLink({
+      invoice,
+      portion,
+      performedBy: {
+        id: req.user.id,
+        name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
+        role: req.user.role
       }
-    }
+    });
+    if (result.error) return res.status(result.status).json({ success: false, message: result.error });
+    res.json({ success: true, message: result.message, data: result.data });
 
-    // Calculate expiry (7 days from now)
-    const expiresAt = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
-    const expiresAtDate = new Date(expiresAt * 1000);
+  } catch (error) {
+    console.error('Error creating payment link:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create payment link',
+      error: error.message
+    });
+  }
+});
 
-    // Create Razorpay payment link
-    const paymentLinkOptions = {
-      amount: Math.round(invoice.balance_amount * 100), // Amount in paise
-      currency: 'INR',
-      accept_partial: true,
-      first_min_partial_amount: 100, // Minimum ₹1 partial payment
-      description: `Payment for Invoice: ${invoice.invoice_id}`,
-      customer: {
-        name: invoice.customer_name || 'Customer',
-        email: invoice.customer_email || undefined,
-        contact: invoice.customer_phone || undefined
-      },
-      notify: {
-        sms: false,
-        email: false // We'll send our own email
-      },
-      reminder_enable: true,
-      notes: {
-        invoice_id: invoice.invoice_id,
-        internal_invoice_id: invoice.id.toString(),
-        property_id: invoice.property_id?.toString() || '',
-        property_name: invoice.property_name || '',
-        customer_name: invoice.customer_name || ''
-      },
-      callback_url: `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/payment/success`,
-      callback_method: 'get',
-      expire_by: expiresAt
+/**
+ * A Razorpay payment link for an invoice: the whole balance, or the first of the two half-yearly
+ * instalments when `portion` is 'half'.
+ *
+ * Shared by the staff route above and the customer's own payment page below, which differ only in
+ * how the caller is authorised. Returns `{ error, status }` rather than throwing, so each route
+ * answers in its own shape.
+ */
+const createInvoicePaymentLink = async ({ invoice, portion, performedBy }) => {
+  if (!razorpay) {
+    return { status: 500, error: 'Razorpay is not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to environment variables.' };
+  }
+  if (Number(invoice.balance_amount) <= 0) {
+    return { status: 400, error: 'Invoice is already fully paid' };
+  }
+  const { amount: chargeAmount, plan, error: portionError } = resolvePaymentPortion(portion, invoice.balance_amount);
+  if (portionError) return { status: 400, error: portionError };
+
+  // The invoice's stored link is for the whole balance, so it is reused for a full payment and
+  // never handed back to a request asking to pay half of it.
+  if (!plan && invoice.razorpay_payment_link_id && invoice.payment_link_status === 'created'
+    && new Date(invoice.payment_link_expires_at) > new Date()) {
+    return {
+      message: 'Payment link already exists',
+      data: {
+        paymentLink: invoice.payment_link,
+        shortUrl: invoice.razorpay_short_url,
+        expiresAt: invoice.payment_link_expires_at,
+        status: invoice.payment_link_status,
+        amount: chargeAmount,
+        plan: null
+      }
     };
+  }
 
-    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+  // Calculate expiry (7 days from now)
+  const expiresAt = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+  const expiresAtDate = new Date(expiresAt * 1000);
 
-    // Update invoice with payment link details
-    // NOTE: Status stays unchanged - invoice remains in "Generated Invoices" until payment is received
+  // Create Razorpay payment link
+  const paymentLinkOptions = {
+    amount: Math.round(chargeAmount * 100), // Amount in paise
+    currency: 'INR',
+    // An instalment link is for an agreed figure, so it is not itself part-payable
+    accept_partial: !plan,
+    first_min_partial_amount: 100, // Minimum ₹1 partial payment
+    description: `Payment for Invoice: ${invoice.invoice_id}${plan ? ' (1st half-yearly payment)' : ''}`,
+    customer: {
+      name: invoice.customer_name || 'Customer',
+      email: invoice.customer_email || undefined,
+      contact: invoice.customer_phone || undefined
+    },
+    notify: {
+      sms: false,
+      email: false // We'll send our own email
+    },
+    reminder_enable: true,
+    notes: {
+      invoice_id: invoice.invoice_id,
+      internal_invoice_id: invoice.id.toString(),
+      property_id: invoice.property_id?.toString() || '',
+      property_name: invoice.property_name || '',
+      customer_name: invoice.customer_name || '',
+      // The webhook records whatever was actually paid; these only describe the instalment
+      ...(plan ? { portion: 'half', second_half_amount: plan.secondAmount.toString(), second_half_due: plan.secondDueDate } : {})
+    },
+    callback_url: `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/payment/success`,
+    callback_method: 'get',
+    expire_by: expiresAt
+  };
+
+  const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+
+  // Update invoice with payment link details. An instalment link is deliberately not stored:
+  // these columns are the invoice's own link, the one already sent to the customer for the whole
+  // balance, and overwriting it with a half-amount link would leave that email pointing at it.
+  // The webhook matches on notes.internal_invoice_id, so the payment is still recorded.
+  // NOTE: Status stays unchanged - invoice remains in "Generated Invoices" until payment is received
+  if (!plan) {
     await pool.execute(`
       UPDATE invoices SET
         payment_link = ?,
@@ -178,43 +228,35 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
       paymentLink.id,
       paymentLink.short_url,
       expiresAtDate,
-      invoiceId
+      invoice.id
     ]);
-
-    // Log the action
-    await pool.execute(`
-      INSERT INTO payment_history (invoice_id, action, new_status, description, performed_by, performed_by_name, performed_by_role)
-      VALUES (?, 'created', 'created', ?, ?, ?, ?)
-    `, [
-      invoiceId,
-      `Payment link created: ${paymentLink.short_url}`,
-      req.user.id,
-      `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
-      req.user.role
-    ]);
-
-    res.json({
-      success: true,
-      message: 'Payment link created successfully',
-      data: {
-        paymentLinkId: paymentLink.id,
-        paymentLink: paymentLink.short_url,
-        shortUrl: paymentLink.short_url,
-        amount: invoice.balance_amount,
-        expiresAt: expiresAtDate,
-        status: 'created'
-      }
-    });
-
-  } catch (error) {
-    console.error('Error creating payment link:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create payment link',
-      error: error.message
-    });
   }
-});
+
+  // Log the action
+  await pool.execute(`
+    INSERT INTO payment_history (invoice_id, action, new_status, description, performed_by, performed_by_name, performed_by_role)
+    VALUES (?, 'created', 'created', ?, ?, ?, ?)
+  `, [
+    invoice.id,
+    `Payment link created for ₹${chargeAmount.toLocaleString('en-IN')}: ${paymentLink.short_url}.${halfPaymentNote(plan)}`,
+    performedBy?.id || null,
+    performedBy?.name || 'Customer',
+    performedBy?.role || 'customer'
+  ]);
+
+  return {
+    message: 'Payment link created successfully',
+    data: {
+      paymentLinkId: paymentLink.id,
+      paymentLink: paymentLink.short_url,
+      shortUrl: paymentLink.short_url,
+      amount: chargeAmount,
+      expiresAt: expiresAtDate,
+      status: 'created',
+      plan
+    }
+  };
+};
 
 // ============================================
 // SEND PAYMENT LINK VIA EMAIL
@@ -1436,12 +1478,68 @@ router.get('/public/pay', ipBlacklistMiddleware, async (req, res) => {
 });
 
 // ============================================
+// PUBLIC: PAYMENT LINK FOR A CARD / UPI / NET BANKING PAYMENT
+// The customer's payment page has no login, so the link's own token is the authorisation: it is
+// hashed and compared with the invoice's stored hash exactly as /public/pay does. The amount is
+// never read from the request — 'half' is resolved against the balance this query returns — so the
+// page can ask to pay half but cannot ask to pay ₹1.
+// ============================================
+router.post('/public/payment-link', ipBlacklistMiddleware, paymentLinkLimiter, async (req, res) => {
+  try {
+    const { invoiceId, token, portion } = req.body;
+    const ip = getClientIP(req);
+
+    if (!invoiceId || !token) {
+      req.ipBlacklist.recordFailed();
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice ID and token are required',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
+      });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const [invoices] = await pool.execute(`
+      SELECT i.*, p.community_name as property_name
+      FROM invoices i
+      LEFT JOIN onboarded_properties p ON i.property_id = p.id
+      WHERE i.invoice_id = ? AND i.payment_token_hash = ?
+    `, [invoiceId, tokenHash]);
+
+    if (invoices.length === 0) {
+      req.ipBlacklist.recordFailed();
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found or payment link has expired',
+        requireCaptcha: getFailedAttemptCount(ip) >= 3
+      });
+    }
+    req.ipBlacklist.clearFailed();
+
+    const invoice = invoices[0];
+    if (invoice.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'This invoice has been cancelled' });
+    }
+
+    const result = await createInvoicePaymentLink({ invoice, portion, performedBy: null });
+    if (result.error) return res.status(result.status).json({ success: false, message: result.error });
+    res.json({ success: true, message: result.message, data: result.data });
+
+  } catch (error) {
+    console.error('Error creating public payment link:', error);
+    res.status(500).json({ success: false, message: 'Failed to start the payment. Please try again.' });
+  }
+});
+
+// ============================================
 // PUBLIC: RECORD PAYMENT INTENT (for non-Razorpay methods)
 // Protected by IP blacklisting
 // ============================================
 router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, res) => {
   try {
-    const { invoiceId, token, paymentMethod } = req.body;
+    // 'half' records the first of the two half-yearly instalments; the amount itself is worked out
+    // here from the balance, never taken from the request
+    const { invoiceId, token, paymentMethod, portion } = req.body;
     const ip = getClientIP(req);
 
     if (!invoiceId || !token || !paymentMethod) {
@@ -1485,6 +1583,9 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
     
     let referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     let paymentRecordId = null;
+    // What was actually recorded, so the page states the server's figure rather than its own
+    let recordedAmount = null;
+    let recordedPlan = null;
 
     if (isOfflinePayment) {
       // Get full invoice details for property_id and amount
@@ -1495,7 +1596,11 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
 
       if (fullInvoice.length > 0) {
         const inv = fullInvoice[0];
-        const paymentAmount = parseFloat(inv.balance_amount) || parseFloat(inv.total_amount) || 0;
+        const balance = parseFloat(inv.balance_amount) || parseFloat(inv.total_amount) || 0;
+        const { amount: paymentAmount, plan, error: portionError } = resolvePaymentPortion(portion, balance);
+        if (portionError) {
+          return res.status(400).json({ success: false, message: portionError });
+        }
 
         // Normalize payment method name
         let normalizedMethod = paymentMethod.toLowerCase();
@@ -1507,11 +1612,14 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
           `INSERT INTO payments (
             invoice_id, property_id, amount, payment_method, payment_date,
             transaction_id, status, remarks, created_at
-          ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', 'Payment intent from Public Payment Link - Awaiting verification', NOW())`,
-          [inv.id, inv.property_id, paymentAmount, normalizedMethod, referenceId]
+          ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', ?, NOW())`,
+          [inv.id, inv.property_id, paymentAmount, normalizedMethod, referenceId,
+            `Payment intent from Public Payment Link - Awaiting verification.${halfPaymentNote(plan)}`]
         );
         paymentRecordId = paymentResult.insertId;
-        console.log(`[Payment Record Created] ID: ${paymentRecordId}, Invoice: ${invoiceId}, Method: ${normalizedMethod}, Status: verification_pending`);
+        recordedAmount = paymentAmount;
+        recordedPlan = plan;
+        console.log(`[Payment Record Created] ID: ${paymentRecordId}, Invoice: ${invoiceId}, Method: ${normalizedMethod}, Amount: ${paymentAmount}, Status: verification_pending`);
       }
     }
 
@@ -1524,6 +1632,8 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
         referenceId,
         paymentId: paymentRecordId,
         status: 'verification_pending',
+        amount: recordedAmount,
+        plan: recordedPlan,
         instructions: paymentMethod === 'bank' || paymentMethod === 'bank_transfer'
           ? 'Please transfer to our bank account using the details provided. Include the reference ID in payment remarks.'
           : paymentMethod === 'upi'

@@ -36,6 +36,7 @@ import CustomEstimateBuilder from '../components/estimates/CustomEstimateBuilder
 import * as XLSX from 'xlsx';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 import { shortDivision } from '../utils/fieldOptionsStore';
+import EstimateStatCards from '../components/estimates/EstimateStatCards';
 
 // Decode HTML entities (e.g., &amp;amp; -> &)
 const decodeHtml = (html) => {
@@ -2435,15 +2436,14 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-indigo-600" /></div>
               <div><h1 className="text-2xl font-bold text-gray-800">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-gray-500">Create and manage estimates, AMC packages, and services</p></div>
             </div>
-            <div className="flex items-center gap-6">
-              <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Refresh">
-                <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredEstimates.length}</p><p className="text-xs text-gray-500">Active Estimates</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAmcPackages.length}</p><p className="text-xs text-gray-500">AMC Packages</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{filteredAddons.length}</p><p className="text-xs text-gray-500">Add Service</p></div>
-              <div className="text-center"><p className="text-2xl font-bold text-gray-800">{archivedEstimates.length}</p><p className="text-xs text-gray-500">Archived</p></div>
-            </div>
+            <EstimateStatCards
+              active={filteredEstimates.length}
+              amc={filteredAmcPackages.length}
+              services={filteredAddons.length}
+              archived={archivedEstimates.length}
+              onRefresh={loadData}
+              refreshing={loading}
+            />
           </div>
         </div>
       </div>

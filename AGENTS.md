@@ -168,6 +168,35 @@ fetch('/api/manager/dashboard', { ... });
   the sidebar takes 288px). The six copies of this picker — `CreateCustomer`, `FPCustomers`,
   `ManagerCustomers`, `CoordinatorCustomers`, `SupervisorCustomers`, `ExecutiveCustomers` — are
   identical markup and must be changed together.
+- **An Estimates header states its counts through `components/estimates/EstimateStatCards.jsx`.**
+  The five portals each had their own header for the same four figures — bare centred numbers in
+  Manager, Coordinator, Supervisor and Executive, three tinted chips in FP. The shared row is the
+  agreed design: a 184×56 cream card (`bg-[#FFFAF0]`, `border-[#F1E3C6]`, `rounded-xl`) carrying a
+  32px icon circle, the count at 20px semibold `#111827` and the label at 14px medium `#6B7280`,
+  with the colour in the icon only — green `Circle` for Active Estimates, amber `Package` for AMC
+  Packages, `PlusCircle` for Add Service and `Database` for Archived. A count passed as `undefined`
+  is left out (FP has no Add Service card). Change the component, never a copy in a page.
+
+## Half-Yearly Payments
+
+- **A payment is either the whole balance or exactly half of it.** The AMC policy offers one split
+  — half now, half before the next six-month service period — so there is no percentage dropdown
+  and no free-text instalment. `backend/utils/halfPayment.js` owns it; `admin-portal/src/utils/
+  halfPayment.js` mirrors it for the two screens and `halfPayment.test.js` compares them.
+- **The amount is never read from the request.** A caller sends `portion: 'half'` (anything else is
+  the full balance) and the route works the figure out from the balance it just read, because the
+  customer's payment page has no login behind it. `resolvePaymentPortion` is the only way in, and
+  `backend/utils/halfPayment.test.js` fails if any route destructures an `amount` from `req.body`.
+- The second half is due **30 days before the next 6-month period**, i.e. first payment + 6 months
+  − 30 days, with month-ends clamped (31 Aug + 6 months is 28 Feb). Nothing is stored: it is
+  derived from the payment date, and written into the payment's remarks and the history row.
+- An instalment's Razorpay link is **not** saved onto the invoice. `payment_link` /
+  `razorpay_payment_link_id` are the invoice's own full-balance link, already emailed to the
+  customer; the webhook matches on `notes.internal_invoice_id`, so a half payment still records.
+- The option is a small text button in the summary panel on both screens (`PublicPayment`,
+  `billing/MakePayments`) — never a highlighted panel of radio buttons at the top of the page.
+  On cash and cheque it only prefills the amount box, which stays editable, and the instalment is
+  noted on the payment only when the figure really is the half.
 
 ## Warm Beige UI System
 

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
+import { formatPlanDate, halfPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -278,8 +279,39 @@ const StepProgress = ({ currentStep, selectedMethod }) => (
   </div>
 );
 
+/**
+ * The half-yearly option, as a plain text-sized control under the amount rather than a panel of
+ * its own. The invoice asks for the whole balance; paying half of it is the exception the policy
+ * allows, so it is offered where the figure is read and nowhere else. `plan` is null — and this
+ * renders nothing — on a balance too small to split.
+ */
+const HalfPaymentToggle = ({ plan, active, onToggle }) => {
+  if (!plan) return null;
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={active}
+        className={`text-xs font-medium px-2 py-1 rounded-md border transition-colors ${
+          active ? 'border-gray-300 bg-gray-100 text-gray-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        {active ? 'Paying 50% — pay full instead' : 'Pay 50% now'}
+      </button>
+      {active && (
+        <p className="text-[11px] font-normal text-gray-500 mt-1 leading-snug max-w-[14rem] ml-auto">
+          Paying {formatCurrency(plan.firstAmount)} now. The remaining {formatCurrency(plan.secondAmount)} is
+          due by {formatPlanDate(plan.secondDueDate)}, 30 days before the next 6-month service period
+          starts on {formatPlanDate(plan.nextPeriodStart)}.
+        </p>
+      )}
+    </div>
+  );
+};
+
 // Invoice Details Bar
-const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount }) => (
+const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount, halfPlan, payHalf, onToggleHalf }) => (
   <div className="bg-white border-b border-gray-200 px-6 py-4">
     <div className="max-w-5xl mx-auto flex items-center justify-between">
       <div className="grid grid-cols-4 gap-8">
@@ -309,6 +341,7 @@ const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount }) => (
             {daysUntilDue < 0 ? `Overdue by ${Math.abs(daysUntilDue)} days` : `Due in ${daysUntilDue} days`}
           </div>
         )}
+        <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={onToggleHalf} />
       </div>
     </div>
   </div>
@@ -354,6 +387,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   });
   const [paymentProof, setPaymentProof] = useState(null);
   const [copied, setCopied] = useState(null);
+  // Taking the first of the two half-yearly instalments rather than the whole balance
+  const [payHalf, setPayHalf] = useState(false);
   
   // Employee list for cash payment "Received By" dropdown
   const [employees, setEmployees] = useState([]);
@@ -465,6 +500,22 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     }
   }, [selectedInvoice, selectedMethod, paymentDetails.amountReceived]);
 
+  // The half-yearly split for what is still owed, or null where the balance is too small to carry
+  // one. The server recomputes it from the balance before charging anything; this is what the
+  // screen states and what it prefills the cash and cheque amount with.
+  const invoiceBalance = selectedInvoice
+    ? (parseFloat(selectedInvoice.balanceAmount) || parseFloat(selectedInvoice.totalAmount) || 0)
+    : 0;
+  const halfPlan = halfPaymentPlan(invoiceBalance);
+  const toggleHalf = () => {
+    const next = !payHalf;
+    setPayHalf(next);
+    // Cash and a cheque are for whatever was handed over, so the box stays editable — this only
+    // fills in the figure the instalment comes to
+    const amount = next && halfPlan ? halfPlan.firstAmount : invoiceBalance;
+    setPaymentDetails(prev => ({ ...prev, amountReceived: amount.toFixed(2) }));
+  };
+
   const copyToClipboard = (text, field) => {
     navigator.clipboard.writeText(text);
     setCopied(field);
@@ -505,8 +556,10 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          invoiceId: selectedInvoice.id || selectedInvoice.invoiceId 
+        body: JSON.stringify({
+          invoiceId: selectedInvoice.id || selectedInvoice.invoiceId,
+          // The server works out the figure; this only says which of the two is being paid
+          portion: payHalf && halfPlan ? 'half' : 'full'
         })
       });
       
@@ -598,10 +651,15 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       : paymentDetails.receiptNumber || paymentDetails.transactionReference || paymentDetails.chequeNumber;
     
     // Cash and cheque carry their own amount, so a part payment can be recorded; other methods
-    // settle the whole balance. A cheque is dated by the cheque itself.
+    // settle the portion chosen — the whole balance, or the first half-yearly instalment.
+    // A cheque is dated by the cheque itself.
     const paymentAmount = selectedMethod === 'cash' || selectedMethod === 'check'
       ? paymentDetails.amountReceived 
-      : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount);
+      : (payHalf && halfPlan ? halfPlan.firstAmount : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount));
+    // The instalment is noted on the payment only where the figure really is the first half: the
+    // cash and cheque boxes stay editable, and a typed-over amount is not an instalment.
+    const isFirstHalf = Boolean(payHalf && halfPlan)
+      && Math.abs(parseFloat(paymentAmount) - halfPlan.firstAmount) < 0.005;
     const paymentDate = selectedMethod === 'cash' 
       ? paymentDetails.receivedDate 
       : selectedMethod === 'check'
@@ -619,7 +677,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       submitData.append('paymentStatus', 'verification_pending');
       submitData.append('transactionReference', finalReference);
       submitData.append('receivedBy', paymentDetails.receivedBy || user?.firstName || 'Admin');
-      submitData.append('remarks', paymentDetails.notes || '');
+      submitData.append('remarks', `${paymentDetails.notes || ''}${isFirstHalf ? `${paymentDetails.notes ? ' ' : ''}${halfPaymentRemark(halfPlan)}` : ''}`);
       
       // Cash payment specific fields
       if (selectedMethod === 'cash') {
@@ -1085,7 +1143,8 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
             </div>
           </div>
         </div>
-        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount} />
+        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount}
+          halfPlan={halfPlan} payHalf={payHalf} onToggleHalf={toggleHalf} />
         <StepProgress currentStep={2} selectedMethod={selectedMethod} />
 
         <div className="max-w-5xl mx-auto px-6 py-6">
@@ -1766,6 +1825,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalAmount)}</p>
                 <p className="text-xs text-gray-500 mt-2">Due Amount</p>
                 <p className="text-xl font-bold text-red-600">{formatCurrency(balanceAmount)}</p>
+                <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={toggleHalf} />
               </div>
             </div>
           </div>
