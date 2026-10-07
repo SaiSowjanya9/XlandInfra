@@ -3039,6 +3039,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   options={zoneOptions}
                   placeholder="Type or select zone..."
                   allowCustom={true}
+                  showAllOnOpen={true}
                   inputClassName="text-sm"
                 />
               </div>
@@ -3050,6 +3051,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   options={cityOptions}
                   placeholder="Type or select city..."
                   allowCustom={true}
+                  showAllOnOpen={true}
                   inputClassName="text-sm"
                 />
               </div>
