@@ -630,19 +630,23 @@ const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false
       doc.text('PACKAGE DESCRIPTION', margin, y);
       y += 6;
       
-      // Cream, like the panel the backend's PDF draws
+      // Cream, like the panel the backend's PDF draws. The text is decoded (stored text is escaped,
+      // sometimes twice -- "change&amp;#x2F;update" printed as it was stored) and the panel is as tall
+      // as the lines measure, with the same space above and below them: a 4mm-a-line guess left the
+      // text riding high in a box a third too tall.
       doc.setFillColor(...(warm ? warmSection : cardBg));
       doc.setDrawColor(...(warm ? warmBorder : borderLight));
-      const descLines = doc.splitTextToSize(String(data.amcPackageDescription), pageWidth - margin * 2 - 8);
-      // Allow full description - up to 80 height and 20 lines
-      const descBoxH = Math.min(Math.max(10, descLines.length * 4 + 4), 80);
-      doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxH, 2, 2, 'FD');
-      
-      doc.setTextColor(...mediumText);
-      doc.setFontSize(7);
+      doc.setFontSize(7.5);
       doc.setFont('helvetica', 'normal');
-      doc.text(descLines.slice(0, 20), margin + 4, y + 4);
-      y += descBoxH + 4;
+      const descPad = 3.5;
+      const descLines = doc.splitTextToSize(decodeHtml(String(data.amcPackageDescription)).trim(), pageWidth - margin * 2 - descPad * 2).slice(0, 20);
+      const descLineH = (doc.getFontSize() * doc.getLineHeightFactor()) / doc.internal.scaleFactor;
+      const descBoxH = descLines.length * descLineH + descPad * 2;
+      doc.roundedRect(margin, y, pageWidth - margin * 2, descBoxH, 2, 2, 'FD');
+      doc.setTextColor(...mediumText);
+      // jsPDF sets a line on its baseline, so the first sits a cap height below the top padding
+      doc.text(descLines, margin + descPad, y + descPad + descLineH * 0.72);
+      y += descBoxH + 5;
     }
 
     // Billing is stated in the letterhead's strip on an estimate and a package alike
