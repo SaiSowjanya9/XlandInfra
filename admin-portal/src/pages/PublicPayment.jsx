@@ -13,7 +13,8 @@ import {
   Check,
   RefreshCw,
   Lock,
-  Clock
+  Clock,
+  Percent
 } from 'lucide-react';
 import { formatPlanDate, halfPaymentPlan } from '../utils/halfPayment';
 
@@ -694,12 +695,13 @@ const PublicPayment = () => {
                     type="button"
                     onClick={() => setPayHalf(!payHalf)}
                     aria-pressed={payHalf}
-                    className={`text-xs font-medium px-2 py-1 rounded-md border transition-colors ${
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
                       payHalf
-                        ? 'border-gray-300 bg-gray-100 text-gray-700'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'bg-[#B5812A] border-[#B5812A] text-white hover:bg-[#9C6E22]'
+                        : 'bg-[#FFFAF0] border-[#B5812A] text-[#9C6E22] hover:bg-[#F6EBD1]'
                     }`}
                   >
+                    <Percent className="w-3 h-3" />
                     {payHalf ? 'Paying 50% — pay full instead' : 'Pay 50% now'}
                   </button>
                   {payHalf && (
