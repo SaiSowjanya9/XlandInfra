@@ -313,7 +313,7 @@ const HalfPaymentToggle = ({ plan, active, onToggle }) => {
 };
 
 // Invoice Details Bar
-const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount, halfPlan, payHalf, onToggleHalf }) => (
+const InvoiceDetailsBar = ({ invoice, daysUntilDue, payableNow, halfPlan, payHalf, onToggleHalf }) => (
   <div className="bg-white border-b border-gray-200 px-6 py-4">
     <div className="max-w-5xl mx-auto flex items-center justify-between">
       <div className="grid grid-cols-4 gap-8">
@@ -336,7 +336,7 @@ const InvoiceDetailsBar = ({ invoice, daysUntilDue, balanceAmount, halfPlan, pay
       </div>
       <div className="text-right">
         <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Payable</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(balanceAmount)}</p>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(payableNow)}</p>
         {daysUntilDue !== null && (
           <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs mt-1 ${daysUntilDue < 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
             <Clock className="w-3 h-3" />
@@ -741,6 +741,11 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const isDuePassed = daysUntilDue !== null && daysUntilDue < 0;
   const balanceAmount = selectedInvoice ? (parseFloat(selectedInvoice.balanceAmount) || parseFloat(selectedInvoice.totalAmount) || 0) : 0;
   const totalAmount = selectedInvoice ? (parseFloat(selectedInvoice.totalAmount) || 0) : 0;
+  // What is actually about to be recorded: the typed amount for cash and cheque (they carry
+  // their own figure), else the chosen portion — the whole balance or the first instalment.
+  const payableNow = selectedMethod === 'cash' || selectedMethod === 'check'
+    ? (parseFloat(paymentDetails.amountReceived) || balanceAmount)
+    : (payHalf && halfPlan ? halfPlan.firstAmount : balanceAmount);
   const generatedReference = selectedInvoice 
     ? `XLAND${selectedInvoice.invoiceId?.replace(/[^0-9]/g, '') || ''}${new Date().getFullYear()}`
     : '';
@@ -813,7 +818,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500 mb-1">Amount Payable</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(balanceAmount)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(payableNow)}</p>
                 {daysUntilDue !== null && (
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs mt-1 ${daysUntilDue < 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                     <Clock className="w-3 h-3" />
@@ -902,7 +907,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Amount Payable</span>
-                    <span className="text-sm font-medium text-gray-900">{formatCurrency(balanceAmount)}</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(payableNow)}</span>
                   </div>
                 </div>
               </div>
@@ -985,7 +990,10 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                   </div>
                   <div className="flex justify-between items-center border-t-2 border-blue-500 pt-3 mt-3">
                     <span className="text-blue-600 font-semibold">Amount Payable</span>
-                    <span className="text-2xl font-bold text-blue-600">{formatCurrency(balanceAmount)}</span>
+                    <span className="text-2xl font-bold text-blue-600">{formatCurrency(payableNow)}</span>
+                  </div>
+                  <div className="flex justify-end">
+                    <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={toggleHalf} />
                   </div>
                 </div>
               </div>
@@ -1144,7 +1152,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
             </PageHeader>
           </div>
         </div>
-        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} balanceAmount={balanceAmount}
+        <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} payableNow={payableNow}
           halfPlan={halfPlan} payHalf={payHalf} onToggleHalf={toggleHalf} />
         <StepProgress currentStep={2} selectedMethod={selectedMethod} />
 
