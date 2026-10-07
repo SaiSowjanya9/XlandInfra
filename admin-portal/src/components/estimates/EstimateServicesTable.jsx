@@ -1,6 +1,6 @@
 import { formatCurrency, getAddonName, getAddonPrice, getServiceInput, stripInternalServiceDetails,
   getServiceMethodLabel, getServiceRate, getServiceVendorCost, getServiceXlandCost,
-  getServiceMarginPercent } from '../../utils/estimatePackageUtils';
+  getServiceMarginPercent, getServiceOperatingCost } from '../../utils/estimatePackageUtils';
 import { normalizeServiceRow } from './EstimateDraftServicesTable';
 
 /**
@@ -122,6 +122,64 @@ const COLUMN_SHARE = {
   plain: { '#': 4, Service: 16, Description: 28, 'Input / Details': 14, Method: 10, Frequency: 10, 'Visits / Year': 7, 'Customer Price': 11 }
 };
 
+// The totals of a set of service rows, for the footer cells. Read from the same figures as the row
+// cells -- a package's own service against its share of the package price -- so a column's total
+// is the sum of what it lists. A row with no vendor cost on record leaves the cost totals unknown
+// rather than counting it as free (`uncosted` names them).
+export const serviceTotals = rows => {
+  const list = (Array.isArray(rows) ? rows : []).map(row => (row && row.pricing_method !== undefined ? row : normalizeServiceRow(row)));
+  const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  const priceOf = row => (row._tag === 'Package' ? (row.packageShare ?? 0) : getAddonPrice(row));
+  const uncosted = list.filter(row => getServiceVendorCost(row) == null).map(row => getAddonName(row) || 'a service');
+  const vendor = round2(list.reduce((sum, row) => sum + (getServiceVendorCost(row) || 0), 0));
+  const operating = round2(list.reduce((sum, row) => sum + (getServiceOperatingCost(row) || 0), 0));
+  const price = round2(list.reduce((sum, row) => sum + priceOf(row), 0));
+  return { vendor, operating, price, uncosted };
+};
+
+// One footer row of totals, laid on the table's own columns: the label across the descriptive
+// columns, then each figure under its column. Without the internal columns, the price alone.
+export function TotalsCells({ columns, label, totals, internal, cell, strong = false }) {
+  const firstFigure = columns.findIndex(column => column.label === (internal ? 'Vendor Cost' : 'Customer Price'));
+  const known = !totals.uncosted?.length;
+  const xland = known ? Math.round((totals.price - totals.vendor - (totals.operating || 0)) * 100) / 100 : null;
+  const margin = known && totals.price ? Math.round((xland / totals.price) * 10000) / 100 : null;
+  const figure = (value, extra = '') => <td className={`${cell} text-[11px] tabular-nums ${extra}`}>{value}</td>;
+  const unknown = known ? null : `No vendor cost on record for ${totals.uncosted.join(', ')}`;
+  return (
+    <tr className={strong ? 'border-t-2 border-warm-border' : ''}>
+      <td colSpan={firstFigure} className={`${cell} font-semibold text-warm-text ${strong ? 'text-sm' : ''}`}>{label}</td>
+      {internal && figure(known ? formatCurrency(totals.vendor) : <span title={unknown}>—</span>, 'text-right font-semibold text-gray-700 print:hidden')}
+      {internal && figure(known ? formatCurrency(xland) : <span title={unknown}>—</span>, `text-right font-semibold print:hidden ${xland != null && xland < 0 ? 'text-red-600' : 'text-gray-700'}`)}
+      {figure(formatCurrency(totals.price), `text-center font-bold text-warm-text ${strong ? 'text-sm' : ''}`)}
+      {internal && figure(margin == null ? <span title={unknown || undefined}>—</span> : `${margin}%`, `text-center font-semibold print:hidden ${margin != null && margin < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`)}
+    </tr>
+  );
+}
+
+// The Total Services Price line across every block, on the same columns as the tables above it so
+// its figures sit under theirs
+export function EstimateGrandTotal({ rows, price, internal = false, label = 'Total Services Price' }) {
+  const columns = serviceColumns(value => value ?? '', internal, false);
+  const cell = 'px-2 py-2.5 align-middle break-words';
+  const totals = { ...serviceTotals(rows), price };
+  return (
+    <div className="overflow-hidden rounded-lg border border-warm-border">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
+        <tbody className="bg-warm-section">
+          <TotalsCells columns={columns} label={label} totals={totals} internal={internal} cell={cell} strong />
+        </tbody>
+      </table>
+      {internal && totals.uncosted.length > 0 && (
+        <p className="border-t border-warm-border bg-amber-50 px-3 py-2 text-[11px] text-amber-800 print:hidden">
+          No vendor cost is on record for {totals.uncosted.join(', ')}, so the cost totals are not shown -- {totals.uncosted.length === 1 ? 'it' : 'they'} would count as free.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // `totalLabel` names the footer figure; `showTag` is off where a table holds a package's services alone
 export default function EstimateServicesTable({ rows, total, note = null, totalLabel = 'Total Services Price', showTag = true, decode = value => value ?? '',
   topRadius = 'rounded-t-lg', bottomRadius = 'rounded-b-lg', internal = false }) {
@@ -153,16 +211,11 @@ export default function EstimateServicesTable({ rows, total, note = null, totalL
             </tr>
           ))}
         </tbody>
-        {/* One figure for all the services, across the full width */}
+        {/* The block's totals, each under its own column: Vendor Cost, XLAND Cost, Customer Price
+            and Margin % for the block as a whole -- the INTERNAL figures, where a separate panel
+            used to repeat them */}
         <tfoot className="bg-warm-section">
-          <tr>
-            <td colSpan={columns.length} className={cell}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-warm-text">{totalLabel}</span>
-                <span className="whitespace-nowrap font-bold text-warm-text">{formatCurrency(sum)}</span>
-              </div>
-            </td>
-          </tr>
+          <TotalsCells columns={columns} label={totalLabel} totals={{ ...serviceTotals(services), price: sum }} internal={internal} cell={cell} />
           {/* A small line under the total, e.g. which AMC package it includes and at what price */}
           {note && (
             <tr>

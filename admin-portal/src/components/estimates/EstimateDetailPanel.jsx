@@ -1,34 +1,11 @@
 import { Fragment } from 'react';
-import { formatCurrency, getAddonName, getAddonPrice, getEstimateAddons, getPropertyTypeLabel, getServiceOperatingCost, getServiceVendorCost } from '../../utils/estimatePackageUtils';
-import EstimateProfitSummaryPanel from './EstimateProfitSummaryPanel';
-import { normalizeServiceRow } from './EstimateDraftServicesTable';
-import EstimateServicesTable from './EstimateServicesTable';
+import { formatCurrency, getAddonPrice, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import EstimateServicesTable, { EstimateGrandTotal } from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
 import { shortDivision } from '../../utils/fieldOptionsStore';
 import usePrintShortcut from '../../hooks/usePrintShortcut';
-
-/**
- * The estimate's internal figures, over everything it covers: every package service and added
- * service's vendor and operating cost, against what the customer pays before GST -- the subtotal
- * less any discount. A row with no vendor cost on record is listed in `uncosted`, never counted as
- * nothing. Returns null for an estimate with no services.
- */
-const estimateInternalFigures = (estimate, packageServices, services) => {
-  const rows = [...packageServices.filter(row => row && typeof row === 'object'), ...services].map(normalizeServiceRow);
-  if (!rows.length) return null;
-  const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
-  const number = (...values) => { const found = values.find(value => value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))); return found === undefined ? null : Number(found); };
-  const uncosted = rows.filter(row => getServiceVendorCost(row) == null).map(row => getAddonName(row) || 'a service');
-  const vendorCost = round2(rows.reduce((sum, row) => sum + (getServiceVendorCost(row) || 0), 0));
-  const operatingCost = round2(rows.reduce((sum, row) => sum + (getServiceOperatingCost(row) || 0), 0));
-  const subtotal = number(estimate.subtotal, estimate.subTotal, estimate.sub_total)
-    ?? round2((number(estimate.package_price, estimate.packagePrice) || 0) + services.reduce((sum, row) => sum + getAddonPrice(row), 0));
-  // Read as the Price Summary reads it, so the panel's Customer Price is the summary's figure
-  const discount = number(estimate.discount_amount, estimate.discountAmount, estimate.discount) || 0;
-  return { uncosted, vendorCost, operatingCost, customerPrice: round2(subtotal - discount) };
-};
 
 /**
  * Everything a saved estimate holds, shown as the full-screen view behind an Estimate ID. Clicking
@@ -200,35 +177,19 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
           />
         </Section>
       )}
+      {/* Total Services Price across both blocks, on their columns: under Vendor Cost, XLAND Cost
+          and Margin % it carries the whole estimate's figures -- what the separate INTERNAL panel
+          used to state -- and under Customer Price the subtotal */}
       {(packageServices.length > 0 || services.length > 0 || packageName) && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-warm-border bg-warm-section px-3 py-2.5">
-          <span className="font-semibold text-warm-text">Total Services Price</span>
-          <span className="whitespace-nowrap font-bold text-warm-text">{money(packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0))}</span>
-        </div>
+        <EstimateGrandTotal internal={internal}
+          rows={[...packageServices.filter(row => row && typeof row === 'object').map(row => ({ ...row, _tag: 'Package' })), ...services]}
+          price={packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0)} />
       )}
 
       {/* The card carries its own Price Summary caption, so the section is not headed again */}
       <div className="border-t border-gray-100 pt-4">
         <EstimatePriceSummary estimate={estimate} />
       </div>
-
-      {/* The INTERNAL read-out the AMC package form shows, for this estimate as a whole. Worked out
-          from the same rows as the cost columns above, so the two always agree. It is shown only
-          when every service has a cost on record: a service with none would count as free and
-          overstate the margin, so it names those services instead of showing a wrong figure. */}
-      {internal && (() => {
-        const figures = estimateInternalFigures(estimate, packageServices, services);
-        if (!figures) return null;
-        if (figures.uncosted.length) {
-          return (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 print:hidden">
-              <span className="font-semibold">INTERNAL: </span>
-              no vendor cost is on record for {figures.uncosted.map(name => decode(name)).join(', ')}, so this estimate&apos;s profit summary is not shown -- it would count {figures.uncosted.length === 1 ? 'that service' : 'those services'} as free.
-            </div>
-          );
-        }
-        return <EstimateProfitSummaryPanel vendorCost={figures.vendorCost} operatingCost={figures.operatingCost} customerPrice={figures.customerPrice} />;
-      })()}
 
       {(estimate.description || estimate.notes) && (
         <Section title="Notes">
