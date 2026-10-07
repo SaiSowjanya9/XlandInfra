@@ -38,6 +38,7 @@ import SelectWithAdd from '../components/SelectWithAdd';
 import { getCategories, addCategory, getSubcategories, addSubcategory } from '../utils/fieldOptionsStore';
 import { extractBlockNames, extractTotalUnits, extractUnitNumber } from '../utils/propertyStore';
 import { useFP } from '../contexts/FPContext';
+import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -49,7 +50,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  const [counts, setCounts] = useState({ pending: 0, completed: 0, total: 0 });
+  const [counts, setCounts] = useState({ pending: 0, completed: 0, closed: 0, total: 0 });
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -169,7 +170,8 @@ const EmployeeWorkOrders = ({ admin }) => {
         // Calculate counts - Pending = all except completed, Completed = only completed
         const pendingCount = allOrders.filter(o => o.status !== 'completed').length;
         const completedCount = allOrders.filter(o => o.status === 'completed').length;
-        setCounts({ pending: pendingCount, completed: completedCount, total: allOrders.length });
+        const closedCount = allOrders.filter(o => o.status === 'closed').length;
+        setCounts({ pending: pendingCount, completed: completedCount, closed: closedCount, total: allOrders.length });
         
         // Filter orders based on active tab - All shows everything, Completed shows only completed
         let filteredOrders = allOrders;
@@ -826,20 +828,16 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header with FP Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <ClipboardList className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-            <p className="text-gray-500 text-sm">
-              {selectedFp.id === 'all' ? 'Viewing all work orders (Admin Mode)' : `Viewing work orders for ${selectedFp.companyName}`} • {workOrders.length} orders
-            </p>
-          </div>
-        </div>
-        
+      {/* Header — the shared Work Orders header, same in every portal. The FP switcher rides in
+          the same row, since this is the one portal that can look across partners. */}
+      <WorkOrdersHeader
+        subtitle={selectedFp.id === 'all' ? 'Viewing all work orders (Admin Mode)' : `Viewing work orders for ${selectedFp.companyName}`}
+        stats={[
+          { tone: 'total', label: 'Total Orders', value: counts.total },
+          { tone: 'completed', label: 'Completed', value: counts.completed },
+          { tone: 'closed', label: 'Closed', value: counts.closed }
+        ]}
+      >
         {/* FP Switcher - Top Right */}
         <div className="relative">
           <button
@@ -884,7 +882,7 @@ const EmployeeWorkOrders = ({ admin }) => {
             </div>
           )}
         </div>
-      </div>
+      </WorkOrdersHeader>
 
       {/* Success/Error Messages */}
       {success && (

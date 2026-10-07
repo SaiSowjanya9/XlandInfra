@@ -179,10 +179,26 @@ fetch('/api/manager/dashboard', { ... });
 - **The header around those cards is the same card in every portal too**: `bg-warm-section border
   border-warm-border rounded-xl shadow-warm px-5 py-4`, a `bg-warm-accent-soft` tile with a
   `text-warm-accent` `FileText`, the title in `text-warm-text` and the strapline in `text-warm-muted`
-  — FP's header, now also Manager's, Coordinator's, Supervisor's and Executive's. The white
+  — FP's header, now also the admin `Estimates` page's, Manager's, Coordinator's, Supervisor's and
+  Executive's. The white
   full-width band those four used is gone, so the tab bar beneath is a card as well rather than a
   second band butted against the first. This is the one place the warm skin is deliberately used
   outside the FP portal.
+
+## Work Orders Header
+
+- **Every portal's Work Orders page uses `components/workorders/WorkOrdersHeader.jsx`.** Six pages
+  had six headers for a title, three counts and a Create button — a blue-to-purple gradient tile in
+  five of them and a bare heading in the sixth, with the counts living in the tab bar rather than
+  the header. The shared one is the agreed "Elegant Gold Accent" design: a cream `#FFFAF0` bar on
+  `#E8DFC9`, a 40px gold icon circle, the title at 24px semibold, a `#E8DFC9` rule, then the stats
+  (`FileText`/gold Total Orders, `CheckCircle`/green Completed, `Lock`/amber Closed) and the gold
+  `#B5812A` Create button against the right edge.
+- `stats` is a list, so a page passes only the counts it keeps; `action` takes `{ label, onClick }`
+  or `{ label, to }` (Coordinator navigates to a create page rather than switching a tab); and
+  `children` ride in the same row — that is where the admin page's FP switcher sits.
+- Gold `#B5812A`, not the lighter `warm-accent`, carries white button text: the tan accent does not
+  meet contrast, which is the same rule the warm estimate screens follow.
 
 ## Customer Portal — Payments & Invoices
 

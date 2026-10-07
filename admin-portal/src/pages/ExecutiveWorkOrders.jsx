@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List,
@@ -93,6 +94,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   // Count work orders by status
   const allCount = workOrders.length;
   const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
+  const closedCount = workOrders.filter(wo => wo.status === 'closed').length;
 
   // Filter work orders by active tab, status filter, and search term
   const filteredWorkOrders = workOrders.filter(wo => {
@@ -351,25 +353,15 @@ const ExecutiveWorkOrders = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <ClipboardList className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-            <p className="text-gray-500">Manage and track all work orders</p>
-          </div>
-        </div>
-        <button
-          onClick={() => { resetForm(); setActiveTab('create'); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
-        </button>
-      </div>
+      {/* Header — the shared Work Orders header, same in every portal */}
+      <WorkOrdersHeader
+        stats={[
+          { tone: 'total', label: 'Total Orders', value: allCount },
+          { tone: 'completed', label: 'Completed', value: completedCount },
+          { tone: 'closed', label: 'Closed', value: closedCount }
+        ]}
+        action={{ label: 'Create Work Order', onClick: () => { resetForm(); setActiveTab('create'); } }}
+      />
 
       {message.text && (
         <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>

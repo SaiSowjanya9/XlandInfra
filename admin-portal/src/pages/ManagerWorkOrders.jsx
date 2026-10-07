@@ -34,6 +34,7 @@ import {
   Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -176,7 +177,9 @@ const ManagerWorkOrders = ({ user }) => {
   }, []);
 
   // Count work orders by status - Pending = all except completed, Completed = only completed
+  const allCount = workOrders.length;
   const pendingCount = workOrders.filter(wo => wo.status !== 'completed').length;
+  const closedCount = workOrders.filter(wo => wo.status === 'closed').length;
   const completedCount = workOrders.filter(wo => wo.status === 'completed').length;
 
   // Filter work orders by active tab, status filter, and search term
@@ -713,25 +716,15 @@ const ManagerWorkOrders = ({ user }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <ClipboardList className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-            <p className="text-gray-500">Manage and track all work orders</p>
-          </div>
-        </div>
-        <button
-          onClick={() => { resetForm(); setActiveTab('create'); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Work Order</span>
-        </button>
-      </div>
+      {/* Header — the shared Work Orders header, same in every portal */}
+      <WorkOrdersHeader
+        stats={[
+          { tone: 'total', label: 'Total Orders', value: allCount },
+          { tone: 'completed', label: 'Completed', value: completedCount },
+          { tone: 'closed', label: 'Closed', value: closedCount }
+        ]}
+        action={{ label: 'Create Work Order', onClick: () => { resetForm(); setActiveTab('create'); } }}
+      />
 
       {/* Message */}
       {message.text && (
