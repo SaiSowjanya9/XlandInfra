@@ -1831,6 +1831,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalAmount)}</p>
                 <p className="text-xs text-gray-500 mt-2">Due Amount</p>
                 <p className="text-xl font-bold text-red-600">{formatCurrency(balanceAmount)}</p>
+                {payableNow !== balanceAmount && (
+                  <>
+                    <p className="text-xs text-gray-500 mt-2">Paying Now</p>
+                    <p className="text-xl font-bold text-emerald-600">{formatCurrency(payableNow)}</p>
+                  </>
+                )}
                 <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={toggleHalf} />
               </div>
             </div>
@@ -2052,7 +2058,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Proceed to Pay
+                    Proceed to Pay {formatCurrency(payableNow)}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
