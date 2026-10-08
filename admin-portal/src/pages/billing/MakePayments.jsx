@@ -33,7 +33,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader from '../../components/common/PageHeader';
 import PaymentAmountSection from '../../components/common/PaymentAmountSection';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
-import { formatPlanDate, halfPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
+import { formatPlanDate, halfPaymentPlan, splitPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -284,13 +284,13 @@ const StepProgress = ({ currentStep, selectedMethod }) => (
 );
 
 /**
- * The half-yearly option, as a plain text-sized control under the amount rather than a panel of
- * its own. The invoice asks for the whole balance; paying half of it is the exception the policy
- * allows, so it is offered where the figure is read and nowhere else. `plan` is null — and this
- * renders nothing — on a balance too small to split.
+ * The partial-payment quick toggle for the later steps, as a plain text-sized control under the
+ * amount rather than a panel of its own — the chooser on step 1 picks the share; this only flips
+ * between it and the full balance. `plan` is null — and this renders nothing — where the balance
+ * cannot be split.
  */
-const HalfPaymentToggle = ({ plan, active, onToggle }) => {
-  if (!plan) return null;
+const HalfPaymentToggle = ({ plan, canSplit, active, onToggle }) => {
+  if (!canSplit) return null;
   return (
     <div className="mt-2">
       <button
@@ -304,9 +304,9 @@ const HalfPaymentToggle = ({ plan, active, onToggle }) => {
         }`}
       >
         <Percent className="w-3 h-3" />
-        {active ? 'Paying 50% — pay full instead' : 'Pay 50% now'}
+        {active ? 'Partial payment — pay full instead' : 'Pay a part now'}
       </button>
-      {active && (
+      {active && plan && (
         <p className="text-[11px] font-normal text-gray-500 mt-1 leading-snug max-w-[14rem] ml-auto">
           Paying {formatCurrency(plan.firstAmount)} now. The remaining {formatCurrency(plan.secondAmount)} is
           due by {formatPlanDate(plan.secondDueDate)}, 30 days before the next 6-month service period
@@ -318,7 +318,7 @@ const HalfPaymentToggle = ({ plan, active, onToggle }) => {
 };
 
 // Invoice Details Bar
-const InvoiceDetailsBar = ({ invoice, daysUntilDue, payableNow, halfPlan, payHalf, onToggleHalf }) => (
+const InvoiceDetailsBar = ({ invoice, daysUntilDue, payableNow, activePlan, canSplit, payHalf, onToggleHalf }) => (
   <div className="bg-white border-b border-gray-200 px-6 py-4">
     <div className="max-w-5xl mx-auto flex items-center justify-between">
       <div className="grid grid-cols-4 gap-8">
@@ -348,7 +348,7 @@ const InvoiceDetailsBar = ({ invoice, daysUntilDue, payableNow, halfPlan, payHal
             {daysUntilDue < 0 ? `Overdue by ${Math.abs(daysUntilDue)} days` : `Due in ${daysUntilDue} days`}
           </div>
         )}
-        <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={onToggleHalf} />
+        <HalfPaymentToggle plan={activePlan} canSplit={canSplit} active={payHalf} onToggle={onToggleHalf} />
       </div>
     </div>
   </div>
@@ -396,9 +396,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const [copied, setCopied] = useState(null);
   // Taking the first of the two half-yearly instalments rather than the whole balance
   const [payHalf, setPayHalf] = useState(false);
-  // 'percentage' is the fixed half-yearly split — the only portion the online routes accept.
-  // 'custom' is only offered for Cash and Cheque, which already record a typed amountReceived.
+  // 'percentage' takes a share of the balance (25/50/75/100); 'custom' is a typed amount.
   const [partialKind, setPartialKind] = useState('percentage');
+  const [partialPct, setPartialPct] = useState('50');
   const [customAmount, setCustomAmount] = useState('');
   
   // Employee list for cash payment "Received By" dropdown
@@ -511,29 +511,36 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     }
   }, [selectedInvoice, selectedMethod, paymentDetails.amountReceived]);
 
-  // The half-yearly split for what is still owed, or null where the balance is too small to carry
-  // one. The server recomputes it from the balance before charging anything; this is what the
-  // screen states and what it prefills the cash and cheque amount with.
+  // Whether the balance can be split at all — null where it is too small to carry a remainder.
+  // The server recomputes every figure from the balance before charging anything; what the screen
+  // states is only ever a display of what the server will do.
   const invoiceBalance = selectedInvoice
     ? (parseFloat(selectedInvoice.balanceAmount) || parseFloat(selectedInvoice.totalAmount) || 0)
     : 0;
   const halfPlan = halfPaymentPlan(invoiceBalance);
+  // The amount the chosen partial comes to: a share of the balance, or the typed custom figure
+  // (clamped so the screen and the server agree that paying the balance is a full payment).
+  const partialAmount = partialKind === 'custom'
+    ? (() => { const c = parseFloat(customAmount); return Number.isFinite(c) && c > 0 ? Math.min(c, invoiceBalance) : 0; })()
+    : invoiceBalance * (Number(partialPct) / 100);
+  // The instalment plan for that amount, where a remainder still exists to schedule. Paying 100%
+  // or the full balance leaves nothing, so there is no plan — matching the server exactly.
+  const activePlan = payHalf ? splitPaymentPlan(invoiceBalance, partialAmount) : null;
   const toggleHalf = () => {
     const next = !payHalf;
     setPayHalf(next);
     // Cash and a cheque are for whatever was handed over, so the box stays editable — this only
-    // fills in the figure the instalment comes to
-    const amount = next && halfPlan ? halfPlan.firstAmount : invoiceBalance;
+    // fills in the figure the partial choice comes to
+    const amount = next ? partialAmount : invoiceBalance;
     setPaymentDetails(prev => ({ ...prev, amountReceived: amount.toFixed(2) }));
   };
 
-  // A custom partial is only real for Cash and Cheque — the online routes accept only the fixed
-  // half. Switching to an online method falls back to the percentage split.
+  // A custom partial is also what Cash and Cheque record, so keep their amount box in step
   useEffect(() => {
-    if (partialKind === 'custom' && !(selectedMethod === 'cash' || selectedMethod === 'check')) {
-      setPartialKind('percentage');
+    if (payHalf && partialKind === 'custom' && (selectedMethod === 'cash' || selectedMethod === 'check')) {
+      setPaymentDetails(prev => ({ ...prev, amountReceived: customAmount }));
     }
-  }, [selectedMethod, partialKind]);
+  }, [customAmount, partialKind, payHalf, selectedMethod]);
 
   const copyToClipboard = (text, field) => {
     navigator.clipboard.writeText(text);
@@ -577,8 +584,10 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
         },
         body: JSON.stringify({
           invoiceId: selectedInvoice.id || selectedInvoice.invoiceId,
-          // The server works out the figure; this only says which of the two is being paid
-          portion: payHalf && halfPlan ? 'half' : 'full'
+          // The server works out the figure from the balance; this only names the share —
+          // '25'/'50'/'75', or 'custom' with an amount it validates against the balance
+          portion: payHalf ? (partialKind === 'custom' ? 'custom' : partialPct) : 'full',
+          ...(payHalf && partialKind === 'custom' ? { customAmount: parseFloat(customAmount) || 0 } : {})
         })
       });
       
@@ -606,16 +615,20 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     setError(null);
     
     if (currentStep === 1) {
-      // A typed partial amount has to be genuinely partial — less than the balance, more than
-      // nothing. Equal to the balance is just a full payment wearing the wrong label.
-      if (payHalf && partialKind === 'custom' && (selectedMethod === 'cash' || selectedMethod === 'check')) {
-        const custom = parseFloat(paymentDetails.amountReceived);
+      // A typed partial amount has to be genuinely partial — more than nothing, and leaving at
+      // least ₹1 behind. Meeting the balance is just a full payment wearing the wrong label.
+      if (payHalf && partialKind === 'custom') {
+        const custom = parseFloat(customAmount);
         if (!custom || custom <= 0) {
           setError('Please enter the amount being paid now');
           return;
         }
         if (custom >= balanceAmount) {
           setError('That is the full balance — choose Pay Full Amount instead');
+          return;
+        }
+        if (balanceAmount - custom < 1) {
+          setError('That amount leaves less than ₹1 unpaid — pay a little less, or the full balance');
           return;
         }
       }
@@ -686,12 +699,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     // settle the portion chosen — the whole balance, or the first half-yearly instalment.
     // A cheque is dated by the cheque itself.
     const paymentAmount = selectedMethod === 'cash' || selectedMethod === 'check'
-      ? paymentDetails.amountReceived 
-      : (payHalf && halfPlan ? halfPlan.firstAmount : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount));
-    // The instalment is noted on the payment only where the figure really is the first half: the
-    // cash and cheque boxes stay editable, and a typed-over amount is not an instalment.
-    const isFirstHalf = Boolean(payHalf && halfPlan)
-      && Math.abs(parseFloat(paymentAmount) - halfPlan.firstAmount) < 0.005;
+      ? paymentDetails.amountReceived
+      : (payHalf ? partialAmount : (selectedInvoice.balanceAmount || selectedInvoice.totalAmount));
+    // The part-payment note is written only where the figure really is the chosen instalment:
+    // the cash and cheque boxes stay editable, and a typed-over amount is not one.
+    const isPartial = Boolean(payHalf && activePlan)
+      && Math.abs(parseFloat(paymentAmount) - activePlan.firstAmount) < 0.005;
     const paymentDate = selectedMethod === 'cash' 
       ? paymentDetails.receivedDate 
       : selectedMethod === 'check'
@@ -709,7 +722,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
       submitData.append('paymentStatus', 'verification_pending');
       submitData.append('transactionReference', finalReference);
       submitData.append('receivedBy', paymentDetails.receivedBy || user?.firstName || 'Admin');
-      submitData.append('remarks', `${paymentDetails.notes || ''}${isFirstHalf ? `${paymentDetails.notes ? ' ' : ''}${halfPaymentRemark(halfPlan)}` : ''}`);
+      submitData.append('remarks', `${paymentDetails.notes || ''}${isPartial ? `${paymentDetails.notes ? ' ' : ''}${halfPaymentRemark(activePlan)}` : ''}`);
       
       // Cash payment specific fields
       if (selectedMethod === 'cash') {
@@ -775,7 +788,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   // their own figure), else the chosen portion — the whole balance or the first instalment.
   const payableNow = selectedMethod === 'cash' || selectedMethod === 'check'
     ? (parseFloat(paymentDetails.amountReceived) || balanceAmount)
-    : (payHalf && halfPlan ? halfPlan.firstAmount : balanceAmount);
+    : (payHalf ? partialAmount : balanceAmount);
   const generatedReference = selectedInvoice 
     ? `XLAND${selectedInvoice.invoiceId?.replace(/[^0-9]/g, '') || ''}${new Date().getFullYear()}`
     : '';
@@ -1023,7 +1036,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                     <span className="text-2xl font-bold text-blue-600">{formatCurrency(payableNow)}</span>
                   </div>
                   <div className="flex justify-end">
-                    <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={toggleHalf} />
+                    <HalfPaymentToggle plan={activePlan} canSplit={Boolean(halfPlan)} active={payHalf} onToggle={toggleHalf} />
                   </div>
                 </div>
               </div>
@@ -1183,7 +1196,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           </div>
         </div>
         <InvoiceDetailsBar invoice={selectedInvoice} daysUntilDue={daysUntilDue} payableNow={payableNow}
-          halfPlan={halfPlan} payHalf={payHalf} onToggleHalf={toggleHalf} />
+          activePlan={activePlan} canSplit={Boolean(halfPlan)} payHalf={payHalf} onToggleHalf={toggleHalf} />
         <StepProgress currentStep={2} selectedMethod={selectedMethod} />
 
         <div className="max-w-5xl mx-auto px-6 py-6">
@@ -1866,29 +1879,28 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
           </div>
         )}
 
-        {/* Payment Amount — the full-vs-partial chooser, mirroring the reference design. 'Custom'
-            is only offered for Cash and Cheque, the two methods that carry a typed amount;
-            the online routes accept the fixed half or the whole balance, nothing in between. */}
+        {/* Payment Amount — the full-vs-partial chooser, mirroring the reference design. The
+            server resolves every share and validates every custom amount against the balance. */}
         {selectedInvoice && (
           <PaymentAmountSection
             total={totalAmount}
             balance={balanceAmount}
-            plan={halfPlan}
+            plan={activePlan}
             partial={payHalf}
             onPartialChange={on => {
               setPayHalf(on);
               setPaymentDetails(prev => ({
                 ...prev,
-                amountReceived: (on && halfPlan ? halfPlan.firstAmount : balanceAmount).toFixed(2)
+                amountReceived: (on ? partialAmount : balanceAmount).toFixed(2)
               }));
             }}
             kind={partialKind}
             onKindChange={setPartialKind}
-            customAmount={paymentDetails.amountReceived}
-            onCustomAmountChange={value => setPaymentDetails(prev => ({ ...prev, amountReceived: value }))}
-            allowCustom={selectedMethod === 'cash' || selectedMethod === 'check'}
-            customDisabledNote="Custom amounts can only be recorded for Cash or Cheque payments"
-            customDueDateLabel={formatDate(selectedInvoice.dueDate)}
+            percentage={partialPct}
+            onPercentageChange={setPartialPct}
+            customAmount={customAmount}
+            onCustomAmountChange={setCustomAmount}
+            canSplit={Boolean(halfPlan)}
           />
         )}
 

@@ -2,19 +2,18 @@ import { CheckCircle2, Wallet } from 'lucide-react';
 import { formatPlanDate } from '../../utils/halfPayment';
 
 /**
- * The "Payment Amount" chooser from the shared design: Pay Full Amount vs Partial Payment as two
- * radio cards, then — when partial — a Percentage/Custom Amount pill row, the computed figures
- * (paying now, remaining, due dates), and the blue "Amount to Pay Now" summary bar.
+ * The "Payment Amount" chooser: Pay Full Amount vs Partial Payment as two radio cards, then —
+ * when partial — a Percentage/Custom Amount pill row, the computed figures (paying now,
+ * remaining, next due date), and the blue "Amount to Pay Now" summary bar.
  *
- * Two kinds of partial exist because of what the server will accept, not preference:
- * - 'percentage' is the fixed half-yearly split — the only portion the online routes honour, since
- *   `resolvePaymentPortion` recomputes the figure server-side and ignores any amount a browser posts.
- * - 'custom' is only offered where the caller passes `allowCustom` — the staff screen's Cash and
- *   Cheque methods, which carry their own typed `amountReceived`. Everywhere else the pill renders
- *   disabled; a disabled radio can never produce a charge the server didn't compute.
+ * Percentage offers 25/50/75/100; the caller turns the selection into a `splitPaymentPlan` and
+ * hands it back as `plan`, which supplies the remainder's due dates. Custom Amount carries the
+ * typed figure the same way — the server validates it against the invoice balance either way.
  */
 const inr = value =>
   '₹' + (Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+const PERCENTAGES = ['25', '50', '75', '100'];
 
 const PaymentAmountSection = ({
   total,
@@ -24,11 +23,11 @@ const PaymentAmountSection = ({
   onPartialChange,
   kind = 'percentage',
   onKindChange,
+  percentage = '50',
+  onPercentageChange,
   customAmount,
   onCustomAmountChange,
-  allowCustom = false,
-  customDisabledNote = 'Custom amounts can only be recorded for Cash or Cheque payments',
-  customDueDateLabel
+  canSplit = true
 }) => {
   const balanceNum = Number(balance) || 0;
   const custom = parseFloat(customAmount);
@@ -38,10 +37,9 @@ const PaymentAmountSection = ({
       ? (Number.isFinite(custom) ? custom : 0)
       : (plan ? plan.firstAmount : balanceNum);
   const remaining = Math.max(balanceNum - payingNow, 0);
-  const nextDue = kind === 'custom'
-    ? (customDueDateLabel || '—')
-    : formatPlanDate(plan?.secondDueDate);
-  const dueLabel = kind === 'custom' ? 'As per invoice' : 'After 6 Months';
+  // A plan carries the policy dates; paying the whole balance as "100%" leaves nothing to schedule
+  const nextDue = plan ? formatPlanDate(plan.secondDueDate) : '—';
+  const dueLabel = plan ? 'After 6 Months' : 'Paid in full';
 
   const OptionCard = ({ selected, disabled, onClick, title, desc }) => (
     <button
@@ -68,7 +66,7 @@ const PaymentAmountSection = ({
     <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-gray-900 text-base">Payment Amount</h3>
-        {plan && (
+        {canSplit && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Partially Paid Rule Enabled
@@ -90,7 +88,7 @@ const PaymentAmountSection = ({
           />
           <OptionCard
             selected={partial}
-            disabled={!plan}
+            disabled={!canSplit}
             onClick={() => onPartialChange(true)}
             title="Partial Payment"
             desc="Pay a part of the invoice amount now"
@@ -98,7 +96,7 @@ const PaymentAmountSection = ({
         </div>
       </div>
 
-      {partial && plan && (
+      {partial && (
         <>
           <div className="flex items-center gap-5 mt-5">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -111,15 +109,11 @@ const PaymentAmountSection = ({
               />
               <span className="text-sm font-medium text-gray-800">Percentage</span>
             </label>
-            <label
-              className={`flex items-center gap-2 ${allowCustom ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
-              title={!allowCustom ? customDisabledNote : undefined}
-            >
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="partial-kind"
                 checked={kind === 'custom'}
-                disabled={!allowCustom}
                 onChange={() => onKindChange?.('custom')}
                 className="w-4 h-4 text-blue-600"
               />
@@ -141,11 +135,13 @@ const PaymentAmountSection = ({
                 />
               ) : (
                 <select
-                  value="50"
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-700"
+                  value={percentage}
+                  onChange={e => onPercentageChange?.(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
                 >
-                  <option value="50">50%</option>
+                  {PERCENTAGES.map(p => (
+                    <option key={p} value={p}>{p}%</option>
+                  ))}
                 </select>
               )}
             </div>
@@ -178,8 +174,9 @@ const PaymentAmountSection = ({
               </span>
             </div>
             <p className="sm:ml-auto text-xs sm:text-sm text-gray-600">
-              You will be charged {inr(payingNow)} now. The remaining {inr(remaining)} will be due
-              on {nextDue}{kind === 'custom' ? '' : ' (after 6 months)'}.
+              {remaining > 0
+                ? `You will be charged ${inr(payingNow)} now. The remaining ${inr(remaining)} will be due on ${nextDue}${plan ? ' (after 6 months)' : ''}.`
+                : `You will be charged ${inr(payingNow)} now — the invoice is settled in full.`}
             </p>
           </div>
         </>

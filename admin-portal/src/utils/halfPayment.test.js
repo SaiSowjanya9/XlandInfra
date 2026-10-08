@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { formatPlanDate, halfPaymentPlan } from './halfPayment.js';
+import { formatPlanDate, halfPaymentPlan, splitPaymentPlan } from './halfPayment.js';
 
 const require = createRequire(import.meta.url);
 const server = require('../../../backend/utils/halfPayment.js');
@@ -46,6 +46,13 @@ test('the screens compute exactly what the server charges', () => {
   for (const balance of [2, 7, 1000, 1000.01, 20000, 3333.33, 123456.78]) {
     for (const from of ['2026-01-31', '2026-08-31', '2026-10-01', '2027-02-28', '2027-12-15']) {
       assert.deepEqual(halfPaymentPlan(balance, from), server.halfPaymentPlan(balance, from), `${balance} @ ${from}`);
+      for (const share of [0.25, 0.5, 0.75]) {
+        assert.deepEqual(
+          splitPaymentPlan(balance, balance * share, from),
+          server.splitPaymentPlan(balance, balance * share, from),
+          `${balance} @ ${share} @ ${from}`
+        );
+      }
     }
   }
   assert.equal(server.SERVICE_PERIOD_MONTHS, 6);
