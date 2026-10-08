@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader from '../../components/common/PageHeader';
+import PaymentAmountSection from '../../components/common/PaymentAmountSection';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import { formatPlanDate, halfPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { useFP } from '../../contexts/FPContext';
@@ -395,6 +396,10 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
   const [copied, setCopied] = useState(null);
   // Taking the first of the two half-yearly instalments rather than the whole balance
   const [payHalf, setPayHalf] = useState(false);
+  // 'percentage' is the fixed half-yearly split — the only portion the online routes accept.
+  // 'custom' is only offered for Cash and Cheque, which already record a typed amountReceived.
+  const [partialKind, setPartialKind] = useState('percentage');
+  const [customAmount, setCustomAmount] = useState('');
   
   // Employee list for cash payment "Received By" dropdown
   const [employees, setEmployees] = useState([]);
@@ -522,6 +527,14 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     setPaymentDetails(prev => ({ ...prev, amountReceived: amount.toFixed(2) }));
   };
 
+  // A custom partial is only real for Cash and Cheque — the online routes accept only the fixed
+  // half. Switching to an online method falls back to the percentage split.
+  useEffect(() => {
+    if (partialKind === 'custom' && !(selectedMethod === 'cash' || selectedMethod === 'check')) {
+      setPartialKind('percentage');
+    }
+  }, [selectedMethod, partialKind]);
+
   const copyToClipboard = (text, field) => {
     navigator.clipboard.writeText(text);
     setCopied(field);
@@ -593,6 +606,19 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
     setError(null);
     
     if (currentStep === 1) {
+      // A typed partial amount has to be genuinely partial — less than the balance, more than
+      // nothing. Equal to the balance is just a full payment wearing the wrong label.
+      if (payHalf && partialKind === 'custom' && (selectedMethod === 'cash' || selectedMethod === 'check')) {
+        const custom = parseFloat(paymentDetails.amountReceived);
+        if (!custom || custom <= 0) {
+          setError('Please enter the amount being paid now');
+          return;
+        }
+        if (custom >= balanceAmount) {
+          setError('That is the full balance — choose Pay Full Amount instead');
+          return;
+        }
+      }
       if (selectedMethod === 'razorpay' || selectedMethod === 'upi_razorpay') {
         handleRazorpayPayment();
       } else {
@@ -1835,16 +1861,35 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalAmount)}</p>
                 <p className="text-xs text-gray-500 mt-2">Due Amount</p>
                 <p className="text-xl font-bold text-red-600">{formatCurrency(balanceAmount)}</p>
-                {payableNow !== balanceAmount && (
-                  <>
-                    <p className="text-xs text-gray-500 mt-2">Paying Now</p>
-                    <p className="text-xl font-bold text-emerald-600">{formatCurrency(payableNow)}</p>
-                  </>
-                )}
-                <HalfPaymentToggle plan={halfPlan} active={payHalf} onToggle={toggleHalf} />
               </div>
             </div>
           </div>
+        )}
+
+        {/* Payment Amount — the full-vs-partial chooser, mirroring the reference design. 'Custom'
+            is only offered for Cash and Cheque, the two methods that carry a typed amount;
+            the online routes accept the fixed half or the whole balance, nothing in between. */}
+        {selectedInvoice && (
+          <PaymentAmountSection
+            total={totalAmount}
+            balance={balanceAmount}
+            plan={halfPlan}
+            partial={payHalf}
+            onPartialChange={on => {
+              setPayHalf(on);
+              setPaymentDetails(prev => ({
+                ...prev,
+                amountReceived: (on && halfPlan ? halfPlan.firstAmount : balanceAmount).toFixed(2)
+              }));
+            }}
+            kind={partialKind}
+            onKindChange={setPartialKind}
+            customAmount={paymentDetails.amountReceived}
+            onCustomAmountChange={value => setPaymentDetails(prev => ({ ...prev, amountReceived: value }))}
+            allowCustom={selectedMethod === 'cash' || selectedMethod === 'check'}
+            customDisabledNote="Custom amounts can only be recorded for Cash or Cheque payments"
+            customDueDateLabel={formatDate(selectedInvoice.dueDate)}
+          />
         )}
 
         {/* Choose Payment Method Section */}
