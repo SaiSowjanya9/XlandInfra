@@ -75,9 +75,10 @@ const getFPScope = (req) => {
 // ============================================
 router.post('/create-payment-link', authenticate, canManagePayments, paymentLinkLimiter, fraudDetectionMiddleware, async (req, res) => {
   try {
-    // 'half' pays the first of the two half-yearly instalments. Anything else is the full balance,
-    // which is what every existing caller asks for by sending no portion at all.
-    const { invoiceId, portion } = req.body;
+    // 'half'/'25'/'50'/'75' pay a share of the balance; 'custom' pays the customAmount, validated
+    // against the balance. Anything else is the full balance, which is what every existing caller
+    // asks for by sending no portion at all.
+    const { invoiceId, portion, customAmount } = req.body;
 
     if (!razorpay) {
       return res.status(500).json({
@@ -116,6 +117,7 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
     const result = await createInvoicePaymentLink({
       invoice,
       portion,
+      customAmount,
       performedBy: {
         id: req.user.id,
         name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
@@ -136,21 +138,21 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
 });
 
 /**
- * A Razorpay payment link for an invoice: the whole balance, or the first of the two half-yearly
- * instalments when `portion` is 'half'.
+ * A Razorpay payment link for an invoice: the whole balance, or a part payment when `portion`
+ * names a share ('25'/'50'/'half'/'75') or is 'custom' with a validated `customAmount`.
  *
  * Shared by the staff route above and the customer's own payment page below, which differ only in
  * how the caller is authorised. Returns `{ error, status }` rather than throwing, so each route
  * answers in its own shape.
  */
-const createInvoicePaymentLink = async ({ invoice, portion, performedBy }) => {
+const createInvoicePaymentLink = async ({ invoice, portion, customAmount, performedBy }) => {
   if (!razorpay) {
     return { status: 500, error: 'Razorpay is not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to environment variables.' };
   }
   if (Number(invoice.balance_amount) <= 0) {
     return { status: 400, error: 'Invoice is already fully paid' };
   }
-  const { amount: chargeAmount, plan, error: portionError } = resolvePaymentPortion(portion, invoice.balance_amount);
+  const { amount: chargeAmount, plan, error: portionError } = resolvePaymentPortion(portion, invoice.balance_amount, customAmount);
   if (portionError) return { status: 400, error: portionError };
 
   // The invoice's stored link is for the whole balance, so it is reused for a full payment and
@@ -181,7 +183,7 @@ const createInvoicePaymentLink = async ({ invoice, portion, performedBy }) => {
     // An instalment link is for an agreed figure, so it is not itself part-payable
     accept_partial: !plan,
     first_min_partial_amount: 100, // Minimum ₹1 partial payment
-    description: `Payment for Invoice: ${invoice.invoice_id}${plan ? ' (1st half-yearly payment)' : ''}`,
+    description: `Payment for Invoice: ${invoice.invoice_id}${plan ? ' (part payment)' : ''}`,
     customer: {
       name: invoice.customer_name || 'Customer',
       email: invoice.customer_email || undefined,
@@ -198,8 +200,8 @@ const createInvoicePaymentLink = async ({ invoice, portion, performedBy }) => {
       property_id: invoice.property_id?.toString() || '',
       property_name: invoice.property_name || '',
       customer_name: invoice.customer_name || '',
-      // The webhook records whatever was actually paid; these only describe the instalment
-      ...(plan ? { portion: 'half', second_half_amount: plan.secondAmount.toString(), second_half_due: plan.secondDueDate } : {})
+      // The webhook records whatever was actually paid; these only describe the part payment
+      ...(plan ? { portion: 'partial', remaining_amount: plan.secondAmount.toString(), remaining_due: plan.secondDueDate } : {})
     },
     callback_url: `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/payment/success`,
     callback_method: 'get',
@@ -1480,13 +1482,13 @@ router.get('/public/pay', ipBlacklistMiddleware, async (req, res) => {
 // ============================================
 // PUBLIC: PAYMENT LINK FOR A CARD / UPI / NET BANKING PAYMENT
 // The customer's payment page has no login, so the link's own token is the authorisation: it is
-// hashed and compared with the invoice's stored hash exactly as /public/pay does. The amount is
-// never read from the request — 'half' is resolved against the balance this query returns — so the
-// page can ask to pay half but cannot ask to pay ₹1.
+// hashed and compared with the invoice's stored hash exactly as /public/pay does. A percentage is
+// resolved against the balance this query returns, and a customAmount is validated against it —
+// the caller can only ever underpay, never name a charge bigger than what is owed.
 // ============================================
 router.post('/public/payment-link', ipBlacklistMiddleware, paymentLinkLimiter, async (req, res) => {
   try {
-    const { invoiceId, token, portion } = req.body;
+    const { invoiceId, token, portion, customAmount } = req.body;
     const ip = getClientIP(req);
 
     if (!invoiceId || !token) {
@@ -1521,7 +1523,7 @@ router.post('/public/payment-link', ipBlacklistMiddleware, paymentLinkLimiter, a
       return res.status(400).json({ success: false, message: 'This invoice has been cancelled' });
     }
 
-    const result = await createInvoicePaymentLink({ invoice, portion, performedBy: null });
+    const result = await createInvoicePaymentLink({ invoice, portion, customAmount, performedBy: null });
     if (result.error) return res.status(result.status).json({ success: false, message: result.error });
     res.json({ success: true, message: result.message, data: result.data });
 
@@ -1537,9 +1539,9 @@ router.post('/public/payment-link', ipBlacklistMiddleware, paymentLinkLimiter, a
 // ============================================
 router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, res) => {
   try {
-    // 'half' records the first of the two half-yearly instalments; the amount itself is worked out
-    // here from the balance, never taken from the request
-    const { invoiceId, token, paymentMethod, portion } = req.body;
+    // A share ('25'/'50'/'half'/'75') is resolved against the balance; 'custom' is validated
+    // against it — the figure recorded is always within what the invoice is owed
+    const { invoiceId, token, paymentMethod, portion, customAmount } = req.body;
     const ip = getClientIP(req);
 
     if (!invoiceId || !token || !paymentMethod) {
@@ -1597,7 +1599,7 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
       if (fullInvoice.length > 0) {
         const inv = fullInvoice[0];
         const balance = parseFloat(inv.balance_amount) || parseFloat(inv.total_amount) || 0;
-        const { amount: paymentAmount, plan, error: portionError } = resolvePaymentPortion(portion, balance);
+        const { amount: paymentAmount, plan, error: portionError } = resolvePaymentPortion(portion, balance, customAmount);
         if (portionError) {
           return res.status(400).json({ success: false, message: portionError });
         }

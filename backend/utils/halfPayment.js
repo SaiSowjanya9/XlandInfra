@@ -1,23 +1,27 @@
 /**
- * The half-yearly payment split.
+ * Partial-payment splits.
  *
- * The AMC payment policy offers one split and one only: half of the amount due now, and the other
- * half before the next six-month service period begins — "at least 30 days before", so the second
- * instalment falls due a month ahead of that period, not on the day it starts. There is no 25/75,
- * no free-text instalment and no arbitrary percentage: an amount a customer types is an amount
- * nobody agreed to, and the policy is what the signed agreement states.
+ * A part payment against an invoice always means the same thing: some amount now, the rest before
+ * the next six-month service period begins — "at least 30 days before", so the remainder falls due
+ * a month ahead of that period, not on the day it starts. The amount due now is either a share of
+ * the balance ('25', '50'/'half', '75' — '100' is simply a full payment) or a custom amount the
+ * caller names.
  *
- * Everything here is derived from the balance and the date the first half is paid, so no invoice
- * column carries an instalment plan and nothing has to be migrated or kept in step.
+ * Every figure is derived from the balance read from the invoice and the date the first part is
+ * paid, so no invoice column carries an instalment plan and nothing has to be migrated or kept in
+ * step. A custom amount is validated against that same balance — it can never exceed what is owed,
+ * so the worst a caller can do is underpay, not name a bigger charge.
  *
  * Mirrored by admin-portal/src/utils/halfPayment.js, which is what the two payment screens use;
  * admin-portal/src/utils/halfPayment.test.js compares the two implementations.
  */
 const SERVICE_PERIOD_MONTHS = 6;
-// The policy's notice period: the second instalment is due this many days before the next period
+// The policy's notice period: the remainder is due this many days before the next period
 const SECOND_HALF_LEAD_DAYS = 30;
-// Razorpay refuses anything under ₹1, so an invoice below ₹2 cannot be halved at all
+// Razorpay refuses anything under ₹1, so neither side of a split can fall below it
 const MIN_INSTALMENT = 1;
+// The shares offered as percentages, keyed by the exact portion string a request may send
+const PORTION_SHARES = { '25': 0.25, '50': 0.5, '75': 0.75, half: 0.5 };
 
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -56,56 +60,80 @@ const addDays = (date, days) => new Date(date.getTime() + days * 86400000);
 const isoDate = date => date.toISOString().slice(0, 10);
 
 /**
- * The plan for paying `balance` in two halves, the first of them on `from`.
+ * The plan for paying `firstAmount` of `balance` now and the rest later.
  *
- * Returns null where the balance cannot be split — nothing owed, or so little that half of it is
- * under Razorpay's floor — so a caller offers the option only when it is actually available.
+ * Returns null where the split cannot stand — nothing owed, a first payment under Razorpay's ₹1
+ * floor, or a remainder under it — so a caller offers the option only when it is actually
+ * available.
  *
  * `firstAmount` and `secondAmount` always add back up to the balance exactly: the first takes the
- * rounded half and the second takes whatever is left, so ₹1,000.01 is 500.01 + 500.00 rather than
- * two halves that leave a paisa of debt behind.
+ * rounded figure and the second takes whatever is left, so ₹1,000.01 split at 500.01 is
+ * 500.01 + 500.00 rather than two parts that leave a paisa of debt behind.
  */
-const halfPaymentPlan = (balance, from = new Date()) => {
+const splitPaymentPlan = (balance, firstAmount, from = new Date()) => {
   const total = round2(balance);
+  const first = round2(firstAmount);
   const start = toUTCDate(from);
-  if (!Number.isFinite(total) || !start) return null;
-  const firstAmount = round2(total / 2);
-  const secondAmount = round2(total - firstAmount);
-  if (firstAmount < MIN_INSTALMENT || secondAmount < MIN_INSTALMENT) return null;
+  if (!Number.isFinite(total) || !Number.isFinite(first) || !start) return null;
+  const secondAmount = round2(total - first);
+  if (first < MIN_INSTALMENT || secondAmount < MIN_INSTALMENT) return null;
   const nextPeriodStart = addMonths(start, SERVICE_PERIOD_MONTHS);
   return {
-    firstAmount,
+    firstAmount: first,
     secondAmount,
-    // When the service period the second half pays for begins
+    // When the service period the remainder pays for begins
     nextPeriodStart: isoDate(nextPeriodStart),
-    // When the second half has to be paid by: 30 days before that, per the policy
+    // When the remainder has to be paid by: 30 days before that, per the policy
     secondDueDate: isoDate(addDays(nextPeriodStart, -SECOND_HALF_LEAD_DAYS))
   };
 };
 
+// The original fixed split: half now, half later. Kept as the named entry point every caller and
+// the mirrored test already use.
+const halfPaymentPlan = (balance, from = new Date()) =>
+  splitPaymentPlan(balance, round2(balance) / 2, from);
+
 /**
- * What a request asking to pay in two halves is actually charged.
+ * What a request asking for a part payment is actually charged.
  *
- * The amount is never taken from the request: a caller asks for 'half' or for nothing at all, and
- * the figure is worked out from the balance the route has just read. A payment screen that could
- * post its own amount is a payment screen that can be asked to charge ₹1 for a ₹20,000 invoice,
- * and the customer's page has no login behind it. Anything other than the exact string 'half' —
- * a number, '50', 'full', a missing field — is the whole balance.
+ * `portion` is one of the strings in PORTION_SHARES ('25', '50', 'half', '75') or 'custom' with a
+ * `customAmount`. A percentage is worked out from the balance the route has just read — it is a
+ * share, not an amount, so nothing typed can inflate it. A custom amount is taken from the request
+ * but never trusted: it must be a number, at least ₹1, and leave either nothing (a full payment)
+ * or at least ₹1 behind. Anything unrecognised — a stray number, '50%', 'HALF', a missing field —
+ * is the whole balance.
  */
-const resolvePaymentPortion = (portion, balance) => {
-  if (portion !== 'half') return { amount: Number(balance), plan: null };
-  const plan = halfPaymentPlan(balance);
-  if (!plan) return { error: 'This balance is too small to split into two payments.' };
-  return { amount: plan.firstAmount, plan };
+const resolvePaymentPortion = (portion, balance, customAmount) => {
+  const total = Number(balance);
+  if (portion === 'custom') {
+    const amount = round2(customAmount);
+    if (!Number.isFinite(amount) || amount < MIN_INSTALMENT) {
+      return { error: 'A custom amount must be at least ₹1.' };
+    }
+    // Meeting or exceeding the balance is a full payment wearing a different label
+    if (amount >= total) return { amount: total, plan: null };
+    const plan = splitPaymentPlan(total, amount);
+    if (!plan) {
+      return { error: `That amount leaves less than ₹${MIN_INSTALMENT} unpaid — pay a little less, or the full balance.` };
+    }
+    return { amount: plan.firstAmount, plan };
+  }
+  const share = PORTION_SHARES[portion];
+  if (share) {
+    const plan = splitPaymentPlan(total, total * share);
+    if (!plan) return { error: 'This balance is too small to split into two payments.' };
+    return { amount: plan.firstAmount, plan };
+  }
+  return { amount: total, plan: null };
 };
 
-// What the payment record and the history row say about an instalment, so the second half is
+// What the payment record and the history row say about a part payment, so the remainder is
 // traceable from the payment itself rather than only from the screen that took it
 const halfPaymentNote = plan => plan
-  ? ` First of two half-yearly payments; the remaining ₹${plan.secondAmount.toLocaleString('en-IN')} is due by ${plan.secondDueDate}, before the next 6-month service period begins on ${plan.nextPeriodStart}.`
+  ? ` Part payment of ₹${plan.firstAmount.toLocaleString('en-IN')}; the remaining ₹${plan.secondAmount.toLocaleString('en-IN')} is due by ${plan.secondDueDate}, before the next 6-month service period begins on ${plan.nextPeriodStart}.`
   : '';
 
 module.exports = {
-  halfPaymentPlan, resolvePaymentPortion, halfPaymentNote,
+  halfPaymentPlan, splitPaymentPlan, resolvePaymentPortion, halfPaymentNote,
   SERVICE_PERIOD_MONTHS, SECOND_HALF_LEAD_DAYS, MIN_INSTALMENT
 };
