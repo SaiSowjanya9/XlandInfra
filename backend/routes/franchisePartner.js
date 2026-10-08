@@ -6951,4 +6951,154 @@ router.put('/schedules/notifications/:notificationId/read', async (req, res) => 
   }
 });
 
+// ============================================
+// MARKETING TRACKER
+// ============================================
+//
+// The FP portal's Marketing > Tracker screen attaches lead-tracking answers to a direct estimate.
+// The answers live on fp_estimates itself (schema_v42_marketing_tracker.sql); this backfill keeps
+// a deployment that has not applied the file working, the same tolerance the estimates list above
+// gives its own late columns.
+const MARKETING_TRACKER_COLUMNS = [
+  { name: 'lead_source', def: 'VARCHAR(100) NULL' },
+  { name: 'priority', def: 'VARCHAR(50) NULL' },
+  { name: 'maintenance_system', def: 'VARCHAR(100) NULL' },
+  { name: 'maintenance_system_other', def: 'VARCHAR(255) NULL' },
+  { name: 'proposal_given', def: 'VARCHAR(100) NULL' },
+  { name: 'proposal_given_other', def: 'VARCHAR(255) NULL' },
+  { name: 'customer_decision', def: 'VARCHAR(100) NULL' },
+  { name: 'customer_decision_other', def: 'VARCHAR(255) NULL' },
+  { name: 'tracked_at', def: 'TIMESTAMP NULL' }
+];
+
+const ensureMarketingTrackerColumns = async () => {
+  for (const col of MARKETING_TRACKER_COLUMNS) {
+    try {
+      const [cols] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE ?`, [col.name]);
+      if (cols.length === 0) {
+        await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN ${col.name} ${col.def}`);
+      }
+    } catch (e) { /* column exists or cannot be added; the query below will say which */ }
+  }
+};
+
+// Marketing is shown to the FP account only for now; FP Manager (role 'manager' under an FP)
+// gets 403 here exactly as the sidebar hides the section from it.
+const requireFPAccount = (req, res, next) => {
+  if (!isFranchisePartner(req.user?.role)) {
+    return res.status(403).json({ success: false, message: 'Marketing is available to the franchise partner account only.' });
+  }
+  next();
+};
+
+// The fixed option sets the tracker modal offers. 'Other' carries its free text in the matching
+// *_other column, so the option itself never holds typed input.
+const TRACKER_OPTIONS = {
+  lead_source: ['WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'],
+  priority: ['Low', 'Medium', 'High', 'Urgent'],
+  maintenance_system: ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'],
+  proposal_given: ['Yes', 'No', 'Other'],
+  customer_decision: ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other']
+};
+const TRACKER_OTHER_FIELDS = {
+  maintenance_system: 'maintenance_system_other',
+  proposal_given: 'proposal_given_other',
+  customer_decision: 'customer_decision_other'
+};
+
+const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email,
+  property_type, property_name, total_units, created_at, created_by_name, created_by_role,
+  lead_source, priority,
+  maintenance_system, maintenance_system_other,
+  proposal_given, proposal_given_other,
+  customer_decision, customer_decision_other, tracked_at`;
+
+// Direct estimates for the tracker list and the New picker; latest first.
+router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const [rows] = await pool.execute(
+      `SELECT ${TRACKER_SELECT}
+       FROM fp_estimates
+       WHERE franchise_partner_id = ? AND estimate_type = 'direct'
+         AND (is_archived = 0 OR is_archived IS NULL)
+       ORDER BY created_at DESC`,
+      [req.fpId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Marketing tracker list error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch tracker data', error: error.message });
+  }
+});
+
+// Save the tracker answers onto a direct estimate.
+router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid estimate id' });
+    }
+
+    const updates = {};
+    const errors = [];
+    for (const [field, options] of Object.entries(TRACKER_OPTIONS)) {
+      const value = req.body[field];
+      // proposal_given and customer_decision are the form's required fields; the rest pass through
+      // empty when left unanswered.
+      const required = field === 'proposal_given' || field === 'customer_decision';
+      if (value === undefined || value === null || value === '') {
+        if (required) errors.push(`${field} is required`);
+        updates[field] = null;
+        continue;
+      }
+      if (!options.includes(value)) {
+        errors.push(`${field} must be one of: ${options.join(', ')}`);
+        continue;
+      }
+      updates[field] = value;
+
+      const otherField = TRACKER_OTHER_FIELDS[field];
+      if (otherField) {
+        const otherText = (req.body[otherField] || '').toString().trim().slice(0, 255);
+        if (value === 'Other' && !otherText) errors.push(`${otherField} is required when ${field} is Other`);
+        updates[otherField] = value === 'Other' ? otherText : null;
+      }
+    }
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join('; ') });
+    }
+
+    const [result] = await pool.execute(
+      `UPDATE fp_estimates SET
+         lead_source = ?, priority = ?,
+         maintenance_system = ?, maintenance_system_other = ?,
+         proposal_given = ?, proposal_given_other = ?,
+         customer_decision = ?, customer_decision_other = ?,
+         tracked_at = NOW(), updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ? AND estimate_type = 'direct'`,
+      [
+        updates.lead_source, updates.priority,
+        updates.maintenance_system, updates.maintenance_system_other,
+        updates.proposal_given, updates.proposal_given_other,
+        updates.customer_decision, updates.customer_decision_other,
+        id, req.fpId
+      ]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Direct estimate not found' });
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT ${TRACKER_SELECT} FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    res.json({ success: true, message: 'Tracker updated', data: rows[0] });
+  } catch (error) {
+    console.error('Marketing tracker save error:', error);
+    res.status(500).json({ success: false, message: 'Failed to save tracker data', error: error.message });
+  }
+});
+
 module.exports = router;
