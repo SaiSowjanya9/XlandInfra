@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { paidPercent } from '../utils/invoiceStatus';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -355,7 +356,7 @@ const FPRecordPayment = ({ user }) => {
                   <p className="font-bold text-gray-900 text-lg">{formatCurrency(selectedInvoice.totalAmount)}</p>
                 </div>
                 <div className="bg-white/60 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase">Already Paid</p>
+                  <p className="text-xs text-gray-500 uppercase">Already Paid{paidPercent(selectedInvoice) > 0 ? ` (${paidPercent(selectedInvoice)}%)` : ''}</p>
                   <p className="font-bold text-green-600 text-lg">{formatCurrency(selectedInvoice.amountPaid)}</p>
                 </div>
                 <div className="bg-white/60 rounded-lg p-3">
@@ -405,7 +406,14 @@ const FPRecordPayment = ({ user }) => {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium text-gray-900">{invoice.invoiceId}</p>
-                              <p className="text-sm text-gray-500">{invoice.customerName} • {invoice.propertyName || 'No Property'}</p>
+                              <p className="text-sm text-gray-500">
+                                {invoice.customerName} • {invoice.propertyName || 'No Property'}
+                                {(parseFloat(invoice.amountPaid) || 0) > 0 && (
+                                  <span className="ml-2 text-[11px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                                    Paid {paidPercent(invoice)}%
+                                  </span>
+                                )}
+                              </p>
                             </div>
                             <div className="text-right">
                               <p className="font-semibold text-red-600">{formatCurrency(invoice.balanceAmount)}</p>
@@ -473,11 +481,15 @@ const FPRecordPayment = ({ user }) => {
                   <span className={`font-semibold ${newBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                     {formatCurrency(newBalance)}
                   </span>
-                  {newBalance === 0 && (
+                  {newBalance === 0 ? (
                     <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
                       Fully Paid
                     </span>
-                  )}
+                  ) : selectedInvoice && (parseFloat(formData.amount) || 0) > 0 ? (
+                    <span className="ml-2 text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                      Partially Paid ({Math.min(Math.round(((parseFloat(selectedInvoice.amountPaid) || 0) + parseFloat(formData.amount)) / (parseFloat(selectedInvoice.totalAmount) || 1) * 100), 100)}%)
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>

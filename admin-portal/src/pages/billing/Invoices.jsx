@@ -34,6 +34,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { statusLabel, paidPercent } from '../../utils/invoiceStatus';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1251,7 +1252,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                                 className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}
                                 title="Click to update status"
                               >
-                                {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+                                {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
                                 <ChevronDown className="w-3 h-3" />
                               </button>
                               {/* Status Update Dropdown */}
@@ -1620,8 +1621,17 @@ const InvoiceDetailPanel = ({
           
           {/* ===== TOTAL AMOUNT DUE BANNER - Compact, elegant ===== */}
           <div className="bg-[#D39A1A] rounded-lg px-5 py-3 text-center">
-            <p className="text-white/90 text-[10px] uppercase tracking-wider mb-0.5">Total Amount Due</p>
-            <p className="text-white text-2xl font-bold">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</p>
+            <p className="text-white/90 text-[10px] uppercase tracking-wider mb-0.5">
+              {invoice.status === 'partially_paid' ? 'Balance Due' : 'Total Amount Due'}
+            </p>
+            <p className="text-white text-2xl font-bold">
+              Rs. {Math.round((invoice.status === 'partially_paid' ? invoice.balanceAmount : invoice.totalAmount) || 0).toLocaleString('en-IN')}
+            </p>
+            {invoice.status === 'partially_paid' && paidPercent(invoice) > 0 && (
+              <p className="text-white/85 text-[11px] mt-0.5">
+                Paid {formatCurrency(invoice.amountPaid)} ({paidPercent(invoice)}%) of Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}
+              </p>
+            )}
           </div>
 
           {/* ===== PROPERTY & CUSTOMER DETAILS - Compact, equal height ===== */}

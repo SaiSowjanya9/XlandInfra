@@ -34,6 +34,7 @@ import PageHeader from '../../components/common/PageHeader';
 import PaymentAmountSection from '../../components/common/PaymentAmountSection';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import { formatPlanDate, halfPaymentPlan, splitPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
+import { paidPercent } from '../../utils/invoiceStatus';
 import { useFP } from '../../contexts/FPContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -1830,7 +1831,14 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                 >
                   <div>
                     <p className="font-medium text-gray-900">{invoice.invoiceId}</p>
-                    <p className="text-sm text-gray-500">{invoice.customerName || invoice.propertyName}</p>
+                    <p className="text-sm text-gray-500">
+                      {invoice.customerName || invoice.propertyName}
+                      {(parseFloat(invoice.amountPaid) || 0) > 0 && (
+                        <span className="ml-2 text-[11px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                          Paid {paidPercent(invoice)}%
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900">{formatCurrency(invoice.balanceAmount || invoice.totalAmount)}</p>
@@ -1872,6 +1880,12 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
               <div className="text-right">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalAmount)}</p>
+                {(parseFloat(selectedInvoice.amountPaid) || 0) > 0 && (
+                  <>
+                    <p className="text-xs text-gray-500 mt-2">Already Paid ({paidPercent(selectedInvoice)}%)</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(selectedInvoice.amountPaid)}</p>
+                  </>
+                )}
                 <p className="text-xs text-gray-500 mt-2">Due Amount</p>
                 <p className="text-xl font-bold text-red-600">{formatCurrency(balanceAmount)}</p>
               </div>
