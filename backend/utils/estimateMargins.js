@@ -61,15 +61,14 @@ const estimateMargin = (estimate) => {
 /**
  * The same figures across a set of estimates, plus each estimate's own.
  *
- * The headline totals count only estimates that actually carry costs. An estimate whose services
- * were all typed by hand has a price and no cost, so including it would report a margin approaching
- * 100% and make the whole panel read as profit we have no evidence for. Those estimates are counted
- * as `uncostedCount` and still listed, so nothing is hidden -- they are just not averaged in.
+ * The headline totals count every estimate handed in. One whose services were all typed by hand
+ * contributes its price with zero recorded cost, which lifts the margin -- `uncostedCount` says
+ * how many estimates are priced that way, so the panel can be read for what it is.
  */
 const estimateMarginTotals = (estimates = []) => {
   const rows = estimates.map(estimateMargin);
   const costed = rows.filter(row => row.actualCost > 0);
-  const sum = (field) => round2(costed.reduce((total, row) => total + (row[field] || 0), 0));
+  const sum = (field) => round2(rows.reduce((total, row) => total + (row[field] || 0), 0));
   const customerPrice = sum('customerPrice');
   const vendorCost = sum('vendorCost');
   const operatingCost = sum('operatingCost');

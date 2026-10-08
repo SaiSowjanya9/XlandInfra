@@ -322,9 +322,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const funnelInvoicesCreated = funnelApproved;
   const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
 
-  // What the estimates counted in the cards cost and make, on the FP and Manager portals
+  // What the direct estimates counted in the cards cost and make, on the FP and Manager portals.
+  // Only direct estimates feed it — property-based and work-order estimates are costed elsewhere.
   const showProfitSummary = portalType === 'franchise' || portalType === 'manager';
-  const profitSummary = estimateProfitSummary(mainFilteredEstimates);
+  const profitSummary = estimateProfitSummary(
+    mainFilteredEstimates.filter(e => getEstimateType(e) === 'direct')
+  );
   const formatMoney = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
   // Stat cards configuration - matching the reference image exactly with gradient backgrounds
@@ -712,10 +715,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold text-gray-800">Profit &amp; Margin Summary</h3>
             <p className="text-[11px] text-gray-500">
-              {profitSummary.costedCount
-                ? `From ${profitSummary.costedCount} costed estimate${profitSummary.costedCount === 1 ? '' : 's'}${startDate || endDate ? ' in the selected period' : ''}`
-                : 'No estimate in this range carries a cost yet'}
-              {profitSummary.uncostedCount > 0 && ` · ${profitSummary.uncostedCount} without costs not included`}
+              {profitSummary.estimateCount
+                ? `From ${profitSummary.estimateCount} direct estimate${profitSummary.estimateCount === 1 ? '' : 's'}${startDate || endDate ? ' in the selected period' : ''}`
+                : 'No direct estimate in this range'}
+              {profitSummary.uncostedCount > 0 && ` · ${profitSummary.uncostedCount} without a recorded cost`}
               {profitSummary.excludedCount > 0 && ` · ${profitSummary.excludedCount} rejected/archived excluded`}
             </p>
           </div>
