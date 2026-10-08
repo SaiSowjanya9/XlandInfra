@@ -141,6 +141,23 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null, 'processing', 'success', 'failed', 'submitted'
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
+  // The customer gets exactly one alternative to the full balance: pay half now, the rest before
+  // the next service period. Off by default — the full amount is what the invoice is for.
+  const [payHalf, setPayHalf] = useState(false);
+
+  const balanceNum = parseFloat(invoice?.balanceAmount ?? invoice?.totalAmount) || 0;
+  const halfAmount = Math.round((balanceNum / 2 + Number.EPSILON) * 100) / 100;
+  // Both halves must clear the ₹1 floor the gateway enforces
+  const canSplit = halfAmount >= 1 && Math.round((balanceNum - halfAmount + Number.EPSILON) * 100) / 100 >= 1;
+  const amountToPay = payHalf && canSplit ? halfAmount : balanceNum;
+  // The remainder falls due 30 days before the next 6-month service period — the server works
+  // the authoritative dates out of the payment date; this preview matches it
+  const secondDue = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    d.setDate(d.getDate() - 30);
+    return formatDate(d);
+  })();
 
   // Check if selected method is online (Razorpay) or offline (manual)
   const selectedMethodData = ALL_PAYMENT_METHODS.find(m => m.id === selectedMethod);
@@ -171,7 +188,9 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        // The server derives the charge from the invoice's own balance — only the share travels
+        body: JSON.stringify({ portion: payHalf && canSplit ? 'half' : 'full' })
       });
 
       const orderResult = await orderResponse.json();
@@ -229,7 +248,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               setPaymentStatus('success');
               setPaymentDetails({
                 paymentId: response.razorpay_payment_id,
-                amount: invoice.balanceAmount,
+                amount: verifyResult.data?.amount ?? orderResult.data?.amount,
                 invoiceId: invoiceId
               });
               if (onPaymentSuccess) {
@@ -293,7 +312,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
         },
         body: JSON.stringify({
           paymentMethod: selectedMethod,
-          amount: invoice.balanceAmount
+          // The server derives the figure from the invoice's own balance — only the share travels
+          portion: payHalf && canSplit ? 'half' : 'full'
         })
       });
 
@@ -303,7 +323,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
         setPaymentStatus('submitted');
         setPaymentDetails({
           referenceId: result.data?.referenceId || `REF-${Date.now()}`,
-          amount: invoice.balanceAmount,
+          amount: result.data?.amount ?? amountToPay,
           invoiceId: invoice.invoiceId,
           method: selectedMethodData?.label
         });
@@ -312,7 +332,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
         setPaymentStatus('submitted');
         setPaymentDetails({
           referenceId: `REF-${Date.now()}`,
-          amount: invoice.balanceAmount,
+          amount: amountToPay,
           invoiceId: invoice.invoiceId,
           method: selectedMethodData?.label
         });
@@ -322,7 +342,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
       setPaymentStatus('submitted');
       setPaymentDetails({
         referenceId: `REF-${Date.now()}`,
-        amount: invoice.balanceAmount,
+        amount: amountToPay,
         invoiceId: invoice.invoiceId,
         method: selectedMethodData?.label
       });
@@ -384,6 +404,64 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
           {/* Step 1: Select Payment Method */}
           {step === 1 && (
             <div className="p-6">
+              {/* Payment Amount — full balance or half of it */}
+              {canSplit && (
+                <div className="mb-5">
+                  <h3 className="text-lg font-semibold text-white mb-3">Payment Amount</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPayHalf(false)}
+                      className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                        !payHalf
+                          ? 'bg-gold-500/10 border-gold-500/50'
+                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        !payHalf ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
+                      }`}>
+                        {!payHalf && <div className="w-2 h-2 rounded-full bg-dark-900" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-semibold">Pay Full Amount</p>
+                        <p className="text-dark-400 text-xs mt-0.5">{formatCurrency(balanceNum)}</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayHalf(true)}
+                      className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                        payHalf
+                          ? 'bg-gold-500/10 border-gold-500/50'
+                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        payHalf ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
+                      }`}>
+                        {payHalf && <div className="w-2 h-2 rounded-full bg-dark-900" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-semibold">Pay 50% Now</p>
+                        <p className="text-dark-400 text-xs mt-0.5">{formatCurrency(halfAmount)}, rest later</p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {payHalf && (
+                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-gold-500/10 border border-gold-500/20 px-4 py-3">
+                      <Wallet className="w-5 h-5 text-gold-400 shrink-0" />
+                      <p className="text-xs text-dark-300 leading-relaxed">
+                        You will be charged <span className="text-gold-400 font-semibold">{formatCurrency(halfAmount)}</span> now.
+                        The remaining <span className="text-white font-medium">{formatCurrency(balanceNum - halfAmount)}</span> is
+                        due by <span className="text-white font-medium">{secondDue}</span> (30 days before the next service period).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Header */}
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-white">Choose Payment Method</h3>
@@ -574,9 +652,15 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   <span className="text-white text-sm">{invoice.propertyName || invoice.propertyCode}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-dark-400 text-sm">Amount to Pay</span>
-                  <span className="text-gold-400 font-bold text-lg">{formatCurrency(invoice.balanceAmount)}</span>
+                  <span className="text-dark-400 text-sm">Amount to Pay{payHalf && canSplit ? ' (50%)' : ''}</span>
+                  <span className="text-gold-400 font-bold text-lg">{formatCurrency(amountToPay)}</span>
                 </div>
+                {payHalf && canSplit && (
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-dark-600">
+                    <span className="text-dark-400 text-xs">Remaining due by {secondDue}</span>
+                    <span className="text-dark-300 text-sm font-medium">{formatCurrency(balanceNum - halfAmount)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Selected Payment Method */}
@@ -721,7 +805,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                     </>
                   ) : isOnlineMethod ? (
                     <>
-                      Pay {formatCurrency(invoice.balanceAmount)}
+                      Pay {formatCurrency(amountToPay)}
                       <ArrowRight className="w-5 h-5" />
                     </>
                   ) : (

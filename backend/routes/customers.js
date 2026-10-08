@@ -9,6 +9,9 @@ const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPassword
 const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
+const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+
+const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 // Constants
 const ACTIVATION_EXPIRY_HOURS = 72; // 72 hours
@@ -2164,6 +2167,13 @@ router.post('/invoices/:id/create-order', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
     }
 
+    // The customer may pay the whole balance or half of it — the server owns the arithmetic;
+    // the request only names the share, never an amount.
+    const charge = resolvePaymentPortion(req.body.portion || 'full', balanceAmount);
+    if (charge.error) {
+      return res.status(400).json({ success: false, message: charge.error });
+    }
+
     // Create Razorpay Order
     const Razorpay = require('razorpay');
     const razorpay = new Razorpay({
@@ -2172,7 +2182,7 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     });
 
     const orderOptions = {
-      amount: Math.round(balanceAmount * 100), // Razorpay expects amount in paise
+      amount: Math.round(charge.amount * 100), // Razorpay expects amount in paise
       currency: 'INR',
       receipt: `inv_${inv.invoice_id}_${Date.now()}`,
       notes: {
@@ -2190,7 +2200,7 @@ router.post('/invoices/:id/create-order', async (req, res) => {
       message: 'Order created successfully',
       data: {
         orderId: order.id,
-        amount: balanceAmount,
+        amount: charge.amount,
         amountInPaise: order.amount,
         currency: order.currency,
         invoiceId: inv.invoice_id,
@@ -2198,7 +2208,9 @@ router.post('/invoices/:id/create-order', async (req, res) => {
         customerName: inv.customer_name || customerData.first_name + ' ' + customerData.last_name,
         customerEmail: inv.customer_email || customerEmail,
         customerPhone: inv.customer_phone || customerData.phone || '',
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+        // Present only on a part payment: the remainder and when it falls due
+        plan: charge.plan
       }
     });
   } catch (error) {
@@ -2258,7 +2270,19 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     const inv = invoices[0];
     const amountPaid = parseFloat(inv.amount_paid) || 0;
     const totalAmount = parseFloat(inv.total_amount) || 0;
-    const balanceAmount = totalAmount - amountPaid;
+
+    // Record what Razorpay actually captured — with a part payment this is less than the
+    // balance, and writing the balance here would mark a half-paid invoice fully paid.
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+    const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
+    const paidAmount = round2(((rzpPayment.amount || 0) / 100));
+    if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Could not confirm the paid amount' });
+    }
 
     // Record the payment
     const [paymentResult] = await pool.execute(
@@ -2267,18 +2291,18 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
         transaction_id, razorpay_order_id, razorpay_payment_id, razorpay_signature,
         status, remarks, created_at
       ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, 'completed', 'Payment via Customer Portal', NOW())`,
-      [inv.id, inv.property_id, balanceAmount, 'razorpay', razorpay_payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]
+      [inv.id, inv.property_id, paidAmount, 'razorpay', razorpay_payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]
     );
 
     // Update invoice status
-    const newAmountPaid = amountPaid + balanceAmount;
+    const newAmountPaid = round2(amountPaid + paidAmount);
     const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partially_paid';
 
     await pool.execute(
-      `UPDATE invoices 
+      `UPDATE invoices
        SET status = ?, amount_paid = ?, balance_amount = ?, paid_at = NOW(), updated_at = NOW()
        WHERE id = ?`,
-      [newStatus, newAmountPaid, totalAmount - newAmountPaid, inv.id]
+      [newStatus, newAmountPaid, round2(totalAmount - newAmountPaid), inv.id]
     );
 
     res.json({
@@ -2287,7 +2311,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
       data: {
         paymentId: razorpay_payment_id,
         orderId: razorpay_order_id,
-        amount: balanceAmount,
+        amount: paidAmount,
         invoiceId: inv.invoice_id,
         invoiceStatus: newStatus
       }
@@ -2304,8 +2328,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
 router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
   try {
     const { id } = req.params;
-    const { paymentMethod, amount } = req.body;
-    
+    const { paymentMethod } = req.body;
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -2380,7 +2403,7 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     const custPropertyCode = String(propertyCode || '');
     const custEmail = String(customerData.email || '').toLowerCase();
 
-    const hasAccess = 
+    const hasAccess =
       (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
       (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
       (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
@@ -2391,6 +2414,15 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
+    // The request names a share ('full' or 'half'), never an amount — the posted `amount` is
+    // not trusted; the server derives the figure from the invoice's own balance.
+    const balanceAmount = parseFloat(inv.balance_amount) ||
+      (parseFloat(inv.total_amount) || 0) - (parseFloat(inv.amount_paid) || 0);
+    const charge = resolvePaymentPortion(req.body.portion || 'full', balanceAmount);
+    if (charge.error) {
+      return res.status(400).json({ success: false, message: charge.error });
+    }
+
     // Generate reference ID
     const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
@@ -2399,8 +2431,9 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
       `INSERT INTO payments (
         invoice_id, property_id, amount, payment_method, payment_date,
         transaction_id, status, remarks, created_at
-      ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', 'Offline payment intent from Customer Portal - Awaiting verification', NOW())`,
-      [inv.id, inv.property_id, amount || inv.total_amount, paymentMethod, referenceId]
+      ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', ?, NOW())`,
+      [inv.id, inv.property_id, charge.amount, paymentMethod, referenceId,
+       `Offline payment intent from Customer Portal - Awaiting verification.${halfPaymentNote(charge.plan)}`]
     );
 
     res.json({
@@ -2409,9 +2442,10 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
       data: {
         referenceId: referenceId,
         paymentId: paymentResult.insertId,
-        amount: amount || inv.total_amount,
+        amount: charge.amount,
         invoiceId: inv.invoice_id,
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        plan: charge.plan
       }
     });
   } catch (error) {

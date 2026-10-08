@@ -73,6 +73,11 @@ test('the custom amount the public page may post is always validated server-side
   const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'razorpay.js'), 'utf8');
   // Every charge still goes through the resolver
   assert.ok(source.split('resolvePaymentPortion(').length - 1 >= 2);
+  // The logged-in customer portal's own charges take the same path — its order, offline intent
+  // and (crucially) verify-payment must never trust a posted figure
+  const customerRoutes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'customers.js'), 'utf8');
+  assert.ok(customerRoutes.split('resolvePaymentPortion(').length - 1 >= 2);
+  assert.match(customerRoutes, /rzpPayment\.amount/);
   // And the resolver itself is what checks a custom figure, not the routes trusting it
   const resolver = fs.readFileSync(path.join(__dirname, 'halfPayment.js'), 'utf8');
   assert.match(resolver, /customAmount/);
