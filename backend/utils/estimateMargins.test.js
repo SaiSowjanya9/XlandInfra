@@ -58,14 +58,14 @@ test('the panel totals every estimate and keeps each one for the table', () => {
   assert.equal(totals.marginPercent, 19.05);
   assert.deepEqual(totals.estimates.map(row => row.estimateId), ['EST-1', 'EST-5']);
 
-  // An estimate with a price and no recorded cost is listed but not averaged in: counting it would
-  // report a margin approaching 100% for work we have no cost evidence for
+  // An estimate with a price and no recorded cost is counted too -- every estimate's value is in
+  // the totals -- and uncostedCount flags how many of them lift the margin with no cost behind it
   const withLegacy = estimateMarginTotals([priced, { estimate_id: 'EST-OLD', subtotal: 500000, addons_data: JSON.stringify([{ name: 'Typed by hand', totalPrice: 500000 }]) }]);
   assert.equal(withLegacy.estimateCount, 2);
   assert.equal(withLegacy.costedCount, 1);
   assert.equal(withLegacy.uncostedCount, 1);
-  assert.equal(withLegacy.customerPrice, 198000, 'the uncosted estimate does not inflate the price');
-  assert.equal(withLegacy.marginPercent, 18.48, 'so the margin is the costed estimate\'s own');
+  assert.equal(withLegacy.customerPrice, 698000, 'the uncosted estimate\'s price counts');
+  assert.equal(withLegacy.marginPercent, 76.88, 'its missing cost reads as margin, flagged above');
   assert.equal(withLegacy.estimates.length, 2, 'both are still listed');
 
   // No estimates at all: a panel of zeroes, not a crash

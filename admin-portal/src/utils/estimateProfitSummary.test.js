@@ -41,16 +41,17 @@ test('a package estimate counts what the package costs as well as what it sells 
   assert.equal(estimateProfit({ ...packaged, package_services: [{ vendorCost: 10000 }] }).vendorCost, 14000);
 });
 
-test('the summary adds up costed live estimates only, and says what it left out', () => {
+test('the summary adds up every live estimate, and flags how many carry no cost', () => {
   const summary = estimateProfitSummary([costed, snapshotOnly, typedOnly, rejected]);
   assert.equal(summary.estimateCount, 3);
   assert.equal(summary.excludedCount, 1, 'rejected is not counted');
   assert.equal(summary.costedCount, 2);
-  assert.equal(summary.uncostedCount, 1, 'hand-typed with no cost is not averaged in');
-  assert.equal(summary.customerPrice, 6700);
+  assert.equal(summary.uncostedCount, 1, 'hand-typed with no cost still counts, but is flagged');
+  // Every live estimate's value is in the totals — the typed one's ₹900 price included
+  assert.equal(summary.customerPrice, 7600);
   assert.equal(summary.actualCost, 5200);
-  assert.equal(summary.profit, 1500);
-  assert.equal(summary.marginPercent, 22.39);
+  assert.equal(summary.profit, 2400);
+  assert.equal(summary.marginPercent, 31.58);
   // The same live rows give the same totals as the server's panel
   const server = estimateMarginTotals([costed, typedOnly]);
   const client = estimateProfitSummary([costed, typedOnly]);

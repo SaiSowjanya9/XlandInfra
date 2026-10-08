@@ -4,9 +4,9 @@
  * Cost & Margin panel), so the two screens can never disagree: a test runs both on the same rows.
  *
  * Every figure comes from the pricing snapshot saved with each service. The headline totals count
- * only estimates that carry a cost -- one whose services were all typed by hand has a price and no
- * cost, and averaging it in would report a margin near 100% for work with no cost behind it. Those
- * are counted as `uncostedCount` instead. Rejected and archived estimates are not work we expect to
+ * every live estimate: one whose services were all typed by hand contributes its price with zero
+ * recorded cost, which lifts the margin -- `uncostedCount` says how many estimates are priced that
+ * way so the reader can weigh the figure. Rejected and archived estimates are not work we expect to
  * bill, so they are left out before anything is added up.
  */
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -57,7 +57,8 @@ export const estimateProfitSummary = (estimates = []) => {
     && !(estimate.is_archived === 1 || estimate.is_archived === true));
   const rows = live.map(estimateProfit);
   const costed = rows.filter(row => row.actualCost > 0);
-  const sum = field => round2(costed.reduce((total, row) => total + (row[field] || 0), 0));
+  // Every live estimate's price and cost count; `uncostedCount` flags how many carried no cost
+  const sum = field => round2(rows.reduce((total, row) => total + (row[field] || 0), 0));
   const customerPrice = sum('customerPrice');
   const vendorCost = sum('vendorCost');
   const operatingCost = sum('operatingCost');
