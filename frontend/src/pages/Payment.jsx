@@ -36,9 +36,10 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // Status configuration
 const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: FileText },
-  sent: { label: 'Sent', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Clock },
+  // 'sent' is staff language — to the customer the invoice arrived, so the badge reads Received
+  sent: { label: 'Received', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Clock },
   paid: { label: 'Paid', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
-  partially_paid: { label: 'Partial', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: AlertCircle },
+  partially_paid: { label: 'Partially Paid', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: AlertCircle },
   overdue: { label: 'Overdue', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: AlertCircle },
   cancelled: { label: 'Cancelled', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: X }
 };
@@ -899,6 +900,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
                 return <Icon className="w-4 h-4" />;
               })()}
               {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+              {invoice.status === 'partially_paid' && (() => {
+                const pct = Math.round(((parseFloat(invoice.amountPaid) || 0) / (parseFloat(invoice.totalAmount) || 1)) * 100);
+                return pct > 0 ? ` (${pct}%)` : '';
+              })()}
             </div>
             <div className="flex gap-6 text-sm">
               <div>
@@ -1315,6 +1320,7 @@ const Payment = () => {
               const isOverdue = invoice.status === 'overdue' || (invoice.dueDate && new Date(invoice.dueDate) < new Date() && !isPaid);
               const StatusIcon = STATUS_CONFIG[invoice.status]?.icon || FileText;
               const isWorkOrder = invoice.invoiceType === 'work_order';
+              const paidPct = Math.round(((parseFloat(invoice.amountPaid) || 0) / (parseFloat(invoice.totalAmount) || 1)) * 100);
 
               return (
                 <div
@@ -1342,6 +1348,7 @@ const Payment = () => {
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_CONFIG[invoice.status]?.color || STATUS_CONFIG.draft.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+                          {invoice.status === 'partially_paid' && paidPct > 0 && ` (${paidPct}%)`}
                         </span>
                       </div>
                       <p className="text-dark-400 text-sm truncate">
