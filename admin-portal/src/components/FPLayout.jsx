@@ -39,6 +39,9 @@ import {
   CalendarDays,
   CalendarClock,
   Ban,
+  Megaphone,
+  Target,
+  FileWarning,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -89,6 +92,10 @@ const FPLayout = ({ admin, onLogout, children }) => {
 
   const [schedulesOpen, setSchedulesOpen] = useState(
     location.pathname.startsWith('/fp/schedules')
+  );
+
+  const [marketingOpen, setMarketingOpen] = useState(
+    location.pathname.startsWith('/fp/marketing')
   );
 
   // Notification states
@@ -197,7 +204,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !workOrdersOpen;
       setWorkOrdersOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -205,7 +212,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -213,7 +220,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -221,7 +228,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -229,7 +236,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !billingPaymentsOpen;
       setBillingPaymentsOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -237,7 +244,15 @@ const FPLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !schedulesOpen;
       setSchedulesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setMarketingOpen(false); }
+    }
+  };
+
+  const toggleMarketing = () => {
+    if (!sidebarCollapsed) {
+      const opening = !marketingOpen;
+      setMarketingOpen(opening);
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -309,12 +324,20 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
+  // Marketing sub-items - FP account only; the section is not rendered for FP Manager
+  const marketingSubItems = [
+    { path: '/fp/marketing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/fp/marketing/tracker', icon: Target, label: 'Tracker' },
+    { path: '/fp/marketing/complaint-form', icon: FileWarning, label: 'Complaint Form' },
+  ];
+
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/work-orders');
   const isVendorSectionActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEmployeeSectionActive = employeeSubItems.some(item => location.pathname === item.path);
   const isEstimatesSectionActive = estimatesSubItems.some(item => location.pathname === item.path);
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/billing');
   const isSchedulesSectionActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/schedules');
+  const isMarketingSectionActive = marketingSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/marketing');
   
   // Color constants for sidebar
   const colors = {
@@ -334,7 +357,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen || schedulesOpen;
+  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen || schedulesOpen || marketingOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -351,6 +374,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
         setEstimatesOpen(false);
         setBillingPaymentsOpen(false);
         setSchedulesOpen(false);
+        setMarketingOpen(false);
       }
 
       if (localStorage.getItem('formDirty') === 'true') {
@@ -829,6 +853,47 @@ const FPLayout = ({ admin, onLogout, children }) => {
                 </div>
               )}
             </div>
+
+            {/* Marketing Section - FP account only, hidden for FP Manager */}
+            {!isFPManager && (
+            <div className="mt-1">
+              <button
+                onClick={toggleMarketing}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!marketingOpen && !(isMarketingSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!marketingOpen && !(isMarketingSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Marketing' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Megaphone className="w-5 h-5 flex-shrink-0" style={{ color: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm truncate">Marketing</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    marketingOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        marketingOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: marketingOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {marketingOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {marketingSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+            )}
 
           </nav>
 

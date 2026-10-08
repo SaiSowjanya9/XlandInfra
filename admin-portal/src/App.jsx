@@ -33,6 +33,9 @@ import FPEditEmployee from './pages/FPEditEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPEstimates from './pages/FPEstimates';
 import FPCustomers from './pages/FPCustomers';
+import FPMarketingDashboard from './pages/FPMarketingDashboard';
+import FPMarketingTracker from './pages/FPMarketingTracker';
+import FPMarketingComplaintForm from './pages/FPMarketingComplaintForm';
 
 import ManagerLogin from './pages/ManagerLogin';
 import ManagerLayout from './components/ManagerLayout';
@@ -494,6 +497,12 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/fp/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="franchise" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="franchise" />} />
+                    {/* Marketing: FP account only -- the sidebar hides it for FP Manager and the
+                        tracker API answers 403 to a manager token */}
+                    <Route path="marketing/dashboard" element={<FPMarketingDashboard user={user} />} />
+                    <Route path="marketing/tracker" element={<FPMarketingTracker user={user} />} />
+                    <Route path="marketing/complaint-form" element={<FPMarketingComplaintForm user={user} />} />
+                    <Route path="marketing" element={<Navigate to="/fp/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
                 </FPLayout>
