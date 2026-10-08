@@ -9,6 +9,10 @@ import { formatPlanDate } from '../../utils/halfPayment';
  * Percentage offers 25/50/75/100; the caller turns the selection into a `splitPaymentPlan` and
  * hands it back as `plan`, which supplies the remainder's due dates. Custom Amount carries the
  * typed figure the same way — the server validates it against the invoice balance either way.
+ *
+ * `fixedPercentage` locks the partial to one share (the customer payment page offers only
+ * 50/50): the kind radios and the select/input are not rendered, the card says what the part
+ * payment is, and the figures read off the plan the caller computed for that share.
  */
 const inr = value =>
   '₹' + (Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -27,7 +31,8 @@ const PaymentAmountSection = ({
   onPercentageChange,
   customAmount,
   onCustomAmountChange,
-  canSplit = true
+  canSplit = true,
+  fixedPercentage
 }) => {
   const balanceNum = Number(balance) || 0;
   const custom = parseFloat(customAmount);
@@ -91,40 +96,46 @@ const PaymentAmountSection = ({
             disabled={!canSplit}
             onClick={() => onPartialChange(true)}
             title="Partial Payment"
-            desc="Pay a part of the invoice amount now"
+            desc={fixedPercentage
+              ? `Pay ${fixedPercentage}% now, the rest later`
+              : 'Pay a part of the invoice amount now'}
           />
         </div>
       </div>
 
       {partial && (
         <>
-          <div className="flex items-center gap-5 mt-5">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="partial-kind"
-                checked={kind === 'percentage'}
-                onChange={() => onKindChange?.('percentage')}
-                className="w-4 h-4 text-blue-600"
-              />
-              <span className="text-sm font-medium text-gray-800">Percentage</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="partial-kind"
-                checked={kind === 'custom'}
-                onChange={() => onKindChange?.('custom')}
-                className="w-4 h-4 text-blue-600"
-              />
-              <span className="text-sm font-medium text-gray-800">Custom Amount</span>
-            </label>
-          </div>
+          {!fixedPercentage && (
+            <div className="flex items-center gap-5 mt-5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="partial-kind"
+                  checked={kind === 'percentage'}
+                  onChange={() => onKindChange?.('percentage')}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-sm font-medium text-gray-800">Percentage</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="partial-kind"
+                  checked={kind === 'custom'}
+                  onChange={() => onKindChange?.('custom')}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-sm font-medium text-gray-800">Custom Amount</span>
+              </label>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1">{kind === 'custom' ? 'Custom Amount' : 'Percentage'}</p>
-              {kind === 'custom' ? (
+              <p className="text-xs text-gray-500 mb-1">{!fixedPercentage && kind === 'custom' ? 'Custom Amount' : 'Percentage'}</p>
+              {fixedPercentage ? (
+                <p className="text-sm font-semibold text-gray-900 py-2">{fixedPercentage}%</p>
+              ) : kind === 'custom' ? (
                 <input
                   type="text"
                   inputMode="decimal"

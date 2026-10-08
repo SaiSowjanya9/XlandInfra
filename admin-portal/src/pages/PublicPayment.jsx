@@ -15,7 +15,7 @@ import {
   Lock,
   Clock
 } from 'lucide-react';
-import { formatPlanDate, halfPaymentPlan, splitPaymentPlan } from '../utils/halfPayment';
+import { formatPlanDate, halfPaymentPlan } from '../utils/halfPayment';
 import { paidAmount, paidPercent } from '../utils/invoiceStatus';
 import PaymentAmountSection from '../components/common/PaymentAmountSection';
 
@@ -254,14 +254,10 @@ const PublicPayment = () => {
   const [blockRetryAfter, setBlockRetryAfter] = useState(0);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [submittedPaymentDetails, setSubmittedPaymentDetails] = useState(null);
-  // Paying the first of the two half-yearly instalments instead of the whole balance. Off unless
-  // the customer asks for it: the full amount is what the invoice is for.
+  // The customer gets exactly one alternative to the full balance: pay half now, the rest before
+  // the next service period. Off unless they ask for it — the full amount is what the invoice is
+  // for — and never an amount of their own choosing.
   const [payHalf, setPayHalf] = useState(false);
-  // 'percentage' takes a share of the balance (25/50/75/100); 'custom' is a typed amount — the
-  // server validates it against the balance, so it can never name more than is owed
-  const [partialKind, setPartialKind] = useState('percentage');
-  const [partialPct, setPartialPct] = useState('50');
-  const [customAmount, setCustomAmount] = useState('');
 
   // Bank details for bank transfer
   const bankDetails = {
@@ -282,13 +278,10 @@ const PublicPayment = () => {
   // small to carry a remainder, rather than offering an instalment the gateway would refuse.
   const balanceDue = parseFloat(invoice?.balanceAmount ?? invoice?.totalAmount ?? 0) || 0;
   const halfPlan = halfPaymentPlan(balanceDue);
-  // The amount the chosen partial comes to, and the plan for it where a remainder still exists —
-  // paying 100% or the whole balance leaves nothing to schedule.
-  const partialAmount = partialKind === 'custom'
-    ? (() => { const c = parseFloat(customAmount); return Number.isFinite(c) && c > 0 ? Math.min(c, balanceDue) : 0; })()
-    : balanceDue * (Number(partialPct) / 100);
-  const activePlan = payHalf ? splitPaymentPlan(balanceDue, partialAmount) : null;
-  const amountToPay = payHalf ? (partialAmount || balanceDue) : balanceDue;
+  // The only partial a customer may take is half the balance; the plan carries the remainder's
+  // due dates. Paying the whole balance leaves nothing to schedule.
+  const activePlan = payHalf ? halfPlan : null;
+  const amountToPay = payHalf ? (activePlan?.firstAmount ?? balanceDue) : balanceDue;
 
   // Check if CAPTCHA is required on initial load
   useEffect(() => {
@@ -385,18 +378,9 @@ const PublicPayment = () => {
 
   const handleProceedToPay = async () => {
     setProcessing(true);
-    // The server works the figure out from the balance; this only names the share — '25'/'50'/
-    // '75', or 'custom' with an amount it validates. '100' and 'full' are the whole balance.
-    const portion = !payHalf ? 'full'
-      : partialKind === 'custom' ? 'custom' : partialPct;
-    const custom = payHalf && partialKind === 'custom' ? parseFloat(customAmount) || 0 : undefined;
-    if (payHalf && partialKind === 'custom' && (!custom || custom <= 0 || balanceDue - custom < 1)) {
-      setError(custom >= balanceDue
-        ? 'That is the full balance — choose Pay Full Amount instead'
-        : 'Please enter a valid amount — at least ₹1, leaving at least ₹1 unpaid');
-      setProcessing(false);
-      return;
-    }
+    // The server works the figure out from the balance; the customer can only ever name
+    // 'half' or the whole thing — no amount travels from this page.
+    const portion = payHalf ? 'half' : 'full';
 
     try {
       if (selectedMethod === 'razorpay') {
@@ -408,7 +392,7 @@ const PublicPayment = () => {
           const response = await fetch(`${API_BASE}/api/razorpay/public/payment-link`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ invoiceId: invoice.invoiceId, token, portion, ...(custom !== undefined ? { customAmount: custom } : {}) })
+            body: JSON.stringify({ invoiceId: invoice.invoiceId, token, portion })
           });
           const result = await response.json();
           if (result.success && result.data?.paymentLink) {
@@ -426,8 +410,7 @@ const PublicPayment = () => {
             invoiceId: invoice.invoiceId,
             token,
             paymentMethod: selectedMethod,
-            portion,
-            ...(custom !== undefined ? { customAmount: custom } : {})
+            portion
           })
         });
         const result = await response.json();
@@ -719,9 +702,8 @@ const PublicPayment = () => {
           </div>
         </div>
 
-        {/* Payment Amount — full balance or a part payment. The server resolves every share and
-            validates every custom amount against the invoice's real balance, so a choice here can
-            only ever underpay, never name a bigger charge. */}
+        {/* Payment Amount — full balance or half of it. The server resolves the half against the
+            invoice's real balance, so no figure ever travels from this page. */}
         {invoice && (
           <PaymentAmountSection
             total={invoice.totalAmount}
@@ -729,13 +711,8 @@ const PublicPayment = () => {
             plan={activePlan}
             partial={payHalf}
             onPartialChange={setPayHalf}
-            kind={partialKind}
-            onKindChange={setPartialKind}
-            percentage={partialPct}
-            onPercentageChange={setPartialPct}
-            customAmount={customAmount}
-            onCustomAmountChange={setCustomAmount}
             canSplit={Boolean(halfPlan)}
+            fixedPercentage="50"
           />
         )}
 
