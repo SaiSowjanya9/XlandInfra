@@ -32,6 +32,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader from '../../components/common/PageHeader';
 import PaymentAmountSection from '../../components/common/PaymentAmountSection';
+import AmountExceedsCaution from '../../components/common/AmountExceedsCaution';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import { formatPlanDate, halfPaymentPlan, splitPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { paidPercent } from '../../utils/invoiceStatus';
@@ -1355,10 +1356,11 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                             const value = e.target.value.replace(/[^0-9.]/g, '');
                             setPaymentDetails(prev => ({ ...prev, amountReceived: value }));
                           }}
-                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                          placeholder="15,000.00" 
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="15,000.00"
                         />
                       </div>
+                      <AmountExceedsCaution amount={paymentDetails.amountReceived} balance={balanceAmount} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
@@ -1590,6 +1592,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                             placeholder="15,000.00"
                           />
                         </div>
+                        <AmountExceedsCaution amount={paymentDetails.amountReceived} balance={balanceAmount} />
                       </div>
                     </div>
 
