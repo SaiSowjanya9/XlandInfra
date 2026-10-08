@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import { statusLabel } from '../utils/invoiceStatus';
 import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -344,7 +345,7 @@ const FPInvoices = ({ user }) => {
                       <td className="py-3 px-4">
                         <div className="flex justify-center">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${paymentConfig.color}`}>
-                            {paymentConfig.label}
+                            {statusLabel(invoice, paymentConfig.label)}
                           </span>
                         </div>
                       </td>

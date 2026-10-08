@@ -16,6 +16,7 @@ import {
   Clock
 } from 'lucide-react';
 import { formatPlanDate, halfPaymentPlan, splitPaymentPlan } from '../utils/halfPayment';
+import { paidAmount, paidPercent } from '../utils/invoiceStatus';
 import PaymentAmountSection from '../components/common/PaymentAmountSection';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -706,6 +707,12 @@ const PublicPayment = () => {
             <div className="text-right">
               <p className="text-xs text-gray-500 mb-1">Total Amount</p>
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(invoice?.totalAmount)}</p>
+              {paidAmount(invoice) > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 mt-2">Already Paid ({paidPercent(invoice)}%)</p>
+                  <p className="text-lg font-bold text-green-600">{formatCurrency(paidAmount(invoice))}</p>
+                </>
+              )}
               <p className="text-xs text-gray-500 mt-2">Due Amount</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(balanceDue)}</p>
             </div>

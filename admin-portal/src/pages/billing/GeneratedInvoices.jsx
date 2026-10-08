@@ -35,6 +35,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { statusLabel } from '../../utils/invoiceStatus';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -775,7 +776,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                            {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+                            {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
@@ -848,7 +849,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+                        {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3.5">

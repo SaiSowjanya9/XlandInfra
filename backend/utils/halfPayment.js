@@ -118,7 +118,9 @@ const resolvePaymentPortion = (portion, balance, customAmount) => {
     }
     return { amount: plan.firstAmount, plan };
   }
-  const share = PORTION_SHARES[portion];
+  // typeof, not a plain lookup: an object key is coerced to a string, so ['half'] would
+  // otherwise find PORTION_SHARES.half
+  const share = typeof portion === 'string' ? PORTION_SHARES[portion] : undefined;
   if (share) {
     const plan = splitPaymentPlan(total, total * share);
     if (!plan) return { error: 'This balance is too small to split into two payments.' };
