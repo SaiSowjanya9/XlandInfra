@@ -70,7 +70,7 @@ const PaymentAmountSection = ({
 
   const Figure = ({ label, children }) => (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5 whitespace-nowrap">{label}</p>
       {children}
     </div>
   );
@@ -132,7 +132,7 @@ const PaymentAmountSection = ({
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-[0.9fr_1fr_1fr_1.15fr_1fr] gap-x-4 gap-y-5">
             <Figure label={!fixedPercentage && kind === 'custom' ? 'Custom Amount' : 'Percentage'}>
               {fixedPercentage ? (
                 <p className={figureValue}>{fixedPercentage}%</p>
@@ -163,7 +163,7 @@ const PaymentAmountSection = ({
             <Figure label="Remaining Balance">
               <p className={figureValue}>{inr(remaining)}</p>
             </Figure>
-            <Figure label="Remaining Payment Due">
+            <Figure label="Remaining Due">
               <p className={figureValue}>{dueLabel}</p>
             </Figure>
             <Figure label="Next Due Date">
