@@ -21,6 +21,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { paidPercent } from '../utils/invoiceStatus';
+import AmountExceedsCaution from '../components/common/AmountExceedsCaution';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -472,6 +473,7 @@ const FPRecordPayment = ({ user }) => {
                     required
                   />
                 </div>
+                <AmountExceedsCaution amount={formData.amount} balance={selectedInvoice?.balanceAmount} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

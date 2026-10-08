@@ -1,5 +1,6 @@
-import { CheckCircle2, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { formatPlanDate } from '../../utils/halfPayment';
+import AmountExceedsCaution from './AmountExceedsCaution';
 
 /**
  * The "Payment Amount" chooser: Pay Full Amount vs Partial Payment as two radio cards, then —
@@ -69,14 +70,8 @@ const PaymentAmountSection = ({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h3 className="font-semibold text-gray-900 text-base">Payment Amount</h3>
-        {canSplit && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Partially Paid Rule Enabled
-          </span>
-        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -173,6 +168,11 @@ const PaymentAmountSection = ({
               <p className="text-sm font-semibold text-gray-900 py-2">{nextDue}</p>
             </div>
           </div>
+
+          <AmountExceedsCaution
+            amount={!fixedPercentage && kind === 'custom' ? customAmount : 0}
+            balance={balanceNum}
+          />
 
           <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
             <div className="flex items-center gap-3 shrink-0">

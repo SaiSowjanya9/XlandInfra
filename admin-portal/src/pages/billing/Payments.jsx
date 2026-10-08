@@ -38,6 +38,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } from '../../utils/chequePayment';
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import AmountExceedsCaution from '../../components/common/AmountExceedsCaution';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -416,10 +417,11 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
                             const value = e.target.value.replace(/[^0-9.]/g, '');
                             setFormData(prev => ({ ...prev, amountReceived: value }));
                           }}
-                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                          placeholder="15,000.00" 
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="15,000.00"
                         />
                       </div>
+                      <AmountExceedsCaution amount={formData.amountReceived} balance={payment?.balanceAmount ?? payment?.invoiceAmount} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
@@ -1067,16 +1069,17 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (₹) <span className="text-red-500">*</span></label>
-                      <input 
-                        type="text" 
-                        value={formData.amountReceived} 
+                      <input
+                        type="text"
+                        value={formData.amountReceived}
                         onChange={(e) => {
                           const value = e.target.value.replace(/[^0-9.]/g, '');
                           setFormData(prev => ({ ...prev, amountReceived: value }));
                         }}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="15,000.00" 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="15,000.00"
                       />
+                      <AmountExceedsCaution amount={formData.amountReceived} balance={payment?.balanceAmount ?? payment?.invoiceAmount} />
                     </div>
                   </div>
 
@@ -1863,9 +1866,10 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
                             const value = e.target.value.replace(/[^0-9.]/g, '');
                             setFormData(prev => ({ ...prev, amountReceived: value }));
                           }}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                          placeholder="15,000.00" 
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="15,000.00"
                         />
+                        <AmountExceedsCaution amount={formData.amountReceived} balance={payment?.balanceAmount ?? payment?.invoiceAmount} />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Transfer Date <span className="text-red-500">*</span></label>
