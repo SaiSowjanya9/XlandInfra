@@ -665,14 +665,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         />
       </PageHeader>
 
-      {/* Stat Cards Row - 7 cards matching reference */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* Stat Cards Row — one line; on narrow screens the row scrolls instead of wrapping
+          a ninth card onto a lonely second row */}
+      <div className="flex gap-3 overflow-x-auto pb-1">
         {statCards.map((card, index) => {
           const Icon = card.icon;
           return (
             <div
               key={index}
-              className="rounded-xl p-3 shadow-sm hover:shadow-md transition-all"
+              className="min-w-[150px] flex-1 rounded-xl p-3 shadow-sm hover:shadow-md transition-all"
               style={{ 
                 borderTop: `3px solid ${card.borderColor}`,
                 background: `linear-gradient(135deg, white 0%, white 60%, ${card.gradientEnd} 100%)`
