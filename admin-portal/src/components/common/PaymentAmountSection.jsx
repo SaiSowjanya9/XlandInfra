@@ -20,6 +20,39 @@ const inr = value =>
 
 const PERCENTAGES = ['25', '50', '75', '100'];
 
+// These live at module level, not inside the component: defined in render they'd be a new
+// component type every keystroke, so React would unmount and remount the whole subtree —
+// the custom-amount input lost its focus after each character and "stuck".
+const OptionCard = ({ selected, disabled, onClick, title, desc }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 text-left transition-colors ${
+      selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+  >
+    <span className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+      selected ? 'border-blue-500' : 'border-gray-300'
+    }`}>
+      {selected && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+    </span>
+    <span className="min-w-0">
+      <span className="block text-sm font-semibold text-gray-900">{title}</span>
+      <span className="block text-xs text-gray-500 mt-0.5 leading-snug">{desc}</span>
+    </span>
+  </button>
+);
+
+const Figure = ({ label, children }) => (
+  <div>
+    <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5 whitespace-nowrap">{label}</p>
+    {children}
+  </div>
+);
+
+const FIGURE_VALUE = 'text-base font-semibold text-gray-900 leading-none py-1.5';
+
 const PaymentAmountSection = ({
   total,
   balance,
@@ -46,36 +79,6 @@ const PaymentAmountSection = ({
   // A plan carries the policy dates; paying the whole balance as "100%" leaves nothing to schedule
   const nextDue = plan ? formatPlanDate(plan.secondDueDate) : '—';
   const dueLabel = plan ? 'After 6 Months' : 'Paid in full';
-
-  const OptionCard = ({ selected, disabled, onClick, title, desc }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 text-left transition-colors ${
-        selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      <span className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-        selected ? 'border-blue-500' : 'border-gray-300'
-      }`}>
-        {selected && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold text-gray-900">{title}</span>
-        <span className="block text-xs text-gray-500 mt-0.5 leading-snug">{desc}</span>
-      </span>
-    </button>
-  );
-
-  const Figure = ({ label, children }) => (
-    <div>
-      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5 whitespace-nowrap">{label}</p>
-      {children}
-    </div>
-  );
-
-  const figureValue = 'text-base font-semibold text-gray-900 leading-none py-1.5';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
@@ -135,7 +138,7 @@ const PaymentAmountSection = ({
           <div className="grid grid-cols-2 sm:grid-cols-[0.9fr_1fr_1fr_1.15fr_1fr] gap-x-4 gap-y-5">
             <Figure label={!fixedPercentage && kind === 'custom' ? 'Custom Amount' : 'Percentage'}>
               {fixedPercentage ? (
-                <p className={figureValue}>{fixedPercentage}%</p>
+                <p className={FIGURE_VALUE}>{fixedPercentage}%</p>
               ) : kind === 'custom' ? (
                 <input
                   type="text"
@@ -158,16 +161,16 @@ const PaymentAmountSection = ({
               )}
             </Figure>
             <Figure label="Amount Paying Now">
-              <p className={`${figureValue} text-blue-700`}>{inr(payingNow)}</p>
+              <p className={`${FIGURE_VALUE} text-blue-700`}>{inr(payingNow)}</p>
             </Figure>
             <Figure label="Remaining Balance">
-              <p className={figureValue}>{inr(remaining)}</p>
+              <p className={FIGURE_VALUE}>{inr(remaining)}</p>
             </Figure>
             <Figure label="Remaining Due">
-              <p className={figureValue}>{dueLabel}</p>
+              <p className={FIGURE_VALUE}>{dueLabel}</p>
             </Figure>
             <Figure label="Next Due Date">
-              <p className={figureValue}>{nextDue}</p>
+              <p className={FIGURE_VALUE}>{nextDue}</p>
             </Figure>
           </div>
 
