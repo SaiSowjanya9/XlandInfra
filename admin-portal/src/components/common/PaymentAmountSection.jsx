@@ -52,32 +52,39 @@ const PaymentAmountSection = ({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-colors ${
+      className={`flex items-center gap-3 px-5 py-4 rounded-xl border-2 text-left transition-colors ${
         selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      <span className={`shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+      <span className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
         selected ? 'border-blue-500' : 'border-gray-300'
       }`}>
-        {selected && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+        {selected && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-gray-900">{title}</span>
-        <span className="block text-xs text-gray-500 mt-0.5">{desc}</span>
+        <span className="block text-xs text-gray-500 mt-0.5 leading-snug">{desc}</span>
       </span>
     </button>
   );
 
+  const Figure = ({ label, children }) => (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-1.5">{label}</p>
+      {children}
+    </div>
+  );
+
+  const figureValue = 'text-base font-semibold text-gray-900 leading-none py-1.5';
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-900 text-base">Payment Amount</h3>
-      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-5">Payment Amount</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="pt-1">
-          <p className="text-xs text-gray-500">Invoice Total</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{inr(total || balanceNum)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Invoice Total</p>
+          <p className="text-[28px] leading-tight font-bold text-gray-900 mt-1.5">{inr(total || balanceNum)}</p>
         </div>
         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <OptionCard
@@ -99,9 +106,9 @@ const PaymentAmountSection = ({
       </div>
 
       {partial && (
-        <>
+        <div className="mt-6 pt-5 border-t border-gray-100">
           {!fixedPercentage && (
-            <div className="flex items-center gap-5 mt-5">
+            <div className="flex items-center gap-6 mb-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -125,11 +132,10 @@ const PaymentAmountSection = ({
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">{!fixedPercentage && kind === 'custom' ? 'Custom Amount' : 'Percentage'}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-5">
+            <Figure label={!fixedPercentage && kind === 'custom' ? 'Custom Amount' : 'Percentage'}>
               {fixedPercentage ? (
-                <p className="text-sm font-semibold text-gray-900 py-2">{fixedPercentage}%</p>
+                <p className={figureValue}>{fixedPercentage}%</p>
               ) : kind === 'custom' ? (
                 <input
                   type="text"
@@ -137,36 +143,32 @@ const PaymentAmountSection = ({
                   value={customAmount}
                   onChange={e => onCustomAmountChange?.(e.target.value.replace(/[^0-9.]/g, ''))}
                   placeholder="Enter amount"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
                 />
               ) : (
                 <select
                   value={percentage}
                   onChange={e => onPercentageChange?.(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none"
                 >
                   {PERCENTAGES.map(p => (
                     <option key={p} value={p}>{p}%</option>
                   ))}
                 </select>
               )}
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Amount Paying Now</p>
-              <p className="text-sm font-semibold text-gray-900 py-2">{inr(payingNow)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Remaining Balance</p>
-              <p className="text-sm font-semibold text-gray-900 py-2">{inr(remaining)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Remaining Payment Due</p>
-              <p className="text-sm font-semibold text-gray-900 py-2">{dueLabel}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Next Due Date</p>
-              <p className="text-sm font-semibold text-gray-900 py-2">{nextDue}</p>
-            </div>
+            </Figure>
+            <Figure label="Amount Paying Now">
+              <p className={`${figureValue} text-blue-700`}>{inr(payingNow)}</p>
+            </Figure>
+            <Figure label="Remaining Balance">
+              <p className={figureValue}>{inr(remaining)}</p>
+            </Figure>
+            <Figure label="Remaining Payment Due">
+              <p className={figureValue}>{dueLabel}</p>
+            </Figure>
+            <Figure label="Next Due Date">
+              <p className={figureValue}>{nextDue}</p>
+            </Figure>
           </div>
 
           <AmountExceedsCaution
@@ -174,23 +176,23 @@ const PaymentAmountSection = ({
             balance={balanceNum}
           />
 
-          <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+          <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl bg-blue-50 border border-blue-100 px-5 py-4">
+            <div className="flex items-center gap-3.5 shrink-0">
+              <span className="w-11 h-11 rounded-lg bg-blue-100 flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-blue-600" />
               </span>
               <span>
-                <span className="block text-xs text-gray-500">Amount to Pay Now</span>
-                <span className="block text-xl font-bold text-gray-900">{inr(payingNow)}</span>
+                <span className="block text-[11px] font-medium uppercase tracking-wider text-gray-500">Amount to Pay Now</span>
+                <span className="block text-2xl font-bold text-gray-900 leading-tight mt-0.5">{inr(payingNow)}</span>
               </span>
             </div>
-            <p className="sm:ml-auto text-xs sm:text-sm text-gray-600">
+            <p className="sm:ml-auto text-sm text-gray-600 leading-relaxed max-w-md">
               {remaining > 0
                 ? `You will be charged ${inr(payingNow)} now. The remaining ${inr(remaining)} will be due on ${nextDue}${plan ? ' (after 6 months)' : ''}.`
                 : `You will be charged ${inr(payingNow)} now — the invoice is settled in full.`}
             </p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
