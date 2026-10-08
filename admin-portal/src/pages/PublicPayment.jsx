@@ -13,10 +13,10 @@ import {
   Check,
   RefreshCw,
   Lock,
-  Clock,
-  Percent
+  Clock
 } from 'lucide-react';
 import { formatPlanDate, halfPaymentPlan } from '../utils/halfPayment';
+import PaymentAmountSection from '../components/common/PaymentAmountSection';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
@@ -686,36 +686,25 @@ const PublicPayment = () => {
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(invoice?.totalAmount)}</p>
               <p className="text-xs text-gray-500 mt-2">Due Amount</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(balanceDue)}</p>
-              {/* The half-yearly option sits here, in the summary, as a plain link-sized control:
-                  the full amount is what the invoice asks for, and a panel of radio buttons at the
-                  top of the page advertises paying less than that. */}
-              {halfPlan && (
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setPayHalf(!payHalf)}
-                    aria-pressed={payHalf}
-                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                      payHalf
-                        ? 'bg-[#B5812A] border-[#B5812A] text-white hover:bg-[#9C6E22]'
-                        : 'bg-[#FFFAF0] border-[#B5812A] text-[#9C6E22] hover:bg-[#F6EBD1]'
-                    }`}
-                  >
-                    <Percent className="w-3 h-3" />
-                    {payHalf ? 'Paying 50% — pay full instead' : 'Pay 50% now'}
-                  </button>
-                  {payHalf && (
-                    <p className="text-[11px] text-gray-500 mt-1 leading-snug max-w-[13rem] ml-auto">
-                      Paying {formatCurrency(halfPlan.firstAmount)} now. The remaining{' '}
-                      {formatCurrency(halfPlan.secondAmount)} is due by {formatPlanDate(halfPlan.secondDueDate)},
-                      30 days before the next 6-month service period starts on {formatPlanDate(halfPlan.nextPeriodStart)}.
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Payment Amount — full balance or the fixed half-yearly instalment. The public link
+            accepts only those two portions: the server recomputes the figure and ignores any
+            amount posted by the browser, so a Custom Amount choice would be a lie here. */}
+        {invoice && (
+          <PaymentAmountSection
+            total={invoice.totalAmount}
+            balance={balanceDue}
+            plan={halfPlan}
+            partial={payHalf}
+            onPartialChange={setPayHalf}
+            kind="percentage"
+            allowCustom={false}
+            customDisabledNote="Only the fixed 50% instalment can be paid through this link"
+          />
+        )}
 
         {/* Payment Methods */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
