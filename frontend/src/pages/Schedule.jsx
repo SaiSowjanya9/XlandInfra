@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle, Calendar, CalendarCheck, CalendarDays, CheckCircle, ChevronLeft,
@@ -173,7 +174,10 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
       : [])
   ];
 
-  return (
+  // Portal to document.body so the overlay is always centred on the viewport —
+  // an ancestor with transform/filter/backdrop-filter would otherwise capture
+  // position:fixed and centre the modal on the whole page instead.
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
@@ -224,7 +228,8 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

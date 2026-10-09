@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw, Bell, BellRing, CheckCheck, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
 
@@ -602,8 +603,9 @@ const Dashboard = ({ user }) => {
         </div>
       )}
 
-      {/* Work Order Detail Modal */}
-      {selectedWorkOrder && (
+      {/* Work Order Detail Modal — portalled so fixed positioning always
+          resolves against the viewport, not a transformed ancestor */}
+      {selectedWorkOrder && createPortal(
         <div 
           ref={overlayRef}
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
@@ -733,7 +735,8 @@ const Dashboard = ({ user }) => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
