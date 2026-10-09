@@ -6979,7 +6979,10 @@ const MARKETING_TRACKER_COLUMNS = [
   { name: 'tracker_status', def: 'VARCHAR(60) NULL' },
   { name: 'coordinator_reviewed', def: 'VARCHAR(10) NULL' },
   { name: 'follow_up_stage', def: 'VARCHAR(60) NULL' },
-  { name: 'coordinator_name', def: 'VARCHAR(255) NULL' }
+  { name: 'coordinator_name', def: 'VARCHAR(255) NULL' },
+  // Soft delete from the tracker only (schema_v44_marketing_tracker_archive.sql); the estimate
+  // itself stays live in All Estimates -- is_archived is the estimate's own flag.
+  { name: 'tracker_archived_at', def: 'TIMESTAMP NULL' }
 ];
 
 const ensureMarketingTrackerColumns = async () => {
@@ -7035,7 +7038,8 @@ const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email
   maintenance_system, maintenance_system_other,
   proposal_given, proposal_given_other,
   customer_decision, customer_decision_other,
-  tracker_status, coordinator_reviewed, follow_up_stage, coordinator_name, tracked_at`;
+  tracker_status, coordinator_reviewed, follow_up_stage, coordinator_name,
+  tracked_at, tracker_archived_at`;
 
 // The tracker status the row should show. The estimate's own status is the authority at the ends
 // of the pipeline -- approved/rejected always win, and a sent estimate defaults to Estimate Sent
@@ -7057,6 +7061,7 @@ router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, r
        FROM fp_estimates
        WHERE franchise_partner_id = ? AND estimate_type = 'direct'
          AND (is_archived = 0 OR is_archived IS NULL)
+         AND tracker_archived_at IS NULL
        ORDER BY created_at DESC`,
       [req.fpId]
     );
@@ -7064,6 +7069,25 @@ router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, r
   } catch (error) {
     console.error('Marketing tracker list error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tracker data', error: error.message });
+  }
+});
+
+// Tracker entries the FP archived -- newest archive first.
+router.get('/marketing/tracker/archived', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const [rows] = await pool.execute(
+      `SELECT ${TRACKER_SELECT}
+       FROM fp_estimates
+       WHERE franchise_partner_id = ? AND estimate_type = 'direct'
+         AND tracker_archived_at IS NOT NULL
+       ORDER BY tracker_archived_at DESC`,
+      [req.fpId]
+    );
+    res.json({ success: true, data: rows.map(r => ({ ...r, tracker_status: effectiveTrackerStatus(r) })) });
+  } catch (error) {
+    console.error('Marketing archived list error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch archived tracker data', error: error.message });
   }
 });
 
@@ -7137,6 +7161,53 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
   } catch (error) {
     console.error('Marketing tracker save error:', error);
     res.status(500).json({ success: false, message: 'Failed to save tracker data', error: error.message });
+  }
+});
+
+// Soft-delete a tracked row from the tracker (it lands in Marketing > Archived); the estimate
+// itself is untouched. The same flag is what the New picker and tracker list filter on.
+router.put('/marketing/tracker/:id/archive', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid estimate id' });
+    }
+    const [result] = await pool.execute(
+      `UPDATE fp_estimates SET tracker_archived_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ? AND estimate_type = 'direct' AND tracked_at IS NOT NULL`,
+      [id, req.fpId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Tracked estimate not found' });
+    }
+    res.json({ success: true, message: 'Moved to Archived' });
+  } catch (error) {
+    console.error('Marketing tracker archive error:', error);
+    res.status(500).json({ success: false, message: 'Failed to archive tracker entry', error: error.message });
+  }
+});
+
+// Bring an archived tracker entry back to the tracker list.
+router.put('/marketing/tracker/:id/unarchive', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid estimate id' });
+    }
+    const [result] = await pool.execute(
+      `UPDATE fp_estimates SET tracker_archived_at = NULL
+       WHERE id = ? AND franchise_partner_id = ? AND estimate_type = 'direct' AND tracker_archived_at IS NOT NULL`,
+      [id, req.fpId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Archived tracker entry not found' });
+    }
+    res.json({ success: true, message: 'Restored to tracker' });
+  } catch (error) {
+    console.error('Marketing tracker unarchive error:', error);
+    res.status(500).json({ success: false, message: 'Failed to restore tracker entry', error: error.message });
   }
 });
 

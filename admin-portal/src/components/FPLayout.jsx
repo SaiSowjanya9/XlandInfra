@@ -329,6 +329,7 @@ const FPLayout = ({ admin, onLogout, children }) => {
     { path: '/fp/marketing/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/fp/marketing/tracker', icon: Target, label: 'Tracker' },
     { path: '/fp/marketing/complaint-form', icon: FileWarning, label: 'Complaint Form' },
+    { path: '/fp/marketing/archived', icon: Archive, label: 'Archived' },
   ];
 
   const isWorkOrdersSectionActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/fp/work-orders');

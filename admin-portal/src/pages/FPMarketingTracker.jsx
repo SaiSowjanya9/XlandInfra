@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText, Building2, Pencil
+  ClipboardList, FileText, Building2, Pencil, Trash2
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
@@ -174,13 +174,33 @@ const FPMarketingTracker = ({ user }) => {
     }
   };
 
+  // Soft delete: the row leaves the tracker and lands in Marketing > Archived.
+  const archiveRow = async (est) => {
+    if (!window.confirm(`Move ${est.estimate_id} to Archived? You can restore it from Marketing > Archived.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}/archive`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setEstimates(prev => prev.filter(e => e.id !== est.id));
+        showToast('Moved to Archived');
+      } else {
+        showToast(result.message || 'Failed to archive.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to archive. Please try again.', 'error');
+    }
+  };
+
   const cellSelectCls = 'w-full min-w-[130px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
   const cellInputCls = 'w-full min-w-[110px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
 
   const saveTracker = async () => {
     // The required pair, and an Other that has nothing typed, are the only ways to fail here.
     const errors = [];
-    if (!form.proposal_given) errors.push('Proposal Given is required');
+    if (!form.proposal_given) errors.push('Proposal Sent is required');
     if (!form.customer_decision) errors.push('Customer Decision is required');
     if (form.maintenance_system === 'Other' && !form.maintenance_system_other.trim()) errors.push('Enter the current maintenance system');
     if (form.proposal_given === 'Other' && !form.proposal_given_other.trim()) errors.push('Enter the proposal details');
@@ -313,8 +333,12 @@ const FPMarketingTracker = ({ user }) => {
                 <Loader2 className="w-6 h-6 animate-spin text-warm-accent" />
                 <span className="ml-2 text-warm-muted">Loading estimates...</span>
               </div>
-            ) : estimates.length === 0 ? (
-              <EmptyState icon={FileText} title="No direct estimates found" description="Create a direct estimate first to track it here" />
+            ) : untrackedEstimates.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title={estimates.length === 0 ? 'No direct estimates found' : 'All direct estimates are tracked'}
+                description={estimates.length === 0 ? 'Create a direct estimate first to track it here' : 'Every direct estimate already has a tracker entry'}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -323,13 +347,12 @@ const FPMarketingTracker = ({ user }) => {
                       <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate ID</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted">Property Type</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Status</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted">Visit Date</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted">Executive</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {estimates.map((est) => (
+                    {untrackedEstimates.map((est) => (
                       <tr
                         key={est.id}
                         onClick={() => openEditor(est)}
@@ -341,13 +364,6 @@ const FPMarketingTracker = ({ user }) => {
                           <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                         </td>
                         <td className="py-3 px-3 text-warm-muted">{getPropertyTypeLabel(est.property_type)}</td>
-                        <td className="py-3 px-3">
-                          {est.tracked_at ? (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Tracked</span>
-                          ) : (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-warm-warning text-amber-700 border border-[#F3E2B3]">New</span>
-                          )}
-                        </td>
                         <td className="py-3 px-3 text-warm-muted">{formatDate(est.created_at)}</td>
                         <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
                       </tr>
@@ -403,7 +419,7 @@ const FPMarketingTracker = ({ user }) => {
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate Status</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Lead Source</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Priority</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Proposal</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Proposal Sent</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer Decision</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator Reviewed?</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Follow-Up Stage</th>
@@ -493,14 +509,23 @@ const FPMarketingTracker = ({ user }) => {
                           className={cellInputCls}
                         />
                       </td>
-                      <td className="py-3 px-3">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openEditor(est); }}
-                          className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
-                          title="Edit tracker"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openEditor(est)}
+                            className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
+                            title="Edit tracker"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => archiveRow(est)}
+                            className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                            title="Move to Archived"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -639,7 +664,7 @@ const FPMarketingTracker = ({ user }) => {
               </div>
 
               {radioField('Current Maintenance System', 'maintenance_system', 'maintenance_system_other', MAINTENANCE_OPTIONS, false)}
-              {radioField('Proposal Given', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
+              {radioField('Proposal Sent', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
 
               {formError && (

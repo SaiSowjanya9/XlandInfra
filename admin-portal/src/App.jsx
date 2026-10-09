@@ -36,6 +36,7 @@ import FPCustomers from './pages/FPCustomers';
 import FPMarketingDashboard from './pages/FPMarketingDashboard';
 import FPMarketingTracker from './pages/FPMarketingTracker';
 import FPMarketingComplaintForm from './pages/FPMarketingComplaintForm';
+import FPMarketingArchived from './pages/FPMarketingArchived';
 
 import ManagerLogin from './pages/ManagerLogin';
 import ManagerLayout from './components/ManagerLayout';
@@ -502,6 +503,7 @@ function App() {
                     <Route path="marketing/dashboard" element={<FPMarketingDashboard user={user} />} />
                     <Route path="marketing/tracker" element={<FPMarketingTracker user={user} />} />
                     <Route path="marketing/complaint-form" element={<FPMarketingComplaintForm user={user} />} />
+                    <Route path="marketing/archived" element={<FPMarketingArchived user={user} />} />
                     <Route path="marketing" element={<Navigate to="/fp/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
