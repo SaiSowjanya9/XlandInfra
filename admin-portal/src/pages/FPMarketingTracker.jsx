@@ -537,10 +537,9 @@ const FPMarketingTracker = ({ user }) => {
         </div>
       )}
 
-      {/* Edit modal */}
+      {/* Edit modal. Backdrop covers the viewport, but the card centers in the content
+          area -- the expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
       {editing && (
-        {/* Backdrop covers the viewport, but the card centers in the content area — the
-            expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72">
           <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
