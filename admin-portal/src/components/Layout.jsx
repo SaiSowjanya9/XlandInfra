@@ -231,7 +231,7 @@ const Layout = ({ admin, onLogout, children }) => {
             ))}
 
             {/* Work Orders Section */}
-            <div className="mt-3 pt-3" >
+            <div className="mt-1">
               <button
                 onClick={toggleWorkOrders}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
