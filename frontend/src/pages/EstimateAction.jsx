@@ -69,7 +69,7 @@ const EstimateAction = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
           <p className="mt-4 text-gray-500">Loading estimate details...</p>
@@ -80,7 +80,7 @@ const EstimateAction = () => {
 
   if (error && !estimate) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <AlertTriangle className="w-16 h-16 text-red-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
@@ -102,7 +102,7 @@ const EstimateAction = () => {
     const Icon = config.icon;
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className={`w-20 h-20 ${config.bg} rounded-full flex items-center justify-center mx-auto mb-6`}>
             <Icon className={`w-12 h-12 ${config.color}`} />
@@ -111,7 +111,7 @@ const EstimateAction = () => {
           <p className="text-gray-500 mb-4">
             This estimate {config.text}.
           </p>
-          <div className="bg-gray-50 rounded-xl p-4 text-left">
+          <div className="bg-warm-page rounded-xl p-4 text-left">
             <p className="text-sm text-gray-500">Estimate ID</p>
             <p className="font-semibold text-gray-900">{estimate.estimateId}</p>
             {estimate.propertyName && (
@@ -132,7 +132,7 @@ const EstimateAction = () => {
   if (result) {
     const isApproved = result.type === 'approve';
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className={`w-20 h-20 ${isApproved ? 'bg-green-50' : 'bg-red-50'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {isApproved ? (
@@ -149,7 +149,7 @@ const EstimateAction = () => {
               ? 'Thank you! Your estimate has been approved. Our team will contact you shortly.'
               : 'The estimate has been rejected. Our team may follow up for feedback.'}
           </p>
-          <div className="bg-gray-50 rounded-xl p-4 text-left">
+          <div className="bg-warm-page rounded-xl p-4 text-left">
             <p className="text-sm text-gray-500">Estimate ID</p>
             <p className="font-semibold text-gray-900">{estimate.estimateId}</p>
             {estimate.propertyName && (
@@ -171,7 +171,7 @@ const EstimateAction = () => {
 
   // Show action buttons
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -181,7 +181,7 @@ const EstimateAction = () => {
           <p className="text-gray-500 mt-1">Please review and take action</p>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-5 mb-6">
+        <div className="bg-warm-page rounded-xl p-5 mb-6">
           <div className="space-y-3">
             <div>
               <p className="text-sm text-gray-500">Estimate ID</p>

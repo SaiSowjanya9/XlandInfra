@@ -176,7 +176,7 @@ const PublicPayment = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
           <p className="text-gray-500">Loading invoice details...</p>
@@ -187,7 +187,7 @@ const PublicPayment = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-sm p-8 max-w-md w-full text-center border border-gray-200">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
@@ -208,14 +208,14 @@ const PublicPayment = () => {
   // Already paid
   if (step === 4) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-sm p-8 max-w-md w-full text-center border border-gray-200">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Invoice Already Paid</h2>
           <p className="text-gray-500 mb-4">This invoice has already been paid. Thank you!</p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <div className="bg-warm-page rounded-lg p-4 mb-6">
             <p className="text-gray-500 text-sm">Invoice</p>
             <p className="text-gray-900 font-semibold">{invoice?.invoiceId}</p>
           </div>
@@ -231,7 +231,7 @@ const PublicPayment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 py-4">
@@ -379,7 +379,7 @@ const PublicPayment = () => {
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={() => navigate('/')}
-                className="px-6 py-2.5 border border-gray-200 text-gray-900 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-2.5 border border-gray-200 text-gray-900 rounded-lg font-medium hover:bg-warm-page transition-colors"
               >
                 Cancel
               </button>
@@ -469,7 +469,7 @@ const PublicPayment = () => {
                   <Building2 className="w-5 h-5 text-blue-600" />
                   Office Address
                 </h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="bg-warm-page rounded-lg p-4 mb-4">
                   <p className="font-medium text-gray-900">{OFFICE_ADDRESS.line1}</p>
                   <p className="text-gray-900">{OFFICE_ADDRESS.line2}</p>
                   <p className="text-gray-900">{OFFICE_ADDRESS.city}</p>
@@ -492,7 +492,7 @@ const PublicPayment = () => {
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={() => setStep(1)}
-                className="px-6 py-2.5 border border-gray-200 text-gray-900 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-2.5 border border-gray-200 text-gray-900 rounded-lg font-medium hover:bg-warm-page transition-colors"
               >
                 Choose Different Method
               </button>

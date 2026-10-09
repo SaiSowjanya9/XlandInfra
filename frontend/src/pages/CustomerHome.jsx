@@ -177,7 +177,7 @@ function CustomerHome() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFB' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#FAF7F2' }}>
       {/* ============ HERO VIDEO BANNER ============ */}
       <section className="relative h-[70vh] md:h-[80vh] overflow-hidden">
         {/* Video Background */}
@@ -192,7 +192,7 @@ function CustomerHome() {
         </video>
         
         {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-100/70 via-gray-50 to-gray-100/90"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-warm-page/70 via-warm-page to-warm-page/90"></div>
         
         {/* Hero Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
@@ -233,7 +233,7 @@ function CustomerHome() {
       </section>
 
       {/* ============ TOP NAVIGATION SECTION ============ */}
-      <header className="relative z-50 bg-gray-50/95 backdrop-blur-md border-b border-gold-600/20">
+      <header className="relative z-50 bg-warm-page/95 backdrop-blur-md border-b border-gold-600/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
@@ -448,7 +448,7 @@ function CustomerHome() {
                         </div>
                         
                         {/* Icon Decoration */}
-                        <div className="absolute top-6 right-6 w-14 h-14 bg-gray-50 backdrop-blur-sm border border-gold-500/20 rounded-xl flex items-center justify-center">
+                        <div className="absolute top-6 right-6 w-14 h-14 bg-warm-page backdrop-blur-sm border border-gold-500/20 rounded-xl flex items-center justify-center">
                           <ItemIcon className="w-7 h-7 text-gold-600" />
                         </div>
                       </div>
