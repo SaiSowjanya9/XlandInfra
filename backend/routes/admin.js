@@ -2250,7 +2250,7 @@ router.get('/estimates', authenticate, adminOnly, async (req, res) => {
              COALESCE(fe.client_name, fe.property_name, 'Direct Estimate') as customerName,
              COALESCE(fe.estimate_type, 'direct') as estimateType,
              fe.property_type as propertyType,
-             COALESCE(fe.total_price, fe.total_amount, 0) as totalPrice,
+             COALESCE(fe.total_amount, 0) as totalPrice,
              fe.archived_at as archivedAt,
              fe.created_at as createdAt
       FROM fp_estimates fe

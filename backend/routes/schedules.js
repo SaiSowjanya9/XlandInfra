@@ -26,9 +26,39 @@ const generateScheduleId = () => {
   return `${prefix}-${timestamp}-${random}`;
 };
 
+// The joins below read fp_estimates columns that only exist as post-v8 migrations
+// (schema_v45_fp_estimates_drift.sql). The older files that were meant to add them use
+// MariaDB-only "ADD COLUMN IF NOT EXISTS", so a MySQL 8 deployment can be missing them;
+// this backfill keeps those deployments working, the same tolerance the FP estimate
+// routes give their own late columns.
+const FP_ESTIMATE_LATE_COLUMNS = [
+  { name: 'estimate_type', def: "VARCHAR(50) DEFAULT 'property_based'" },
+  { name: 'payment_status', def: "ENUM('pending', 'partial', 'paid') DEFAULT 'pending'" },
+  { name: 'package_services', def: 'JSON' },
+  { name: 'service_category', def: 'VARCHAR(100)' }
+];
+
+const ensureFpEstimateColumns = async () => {
+  for (const col of FP_ESTIMATE_LATE_COLUMNS) {
+    try {
+      // SHOW ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+      // check goes through information_schema instead
+      const [cols] = await pool.execute(
+        `SELECT COUNT(*) AS n FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = 'fp_estimates' AND column_name = ?`,
+        [col.name]
+      );
+      if (cols[0].n === 0) {
+        await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN ${col.name} ${col.def}`);
+      }
+    } catch (e) { /* column exists or cannot be added; the query below will say which */ }
+  }
+};
+
 // Get all schedules (Admin, Manager full access; Supervisor view only)
 router.get('/', authenticate, canSeeSchedule, async (req, res) => {
   try {
+    await ensureFpEstimateColumns();
     const { status, propertyId, fpId } = req.query;
     
     // Get FP scope for non-admin users
@@ -117,6 +147,7 @@ router.get('/', authenticate, canSeeSchedule, async (req, res) => {
 // Get dashboard statistics - MUST be before /:id route
 router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) => {
   try {
+    await ensureFpEstimateColumns();
     const { startDate, endDate, zone } = req.query;
     
     let dateFilter = '';
@@ -262,6 +293,7 @@ router.get('/dashboard/stats', authenticate, canSeeSchedule, async (req, res) =>
 // Returns properties that are paid and have vendors assigned but not yet scheduled
 router.get('/pending-properties', authenticate, canSeeSchedule, async (req, res) => {
   try {
+    await ensureFpEstimateColumns();
     const userFpId = req.user?.franchisePartnerId || req.user?.fpId;
     const isAdmin = req.user?.role === 'admin' || req.user?.role === 'super_admin' || req.user?.role === 'operations_manager';
     
@@ -999,6 +1031,7 @@ router.get('/pending-properties-v2', authenticate, canSeeSchedule, async (req, r
 // Enhances with vendor assignments and scheduling status
 router.get('/property/:propertyId/services', authenticate, canSeeSchedule, async (req, res) => {
   try {
+    await ensureFpEstimateColumns();
     const { propertyId } = req.params;
     
     console.log('[Property Services] Fetching services for property ID:', propertyId);
