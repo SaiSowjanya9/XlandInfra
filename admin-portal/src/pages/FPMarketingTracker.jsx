@@ -194,8 +194,8 @@ const FPMarketingTracker = ({ user }) => {
     }
   };
 
-  const cellSelectCls = 'w-full min-w-[130px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
-  const cellInputCls = 'w-full min-w-[110px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
+  const cellSelectCls = 'w-full min-w-[110px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
+  const cellInputCls = 'w-full min-w-[90px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
 
   const saveTracker = async () => {
     // The required pair, and an Other that has nothing typed, are the only ways to fail here.
@@ -407,24 +407,20 @@ const FPMarketingTracker = ({ user }) => {
               ) : null}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div>
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-warm-border bg-warm-section">
-                    <th className="text-left py-3 px-4 font-medium text-warm-muted">Estimate ID</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Visit Date</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Executive</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate Amount</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate Status</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Lead Source</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Priority</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Proposal Sent</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer Decision</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator Reviewed?</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Follow-Up Stage</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Actions</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Estimate ID</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Customer</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Visit / Executive</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Amount</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Estimate Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Lead / Priority</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Proposal / Decision</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Coordinator</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Follow-Up Stage</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -435,17 +431,19 @@ const FPMarketingTracker = ({ user }) => {
                       className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
                       title="Click to edit"
                     >
-                      <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
-                      <td className="py-3 px-3">
+                      <td className="py-2 px-2 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
+                      <td className="py-2 px-2">
                         <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
-                        <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
+                        <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                       </td>
-                      <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
-                      <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
-                      <td className="py-2 px-3 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
+                      <td className="py-2 px-2">
+                        <div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div>
+                        <div className="text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</div>
+                      </td>
+                      <td className="py-2 px-2 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
                       {/* Estimate Status is inline-editable, except at the ends of the pipeline where
                           the estimate's own status (sent/approved/rejected) drives it. */}
-                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         {['approved', 'rejected'].includes(est.status) ? (
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}
                             title="Set by the estimate's status in All Estimates">
@@ -462,28 +460,46 @@ const FPMarketingTracker = ({ user }) => {
                           </select>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-warm-text">{decodeEntities(est.lead_source) || '-'}</td>
-                      <td className="py-2 px-3">
-                        {est.priority ? (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                            {est.priority}
-                          </span>
-                        ) : '-'}
+                      <td className="py-2 px-2">
+                        <div className="text-warm-text">{decodeEntities(est.lead_source) || '-'}</div>
+                        <div className="mt-1">
+                          {est.priority ? (
+                            <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                              {est.priority}
+                            </span>
+                          ) : <span className="text-warm-muted">-</span>}
+                        </div>
                       </td>
-                      <td className="py-2 px-3 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
-                      <td className="py-2 px-3 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
-                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2 px-2">
+                        <div className="text-warm-text"><span className="text-warm-muted">Proposal:</span> {displayAnswer(est.proposal_given, est.proposal_given_other)}</div>
+                        <div className="text-warm-muted mt-0.5 max-w-[140px]">{displayAnswer(est.customer_decision, est.customer_decision_other)}</div>
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.coordinator_reviewed || ''}
                           disabled={savingRowId === est.id}
                           onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
-                          className={`${cellSelectCls} !min-w-[70px]`}
+                          className={`${cellSelectCls} !min-w-0`}
+                          title="Coordinator Reviewed?"
                         >
-                          <option value="">-</option>
+                          <option value="">Reviewed?</option>
                           {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
+                        <input
+                          type="text"
+                          key={est.tracked_at || est.id}
+                          defaultValue={decodeEntities(est.coordinator_name) || ''}
+                          maxLength={255}
+                          placeholder="Coordinator name"
+                          disabled={savingRowId === est.id}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v !== (decodeEntities(est.coordinator_name) || '')) saveRowField(est, { coordinator_name: v });
+                          }}
+                          className={`${cellInputCls} !min-w-0 mt-1`}
+                        />
                       </td>
-                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.follow_up_stage || ''}
                           disabled={savingRowId === est.id}
@@ -494,23 +510,8 @@ const FPMarketingTracker = ({ user }) => {
                           {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
-                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          key={est.tracked_at || est.id}
-                          defaultValue={decodeEntities(est.coordinator_name) || ''}
-                          maxLength={255}
-                          placeholder="Name"
-                          disabled={savingRowId === est.id}
-                          onBlur={(e) => {
-                            const v = e.target.value.trim();
-                            if (v !== (decodeEntities(est.coordinator_name) || '')) saveRowField(est, { coordinator_name: v });
-                          }}
-                          className={cellInputCls}
-                        />
-                      </td>
-                      <td className="py-2 px-3">
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => openEditor(est)}
                             className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
