@@ -428,43 +428,38 @@ const FPMarketingTracker = ({ user }) => {
 
                   const numBlocks = editing.number_of_blocks || Object.keys(blockNames).length || 1;
 
-                  // GC/APT with several blocks - one card per block
+                  // GC/APT with several blocks - one compact row per block
                   if (numBlocks > 1 || Object.keys(blockNames).length > 0) {
+                    const anyUnitTypes = Array.from({ length: numBlocks }, (_, i) => i + 1)
+                      .some(n => Object.values(blockUnitTypes?.[n] || blockUnitTypes?.[String(n)] || {}).some(v => v > 0));
                     return (
-                      <div className="mt-4 pt-4 border-t border-warm-border/70">
-                        <div className="flex items-center gap-2 mb-3">
+                      <div className="mt-4 pt-3 border-t border-warm-border/70">
+                        <div className="flex items-center gap-2 mb-1">
                           <Building2 className="w-4 h-4 text-warm-muted" />
                           <span className="text-sm font-medium text-warm-text">Block Details</span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                            const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
-                            const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
-                            return (
-                              <div key={blockNum} className="bg-white border border-warm-border rounded-[10px] p-3">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="min-w-0 pr-2">
-                                    <label className="block text-xs font-medium text-warm-muted mb-1">Block Name</label>
-                                    <p className="text-sm font-semibold text-warm-text [overflow-wrap:anywhere]">{decodeEntities(blockNames?.[blockNum] || blockNames?.[String(blockNum)]) || `Block ${blockNum}`}</p>
-                                  </div>
-                                  <div className="text-right">
-                                    <label className="block text-xs font-medium text-warm-muted mb-1">Units</label>
-                                    <p className="text-sm font-medium text-warm-text">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
-                                  </div>
-                                </div>
-                                {hasUnitTypes && (
-                                  <div className="flex flex-wrap gap-1 pt-2 border-t border-warm-border/70">
-                                    {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
-                                      <span key={type} className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">
-                                        {unitTypeLabels[type] || type}: {count}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-warm-border/70 text-left">
+                              <th className="py-1.5 pr-4 text-xs font-medium text-warm-muted">Block Name</th>
+                              <th className="py-1.5 pr-4 text-xs font-medium text-warm-muted w-20">Units</th>
+                              {anyUnitTypes && <th className="py-1.5 text-xs font-medium text-warm-muted">Unit Types</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                              const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
+                              const typeText = Object.entries(unitTypes).filter(([, c]) => c > 0).map(([t, c]) => `${unitTypeLabels[t] || t}: ${c}`).join(', ');
+                              return (
+                                <tr key={blockNum} className="border-b border-warm-border/50 last:border-0">
+                                  <td className="py-1.5 pr-4 font-medium text-warm-text [overflow-wrap:anywhere]">{decodeEntities(blockNames?.[blockNum] || blockNames?.[String(blockNum)]) || `Block ${blockNum}`}</td>
+                                  <td className="py-1.5 pr-4 text-warm-text">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</td>
+                                  {anyUnitTypes && <td className="py-1.5 text-warm-muted">{typeText || '-'}</td>}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     );
                   }
