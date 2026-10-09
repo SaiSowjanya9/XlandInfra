@@ -10,7 +10,7 @@ const Layout = ({ children, user, onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/dashboard" className="flex items-center space-x-3">
-              <img src="/logo.png" alt="XLAND INFRA" className="h-10 w-auto" />
+              <img src="/logo-contract.png" alt="XLAND INFRA" className="h-10 w-auto" />
               <div className="flex flex-col">
                 <span className="text-warm-accent-hover font-bold text-lg leading-tight tracking-wide">XLAND INFRA</span>
                 <span className="text-warm-muted text-[10px] tracking-[0.2em] leading-tight">— PVT LTD —</span>
