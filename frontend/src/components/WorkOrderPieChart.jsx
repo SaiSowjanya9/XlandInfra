@@ -20,12 +20,12 @@ const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-dark-800 px-4 py-3 rounded-lg shadow-xl border border-dark-600">
-        <p className="text-sm font-semibold text-white">{data.name}</p>
+      <div className="bg-white px-4 py-3 rounded-lg shadow-xl border border-gray-200">
+        <p className="text-sm font-semibold text-gray-900">{data.name}</p>
         <p className="text-lg font-bold" style={{ color: data.fill }}>
-          {data.value} <span className="text-xs text-dark-300 font-normal">orders</span>
+          {data.value} <span className="text-xs text-gray-600 font-normal">orders</span>
         </p>
-        <p className="text-xs text-dark-400">
+        <p className="text-xs text-gray-500">
           {data.percentage}% of total
         </p>
       </div>
@@ -42,16 +42,16 @@ const CustomLegend = ({ payload, onClickLegend }) => {
         <button
           key={index}
           onClick={() => onClickLegend && onClickLegend(entry.payload.status)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-dark-700/50 hover:bg-dark-700 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors cursor-pointer"
         >
           <span 
             className="w-3 h-3 rounded-full" 
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-xs font-medium text-dark-300">
+          <span className="text-xs font-medium text-gray-600">
             {entry.value}
           </span>
-          <span className="text-xs font-bold text-white">
+          <span className="text-xs font-bold text-gray-900">
             ({entry.payload.value})
           </span>
         </button>
@@ -109,28 +109,28 @@ const WorkOrderPieChart = ({
   // If no data, show empty state
   if (chartData.length === 0 || total === 0) {
     return (
-      <div className={`bg-dark-800/50 border border-white/5 rounded-2xl p-6 ${className}`}>
-        <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+      <div className={`bg-white border border-gray-200 rounded-2xl p-6 ${className}`}>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="w-24 h-24 bg-dark-700 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-12 h-12 text-dark-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-12 h-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <p className="text-dark-400 text-sm">No work orders yet</p>
+          <p className="text-gray-500 text-sm">No work orders yet</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-dark-800/50 border border-white/5 rounded-2xl p-6 ${className}`}>
+    <div className={`bg-white border border-gray-200 rounded-2xl p-6 ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
         {showTotal && (
           <div className="text-right">
-            <p className="text-2xl font-bold text-white">{total}</p>
-            <p className="text-xs text-dark-400">Total Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{total}</p>
+            <p className="text-xs text-gray-500">Total Orders</p>
           </div>
         )}
       </div>

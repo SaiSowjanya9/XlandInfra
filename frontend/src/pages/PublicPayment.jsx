@@ -301,7 +301,7 @@ const PublicPayment = () => {
                       key={method.id}
                       className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         isSelected 
-                          ? 'border-blue-500 bg-blue-50/50' 
+                          ? 'border-blue-300 bg-blue-50/50' 
                           : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                     >
@@ -311,7 +311,7 @@ const PublicPayment = () => {
                         value={method.id}
                         checked={isSelected}
                         onChange={() => setSelectedMethod(method.id)}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-300"
                       />
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                         isSelected ? 'bg-blue-100' : 'bg-gray-100'

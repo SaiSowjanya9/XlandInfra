@@ -35,12 +35,12 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Status configuration
 const STATUS_CONFIG = {
-  draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: FileText },
+  draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: FileText },
   // 'sent' is staff language — to the customer the invoice arrived, so the badge reads Received
-  sent: { label: 'Received', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Clock },
-  paid: { label: 'Paid', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
-  partially_paid: { label: 'Partially Paid', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: AlertCircle },
-  overdue: { label: 'Overdue', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: AlertCircle },
+  sent: { label: 'Received', color: 'bg-blue-100 text-blue-600 border-blue-200', icon: Clock },
+  paid: { label: 'Paid', color: 'bg-green-100 text-green-600 border-green-200', icon: CheckCircle },
+  partially_paid: { label: 'Partially Paid', color: 'bg-amber-100 text-amber-600 border-amber-200', icon: AlertCircle },
+  overdue: { label: 'Overdue', color: 'bg-red-100 text-red-600 border-red-200', icon: AlertCircle },
   cancelled: { label: 'Cancelled', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: X }
 };
 
@@ -361,15 +361,15 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-dark-800 rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header with Step Indicator */}
         <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Make Payment</h2>
+            <h2 className="text-xl font-bold text-gray-900">Make Payment</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-dark-700 text-dark-300 hover:text-white transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -381,21 +381,21 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div key={s} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                   step >= s 
-                    ? 'bg-gold-500 text-dark-900' 
-                    : 'bg-dark-600 text-dark-400'
+                    ? 'bg-gold-500 text-gray-900' 
+                    : 'bg-gray-200 text-gray-500'
                 }`}>
                   {step > s ? <Check className="w-4 h-4" /> : s}
                 </div>
                 {s < 3 && (
-                  <div className={`w-12 h-0.5 mx-1 ${step > s ? 'bg-gold-500' : 'bg-dark-600'}`} />
+                  <div className={`w-12 h-0.5 mx-1 ${step > s ? 'bg-gold-500' : 'bg-gray-200'}`} />
                 )}
               </div>
             ))}
           </div>
-          <div className="flex justify-center gap-8 mt-2 text-xs text-dark-400">
-            <span className={step === 1 ? 'text-gold-400' : ''}>Select Method</span>
-            <span className={step === 2 ? 'text-gold-400' : ''}>Review</span>
-            <span className={step === 3 ? 'text-gold-400' : ''}>Confirm</span>
+          <div className="flex justify-center gap-8 mt-2 text-xs text-gray-500">
+            <span className={step === 1 ? 'text-gold-600' : ''}>Select Method</span>
+            <span className={step === 2 ? 'text-gold-600' : ''}>Review</span>
+            <span className={step === 3 ? 'text-gold-600' : ''}>Confirm</span>
           </div>
         </div>
 
@@ -407,7 +407,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               {/* Payment Amount — full balance or half of it */}
               {canSplit && (
                 <div className="mb-5">
-                  <h3 className="text-lg font-semibold text-white mb-3">Payment Amount</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Amount</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -415,17 +415,17 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                         !payHalf
                           ? 'bg-gold-500/10 border-gold-500/50'
-                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
+                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        !payHalf ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
+                        !payHalf ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
                       }`}>
-                        {!payHalf && <div className="w-2 h-2 rounded-full bg-dark-900" />}
+                        {!payHalf && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-white text-sm font-semibold">Pay Full Amount</p>
-                        <p className="text-dark-400 text-xs mt-0.5">{formatCurrency(balanceNum)}</p>
+                        <p className="text-gray-900 text-sm font-semibold">Pay Full Amount</p>
+                        <p className="text-gray-500 text-xs mt-0.5">{formatCurrency(balanceNum)}</p>
                       </div>
                     </button>
                     <button
@@ -434,28 +434,28 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                         payHalf
                           ? 'bg-gold-500/10 border-gold-500/50'
-                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
+                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        payHalf ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
+                        payHalf ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
                       }`}>
-                        {payHalf && <div className="w-2 h-2 rounded-full bg-dark-900" />}
+                        {payHalf && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-white text-sm font-semibold">Pay 50% Now</p>
-                        <p className="text-dark-400 text-xs mt-0.5">{formatCurrency(halfAmount)}, rest later</p>
+                        <p className="text-gray-900 text-sm font-semibold">Pay 50% Now</p>
+                        <p className="text-gray-500 text-xs mt-0.5">{formatCurrency(halfAmount)}, rest later</p>
                       </div>
                     </button>
                   </div>
 
                   {payHalf && (
                     <div className="mt-3 flex items-center gap-3 rounded-xl bg-gold-500/10 border border-gold-500/20 px-4 py-3">
-                      <Wallet className="w-5 h-5 text-gold-400 shrink-0" />
-                      <p className="text-xs text-dark-300 leading-relaxed">
-                        You will be charged <span className="text-gold-400 font-semibold">{formatCurrency(halfAmount)}</span> now.
-                        The remaining <span className="text-white font-medium">{formatCurrency(balanceNum - halfAmount)}</span> is
-                        due by <span className="text-white font-medium">{secondDue}</span> (30 days before the next service period).
+                      <Wallet className="w-5 h-5 text-gold-600 shrink-0" />
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        You will be charged <span className="text-gold-600 font-semibold">{formatCurrency(halfAmount)}</span> now.
+                        The remaining <span className="text-gray-900 font-medium">{formatCurrency(balanceNum - halfAmount)}</span> is
+                        due by <span className="text-gray-900 font-medium">{secondDue}</span> (30 days before the next service period).
                       </p>
                     </div>
                   )}
@@ -464,8 +464,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Header */}
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-white">Choose Payment Method</h3>
-                <p className="text-dark-400 text-sm">Select any one payment method to proceed</p>
+                <h3 className="text-lg font-semibold text-gray-900">Choose Payment Method</h3>
+                <p className="text-gray-500 text-sm">Select any one payment method to proceed</p>
               </div>
 
               {/* Payment Methods List */}
@@ -480,29 +480,29 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                         isSelected 
                           ? 'bg-gold-500/10 border-gold-500/50' 
-                          : 'bg-dark-700/30 border-dark-600 hover:border-dark-500'
+                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       {/* Radio Button */}
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'border-gold-500 bg-gold-500' : 'border-dark-400'
+                        isSelected ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
                       }`}>
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-dark-900" />}
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
 
                       {/* Icon */}
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'bg-gold-500/20' : 'bg-dark-600/50'
+                        isSelected ? 'bg-gold-500/20' : 'bg-gray-200'
                       }`}>
-                        <Icon className={`w-6 h-6 ${isSelected ? 'text-gold-400' : 'text-dark-300'}`} />
+                        <Icon className={`w-6 h-6 ${isSelected ? 'text-gold-600' : 'text-gray-600'}`} />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0 text-left">
-                        <p className={`font-semibold ${isSelected ? 'text-white' : 'text-dark-200'}`}>
+                        <p className={`font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
                           {method.label}
                         </p>
-                        <p className="text-xs text-dark-400 mt-0.5">{method.description}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{method.description}</p>
                         
                         {/* Payment Brand Icons */}
                         {method.badges && (
@@ -571,7 +571,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                                 {/* BHIM - Official Logo */}
                                 {badge === 'BHIM' && (
                                   <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                                    <span className="text-[#4A4A4A] text-[11px] font-bold tracking-tight">BHIM</span>
+                                    <span className="text-gray-600 text-[11px] font-bold tracking-tight">BHIM</span>
                                     <svg viewBox="0 0 20 20" className="w-4 h-4 ml-0.5">
                                       <path d="M10 2L18 10L14 10L14 18L10 14" fill="#FF9933"/>
                                       <path d="M10 6L14 10L10 10L10 14L6 10L10 10L10 6" fill="white"/>
@@ -589,29 +589,29 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                           a direct payment -- the same wording as the emailed payment link */}
                       <div className="flex-shrink-0 self-start text-right">
                         {method.feeAmount ? (<>
-                          <p className="text-[11px] text-dark-400">{method.feeText}</p>
+                          <p className="text-[11px] text-gray-500">{method.feeText}</p>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
-                            <span className="text-sm font-semibold text-white">{method.feeAmount}</span>
-                            <HelpCircle className="h-3.5 w-3.5 text-dark-400" aria-hidden="true" />
+                            <span className="text-sm font-semibold text-gray-900">{method.feeAmount}</span>
+                            <HelpCircle className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
                           </div>
                           <div className="mt-1.5 flex items-center justify-end gap-1">
                             {method.id === 'upi'
-                              ? <span className="text-[11px] font-semibold text-green-400">{method.tags[0]}</span>
-                              : <><Lock className="h-3 w-3 text-dark-400" /><span className="text-[11px] text-dark-300">{method.tags[0]}</span></>}
+                              ? <span className="text-[11px] font-semibold text-green-600">{method.tags[0]}</span>
+                              : <><Lock className="h-3 w-3 text-gray-500" /><span className="text-[11px] text-gray-600">{method.tags[0]}</span></>}
                           </div>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
-                            <Shield className="h-3 w-3 text-blue-400" />
-                            <span className="text-[11px] font-medium text-blue-400">{method.tags[1]}</span>
+                            <Shield className="h-3 w-3 text-blue-600" />
+                            <span className="text-[11px] font-medium text-blue-600">{method.tags[1]}</span>
                           </div>
                         </>) : (<>
-                          <p className="text-xs font-semibold text-green-400">{method.feeText}</p>
+                          <p className="text-xs font-semibold text-green-600">{method.feeText}</p>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            <span className="text-[11px] text-dark-300">{method.tags[0]}</span>
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <span className="text-[11px] text-gray-600">{method.tags[0]}</span>
                           </div>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            <span className="text-[11px] font-medium text-green-400">{method.tags[1]}</span>
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            <span className="text-[11px] font-medium text-green-600">{method.tags[1]}</span>
                           </div>
                         </>)}
                       </div>
@@ -623,13 +623,13 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-4 py-3 rounded-xl border border-dark-500 text-dark-300 hover:text-white hover:border-dark-400 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
                 >
                   Continue
                   <ChevronRight className="w-5 h-5" />
@@ -642,45 +642,45 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
           {step === 2 && (
             <div className="p-6">
               {/* Invoice Summary */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600 mb-4">
+              <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-dark-400 text-sm">Invoice</span>
-                  <span className="text-white font-semibold">{invoice.invoiceId}</span>
+                  <span className="text-gray-500 text-sm">Invoice</span>
+                  <span className="text-gray-900 font-semibold">{invoice.invoiceId}</span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-dark-400 text-sm">Property</span>
-                  <span className="text-white text-sm">{invoice.propertyName || invoice.propertyCode}</span>
+                  <span className="text-gray-500 text-sm">Property</span>
+                  <span className="text-gray-900 text-sm">{invoice.propertyName || invoice.propertyCode}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-dark-400 text-sm">Amount to Pay{payHalf && canSplit ? ' (50%)' : ''}</span>
-                  <span className="text-gold-400 font-bold text-lg">{formatCurrency(amountToPay)}</span>
+                  <span className="text-gray-500 text-sm">Amount to Pay{payHalf && canSplit ? ' (50%)' : ''}</span>
+                  <span className="text-gold-600 font-bold text-lg">{formatCurrency(amountToPay)}</span>
                 </div>
                 {payHalf && canSplit && (
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-dark-600">
-                    <span className="text-dark-400 text-xs">Remaining due by {secondDue}</span>
-                    <span className="text-dark-300 text-sm font-medium">{formatCurrency(balanceNum - halfAmount)}</span>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
+                    <span className="text-gray-500 text-xs">Remaining due by {secondDue}</span>
+                    <span className="text-gray-600 text-sm font-medium">{formatCurrency(balanceNum - halfAmount)}</span>
                   </div>
                 )}
               </div>
 
               {/* Selected Payment Method */}
-              <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600 mb-4">
+              <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 mb-4">
                 <div className="flex items-center gap-3">
                   {(() => {
                     const method = ALL_PAYMENT_METHODS.find(m => m.id === selectedMethod);
                     const Icon = method?.icon || CreditCard;
                     return (
                       <>
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${method?.color || 'from-dark-600 to-dark-700'}`}>
-                          <Icon className="w-5 h-5 text-white" />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${method?.color || 'from-gray-200 to-gray-100'}`}>
+                          <Icon className="w-5 h-5 text-gray-900" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-medium">{method?.label}</p>
-                          <p className="text-dark-400 text-sm">{method?.description}</p>
+                          <p className="text-gray-900 font-medium">{method?.label}</p>
+                          <p className="text-gray-500 text-sm">{method?.description}</p>
                         </div>
                         <button
                           onClick={() => setStep(1)}
-                          className="text-gold-400 text-sm hover:text-gold-300"
+                          className="text-gold-600 text-sm hover:text-gold-600"
                         >
                           Change
                         </button>
@@ -692,78 +692,78 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Bank Transfer Instructions */}
               {selectedMethod === 'bank_transfer' && (
-                <div className="bg-cyan-500/10 rounded-xl p-4 border border-cyan-500/20 mb-4">
+                <div className="bg-cyan-50 rounded-xl p-4 border border-cyan-200 mb-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Info className="w-4 h-4 text-cyan-400" />
-                    <p className="text-cyan-400 font-semibold text-sm">Bank Transfer Details</p>
+                    <Info className="w-4 h-4 text-cyan-600" />
+                    <p className="text-cyan-600 font-semibold text-sm">Bank Transfer Details</p>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-dark-400">Account Name</span>
+                      <span className="text-gray-500">Account Name</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-white">{BANK_DETAILS.accountName}</span>
-                        <button onClick={() => handleCopy(BANK_DETAILS.accountName, 'name')} className="text-cyan-400 hover:text-cyan-300">
+                        <span className="text-gray-900">{BANK_DETAILS.accountName}</span>
+                        <button onClick={() => handleCopy(BANK_DETAILS.accountName, 'name')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'name' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-dark-400">Account Number</span>
+                      <span className="text-gray-500">Account Number</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-mono">{BANK_DETAILS.accountNumber}</span>
-                        <button onClick={() => handleCopy(BANK_DETAILS.accountNumber, 'account')} className="text-cyan-400 hover:text-cyan-300">
+                        <span className="text-gray-900 font-mono">{BANK_DETAILS.accountNumber}</span>
+                        <button onClick={() => handleCopy(BANK_DETAILS.accountNumber, 'account')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'account' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-dark-400">IFSC Code</span>
+                      <span className="text-gray-500">IFSC Code</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-mono">{BANK_DETAILS.ifscCode}</span>
-                        <button onClick={() => handleCopy(BANK_DETAILS.ifscCode, 'ifsc')} className="text-cyan-400 hover:text-cyan-300">
+                        <span className="text-gray-900 font-mono">{BANK_DETAILS.ifscCode}</span>
+                        <button onClick={() => handleCopy(BANK_DETAILS.ifscCode, 'ifsc')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'ifsc' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-dark-400">Bank & Branch</span>
-                      <span className="text-white text-right">{BANK_DETAILS.bankName}, {BANK_DETAILS.branch}</span>
+                      <span className="text-gray-500">Bank & Branch</span>
+                      <span className="text-gray-900 text-right">{BANK_DETAILS.bankName}, {BANK_DETAILS.branch}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-dark-400 mt-3">
-                    Please use Invoice ID <span className="text-white font-mono">{invoice.invoiceId}</span> as payment reference
+                  <p className="text-xs text-gray-500 mt-3">
+                    Please use Invoice ID <span className="text-gray-900 font-mono">{invoice.invoiceId}</span> as payment reference
                   </p>
                 </div>
               )}
 
               {/* Cash/Cheque Instructions */}
               {(selectedMethod === 'cash' || selectedMethod === 'cheque') && (
-                <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20 mb-4">
+                <div className="bg-orange-50 rounded-xl p-4 border border-orange-200 mb-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Info className="w-4 h-4 text-orange-400" />
-                    <p className="text-orange-400 font-semibold text-sm">
+                    <Info className="w-4 h-4 text-orange-600" />
+                    <p className="text-orange-600 font-semibold text-sm">
                       {selectedMethod === 'cash' ? 'Cash Payment' : 'Cheque Payment'} Instructions
                     </p>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="text-dark-400 block text-xs mb-1">Visit our office at:</span>
-                      <p className="text-white">{OFFICE_ADDRESS.line1}</p>
-                      <p className="text-white">{OFFICE_ADDRESS.line2}</p>
-                      <p className="text-white">{OFFICE_ADDRESS.city}</p>
+                      <span className="text-gray-500 block text-xs mb-1">Visit our office at:</span>
+                      <p className="text-gray-900">{OFFICE_ADDRESS.line1}</p>
+                      <p className="text-gray-900">{OFFICE_ADDRESS.line2}</p>
+                      <p className="text-gray-900">{OFFICE_ADDRESS.city}</p>
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-orange-500/20">
-                      <span className="text-dark-400">Contact</span>
-                      <span className="text-white">{OFFICE_ADDRESS.phone}</span>
+                    <div className="flex justify-between items-center pt-2 border-t border-orange-200">
+                      <span className="text-gray-500">Contact</span>
+                      <span className="text-gray-900">{OFFICE_ADDRESS.phone}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-dark-400">Office Hours</span>
-                      <span className="text-white">{OFFICE_ADDRESS.timings}</span>
+                      <span className="text-gray-500">Office Hours</span>
+                      <span className="text-gray-900">{OFFICE_ADDRESS.timings}</span>
                     </div>
                   </div>
                   {selectedMethod === 'cheque' && (
-                    <p className="text-xs text-dark-400 mt-3">
-                      Make cheque payable to: <span className="text-white font-semibold">{BANK_DETAILS.accountName}</span>
+                    <p className="text-xs text-gray-500 mt-3">
+                      Make cheque payable to: <span className="text-gray-900 font-semibold">{BANK_DETAILS.accountName}</span>
                     </p>
                   )}
                 </div>
@@ -771,7 +771,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Security Badge for Online */}
               {isOnlineMethod && (
-                <div className="flex items-center justify-center gap-2 text-dark-400 text-xs mb-4">
+                <div className="flex items-center justify-center gap-2 text-gray-500 text-xs mb-4">
                   <Shield className="w-4 h-4" />
                   <span>Secured by Razorpay | 256-bit SSL Encryption</span>
                 </div>
@@ -779,7 +779,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Offline Payment Note */}
               {!isOnlineMethod && (
-                <div className="flex items-center gap-2 text-dark-400 text-xs mb-4 justify-center">
+                <div className="flex items-center gap-2 text-gray-500 text-xs mb-4 justify-center">
                   <Info className="w-4 h-4" />
                   <span>Payment will be verified by our team within 24-48 hours</span>
                 </div>
@@ -788,7 +788,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dark-500 text-dark-300 hover:text-white hover:border-dark-400 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                   Back
@@ -796,7 +796,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                 <button
                   onClick={handlePayment}
                   disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -825,10 +825,10 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               {paymentStatus === 'processing' && (
                 <div className="text-center py-8">
                   <div className="w-20 h-20 bg-gold-600/20 border border-gold-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Loader2 className="w-10 h-10 text-gold-400 animate-spin" />
+                    <Loader2 className="w-10 h-10 text-gold-600 animate-spin" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Processing Payment</h3>
-                  <p className="text-dark-300">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing Payment</h3>
+                  <p className="text-gray-600">
                     {isOnlineMethod ? 'Please complete the payment in the popup window...' : 'Submitting your payment details...'}
                   </p>
                 </div>
@@ -836,32 +836,32 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {paymentStatus === 'success' && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-green-600/20 border border-green-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle className="w-10 h-10 text-green-400" />
+                  <div className="w-20 h-20 bg-green-100 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="w-10 h-10 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Payment Successful!</h3>
-                  <p className="text-dark-300 mb-6">Your payment has been processed successfully.</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Successful!</h3>
+                  <p className="text-gray-600 mb-6">Your payment has been processed successfully.</p>
                   
                   {paymentDetails && (
-                    <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600 text-left mb-6">
+                    <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 text-left mb-6">
                       <div className="flex justify-between mb-2">
-                        <span className="text-dark-400 text-sm">Amount Paid</span>
-                        <span className="text-green-400 font-semibold">{formatCurrency(paymentDetails.amount)}</span>
+                        <span className="text-gray-500 text-sm">Amount Paid</span>
+                        <span className="text-green-600 font-semibold">{formatCurrency(paymentDetails.amount)}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-dark-400 text-sm">Invoice</span>
-                        <span className="text-white text-sm">{paymentDetails.invoiceId}</span>
+                        <span className="text-gray-500 text-sm">Invoice</span>
+                        <span className="text-gray-900 text-sm">{paymentDetails.invoiceId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-dark-400 text-sm">Transaction ID</span>
-                        <span className="text-white text-sm font-mono">{paymentDetails.paymentId}</span>
+                        <span className="text-gray-500 text-sm">Transaction ID</span>
+                        <span className="text-gray-900 text-sm font-mono">{paymentDetails.paymentId}</span>
                       </div>
                     </div>
                   )}
 
                   <button
                     onClick={onClose}
-                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
                   >
                     Done
                   </button>
@@ -871,40 +871,40 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               {/* Offline Payment Submitted */}
               {paymentStatus === 'submitted' && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-blue-600/20 border border-blue-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle className="w-10 h-10 text-blue-400" />
+                  <div className="w-20 h-20 bg-blue-100 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="w-10 h-10 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Payment Details Submitted!</h3>
-                  <p className="text-dark-300 mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Details Submitted!</h3>
+                  <p className="text-gray-600 mb-6">
                     {selectedMethod === 'bank_transfer' 
                       ? 'Please complete the bank transfer using the details provided. Your payment will be verified within 24-48 hours.'
                       : 'Please visit our office to complete the payment. Your invoice details have been recorded.'}
                   </p>
                   
                   {paymentDetails && (
-                    <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600 text-left mb-6">
+                    <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 text-left mb-6">
                       <div className="flex justify-between mb-2">
-                        <span className="text-dark-400 text-sm">Amount</span>
-                        <span className="text-white font-semibold">{formatCurrency(paymentDetails.amount)}</span>
+                        <span className="text-gray-500 text-sm">Amount</span>
+                        <span className="text-gray-900 font-semibold">{formatCurrency(paymentDetails.amount)}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-dark-400 text-sm">Invoice</span>
-                        <span className="text-white text-sm">{paymentDetails.invoiceId}</span>
+                        <span className="text-gray-500 text-sm">Invoice</span>
+                        <span className="text-gray-900 text-sm">{paymentDetails.invoiceId}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-dark-400 text-sm">Payment Method</span>
-                        <span className="text-white text-sm">{paymentDetails.method}</span>
+                        <span className="text-gray-500 text-sm">Payment Method</span>
+                        <span className="text-gray-900 text-sm">{paymentDetails.method}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-dark-400 text-sm">Reference ID</span>
-                        <span className="text-white text-sm font-mono">{paymentDetails.referenceId}</span>
+                        <span className="text-gray-500 text-sm">Reference ID</span>
+                        <span className="text-gray-900 text-sm font-mono">{paymentDetails.referenceId}</span>
                       </div>
                     </div>
                   )}
 
                   <button
                     onClick={onClose}
-                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
                   >
                     Done
                   </button>
@@ -913,16 +913,16 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {paymentStatus === 'failed' && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-red-600/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <X className="w-10 h-10 text-red-400" />
+                  <div className="w-20 h-20 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <X className="w-10 h-10 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Payment Failed</h3>
-                  <p className="text-dark-300 mb-6">Something went wrong. Please try again.</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Failed</h3>
+                  <p className="text-gray-600 mb-6">Something went wrong. Please try again.</p>
                   
                   <div className="flex gap-3">
                     <button
                       onClick={onClose}
-                      className="flex-1 px-4 py-3 rounded-xl border border-dark-500 text-dark-300 hover:text-white hover:border-dark-400 transition-colors"
+                      className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
                     >
                       Cancel
                     </button>
@@ -931,7 +931,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                         setStep(1);
                         setPaymentStatus(null);
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all"
+                      className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
                     >
                       Try Again
                     </button>
@@ -958,17 +958,17 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
   const addons = (invoice.lineItems || []).filter(item => item.type === 'addon');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-dark-800 rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">Invoice Details</h2>
-            <p className="text-gold-400 text-sm">{invoice.invoiceId}</p>
+            <h2 className="text-xl font-bold text-gray-900">Invoice Details</h2>
+            <p className="text-gold-600 text-sm">{invoice.invoiceId}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-dark-700 text-dark-300 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -991,12 +991,12 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
             </div>
             <div className="flex gap-6 text-sm">
               <div>
-                <span className="text-dark-400">Invoice Date:</span>
-                <span className="ml-2 text-white font-medium">{formatDate(invoice.invoiceDate)}</span>
+                <span className="text-gray-500">Invoice Date:</span>
+                <span className="ml-2 text-gray-900 font-medium">{formatDate(invoice.invoiceDate)}</span>
               </div>
               <div>
-                <span className={isOverdue && !isPaid ? 'text-red-400' : 'text-dark-400'}>Due Date:</span>
-                <span className={`ml-2 font-medium ${isOverdue && !isPaid ? 'text-red-400' : 'text-white'}`}>
+                <span className={isOverdue && !isPaid ? 'text-red-600' : 'text-gray-500'}>Due Date:</span>
+                <span className={`ml-2 font-medium ${isOverdue && !isPaid ? 'text-red-600' : 'text-gray-900'}`}>
                   {formatDate(invoice.dueDate)}
                 </span>
               </div>
@@ -1004,42 +1004,42 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           </div>
 
           {/* Customer & Property Info - Combined */}
-          <div className="bg-dark-700/50 rounded-xl p-4 border border-dark-600">
+          <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
               {invoice.customerName && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Customer:</span>
-                  <span className="text-white">{invoice.customerName}</span>
+                  <span className="text-gray-500">Customer:</span>
+                  <span className="text-gray-900">{invoice.customerName}</span>
                 </div>
               )}
               {invoice.propertyCode && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Property ID:</span>
-                  <span className="text-white">{invoice.propertyCode}</span>
+                  <span className="text-gray-500">Property ID:</span>
+                  <span className="text-gray-900">{invoice.propertyCode}</span>
                 </div>
               )}
               {invoice.customerEmail && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Email:</span>
-                  <span className="text-white truncate">{invoice.customerEmail}</span>
+                  <span className="text-gray-500">Email:</span>
+                  <span className="text-gray-900 truncate">{invoice.customerEmail}</span>
                 </div>
               )}
               {invoice.propertyName && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Property:</span>
-                  <span className="text-white">{invoice.propertyName}</span>
+                  <span className="text-gray-500">Property:</span>
+                  <span className="text-gray-900">{invoice.propertyName}</span>
                 </div>
               )}
               {invoice.customerPhone && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Phone:</span>
-                  <span className="text-white">{invoice.customerPhone}</span>
+                  <span className="text-gray-500">Phone:</span>
+                  <span className="text-gray-900">{invoice.customerPhone}</span>
                 </div>
               )}
               {invoice.propertyType && (
                 <div className="flex gap-2">
-                  <span className="text-dark-400">Type:</span>
-                  <span className="text-white">{invoice.propertyType}</span>
+                  <span className="text-gray-500">Type:</span>
+                  <span className="text-gray-900">{invoice.propertyType}</span>
                 </div>
               )}
             </div>
@@ -1047,22 +1047,22 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
 
           {/* Work Order Details (for work order invoices) */}
           {invoice.invoiceType === 'work_order' && invoice.workOrderId && (
-            <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
-              <h3 className="text-sm font-semibold text-blue-400 mb-3 flex items-center gap-2">
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <h3 className="text-sm font-semibold text-blue-600 mb-3 flex items-center gap-2">
                 <Briefcase className="w-4 h-4" /> Work Order Details
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-dark-400 block text-xs">Work Order ID</span>
-                  <span className="text-white font-medium">{invoice.workOrderId}</span>
+                  <span className="text-gray-500 block text-xs">Work Order ID</span>
+                  <span className="text-gray-900 font-medium">{invoice.workOrderId}</span>
                 </div>
                 <div>
-                  <span className="text-dark-400 block text-xs">Category</span>
-                  <span className="text-white">{invoice.workOrderCategory || '-'}</span>
+                  <span className="text-gray-500 block text-xs">Category</span>
+                  <span className="text-gray-900">{invoice.workOrderCategory || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-dark-400 block text-xs">Subcategory</span>
-                  <span className="text-white">{invoice.workOrderSubcategory || '-'}</span>
+                  <span className="text-gray-500 block text-xs">Subcategory</span>
+                  <span className="text-gray-900">{invoice.workOrderSubcategory || '-'}</span>
                 </div>
               </div>
             </div>
@@ -1071,28 +1071,28 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           {/* Services Table */}
           {services.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gold-400 mb-3">Services Included</h3>
-              <div className="bg-dark-700/30 rounded-xl border border-dark-600 overflow-hidden">
+              <h3 className="text-sm font-semibold text-gold-600 mb-3">Services Included</h3>
+              <div className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-dark-700/50 border-b border-dark-600">
-                      <th className="px-4 py-3 text-left text-dark-300 font-medium">#</th>
-                      <th className="px-4 py-3 text-left text-dark-300 font-medium">Service</th>
-                      <th className="px-4 py-3 text-center text-dark-300 font-medium">Frequency</th>
-                      <th className="px-4 py-3 text-right text-dark-300 font-medium">Visits</th>
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-gray-600 font-medium">#</th>
+                      <th className="px-4 py-3 text-left text-gray-600 font-medium">Service</th>
+                      <th className="px-4 py-3 text-center text-gray-600 font-medium">Frequency</th>
+                      <th className="px-4 py-3 text-right text-gray-600 font-medium">Visits</th>
                     </tr>
                   </thead>
                   <tbody>
                     {services.map((item, idx) => (
-                      <tr key={idx} className="border-b border-dark-600/50 last:border-0">
-                        <td className="px-4 py-3 text-dark-400">{idx + 1}</td>
+                      <tr key={idx} className="border-b border-gray-200 last:border-0">
+                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
                         <td className="px-4 py-3">
-                          <span className="text-white font-medium">{item.name || item.description || 'Service'}</span>
+                          <span className="text-gray-900 font-medium">{item.name || item.description || 'Service'}</span>
                         </td>
-                        <td className="px-4 py-3 text-center text-dark-300">
+                        <td className="px-4 py-3 text-center text-gray-600">
                           {item.frequency || item.frequencyType || '-'}
                         </td>
-                        <td className="px-4 py-3 text-right text-white">
+                        <td className="px-4 py-3 text-right text-gray-900">
                           {item.visits || item.frequencyCount || item.quantity || 1}
                         </td>
                       </tr>
@@ -1105,37 +1105,37 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
 
           {/* Price Summary */}
           <div className="bg-gradient-to-br from-gold-600/10 to-gold-500/5 rounded-xl p-5 border border-gold-600/20">
-            <h3 className="text-sm font-semibold text-gold-400 mb-4">Price Summary</h3>
+            <h3 className="text-sm font-semibold text-gold-600 mb-4">Price Summary</h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-dark-300">Subtotal</span>
-                <span className="text-white">{formatCurrency(invoice.subtotal)}</span>
+                <span className="text-gray-600">Subtotal</span>
+                <span className="text-gray-900">{formatCurrency(invoice.subtotal)}</span>
               </div>
               {invoice.discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-green-400">Discount ({invoice.discountPercentage || 0}%)</span>
-                  <span className="text-green-400">-{formatCurrency(invoice.discountAmount)}</span>
+                  <span className="text-green-600">Discount ({invoice.discountPercentage || 0}%)</span>
+                  <span className="text-green-600">-{formatCurrency(invoice.discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
-                <span className="text-dark-300">GST ({parseFloat(invoice.taxPercentage) || 0}%)</span>
-                <span className="text-white">{formatCurrency(invoice.taxAmount)}</span>
+                <span className="text-gray-600">GST ({parseFloat(invoice.taxPercentage) || 0}%)</span>
+                <span className="text-gray-900">{formatCurrency(invoice.taxAmount)}</span>
               </div>
               <div className="border-t border-gold-600/20 pt-3">
                 <div className="flex justify-between">
-                  <span className="text-white font-semibold">Total Amount</span>
-                  <span className="text-gold-400 text-lg font-bold">{formatCurrency(invoice.totalAmount)}</span>
+                  <span className="text-gray-900 font-semibold">Total Amount</span>
+                  <span className="text-gold-600 text-lg font-bold">{formatCurrency(invoice.totalAmount)}</span>
                 </div>
               </div>
               {invoice.amountPaid > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-green-400">Amount Paid</span>
-                    <span className="text-green-400">{formatCurrency(invoice.amountPaid)}</span>
+                    <span className="text-green-600">Amount Paid</span>
+                    <span className="text-green-600">{formatCurrency(invoice.amountPaid)}</span>
                   </div>
                   <div className="flex justify-between border-t border-gold-600/20 pt-3">
-                    <span className="text-white font-semibold">Balance Due</span>
-                    <span className="text-red-400 text-lg font-bold">{formatCurrency(invoice.balanceAmount)}</span>
+                    <span className="text-gray-900 font-semibold">Balance Due</span>
+                    <span className="text-red-600 text-lg font-bold">{formatCurrency(invoice.balanceAmount)}</span>
                   </div>
                 </>
               )}
@@ -1144,10 +1144,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
         </div>
 
         {/* Footer with Actions */}
-        <div className="px-6 py-4 border-t border-dark-600 bg-dark-800/80 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl border border-dark-500 text-dark-300 hover:text-white hover:border-dark-400 transition-colors"
+            className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
           >
             Close
           </button>
@@ -1155,7 +1155,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           {!isPaid && invoice.balanceAmount > 0 && (
             <button
               onClick={() => onPay(invoice)}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-dark-900 font-semibold transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
             >
               <CreditCard className="w-5 h-5" />
               Pay Now
@@ -1288,48 +1288,48 @@ const Payment = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           Payments & Invoices
         </h1>
-        <p className="text-dark-300">
+        <p className="text-gray-600">
           View and pay your invoices securely
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-dark-800/80 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-blue-400" />
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Receipt className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-dark-400 text-sm">Total Invoices</p>
-              <p className="text-2xl font-bold text-white">{displayedInvoices.length}</p>
+              <p className="text-gray-500 text-sm">Total Invoices</p>
+              <p className="text-2xl font-bold text-gray-900">{displayedInvoices.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-dark-800/80 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-400" />
+            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-dark-400 text-sm">Pending Amount</p>
-              <p className="text-2xl font-bold text-amber-400">{formatCurrency(totalPending)}</p>
+              <p className="text-gray-500 text-sm">Pending Amount</p>
+              <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-dark-800/80 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-400" />
+            <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-dark-400 text-sm">Total Paid</p>
-              <p className="text-2xl font-bold text-green-400">{formatCurrency(totalPaid)}</p>
+              <p className="text-gray-500 text-sm">Total Paid</p>
+              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
             </div>
           </div>
         </div>
@@ -1339,26 +1339,26 @@ const Payment = () => {
       <div className="flex items-center gap-3 mb-6">
         <label htmlFor="invoice-filter" className="sr-only">Show invoices</label>
         <div className="relative">
-          <Filter className="w-4 h-4 text-dark-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Filter className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <select
             id="invoice-filter"
             value={invoiceFilter}
             onChange={(e) => setInvoiceFilter(e.target.value)}
-            className="appearance-none pl-9 pr-9 py-2.5 rounded-xl bg-dark-800/50 border border-dark-600 text-white font-medium hover:border-dark-500 focus:outline-none focus:border-gold-500/50 transition-colors"
+            className="appearance-none pl-9 pr-9 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 font-medium hover:border-gray-300 focus:outline-none focus:border-gold-500/50 transition-colors"
           >
             {INVOICE_FILTERS.map(option => (
-              <option key={option.value} value={option.value} className="bg-dark-800">
+              <option key={option.value} value={option.value} className="bg-white">
                 {option.label} ({option.count})
               </option>
             ))}
           </select>
-          <ChevronDown className="w-4 h-4 text-dark-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
 
         <button
           onClick={fetchInvoices}
           disabled={loading}
-          className="ml-auto p-2.5 rounded-xl bg-dark-800/50 border border-dark-600 text-dark-300 hover:text-white hover:border-dark-500 transition-colors disabled:opacity-50"
+          className="ml-auto p-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors disabled:opacity-50"
           title="Refresh"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1366,22 +1366,22 @@ const Payment = () => {
       </div>
 
       {/* Invoice List */}
-      <div className="bg-dark-800/80 rounded-2xl shadow-lg border border-gold-600/20 overflow-hidden">
+      <div className="bg-gray-200 rounded-2xl shadow-lg border border-gold-600/20 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <RefreshCw className="w-8 h-8 text-gold-400 animate-spin mx-auto mb-3" />
-              <p className="text-dark-300">Loading invoices...</p>
+              <RefreshCw className="w-8 h-8 text-gold-600 animate-spin mx-auto mb-3" />
+              <p className="text-gray-600">Loading invoices...</p>
             </div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-              <p className="text-dark-300">{error}</p>
+              <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+              <p className="text-gray-600">{error}</p>
               <button
                 onClick={fetchInvoices}
-                className="mt-4 px-4 py-2 rounded-lg bg-gold-600/20 text-gold-400 hover:bg-gold-600/30 transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg bg-gold-600/20 text-gold-600 hover:bg-gold-600/30 transition-colors"
               >
                 Try Again
               </button>
@@ -1390,15 +1390,15 @@ const Payment = () => {
         ) : displayedInvoices.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <FileText className="w-12 h-12 text-dark-500 mx-auto mb-3" />
-              <p className="text-dark-300">
+              <FileText className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-600">
                 No {invoiceFilter === 'amc' ? 'AMC ' : invoiceFilter === 'workorder' ? 'work order ' : ''}invoices found
               </p>
-              <p className="text-dark-500 text-sm mt-1">Invoices will appear here once generated</p>
+              <p className="text-gray-500 text-sm mt-1">Invoices will appear here once generated</p>
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-dark-600/50">
+          <div className="divide-y divide-gray-200">
             {displayedInvoices.map((invoice) => {
               const isPaid = invoice.status === 'paid' || invoice.balanceAmount <= 0;
               const isOverdue = invoice.status === 'overdue' || (invoice.dueDate && new Date(invoice.dueDate) < new Date() && !isPaid);
@@ -1409,44 +1409,44 @@ const Payment = () => {
               return (
                 <div
                   key={invoice.id}
-                  className="p-4 sm:p-5 hover:bg-dark-700/30 transition-colors cursor-pointer"
+                  className="p-4 sm:p-5 hover:bg-gray-100 transition-colors cursor-pointer"
                   onClick={() => fetchInvoiceDetails(invoice.id)}
                 >
                   <div className="flex items-center gap-4">
                     {/* Invoice Icon. Read from the invoice itself, not from the filter: on All
                         the two kinds sit in one list, and the icon is what tells them apart. */}
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      isWorkOrder ? 'bg-blue-500/20' : 'bg-gold-600/20'
+                      isWorkOrder ? 'bg-blue-100' : 'bg-gold-600/20'
                     }`}>
                       {isWorkOrder ? (
-                        <Briefcase className="w-6 h-6 text-blue-400" />
+                        <Briefcase className="w-6 h-6 text-blue-600" />
                       ) : (
-                        <FileText className="w-6 h-6 text-gold-400" />
+                        <FileText className="w-6 h-6 text-gold-600" />
                       )}
                     </div>
 
                     {/* Invoice Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-white font-semibold">{invoice.invoiceId}</h3>
+                        <h3 className="text-gray-900 font-semibold">{invoice.invoiceId}</h3>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_CONFIG[invoice.status]?.color || STATUS_CONFIG.draft.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {STATUS_CONFIG[invoice.status]?.label || invoice.status}
                           {invoice.status === 'partially_paid' && paidPct > 0 && ` (${paidPct}%)`}
                         </span>
                       </div>
-                      <p className="text-dark-400 text-sm truncate">
+                      <p className="text-gray-500 text-sm truncate">
                         {invoice.propertyName || invoice.propertyCode || 'Property'}
                         {invoice.invoiceType === 'work_order' && invoice.workOrderId && (
-                          <span className="ml-2 text-blue-400">• WO: {invoice.workOrderId}</span>
+                          <span className="ml-2 text-blue-600">• WO: {invoice.workOrderId}</span>
                         )}
                       </p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-dark-500">
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {formatDate(invoice.invoiceDate)}
                         </span>
-                        <span className={`flex items-center gap-1 ${isOverdue && !isPaid ? 'text-red-400' : ''}`}>
+                        <span className={`flex items-center gap-1 ${isOverdue && !isPaid ? 'text-red-600' : ''}`}>
                           <Clock className="w-3 h-3" />
                           Due: {formatDate(invoice.dueDate)}
                         </span>
@@ -1455,19 +1455,19 @@ const Payment = () => {
 
                     {/* Amount & Action */}
                     <div className="text-right">
-                      <p className="text-lg font-bold text-white">{formatCurrency(invoice.totalAmount)}</p>
+                      <p className="text-lg font-bold text-gray-900">{formatCurrency(invoice.totalAmount)}</p>
                       {!isPaid && invoice.balanceAmount > 0 && (
-                        <p className="text-sm text-amber-400">Due: {formatCurrency(invoice.balanceAmount)}</p>
+                        <p className="text-sm text-amber-600">Due: {formatCurrency(invoice.balanceAmount)}</p>
                       )}
                       {isPaid && (
-                        <p className="text-sm text-green-400 flex items-center justify-end gap-1">
+                        <p className="text-sm text-green-600 flex items-center justify-end gap-1">
                           <CheckCircle className="w-3 h-3" /> Paid
                         </p>
                       )}
                     </div>
 
                     {/* Arrow */}
-                    <ChevronRight className="w-5 h-5 text-dark-500" />
+                    <ChevronRight className="w-5 h-5 text-gray-500" />
                   </div>
                 </div>
               );
