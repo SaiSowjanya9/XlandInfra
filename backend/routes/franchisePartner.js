@@ -7019,7 +7019,10 @@ const TRACKER_OTHER_FIELDS = {
 };
 
 const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email,
-  property_type, property_name, total_units, created_at, created_by_name, created_by_role,
+  property_type, property_name, total_units,
+  number_of_blocks, units_per_block, block_names, block_unit_types,
+  tower_name, block_number, villa_plot_number,
+  created_at, created_by_name, created_by_role,
   lead_source, priority,
   maintenance_system, maintenance_system_other,
   proposal_given, proposal_given_other,

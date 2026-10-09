@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText
+  ClipboardList, FileText, Building2
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
@@ -398,6 +398,105 @@ const FPMarketingTracker = ({ user }) => {
                   <div className="min-w-0"><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{getPropertyTypeLabel(editing.property_type)}</div></div>
                   <div className="min-w-0"><label className={labelCls}>No. of Units</label><div className={readOnlyCls}>{editing.total_units ?? '-'}</div></div>
                 </div>
+
+                {/* Unit details by property type - the same block/unit split the estimate form shows */}
+                {(() => {
+                  const propType = (editing.property_type || '').toUpperCase();
+                  const parseJson = (v) => {
+                    if (!v) return {};
+                    if (typeof v === 'object') return v;
+                    try { return JSON.parse(v); } catch { return {}; }
+                  };
+                  const blockNames = parseJson(editing.block_names);
+                  const unitsPerBlock = parseJson(editing.units_per_block);
+                  const blockUnitTypes = parseJson(editing.block_unit_types);
+                  const unitTypeLabels = { studio: 'Studio', oneBed: '1 BHK', twoBed: '2 BHK', threeBed: '3 BHK', fourBed: '4 BHK' };
+
+                  // FLAT / VILLA / PLOT - the unit's own number
+                  if (['FLAT', 'FL', 'FLATS'].includes(propType) || ['VILLA', 'VL', 'VILLAS'].includes(propType) || ['PLOT', 'PL', 'PLOTS'].includes(propType)) {
+                    if (!editing.villa_plot_number) return null;
+                    const unitLabel = propType.startsWith('FLAT') || propType === 'FL' ? 'Flat Number' : propType.startsWith('VILLA') || propType === 'VL' ? 'Villa Number' : 'Plot Number';
+                    return (
+                      <div className="mt-4 pt-4 border-t border-warm-border/70">
+                        <div className="max-w-xs">
+                          <label className={labelCls}>{unitLabel}</label>
+                          <div className={`${readOnlyCls} bg-white`}>{decodeEntities(editing.villa_plot_number)}</div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const numBlocks = editing.number_of_blocks || Object.keys(blockNames).length || 1;
+
+                  // GC/APT with several blocks - one card per block
+                  if (numBlocks > 1 || Object.keys(blockNames).length > 0) {
+                    return (
+                      <div className="mt-4 pt-4 border-t border-warm-border/70">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Building2 className="w-4 h-4 text-warm-muted" />
+                          <span className="text-sm font-medium text-warm-text">Block Details</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                            const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
+                            const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
+                            return (
+                              <div key={blockNum} className="bg-white border border-warm-border rounded-[10px] p-3">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="min-w-0 pr-2">
+                                    <label className="block text-xs font-medium text-warm-muted mb-1">Block Name</label>
+                                    <p className="text-sm font-semibold text-warm-text [overflow-wrap:anywhere]">{decodeEntities(blockNames?.[blockNum] || blockNames?.[String(blockNum)]) || `Block ${blockNum}`}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <label className="block text-xs font-medium text-warm-muted mb-1">Units</label>
+                                    <p className="text-sm font-medium text-warm-text">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</p>
+                                  </div>
+                                </div>
+                                {hasUnitTypes && (
+                                  <div className="flex flex-wrap gap-1 pt-2 border-t border-warm-border/70">
+                                    {Object.entries(unitTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                                      <span key={type} className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">
+                                        {unitTypeLabels[type] || type}: {count}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Single block (APT): tower/building name + block number
+                  if (editing.tower_name || editing.block_number) {
+                    const aptTypes = blockUnitTypes?.['apt'] || blockUnitTypes?.[1] || blockUnitTypes?.['1'] || {};
+                    const hasAptTypes = Object.values(aptTypes).some(v => v > 0);
+                    return (
+                      <div className="mt-4 pt-4 border-t border-warm-border/70">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {editing.tower_name && (
+                            <div className="min-w-0"><label className={labelCls}>Tower / Building Name</label><div className={`${readOnlyCls} bg-white`}>{decodeEntities(editing.tower_name)}</div></div>
+                          )}
+                          {editing.block_number && (
+                            <div className="min-w-0"><label className={labelCls}>Block Number</label><div className={`${readOnlyCls} bg-white`}>{decodeEntities(editing.block_number)}</div></div>
+                          )}
+                        </div>
+                        {hasAptTypes && (
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {Object.entries(aptTypes).filter(([, count]) => count > 0).map(([type, count]) => (
+                              <span key={type} className="px-2 py-0.5 bg-warm-accent-soft text-warm-text text-xs rounded-full border border-warm-border">
+                                {unitTypeLabels[type] || type}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Editable answers */}
