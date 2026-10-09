@@ -96,7 +96,7 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
       <SEO 
         title="Login - HomeHub Customer Portal"
         description="Login to your XLAND INFRA HomeHub customer portal. Access project details, track construction progress, and manage your property investments."
@@ -110,30 +110,30 @@ const Login = ({ onLogin }) => {
       </div>
 
       {/* Back to Home */}
-      <Link to="/" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-400 hover:text-gold-300 transition-colors z-10">
+      <Link to="/" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-600 hover:text-gold-700 transition-colors z-10">
         <ArrowLeft className="w-5 h-5" />
         <span className="font-medium">Back to Home</span>
       </Link>
 
-      <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
+      <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
             <BrandLogo size="lg" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Customer Portal</h1>
-          <p className="text-dark-300 mt-2">Sign in to your account</p>
+          <h1 className="text-2xl font-bold text-gray-900">Customer Portal</h1>
+          <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
 
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="input-field"
+                className="portal-field"
                 placeholder="your.email@example.com"
                 required
               />
@@ -141,10 +141,10 @@ const Login = ({ onLogin }) => {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-dark-200">Password</label>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-sm text-gold-400 hover:text-gold-300 font-medium"
+                  className="text-sm text-gold-600 hover:text-gold-700 font-medium"
                 >
                   Forgot Password?
                 </Link>
@@ -154,14 +154,14 @@ const Login = ({ onLogin }) => {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="input-field pr-12"
+                  className="portal-field pr-12"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-gray-500 hover:text-gold-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -170,28 +170,28 @@ const Login = ({ onLogin }) => {
 
             {/* Email Resent Success */}
             {emailResent && (
-              <div className="p-3 bg-green-900/30 border border-green-500/50 rounded-lg flex items-start space-x-2 text-green-400">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start space-x-2 text-green-600">
                 <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium">Activation email sent!</p>
-                  <p className="text-green-400/80">Check your inbox for the activation link.</p>
+                  <p className="text-green-600/80">Check your inbox for the activation link.</p>
                 </div>
               </div>
             )}
 
             {/* Not Activated Warning */}
             {notActivated && (
-              <div className="p-3 bg-amber-900/30 border border-amber-500/50 rounded-lg">
-                <div className="flex items-start space-x-2 text-amber-400">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-2 text-amber-600">
                   <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div className="text-sm flex-1">
                     <p className="font-medium mb-1">Account Not Activated</p>
-                    <p className="text-amber-400/80 mb-3">{error}</p>
+                    <p className="text-amber-600/80 mb-3">{error}</p>
                     <button
                       type="button"
                       onClick={handleResendActivation}
                       disabled={resendingEmail}
-                      className="text-amber-300 hover:text-amber-200 font-medium underline underline-offset-2"
+                      className="text-amber-600 hover:text-amber-200 font-medium underline underline-offset-2"
                     >
                       {resendingEmail ? 'Sending...' : 'Resend Activation Email'}
                     </button>
@@ -202,7 +202,7 @@ const Login = ({ onLogin }) => {
 
             {/* General Error */}
             {error && !notActivated && !emailResent && (
-              <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg flex items-center space-x-2 text-red-400">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-600">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -211,18 +211,18 @@ const Login = ({ onLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-dark-900 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+              className="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-gray-200 border-t-transparent rounded-full animate-spin" />
               ) : (
                 'Sign In'
               )}
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-dark-700/50 rounded-lg border border-dark-600">
-            <p className="text-xs text-dark-400 text-center">
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg border border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
               <button
                 onClick={() => {
                   navigate('/');
@@ -230,7 +230,7 @@ const Login = ({ onLogin }) => {
                     document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }, 150);
                 }}
-                className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2"
+                className="text-gold-600 hover:text-gold-700 font-semibold underline underline-offset-2"
               >
                 Need an account?
               </button>{' '}

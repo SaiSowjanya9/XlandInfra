@@ -43,7 +43,7 @@ const ForgotPassword = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
         <SEO 
           title="Check Your Email - XLAND INFRA"
           description="Password reset instructions have been sent to your email."
@@ -53,7 +53,7 @@ const ForgotPassword = () => {
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gold-600/10 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
+        <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
           <div className="px-6 py-8 text-center border-b border-gold-600/20">
             <div className="flex justify-center mb-4">
               <BrandLogo size="lg" />
@@ -61,19 +61,19 @@ const ForgotPassword = () => {
           </div>
 
           <div className="p-6 text-center">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-400" />
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Check Your Email</h2>
-            <p className="text-dark-300 mb-6">
-              If an account exists with <span className="text-gold-400">{email}</span>, you will receive password reset instructions shortly.
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+            <p className="text-gray-600 mb-6">
+              If an account exists with <span className="text-gold-600">{email}</span>, you will receive password reset instructions shortly.
             </p>
-            <p className="text-dark-400 text-sm mb-6">
-              The reset link will expire in <span className="text-gold-400 font-semibold">48 hours</span>.
+            <p className="text-gray-500 text-sm mb-6">
+              The reset link will expire in <span className="text-gold-600 font-semibold">48 hours</span>.
             </p>
             <Link
               to="/login"
-              className="inline-flex items-center space-x-2 text-gold-400 hover:text-gold-300 font-medium"
+              className="inline-flex items-center space-x-2 text-gold-600 hover:text-gold-700 font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Login</span>
@@ -85,7 +85,7 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
       <SEO 
         title="Forgot Password - HomeHub Customer Portal"
         description="Reset your XLAND INFRA HomeHub customer portal password."
@@ -95,31 +95,31 @@ const ForgotPassword = () => {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gold-600/10 rounded-full blur-3xl"></div>
       </div>
 
-      <Link to="/login" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-400 hover:text-gold-300 transition-colors z-10">
+      <Link to="/login" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-600 hover:text-gold-700 transition-colors z-10">
         <ArrowLeft className="w-5 h-5" />
         <span className="font-medium">Back to Login</span>
       </Link>
 
-      <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
+      <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
             <BrandLogo size="lg" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Forgot Password?</h1>
-          <p className="text-dark-300 mt-2">Enter your email to reset your password</p>
+          <h1 className="text-2xl font-bold text-gray-900">Forgot Password?</h1>
+          <p className="text-gray-600 mt-2">Enter your email to reset your password</p>
         </div>
 
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field !pl-11"
+                  className="portal-field !pl-11"
                   placeholder="Enter your email address"
                   required
                 />
@@ -127,19 +127,19 @@ const ForgotPassword = () => {
             </div>
 
             {notActivated && (
-              <div className="p-3 bg-amber-900/30 border border-amber-500/50 rounded-lg">
-                <div className="flex items-start space-x-2 text-amber-400">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-2 text-amber-600">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-medium mb-1">Account Not Activated</p>
-                    <p className="text-amber-400/80">{error}</p>
+                    <p className="text-amber-600/80">{error}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {error && !notActivated && (
-              <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg flex items-center space-x-2 text-red-400">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-600">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -148,10 +148,10 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-dark-900 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+              className="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-gray-200 border-t-transparent rounded-full animate-spin" />
               ) : (
                 'Send Reset Link'
               )}
@@ -159,9 +159,9 @@ const ForgotPassword = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-dark-400 text-sm">
+            <p className="text-gray-500 text-sm">
               Remember your password?{' '}
-              <Link to="/login" className="text-gold-400 hover:text-gold-300 font-medium">
+              <Link to="/login" className="text-gold-600 hover:text-gold-700 font-medium">
                 Sign in
               </Link>
             </p>

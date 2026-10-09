@@ -82,7 +82,7 @@ const EstimateAction = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <AlertTriangle className="w-16 h-16 text-red-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Error</h1>
           <p className="text-gray-600">{error}</p>
         </div>
@@ -94,9 +94,9 @@ const EstimateAction = () => {
   const normalizedStatus = estimate?.status?.toLowerCase();
   if (estimate && ['approved', 'rejected', 'expired'].includes(normalizedStatus) && !result) {
     const statusConfig = {
-      approved: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50', text: 'has been approved', label: 'Approved' },
-      rejected: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', text: 'has been rejected', label: 'Rejected' },
-      expired: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50', text: 'has expired', label: 'Expired' }
+      approved: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', text: 'has been approved', label: 'Approved' },
+      rejected: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', text: 'has been rejected', label: 'Rejected' },
+      expired: { icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50', text: 'has expired', label: 'Expired' }
     };
     const config = statusConfig[normalizedStatus];
     const Icon = config.icon;
@@ -136,9 +136,9 @@ const EstimateAction = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className={`w-20 h-20 ${isApproved ? 'bg-green-50' : 'bg-red-50'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {isApproved ? (
-              <CheckCircle className="w-12 h-12 text-green-500" />
+              <CheckCircle className="w-12 h-12 text-green-600" />
             ) : (
-              <XCircle className="w-12 h-12 text-red-500" />
+              <XCircle className="w-12 h-12 text-red-600" />
             )}
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">

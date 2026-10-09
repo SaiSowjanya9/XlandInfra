@@ -143,13 +143,13 @@ const ActivateAccount = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="flex justify-center mb-6 animate-pulse">
             <BrandLogo size="lg" />
           </div>
-          <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto" />
-          <p className="text-gray-400 mt-4">Validating activation link...</p>
+          <Loader2 className="w-10 h-10 text-gold-600 animate-spin mx-auto" />
+          <p className="text-gray-500 mt-4">Validating activation link...</p>
         </div>
       </div>
     );
@@ -158,17 +158,17 @@ const ActivateAccount = () => {
   // Token error state
   if (!tokenValid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4">
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-red-500/30">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-red-200">
           <div className="px-6 py-8 text-center">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-8 h-8 text-red-400" />
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Activation Failed</h2>
-            <p className="text-gray-400 mb-6">{tokenError}</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Activation Failed</h2>
+            <p className="text-gray-500 mb-6">{tokenError}</p>
             <Link 
               to="/login" 
-              className="inline-flex items-center space-x-2 text-gold-400 hover:text-gold-300"
+              className="inline-flex items-center space-x-2 text-gold-600 hover:text-gold-700"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Login</span>
@@ -182,17 +182,17 @@ const ActivateAccount = () => {
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4">
-        <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-500/30">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-500/30">
           <div className="px-6 py-10 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-gold-500/30">
-              <CheckCircle className="w-10 h-10 text-dark-900" />
+              <CheckCircle className="w-10 h-10 text-gray-900" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Account Activated!</h2>
-            <p className="text-gray-400 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Activated!</h2>
+            <p className="text-gray-500 mb-6">
               Your account has been successfully activated. You can now log in with your new password.
             </p>
-            <p className="text-gold-400 text-sm">Redirecting to login...</p>
+            <p className="text-gold-600 text-sm">Redirecting to login...</p>
           </div>
         </div>
       </div>
@@ -201,7 +201,7 @@ const ActivateAccount = () => {
 
   // Main form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gold-600/10 rounded-full blur-3xl"></div>
@@ -209,24 +209,24 @@ const ActivateAccount = () => {
       </div>
 
       {/* Back to Home */}
-      <Link to="/" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-400 hover:text-gold-300 transition-colors z-10">
+      <Link to="/" className="absolute top-6 left-6 flex items-center space-x-2 text-gold-600 hover:text-gold-700 transition-colors z-10">
         <ArrowLeft className="w-5 h-5" />
         <span className="font-medium">Back to Home</span>
       </Link>
 
-      <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
+      <div className="bg-gray-200 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
         {/* Header */}
-        <div className="px-6 py-8 text-center border-b border-gold-600/20 bg-gradient-to-b from-dark-700/50 to-transparent">
+        <div className="px-6 py-8 text-center border-b border-gold-600/20 bg-gradient-to-b from-gray-100 to-transparent">
           <div className="flex justify-center mb-4">
             <BrandLogo size="lg" />
           </div>
           <div className="flex items-center justify-center space-x-2 mb-2">
-            <ShieldCheck className="w-6 h-6 text-gold-400" />
-            <h1 className="text-xl font-bold text-white">Activate Your Account</h1>
+            <ShieldCheck className="w-6 h-6 text-gold-600" />
+            <h1 className="text-xl font-bold text-gray-900">Activate Your Account</h1>
           </div>
-          <p className="text-dark-300 text-sm">Set your password to complete activation</p>
+          <p className="text-gray-600 text-sm">Set your password to complete activation</p>
           {customerData?.propertyName && (
-            <p className="text-gold-400 text-sm mt-2 font-medium">{customerData.propertyName}</p>
+            <p className="text-gold-600 text-sm mt-2 font-medium">{customerData.propertyName}</p>
           )}
         </div>
 
@@ -234,9 +234,9 @@ const ActivateAccount = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 <div className="flex items-center space-x-2">
-                  <Mail className="w-4 h-4 text-gold-400" />
+                  <Mail className="w-4 h-4 text-gold-600" />
                   <span>Registered Email</span>
                 </div>
               </label>
@@ -244,20 +244,20 @@ const ActivateAccount = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="input-field bg-dark-700/50"
+                className="portal-field bg-gray-100"
                 placeholder="your.email@example.com"
                 required
               />
               {errors.email && (
-                <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+                <p className="text-red-600 text-xs mt-1">{errors.email}</p>
               )}
             </div>
 
             {/* Temporary Password Field */}
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 <div className="flex items-center space-x-2">
-                  <Key className="w-4 h-4 text-gold-400" />
+                  <Key className="w-4 h-4 text-gold-600" />
                   <span>Temporary Password</span>
                 </div>
               </label>
@@ -266,38 +266,38 @@ const ActivateAccount = () => {
                   type={showPasswords.temp ? 'text' : 'password'}
                   value={formData.tempPassword}
                   onChange={(e) => setFormData({ ...formData, tempPassword: e.target.value })}
-                  className="input-field pr-12 font-mono tracking-wider"
+                  className="portal-field pr-12 font-mono tracking-wider"
                   placeholder="Enter temporary password from email"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, temp: !showPasswords.temp })}
-                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-gray-500 hover:text-gold-600 transition-colors"
                 >
                   {showPasswords.temp ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {errors.tempPassword && (
-                <p className="text-red-400 text-xs mt-1">{errors.tempPassword}</p>
+                <p className="text-red-600 text-xs mt-1">{errors.tempPassword}</p>
               )}
             </div>
 
             {/* Divider */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-dark-600"></div>
+                <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center">
-                <span className="px-3 bg-dark-800 text-dark-400 text-xs">SET NEW PASSWORD</span>
+                <span className="px-3 bg-white text-gray-500 text-xs">SET NEW PASSWORD</span>
               </div>
             </div>
 
             {/* New Password Field */}
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 <div className="flex items-center space-x-2">
-                  <Lock className="w-4 h-4 text-gold-400" />
+                  <Lock className="w-4 h-4 text-gold-600" />
                   <span>New Password</span>
                 </div>
               </label>
@@ -306,31 +306,31 @@ const ActivateAccount = () => {
                   type={showPasswords.new ? 'text' : 'password'}
                   value={formData.newPassword}
                   onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  className="input-field pr-12"
+                  className="portal-field pr-12"
                   placeholder="Create a strong password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-gray-500 hover:text-gold-600 transition-colors"
                 >
                   {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {errors.newPassword && (
-                <p className="text-red-400 text-xs mt-1">{errors.newPassword}</p>
+                <p className="text-red-600 text-xs mt-1">{errors.newPassword}</p>
               )}
-              <p className="text-dark-400 text-xs mt-1">
+              <p className="text-gray-500 text-xs mt-1">
                 Min 8 characters with uppercase, lowercase, and number
               </p>
             </div>
 
             {/* Confirm Password Field */}
             <div>
-              <label className="block text-sm font-medium text-dark-200 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 <div className="flex items-center space-x-2">
-                  <Lock className="w-4 h-4 text-gold-400" />
+                  <Lock className="w-4 h-4 text-gold-600" />
                   <span>Re-enter New Password</span>
                 </div>
               </label>
@@ -339,23 +339,23 @@ const ActivateAccount = () => {
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="input-field pr-12"
+                  className="portal-field pr-12"
                   placeholder="Confirm your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-dark-400 hover:text-gold-400 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-gray-500 hover:text-gold-600 transition-colors"
                 >
                   {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>
+                <p className="text-red-600 text-xs mt-1">{errors.confirmPassword}</p>
               )}
               {formData.confirmPassword && formData.newPassword === formData.confirmPassword && (
-                <p className="text-green-400 text-xs mt-1 flex items-center space-x-1">
+                <p className="text-green-600 text-xs mt-1 flex items-center space-x-1">
                   <CheckCircle className="w-3 h-3" />
                   <span>Passwords match</span>
                 </p>
@@ -364,7 +364,7 @@ const ActivateAccount = () => {
 
             {/* Submit Error */}
             {errors.submit && (
-              <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg flex items-center space-x-2 text-red-400">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-600">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span className="text-sm">{errors.submit}</span>
               </div>
@@ -374,7 +374,7 @@ const ActivateAccount = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-gold-500/20 flex items-center justify-center space-x-2"
+              className="w-full py-3.5 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-gray-900 transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-gold-500/20 flex items-center justify-center space-x-2"
             >
               {submitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -388,9 +388,9 @@ const ActivateAccount = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-dark-400">
+            <p className="text-sm text-gray-500">
               Already activated?{' '}
-              <Link to="/login" className="text-gold-400 font-medium hover:text-gold-300 transition-colors">
+              <Link to="/login" className="text-gold-600 font-medium hover:text-gold-600 transition-colors">
                 Sign In
               </Link>
             </p>

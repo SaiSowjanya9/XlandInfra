@@ -1272,3 +1272,83 @@ body {
     border: 1px solid rgba(63, 63, 70, 0.4);
   }
 }
+
+/* ============ HOMEHUB CUSTOMER PORTAL - LIGHT THEME ============ */
+/* Light variants used ONLY by the customer portal pages (dashboard, work orders,
+   schedule, payments, auth). The public website keeps the dark classes above. */
+
+.portal-field {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  color: #1F2937;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.portal-field::placeholder {
+  color: #9CA3AF;
+}
+
+.portal-field:focus {
+  border-color: #B8860B;
+  box-shadow: 0 0 0 2px rgba(216, 178, 92, 0.25);
+}
+
+select.portal-field {
+  cursor: pointer;
+}
+
+.portal-card {
+  background-color: #FFFFFF;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #EADFCF;
+  padding: 1.5rem;
+}
+
+/* Light scrollbar for portal dropdowns */
+.portal-dropdown {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: scroll !important;
+  overscroll-behavior-y: contain;
+  touch-action: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #D4AF37 #F3EFE7;
+}
+
+.portal-dropdown::-webkit-scrollbar {
+  width: 8px;
+  display: block !important;
+}
+
+.portal-dropdown::-webkit-scrollbar-track {
+  background: #F3EFE7;
+  border-radius: 4px;
+}
+
+.portal-dropdown::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+  min-height: 40px;
+}
+
+.portal-dropdown::-webkit-scrollbar-thumb:active {
+  background: #B8860B;
+}
+
+@media (max-width: 768px) {
+  .portal-dropdown {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portal-dropdown button,
+  .portal-dropdown > div {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+}
