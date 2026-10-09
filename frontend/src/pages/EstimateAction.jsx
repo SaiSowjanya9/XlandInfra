@@ -69,10 +69,10 @@ const EstimateAction = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading estimate details...</p>
+          <p className="mt-4 text-warm-muted">Loading estimate details...</p>
         </div>
       </div>
     );
@@ -80,11 +80,11 @@ const EstimateAction = () => {
 
   if (error && !estimate) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+        <div className="bg-warm-section rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <AlertTriangle className="w-16 h-16 text-red-600 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Error</h1>
-          <p className="text-gray-600">{error}</p>
+          <h1 className="text-2xl font-bold text-warm-text mb-2">Error</h1>
+          <p className="text-warm-muted">{error}</p>
         </div>
       </div>
     );
@@ -102,25 +102,25 @@ const EstimateAction = () => {
     const Icon = config.icon;
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+        <div className="bg-warm-section rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className={`w-20 h-20 ${config.bg} rounded-full flex items-center justify-center mx-auto mb-6`}>
             <Icon className={`w-12 h-12 ${config.color}`} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Estimate {config.label}</h1>
-          <p className="text-gray-600 mb-4">
+          <h1 className="text-2xl font-bold text-warm-text mb-2">Estimate {config.label}</h1>
+          <p className="text-warm-muted mb-4">
             This estimate {config.text}.
           </p>
-          <div className="bg-gray-50 rounded-xl p-4 text-left">
-            <p className="text-sm text-gray-500">Estimate ID</p>
-            <p className="font-semibold text-gray-800">{estimate.estimateId}</p>
+          <div className="bg-warm-page rounded-xl p-4 text-left">
+            <p className="text-sm text-warm-muted">Estimate ID</p>
+            <p className="font-semibold text-warm-text">{estimate.estimateId}</p>
             {estimate.propertyName && (
               <>
-                <p className="text-sm text-gray-500 mt-3">Property</p>
-                <p className="font-semibold text-gray-800">{estimate.propertyName}</p>
+                <p className="text-sm text-warm-muted mt-3">Property</p>
+                <p className="font-semibold text-warm-text">{estimate.propertyName}</p>
               </>
             )}
-            <p className="text-sm text-gray-500 mt-3">Total Amount</p>
+            <p className="text-sm text-warm-muted mt-3">Total Amount</p>
             <p className="font-bold text-xl text-indigo-600">₹{Math.round(Number(estimate.total)).toLocaleString('en-IN')}</p>
           </div>
         </div>
@@ -132,8 +132,8 @@ const EstimateAction = () => {
   if (result) {
     const isApproved = result.type === 'approve';
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+        <div className="bg-warm-section rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className={`w-20 h-20 ${isApproved ? 'bg-green-50' : 'bg-red-50'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {isApproved ? (
               <CheckCircle className="w-12 h-12 text-green-600" />
@@ -141,27 +141,27 @@ const EstimateAction = () => {
               <XCircle className="w-12 h-12 text-red-600" />
             )}
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl font-bold text-warm-text mb-2">
             Estimate {isApproved ? 'Approved' : 'Rejected'}
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-warm-muted mb-6">
             {isApproved 
               ? 'Thank you! Your estimate has been approved. Our team will contact you shortly.'
               : 'The estimate has been rejected. Our team may follow up for feedback.'}
           </p>
-          <div className="bg-gray-50 rounded-xl p-4 text-left">
-            <p className="text-sm text-gray-500">Estimate ID</p>
-            <p className="font-semibold text-gray-800">{estimate.estimateId}</p>
+          <div className="bg-warm-page rounded-xl p-4 text-left">
+            <p className="text-sm text-warm-muted">Estimate ID</p>
+            <p className="font-semibold text-warm-text">{estimate.estimateId}</p>
             {estimate.propertyName && (
               <>
-                <p className="text-sm text-gray-500 mt-3">Property</p>
-                <p className="font-semibold text-gray-800">{estimate.propertyName}</p>
+                <p className="text-sm text-warm-muted mt-3">Property</p>
+                <p className="font-semibold text-warm-text">{estimate.propertyName}</p>
               </>
             )}
-            <p className="text-sm text-gray-500 mt-3">Total Amount</p>
+            <p className="text-sm text-warm-muted mt-3">Total Amount</p>
             <p className="font-bold text-xl text-indigo-600">₹{Math.round(Number(estimate.total)).toLocaleString('en-IN')}</p>
           </div>
-          <p className="text-sm text-gray-500 mt-6">
+          <p className="text-sm text-warm-muted mt-6">
             Contact us at <a href="mailto:info@xlandinfra.com" className="text-indigo-600">info@xlandinfra.com</a>
           </p>
         </div>
@@ -171,36 +171,36 @@ const EstimateAction = () => {
 
   // Show action buttons
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+    <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+      <div className="bg-warm-section rounded-2xl shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-indigo-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Review Estimate</h1>
-          <p className="text-gray-500 mt-1">Please review and take action</p>
+          <h1 className="text-2xl font-bold text-warm-text">Review Estimate</h1>
+          <p className="text-warm-muted mt-1">Please review and take action</p>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-5 mb-6">
+        <div className="bg-warm-page rounded-xl p-5 mb-6">
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-500">Estimate ID</p>
-              <p className="font-semibold text-gray-800">{estimate?.estimateId}</p>
+              <p className="text-sm text-warm-muted">Estimate ID</p>
+              <p className="font-semibold text-warm-text">{estimate?.estimateId}</p>
             </div>
             {estimate?.customerName && (
               <div>
-                <p className="text-sm text-gray-500">Customer</p>
-                <p className="font-semibold text-gray-800">{estimate.customerName}</p>
+                <p className="text-sm text-warm-muted">Customer</p>
+                <p className="font-semibold text-warm-text">{estimate.customerName}</p>
               </div>
             )}
             {estimate?.propertyName && (
               <div>
-                <p className="text-sm text-gray-500">Property</p>
-                <p className="font-semibold text-gray-800">{estimate.propertyName}</p>
+                <p className="text-sm text-warm-muted">Property</p>
+                <p className="font-semibold text-warm-text">{estimate.propertyName}</p>
               </div>
             )}
             <div className="pt-3 border-t">
-              <p className="text-sm text-gray-500">Total Amount</p>
+              <p className="text-sm text-warm-muted">Total Amount</p>
               <p className="font-bold text-2xl text-indigo-600">₹{Math.round(Number(estimate?.total || 0)).toLocaleString('en-IN')}</p>
             </div>
           </div>
@@ -231,7 +231,7 @@ const EstimateAction = () => {
           </button>
         </div>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-warm-muted mt-6">
           Need help? Contact <a href="mailto:info@xlandinfra.com" className="text-indigo-600">info@xlandinfra.com</a>
         </p>
       </div>

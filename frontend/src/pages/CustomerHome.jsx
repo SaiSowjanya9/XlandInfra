@@ -192,7 +192,7 @@ function CustomerHome() {
         </video>
         
         {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-100/70 via-gray-50 to-gray-100/90"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-warm-accent-soft/70 via-warm-page to-warm-accent-soft/90"></div>
         
         {/* Hero Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
@@ -200,8 +200,8 @@ function CustomerHome() {
           <BrandLogo size="xl" className="mb-6 drop-shadow-2xl" />
           
           {/* Tagline */}
-          <p className="mt-6 text-lg md:text-xl text-gray-700 max-w-2xl font-light tracking-wide">
-            Building <span className="text-gold-600 font-medium">Dreams</span> Into Reality
+          <p className="mt-6 text-lg md:text-xl text-warm-text max-w-2xl font-light tracking-wide">
+            Building <span className="text-warm-accent-hover font-medium">Dreams</span> Into Reality
           </p>
           
           {/* CTA Buttons */}
@@ -209,14 +209,14 @@ function CustomerHome() {
             {user ? (
               <button
                 onClick={() => navigate('/dashboard')}
-                className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-gray-900 transition-all duration-300 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 hover:scale-105"
+                className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-warm-accent to-warm-accent-hover hover:from-warm-accent hover:to-warm-accent text-warm-text transition-all duration-300 shadow-lg shadow-warm-accent/25 hover:shadow-warm-accent/40 hover:scale-105"
               >
                 Go to Dashboard
               </button>
             ) : (
               <button
                 onClick={handleLogin}
-                className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-gray-900 transition-all duration-300 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 hover:scale-105"
+                className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-warm-accent to-warm-accent-hover hover:from-warm-accent hover:to-warm-accent text-warm-text transition-all duration-300 shadow-lg shadow-warm-accent/25 hover:shadow-warm-accent/40 hover:scale-105"
               >
                 Login to Portal
               </button>
@@ -226,21 +226,21 @@ function CustomerHome() {
         
         {/* Scroll Indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-gold-500/50 rounded-full flex justify-center">
-            <div className="w-1.5 h-3 bg-gold-400 rounded-full mt-2 animate-pulse"></div>
+          <div className="w-6 h-10 border-2 border-warm-accent/50 rounded-full flex justify-center">
+            <div className="w-1.5 h-3 bg-warm-accent rounded-full mt-2 animate-pulse"></div>
           </div>
         </div>
       </section>
 
       {/* ============ TOP NAVIGATION SECTION ============ */}
-      <header className="relative z-50 bg-gray-50/95 backdrop-blur-md border-b border-gold-600/20">
+      <header className="relative z-50 bg-warm-page/95 backdrop-blur-md border-b border-warm-accent-hover/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <div className="flex items-center space-x-4">
               <BrandLogo size="sm" className="hidden sm:flex" />
               <BrandLogo size="xs" showText={false} className="sm:hidden" />
-              <span className="text-sm text-gray-500 hidden sm:block border-l border-gold-500/30 pl-4">Customer Portal</span>
+              <span className="text-sm text-warm-muted hidden sm:block border-l border-warm-accent/30 pl-4">Customer Portal</span>
             </div>
 
             {/* Main Navigation Modules */}
@@ -251,7 +251,7 @@ function CustomerHome() {
                   <button
                     key={module.id}
                     onClick={() => handleNavigation(module.path)}
-                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg text-gray-700 hover:text-gold-600 hover:bg-gray-100 transition-all duration-200 group"
+                    className="flex items-center space-x-2 px-4 py-2.5 rounded-lg text-warm-text hover:text-warm-accent-hover hover:bg-warm-accent-soft transition-all duration-200 group"
                   >
                     <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     <span className="font-medium">{module.label}</span>
@@ -266,43 +266,43 @@ function CustomerHome() {
                 <div className="relative">
                   <button
                     onClick={() => setShowAccountMenu(!showAccountMenu)}
-                    className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white border border-gold-600/20 hover:border-gold-500/40 transition-all duration-200"
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-warm-section border border-warm-accent-hover/20 hover:border-warm-accent/40 transition-all duration-200"
                   >
-                    <div className="w-8 h-8 bg-gold-600/20 border border-gold-500/30 rounded-full flex items-center justify-center">
-                      <span className="text-gold-600 font-semibold text-sm">
+                    <div className="w-8 h-8 bg-warm-accent-hover/20 border border-warm-accent/30 rounded-full flex items-center justify-center">
+                      <span className="text-warm-accent-hover font-semibold text-sm">
                         {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                       </span>
                     </div>
                     <div className="hidden sm:block text-left">
-                      <p className="text-sm font-medium text-gray-900">{user.firstName}</p>
-                      <p className="text-xs text-gray-500">Account</p>
+                      <p className="text-sm font-medium text-warm-text">{user.firstName}</p>
+                      <p className="text-xs text-warm-muted">Account</p>
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showAccountMenu ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-warm-muted transition-transform duration-200 ${showAccountMenu ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Account Dropdown Menu */}
                   {showAccountMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gold-600/20 rounded-xl shadow-2xl overflow-hidden z-50">
-                      <div className="p-4 border-b border-gray-200">
-                        <p className="text-gray-900 font-medium">{user.firstName} {user.lastName}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                    <div className="absolute right-0 mt-2 w-56 bg-warm-section border border-warm-accent-hover/20 rounded-xl shadow-2xl overflow-hidden z-50">
+                      <div className="p-4 border-b border-warm-border">
+                        <p className="text-warm-text font-medium">{user.firstName} {user.lastName}</p>
+                        <p className="text-sm text-warm-muted">{user.email}</p>
                       </div>
                       <div className="p-2">
                         <button
                           onClick={() => { handleNavigation('/dashboard/payment'); setShowAccountMenu(false); }}
-                          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gold-600 hover:bg-gray-100 transition-all"
+                          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-warm-text hover:text-warm-accent-hover hover:bg-warm-accent-soft transition-all"
                         >
                           <Wallet className="w-5 h-5" />
                           <span>Manage Payments</span>
                         </button>
                         <button
                           onClick={() => { handleNavigation('/dashboard'); setShowAccountMenu(false); }}
-                          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:text-gold-600 hover:bg-gray-100 transition-all"
+                          className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-warm-text hover:text-warm-accent-hover hover:bg-warm-accent-soft transition-all"
                         >
                           <Settings className="w-5 h-5" />
                           <span>Settings</span>
                         </button>
-                        <div className="border-t border-gray-200 mt-2 pt-2">
+                        <div className="border-t border-warm-border mt-2 pt-2">
                           <button
                             onClick={handleLogout}
                             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all"
@@ -318,7 +318,7 @@ function CustomerHome() {
               ) : (
                 <button
                   onClick={handleLogin}
-                  className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-500 hover:to-gold-600 text-gray-900 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-warm-accent to-warm-accent-hover hover:from-warm-accent-hover hover:to-warm-accent text-warm-text font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <LogIn className="w-5 h-5" />
                   <span>Login</span>
@@ -336,7 +336,7 @@ function CustomerHome() {
                   <button
                     key={module.id}
                     onClick={() => handleNavigation(module.path)}
-                    className="flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-gray-600 hover:text-gold-600 transition-all"
+                    className="flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-warm-muted hover:text-warm-accent-hover transition-all"
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-xs font-medium">{module.label}</span>
@@ -350,7 +350,7 @@ function CustomerHome() {
 
       {/* ============ HORIZONTAL DIVIDER ============ */}
       <div className="relative z-10">
-        <div className="h-px bg-gradient-to-r from-transparent via-gold-600/40 to-transparent"></div>
+        <div className="h-px bg-gradient-to-r from-transparent via-warm-accent-hover/40 to-transparent"></div>
       </div>
 
       {/* ============ MAIN CONTENT SECTION ============ */}
@@ -361,15 +361,15 @@ function CustomerHome() {
           <section className="mb-12">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-gold-500/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center">
-                  <Megaphone className="w-6 h-6 text-gold-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-warm-accent/20 to-warm-accent-hover/20 border border-warm-accent/30 rounded-xl flex items-center justify-center">
+                  <Megaphone className="w-6 h-6 text-warm-accent-hover" />
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Announcements & Events</h2>
-                  <p className="text-sm text-gray-500">Stay updated with the latest news and upcoming events</p>
+                  <h2 className="text-2xl md:text-3xl font-bold text-warm-text">Announcements & Events</h2>
+                  <p className="text-sm text-warm-muted">Stay updated with the latest news and upcoming events</p>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center space-x-2 text-gray-500 text-sm">
+              <div className="hidden sm:flex items-center space-x-2 text-warm-muted text-sm">
                 <span>{currentSlide + 1} / {announcementsData.length}</span>
               </div>
             </div>
@@ -379,7 +379,7 @@ function CustomerHome() {
               {/* Left Arrow - Modern Style */}
               <button 
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-black/40 hover:bg-black/50 backdrop-blur-sm border border-white/20 hover:border-gold-500/50 rounded-full flex items-center justify-center text-white hover:text-gold-300 transition-all duration-300 opacity-0 group-hover/slider:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-black/40 hover:bg-black/50 backdrop-blur-sm border border-white/20 hover:border-warm-accent/50 rounded-full flex items-center justify-center text-white hover:text-warm-accent transition-all duration-300 opacity-0 group-hover/slider:opacity-100"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -387,7 +387,7 @@ function CustomerHome() {
               {/* Right Arrow - Modern Style */}
               <button 
                 onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-black/40 hover:bg-black/50 backdrop-blur-sm border border-white/20 hover:border-gold-500/50 rounded-full flex items-center justify-center text-white hover:text-gold-300 transition-all duration-300 opacity-0 group-hover/slider:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-black/40 hover:bg-black/50 backdrop-blur-sm border border-white/20 hover:border-warm-accent/50 rounded-full flex items-center justify-center text-white hover:text-warm-accent transition-all duration-300 opacity-0 group-hover/slider:opacity-100"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -409,8 +409,8 @@ function CustomerHome() {
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                         {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-gray-100 via-gray-100 to-transparent"></div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-gray-100/80 via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-warm-accent-soft via-warm-accent-soft to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-warm-accent-soft/80 via-transparent to-transparent"></div>
                         
                         {/* Content */}
                         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
@@ -422,25 +422,25 @@ function CustomerHome() {
                                   ? 'bg-purple-100 text-purple-600 border border-purple-200' 
                                   : item.type === 'promotion'
                                   ? 'bg-green-100 text-green-600 border border-green-200'
-                                  : 'bg-gold-500/20 text-gold-600 border border-gold-500/30'
+                                  : 'bg-warm-accent-hover/20 text-warm-accent-hover border border-warm-accent/30'
                               }`}>
                                 {item.type}
                               </span>
-                              <span className="text-gray-500 text-sm">{item.date}</span>
+                              <span className="text-warm-muted text-sm">{item.date}</span>
                             </div>
                             
                             {/* Title */}
-                            <h3 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight">
+                            <h3 className="text-2xl md:text-4xl font-bold text-warm-text mb-3 leading-tight">
                               {item.title}
                             </h3>
                             
                             {/* Description */}
-                            <p className="text-gray-600 text-base md:text-lg leading-relaxed mb-6 line-clamp-2">
+                            <p className="text-warm-muted text-base md:text-lg leading-relaxed mb-6 line-clamp-2">
                               {item.description}
                             </p>
                             
                             {/* Action Button */}
-                            <button className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-gold-500/20 border border-gold-500/30 text-gold-600 hover:bg-gold-500/30 hover:border-gold-400/50 transition-all duration-300">
+                            <button className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-warm-accent-hover/20 border border-warm-accent/30 text-warm-accent-hover hover:bg-warm-accent-hover/30 hover:border-warm-accent/50 transition-all duration-300">
                               <span className="font-medium">Learn More</span>
                               <ArrowRight className="w-4 h-4" />
                             </button>
@@ -448,8 +448,8 @@ function CustomerHome() {
                         </div>
                         
                         {/* Icon Decoration */}
-                        <div className="absolute top-6 right-6 w-14 h-14 bg-gray-50 backdrop-blur-sm border border-gold-500/20 rounded-xl flex items-center justify-center">
-                          <ItemIcon className="w-7 h-7 text-gold-600" />
+                        <div className="absolute top-6 right-6 w-14 h-14 bg-warm-page backdrop-blur-sm border border-warm-accent/20 rounded-xl flex items-center justify-center">
+                          <ItemIcon className="w-7 h-7 text-warm-accent-hover" />
                         </div>
                       </div>
                     </div>
@@ -465,8 +465,8 @@ function CustomerHome() {
                     onClick={() => setCurrentSlide(index)}
                     className={`h-2 rounded-full transition-all duration-300 ${
                       currentSlide === index 
-                        ? 'w-8 bg-gold-400' 
-                        : 'w-2 bg-gray-300 hover:bg-gray-200'
+                        ? 'w-8 bg-warm-accent' 
+                        : 'w-2 bg-warm-border hover:bg-warm-border'
                     }`}
                   />
                 ))}
@@ -477,19 +477,19 @@ function CustomerHome() {
 
           {/* ============ HORIZONTAL DIVIDER ============ */}
           <div className="py-6">
-            <div className="h-px bg-gradient-to-r from-transparent via-gold-600/30 to-transparent"></div>
+            <div className="h-px bg-gradient-to-r from-transparent via-warm-accent-hover/30 to-transparent"></div>
           </div>
 
           {/* ============ QUICK ACCESS MODULES - Payments, Work Orders, Schedules ============ */}
           <section className="mb-12">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-gold-500/20 to-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center">
-                  <Star className="w-6 h-6 text-gold-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-warm-accent/20 to-warm-accent-hover/20 border border-warm-accent/30 rounded-xl flex items-center justify-center">
+                  <Star className="w-6 h-6 text-warm-accent-hover" />
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Quick Access</h2>
-                  <p className="text-sm text-gray-500">Access your most used features</p>
+                  <h2 className="text-2xl md:text-3xl font-bold text-warm-text">Quick Access</h2>
+                  <p className="text-sm text-warm-muted">Access your most used features</p>
                 </div>
               </div>
             </div>
@@ -501,7 +501,7 @@ function CustomerHome() {
                   <button
                     key={module.id}
                     onClick={() => handleNavigation(module.path)}
-                    className="group relative overflow-hidden bg-white backdrop-blur-sm border border-gray-200 hover:border-gold-500/40 rounded-2xl p-6 md:p-8 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-gold-500/10"
+                    className="group relative overflow-hidden bg-warm-section backdrop-blur-sm border border-warm-border hover:border-warm-accent/40 rounded-2xl p-6 md:p-8 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-warm-accent/10"
                   >
                     {/* Background Gradient */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
@@ -512,22 +512,22 @@ function CustomerHome() {
                         <ModuleIcon className={`w-7 h-7 ${module.iconColor}`} />
                       </div>
                       
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-gold-600 transition-colors">
+                      <h3 className="text-xl font-bold text-warm-text mb-2 group-hover:text-warm-accent-hover transition-colors">
                         {module.label}
                       </h3>
                       
-                      <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                      <p className="text-warm-muted text-sm leading-relaxed mb-4">
                         {module.description}
                       </p>
                       
-                      <div className="flex items-center text-gold-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex items-center text-warm-accent-hover text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <span>Access Now</span>
                         <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
                     
                     {/* Corner Decoration */}
-                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-gradient-to-tl from-gold-500/10 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-gradient-to-tl from-warm-accent/10 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </button>
                 );
               })}
@@ -546,27 +546,27 @@ function CustomerHome() {
               <div className="mb-4">
                 <BrandLogo size="default" />
               </div>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-md">
+              <p className="text-warm-muted text-sm leading-relaxed mb-6 max-w-md">
                 Building dreams into reality. Your trusted partner for quality construction 
                 and infrastructure development across the region.
               </p>
               {/* Social Media Icons - Hidden from UI, code preserved */}
               <div className="hidden flex items-center space-x-3">
-                <a href="#" className="group w-11 h-11 bg-gray-100/80 hover:bg-[#1877F2] border border-gray-200 hover:border-[#1877F2] rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#1877F2]/20">
+                <a href="#" className="group w-11 h-11 bg-warm-accent-soft/80 hover:bg-[#1877F2] border border-warm-border hover:border-[#1877F2] rounded-xl flex items-center justify-center text-warm-muted hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#1877F2]/20">
                   <Facebook className="w-5 h-5" />
                 </a>
-                <a href="#" className="group w-11 h-11 bg-gray-100/80 hover:bg-black border border-gray-200 hover:border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg">
+                <a href="#" className="group w-11 h-11 bg-warm-accent-soft/80 hover:bg-black border border-warm-border hover:border-warm-border rounded-xl flex items-center justify-center text-warm-muted hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                   </svg>
                 </a>
-                <a href="#" className="group w-11 h-11 bg-gray-100/80 hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] border border-gray-200 hover:border-transparent rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#E1306C]/20">
+                <a href="#" className="group w-11 h-11 bg-warm-accent-soft/80 hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] border border-warm-border hover:border-transparent rounded-xl flex items-center justify-center text-warm-muted hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#E1306C]/20">
                   <Instagram className="w-5 h-5" />
                 </a>
-                <a href="#" className="group w-11 h-11 bg-gray-100/80 hover:bg-[#0A66C2] border border-gray-200 hover:border-[#0A66C2] rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#0A66C2]/20">
+                <a href="#" className="group w-11 h-11 bg-warm-accent-soft/80 hover:bg-[#0A66C2] border border-warm-border hover:border-[#0A66C2] rounded-xl flex items-center justify-center text-warm-muted hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#0A66C2]/20">
                   <Linkedin className="w-5 h-5" />
                 </a>
-                <a href="#" className="group w-11 h-11 bg-gray-100/80 hover:bg-[#FF0000] border border-gray-200 hover:border-[#FF0000] rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#FF0000]/20">
+                <a href="#" className="group w-11 h-11 bg-warm-accent-soft/80 hover:bg-[#FF0000] border border-warm-border hover:border-[#FF0000] rounded-xl flex items-center justify-center text-warm-muted hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-[#FF0000]/20">
                   <Youtube className="w-5 h-5" />
                 </a>
               </div>
@@ -574,29 +574,29 @@ function CustomerHome() {
             
             {/* Quick Links */}
             <div>
-              <h4 className="text-gray-900 font-semibold mb-4">Quick Links</h4>
+              <h4 className="text-warm-text font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-3">
-                <li><button onClick={() => navigate('/')} className="text-gray-500 hover:text-gold-600 text-sm transition-colors">Home</button></li>
-                <li><button onClick={() => handleNavigation('/dashboard')} className="text-gray-500 hover:text-gold-600 text-sm transition-colors">Dashboard</button></li>
-                <li><button onClick={() => handleNavigation('/dashboard/work-order')} className="text-gray-500 hover:text-gold-600 text-sm transition-colors">Work Orders</button></li>
-                <li><button onClick={() => handleNavigation('/dashboard/payment')} className="text-gray-500 hover:text-gold-600 text-sm transition-colors">Payments</button></li>
-                <li><button onClick={() => handleNavigation('/dashboard/contact')} className="text-gray-500 hover:text-gold-600 text-sm transition-colors">Contact</button></li>
+                <li><button onClick={() => navigate('/')} className="text-warm-muted hover:text-warm-accent-hover text-sm transition-colors">Home</button></li>
+                <li><button onClick={() => handleNavigation('/dashboard')} className="text-warm-muted hover:text-warm-accent-hover text-sm transition-colors">Dashboard</button></li>
+                <li><button onClick={() => handleNavigation('/dashboard/work-order')} className="text-warm-muted hover:text-warm-accent-hover text-sm transition-colors">Work Orders</button></li>
+                <li><button onClick={() => handleNavigation('/dashboard/payment')} className="text-warm-muted hover:text-warm-accent-hover text-sm transition-colors">Payments</button></li>
+                <li><button onClick={() => handleNavigation('/dashboard/contact')} className="text-warm-muted hover:text-warm-accent-hover text-sm transition-colors">Contact</button></li>
               </ul>
             </div>
             
             {/* Contact Info */}
             <div>
-              <h4 className="text-gray-900 font-semibold mb-4">Contact Us</h4>
+              <h4 className="text-warm-text font-semibold mb-4">Contact Us</h4>
               <ul className="space-y-3">
-                <li className="flex items-center space-x-3 text-gray-500 text-sm">
+                <li className="flex items-center space-x-3 text-warm-muted text-sm">
                   <Phone className="w-4 h-4" style={{ color: '#D8B25C' }} />
                   <span>+91 8500 010 111</span>
                 </li>
-                <li className="flex items-center space-x-3 text-gray-500 text-sm">
+                <li className="flex items-center space-x-3 text-warm-muted text-sm">
                   <Mail className="w-4 h-4" style={{ color: '#D8B25C' }} />
                   <span>info@xlandinfra.com</span>
                 </li>
-                <li className="flex items-start space-x-3 text-gray-500 text-sm">
+                <li className="flex items-start space-x-3 text-warm-muted text-sm">
                   <MapPin className="w-4 h-4 mt-0.5" style={{ color: '#D8B25C' }} />
                   <span>D.No. 7-333/A/1, NRI Hospital Road<br/>Mangalagiri, Guntur, 522503</span>
                 </li>
@@ -605,23 +605,23 @@ function CustomerHome() {
           </div>
           
           {/* QR Codes Section */}
-          <div className="mb-8 pt-6 border-t border-gray-200">
+          <div className="mb-8 pt-6 border-t border-warm-border">
             <div className="flex items-center space-x-2 mb-4">
               <QrCode className="w-5 h-5" style={{ color: '#D8B25C' }} />
-              <h4 className="text-gray-900 font-semibold">Quick Access QR Codes</h4>
+              <h4 className="text-warm-text font-semibold">Quick Access QR Codes</h4>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Website QR */}
-              <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                <div className="bg-white p-2 rounded-lg inline-block mb-3">
+              <div className="bg-warm-accent-soft border border-warm-border rounded-xl p-4 text-center">
+                <div className="bg-warm-section p-2 rounded-lg inline-block mb-3">
                   <img 
                     src="/XLAND_INFRA_Website.png" 
                     alt="Website QR" 
                     className="w-20 h-20 object-contain"
                   />
                 </div>
-                <p className="text-gray-900 text-sm font-medium mb-1">Main Website</p>
-                <p className="text-gray-500 text-xs mb-2">xlandinfra.com</p>
+                <p className="text-warm-text text-sm font-medium mb-1">Main Website</p>
+                <p className="text-warm-muted text-xs mb-2">xlandinfra.com</p>
                 <a 
                   href="/XLAND_INFRA_Website.png" 
                   download="XLAND_Website_QR.png"
@@ -634,16 +634,16 @@ function CustomerHome() {
               </div>
               
               {/* Customer Portal QR */}
-              <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                <div className="bg-white p-2 rounded-lg inline-block mb-3">
+              <div className="bg-warm-accent-soft border border-warm-border rounded-xl p-4 text-center">
+                <div className="bg-warm-section p-2 rounded-lg inline-block mb-3">
                   <img 
                     src="/XLAND_INFRA_Customer_Portal.png" 
                     alt="Customer Portal QR" 
                     className="w-20 h-20 object-contain"
                   />
                 </div>
-                <p className="text-gray-900 text-sm font-medium mb-1">Customer Portal</p>
-                <p className="text-gray-500 text-xs mb-2">xlandinfra.com/login</p>
+                <p className="text-warm-text text-sm font-medium mb-1">Customer Portal</p>
+                <p className="text-warm-muted text-xs mb-2">xlandinfra.com/login</p>
                 <a 
                   href="/XLAND_INFRA_Customer_Portal.png" 
                   download="XLAND_Portal_QR.png"
@@ -658,14 +658,14 @@ function CustomerHome() {
           </div>
           
           {/* Bottom Bar */}
-          <div className="pt-8 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm">
+          <div className="pt-8 border-t border-warm-border flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-warm-muted text-sm">
               © {new Date().getFullYear()} XlandInfra Pvt Ltd. All rights reserved.
             </p>
             <div className="flex items-center space-x-6 text-sm">
-              <a href="#" className="text-gray-500 hover:text-gold-600 transition-colors">Privacy Policy</a>
-              <a href="#" className="text-gray-500 hover:text-gold-600 transition-colors">Terms of Service</a>
-              <a href="#" className="text-gray-500 hover:text-gold-600 transition-colors">Cookie Policy</a>
+              <a href="#" className="text-warm-muted hover:text-warm-accent-hover transition-colors">Privacy Policy</a>
+              <a href="#" className="text-warm-muted hover:text-warm-accent-hover transition-colors">Terms of Service</a>
+              <a href="#" className="text-warm-muted hover:text-warm-accent-hover transition-colors">Cookie Policy</a>
             </div>
           </div>
         </div>

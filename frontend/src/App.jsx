@@ -33,7 +33,7 @@ const PublicPayment = lazy(() => import('./pages/PublicPayment'));
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
     <div className="text-center">
-      <div className="w-10 h-10 border-2 border-gold-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <div className="w-10 h-10 border-2 border-warm-accent-hover border-t-transparent rounded-full animate-spin mx-auto"></div>
     </div>
   </div>
 );
@@ -291,7 +291,7 @@ function App() {
           <div className="flex justify-center mb-6 animate-pulse">
             <BrandLogo size="lg" />
           </div>
-          <div className="w-12 h-12 border-2 border-gold-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="w-12 h-12 border-2 border-warm-accent-hover border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );
