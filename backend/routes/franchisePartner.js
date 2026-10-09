@@ -7006,7 +7006,7 @@ const requireFPAccount = (req, res, next) => {
 // The fixed option sets the tracker modal offers. 'Other' carries its free text in the matching
 // *_other column, so the option itself never holds typed input.
 const TRACKER_OPTIONS = {
-  lead_source: ['WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Field Visit', 'Referral', 'Other'],
+  lead_source: ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'],
   priority: ['Low', 'Medium', 'High', 'Urgent'],
   maintenance_system: ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'],
   proposal_given: ['Yes', 'No', 'Other'],
