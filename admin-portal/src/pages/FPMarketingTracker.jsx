@@ -372,7 +372,7 @@ const FPMarketingTracker = ({ user }) => {
       {/* Edit modal */}
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 overflow-y-auto py-8 px-4">
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-3xl">
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-5xl">
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
               <div>
@@ -387,15 +387,15 @@ const FPMarketingTracker = ({ user }) => {
             <div className="p-6 space-y-6">
               {/* Automated estimate details */}
               <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div><label className={labelCls}>Estimate ID</label><div className={readOnlyCls}>{editing.estimate_id}</div></div>
-                  <div><label className={labelCls}>Customer Name</label><div className={readOnlyCls}>{decodeEntities(editing.client_name) || '-'}</div></div>
-                  <div><label className={labelCls}>Visit Date</label><div className={readOnlyCls}>{formatDate(editing.created_at)}</div></div>
-                  <div><label className={labelCls}>Executive Name</label><div className={readOnlyCls}>{decodeEntities(editing.created_by_name) || '-'}</div></div>
-                  <div><label className={labelCls}>Phone</label><div className={readOnlyCls}>{decodeEntities(editing.client_phone) || '-'}</div></div>
-                  <div><label className={labelCls}>Email</label><div className={readOnlyCls}>{decodeEntities(editing.client_email) || '-'}</div></div>
-                  <div><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{editing.property_type || '-'}</div></div>
-                  <div><label className={labelCls}>No. of Units</label><div className={readOnlyCls}>{editing.total_units ?? '-'}</div></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="min-w-0"><label className={labelCls}>Estimate ID</label><div className={readOnlyCls}>{editing.estimate_id}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Customer Name</label><div className={readOnlyCls}>{decodeEntities(editing.client_name) || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Visit Date</label><div className={readOnlyCls}>{formatDate(editing.created_at)}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Executive Name</label><div className={readOnlyCls}>{decodeEntities(editing.created_by_name) || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Phone</label><div className={readOnlyCls}>{decodeEntities(editing.client_phone) || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Email</label><div className={readOnlyCls}>{decodeEntities(editing.client_email) || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{editing.property_type || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>No. of Units</label><div className={readOnlyCls}>{editing.total_units ?? '-'}</div></div>
                 </div>
               </div>
 
