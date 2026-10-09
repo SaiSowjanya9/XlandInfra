@@ -779,8 +779,14 @@ router.post('/forgot-password', async (req, res) => {
     ];
     for (const col of columnsToAdd) {
       try {
-        const [cols] = await pool.execute(`SHOW COLUMNS FROM customer_accounts LIKE ?`, [col.name]);
-        if (cols.length === 0) {
+        // SHOW ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+        // check goes through information_schema instead
+        const [cols] = await pool.execute(
+          `SELECT COUNT(*) AS n FROM information_schema.columns
+           WHERE table_schema = DATABASE() AND table_name = 'customer_accounts' AND column_name = ?`,
+          [col.name]
+        );
+        if (cols[0].n === 0) {
           await pool.execute(`ALTER TABLE customer_accounts ADD COLUMN ${col.name} ${col.def}`);
         }
       } catch (e) { /* ignore */ }

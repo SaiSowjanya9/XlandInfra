@@ -414,8 +414,14 @@ const initOnboardingTables = async () => {
     for (const colDef of vendorCols) {
       const colName = colDef.split(' ')[0];
       try {
-        const [cols] = await conn.execute(`SHOW COLUMNS FROM onboarded_vendors LIKE ?`, [colName]);
-        if (cols.length === 0) {
+        // SHOW ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+        // check goes through information_schema instead
+        const [cols] = await conn.execute(
+          `SELECT COUNT(*) AS n FROM information_schema.columns
+           WHERE table_schema = DATABASE() AND table_name = 'onboarded_vendors' AND column_name = ?`,
+          [colName]
+        );
+        if (cols[0].n === 0) {
           await conn.execute(`ALTER TABLE onboarded_vendors ADD COLUMN ${colDef}`);
           console.log(`  ✅ Added column ${colName} to onboarded_vendors`);
         }

@@ -4223,8 +4223,14 @@ router.get('/estimates', requireFPScope, async (req, res) => {
     ];
     for (const col of columnsToAdd) {
       try {
-        const [cols] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE ?`, [col.name]);
-        if (cols.length === 0) {
+        // SHOW ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+        // check goes through information_schema instead
+        const [cols] = await pool.execute(
+          `SELECT COUNT(*) AS n FROM information_schema.columns
+           WHERE table_schema = DATABASE() AND table_name = 'fp_estimates' AND column_name = ?`,
+          [col.name]
+        );
+        if (cols[0].n === 0) {
           await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN ${col.name} ${col.def}`);
         }
       } catch (e) { /* ignore */ }
@@ -6974,8 +6980,14 @@ const MARKETING_TRACKER_COLUMNS = [
 const ensureMarketingTrackerColumns = async () => {
   for (const col of MARKETING_TRACKER_COLUMNS) {
     try {
-      const [cols] = await pool.execute(`SHOW COLUMNS FROM fp_estimates LIKE ?`, [col.name]);
-      if (cols.length === 0) {
+      // SHOW ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+      // check goes through information_schema instead
+      const [cols] = await pool.execute(
+        `SELECT COUNT(*) AS n FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = 'fp_estimates' AND column_name = ?`,
+        [col.name]
+      );
+      if (cols[0].n === 0) {
         await pool.execute(`ALTER TABLE fp_estimates ADD COLUMN ${col.name} ${col.def}`);
       }
     } catch (e) { /* column exists or cannot be added; the query below will say which */ }

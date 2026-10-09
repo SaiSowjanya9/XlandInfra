@@ -59,6 +59,11 @@ Mistakes that fail silently and have each already broken live endpoints:
   error is swallowed, as a permanently empty list. Inline a clamped integer instead:
   `` `... LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)}` ``. `pool.query`
   is not prepared and does accept `LIMIT ?`, so only `execute` call sites matter.
+- **`SHOW COLUMNS … LIKE ?` cannot bind either.** The same prepared-statement limit kills the
+  runtime column checks: `SHOW COLUMNS FROM t LIKE ?` throws a syntax error, the surrounding
+  `catch` swallows it, and the `ALTER` is skipped — so a missing column stays missing while the
+  code looks like it self-heals. Check `information_schema.columns` with a bound `column_name = ?`
+  instead; that is a plain SELECT and binds fine.
 - **A `/:id` route swallows every static route declared after it.** Express matches in
   order, so `router.get('/:id')` above `router.get('/cancelled')` answers `/cancelled`
   with that handler's "not found". Declare the parameter route last, or guard it — the
