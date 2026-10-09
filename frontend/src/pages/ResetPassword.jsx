@@ -116,7 +116,7 @@ const ResetPassword = () => {
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
           <div className="px-6 py-8 text-center border-b border-gold-600/20">
             <div className="flex justify-center mb-4">
-              <BrandLogo size="lg" />
+              <BrandLogo variant="contract" size="lg" />
             </div>
           </div>
 
@@ -150,7 +150,7 @@ const ResetPassword = () => {
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
           <div className="px-6 py-8 text-center border-b border-gold-600/20">
             <div className="flex justify-center mb-4">
-              <BrandLogo size="lg" />
+              <BrandLogo variant="contract" size="lg" />
             </div>
           </div>
 
@@ -193,7 +193,7 @@ const ResetPassword = () => {
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </div>
           <h1 className="text-2xl font-bold text-white">Reset Password</h1>
           {userData && (

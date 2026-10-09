@@ -119,7 +119,7 @@ const Login = ({ onLogin }) => {
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </div>
           <h1 className="text-2xl font-bold text-white">Customer Portal</h1>
           <p className="text-dark-300 mt-2">Sign in to your account</p>

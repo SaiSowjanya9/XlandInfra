@@ -197,7 +197,7 @@ function CustomerHome() {
         {/* Hero Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
           {/* Logo */}
-          <BrandLogo size="xl" className="mb-6 drop-shadow-2xl" />
+          <BrandLogo variant="contract" size="xl" className="mb-6 drop-shadow-2xl" />
           
           {/* Tagline */}
           <p className="mt-6 text-lg md:text-xl text-warm-text max-w-2xl font-light tracking-wide">
@@ -238,8 +238,8 @@ function CustomerHome() {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <div className="flex items-center space-x-4">
-              <BrandLogo size="sm" className="hidden sm:flex" />
-              <BrandLogo size="xs" showText={false} className="sm:hidden" />
+              <BrandLogo variant="contract" size="sm" className="hidden sm:flex" />
+              <BrandLogo variant="contract" size="xs" showText={false} className="sm:hidden" />
               <span className="text-sm text-warm-muted hidden sm:block border-l border-warm-accent/30 pl-4">Customer Portal</span>
             </div>
 
@@ -544,7 +544,7 @@ function CustomerHome() {
             {/* Company Info */}
             <div className="md:col-span-2">
               <div className="mb-4">
-                <BrandLogo size="default" />
+                <BrandLogo variant="contract" size="default" />
               </div>
               <p className="text-warm-muted text-sm leading-relaxed mb-6 max-w-md">
                 Building dreams into reality. Your trusted partner for quality construction 

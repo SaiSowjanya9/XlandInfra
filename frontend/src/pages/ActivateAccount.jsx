@@ -146,7 +146,7 @@ const ActivateAccount = () => {
       <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 flex items-center justify-center">
         <div className="text-center">
           <div className="flex justify-center mb-6 animate-pulse">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </div>
           <Loader2 className="w-10 h-10 text-gold-400 animate-spin mx-auto" />
           <p className="text-gray-400 mt-4">Validating activation link...</p>
@@ -218,7 +218,7 @@ const ActivateAccount = () => {
         {/* Header */}
         <div className="px-6 py-8 text-center border-b border-gold-600/20 bg-gradient-to-b from-dark-700/50 to-transparent">
           <div className="flex justify-center mb-4">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </div>
           <div className="flex items-center justify-center space-x-2 mb-2">
             <ShieldCheck className="w-6 h-6 text-gold-400" />

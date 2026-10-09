@@ -291,7 +291,7 @@ const PaymentSuccess = () => {
         {/* Logo */}
         <div className="flex justify-center mb-10">
           <Link to="/">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </Link>
         </div>
 

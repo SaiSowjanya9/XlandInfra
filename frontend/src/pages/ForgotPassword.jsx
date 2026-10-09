@@ -56,7 +56,7 @@ const ForgotPassword = () => {
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10">
           <div className="px-6 py-8 text-center border-b border-gold-600/20">
             <div className="flex justify-center mb-4">
-              <BrandLogo size="lg" />
+              <BrandLogo variant="contract" size="lg" />
             </div>
           </div>
 
@@ -103,7 +103,7 @@ const ForgotPassword = () => {
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gold-600/20 relative z-10 mt-16 md:mt-0">
         <div className="px-6 py-8 text-center border-b border-gold-600/20">
           <div className="flex justify-center mb-4">
-            <BrandLogo size="lg" />
+            <BrandLogo variant="contract" size="lg" />
           </div>
           <h1 className="text-2xl font-bold text-white">Forgot Password?</h1>
           <p className="text-dark-300 mt-2">Enter your email to reset your password</p>
