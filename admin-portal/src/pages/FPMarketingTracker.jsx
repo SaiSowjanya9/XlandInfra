@@ -480,38 +480,22 @@ const FPMarketingTracker = ({ user }) => {
 
                   const numBlocks = editing.number_of_blocks || Object.keys(blockNames).length || 1;
 
-                  // GC/APT with several blocks - one compact row per block
+                  // GC/APT with several blocks - one chip per block, wrapped on a single line
                   if (numBlocks > 1 || Object.keys(blockNames).length > 0) {
-                    const anyUnitTypes = Array.from({ length: numBlocks }, (_, i) => i + 1)
-                      .some(n => Object.values(blockUnitTypes?.[n] || blockUnitTypes?.[String(n)] || {}).some(v => v > 0));
                     return (
-                      <div className="mt-4 pt-3 border-t border-warm-border/70">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Building2 className="w-4 h-4 text-warm-muted" />
-                          <span className="text-sm font-medium text-warm-text">Block Details</span>
-                        </div>
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-warm-border/70 text-left">
-                              <th className="py-1.5 pr-4 text-xs font-medium text-warm-muted">Block Name</th>
-                              <th className="py-1.5 pr-4 text-xs font-medium text-warm-muted w-20">Units</th>
-                              {anyUnitTypes && <th className="py-1.5 text-xs font-medium text-warm-muted">Unit Types</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
-                              const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
-                              const typeText = Object.entries(unitTypes).filter(([, c]) => c > 0).map(([t, c]) => `${unitTypeLabels[t] || t}: ${c}`).join(', ');
-                              return (
-                                <tr key={blockNum} className="border-b border-warm-border/50 last:border-0">
-                                  <td className="py-1.5 pr-4 font-medium text-warm-text [overflow-wrap:anywhere]">{decodeEntities(blockNames?.[blockNum] || blockNames?.[String(blockNum)]) || `Block ${blockNum}`}</td>
-                                  <td className="py-1.5 pr-4 text-warm-text">{unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0}</td>
-                                  {anyUnitTypes && <td className="py-1.5 text-warm-muted">{typeText || '-'}</td>}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                      <div className="mt-3 pt-2.5 border-t border-warm-border/70 flex items-center gap-1.5 flex-wrap">
+                        <span className="flex items-center gap-1 text-xs font-medium text-warm-muted mr-1">
+                          <Building2 className="w-3.5 h-3.5" /> Blocks:
+                        </span>
+                        {Array.from({ length: numBlocks }, (_, i) => i + 1).map(blockNum => {
+                          const unitTypes = blockUnitTypes?.[blockNum] || blockUnitTypes?.[String(blockNum)] || {};
+                          const typeText = Object.entries(unitTypes).filter(([, c]) => c > 0).map(([t, c]) => `${c}×${unitTypeLabels[t] || t}`).join(' ');
+                          return (
+                            <span key={blockNum} className="px-2 py-0.5 bg-white border border-warm-border rounded text-xs text-warm-text whitespace-nowrap">
+                              {decodeEntities(blockNames?.[blockNum] || blockNames?.[String(blockNum)]) || `Block ${blockNum}`} · {unitsPerBlock?.[blockNum] || unitsPerBlock?.[String(blockNum)] || 0} units{typeText ? ` (${typeText})` : ''}
+                            </span>
+                          );
+                        })}
                       </div>
                     );
                   }
