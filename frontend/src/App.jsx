@@ -31,7 +31,7 @@ const PublicPayment = lazy(() => import('./pages/PublicPayment'));
 
 // Loading fallback component
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+  <div className="min-h-screen flex items-center justify-center bg-warm-page">
     <div className="text-center">
       <div className="w-10 h-10 border-2 border-gold-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
     </div>
@@ -286,7 +286,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-warm-page">
         <div className="text-center">
           <div className="flex justify-center mb-6 animate-pulse">
             <BrandLogo size="lg" />

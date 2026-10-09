@@ -255,7 +255,7 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
         <div className="flex items-center gap-2">
           <button
             onClick={() => shiftMonth(-1)}
-            className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
+            className="p-2 rounded-lg bg-warm-page border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
             title="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -266,13 +266,13 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
               onMonthChange(new Date(now.getFullYear(), now.getMonth(), 1));
               onSelectDay(istToday());
             }}
-            className="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
+            className="px-3 py-2 rounded-lg bg-warm-page border border-gray-200 text-sm text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
           >
             Today
           </button>
           <button
             onClick={() => shiftMonth(1)}
-            className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
+            className="p-2 rounded-lg bg-warm-page border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
             title="Next month"
           >
             <ChevronRight className="w-4 h-4" />
@@ -300,7 +300,7 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
               key={key}
               onClick={() => onSelectDay(key)}
               className={`min-h-[84px] sm:min-h-[104px] p-1.5 text-left border-b border-r border-gray-200 transition-colors ${
-                isCurrentMonth ? 'hover:bg-gray-100' : 'bg-gray-50'
+                isCurrentMonth ? 'hover:bg-gray-100' : 'bg-warm-page'
               } ${isSelected ? 'ring-1 ring-inset ring-gold-500/50 bg-white' : ''}`}
             >
               <div className="flex items-center justify-between mb-1">
@@ -320,7 +320,7 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
                 {dayVisits.slice(0, 2).map((visit) => (
                   <div
                     key={visit.id}
-                    className="flex items-center gap-1 px-1 py-0.5 rounded bg-gray-50/70 border border-gray-200"
+                    className="flex items-center gap-1 px-1 py-0.5 rounded bg-warm-page/70 border border-gray-200"
                   >
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusConfig(displayStatus(visit, today)).dot}`} />
                     <span className="text-[10px] text-gray-900 truncate">
@@ -572,7 +572,7 @@ const Schedule = ({ user }) => {
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-gray-50' : 'bg-gray-100'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-warm-page' : 'bg-gray-100'}`}>
                   {tab.count}
                 </span>
               </button>

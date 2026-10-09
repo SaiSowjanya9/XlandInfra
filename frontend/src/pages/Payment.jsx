@@ -1144,7 +1144,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
         </div>
 
         {/* Footer with Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-t border-gray-200 bg-warm-page flex items-center justify-between gap-4">
           <button
             onClick={onClose}
             className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
