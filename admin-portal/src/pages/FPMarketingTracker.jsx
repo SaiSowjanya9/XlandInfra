@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
+import { getPropertyTypeLabel } from '../utils/estimatePackageUtils';
 import EmptyState from '../components/common/EmptyState';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -270,7 +271,7 @@ const FPMarketingTracker = ({ user }) => {
                           <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                           <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                         </td>
-                        <td className="py-3 px-3 text-warm-muted">{est.property_type || '-'}</td>
+                        <td className="py-3 px-3 text-warm-muted">{getPropertyTypeLabel(est.property_type)}</td>
                         <td className="py-3 px-3">
                           {est.tracked_at ? (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Tracked</span>
@@ -394,7 +395,7 @@ const FPMarketingTracker = ({ user }) => {
                   <div className="min-w-0"><label className={labelCls}>Executive Name</label><div className={readOnlyCls}>{decodeEntities(editing.created_by_name) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Phone</label><div className={readOnlyCls}>{decodeEntities(editing.client_phone) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Email</label><div className={readOnlyCls}>{decodeEntities(editing.client_email) || '-'}</div></div>
-                  <div className="min-w-0"><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{editing.property_type || '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{getPropertyTypeLabel(editing.property_type)}</div></div>
                   <div className="min-w-0"><label className={labelCls}>No. of Units</label><div className={readOnlyCls}>{editing.total_units ?? '-'}</div></div>
                 </div>
               </div>
