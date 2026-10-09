@@ -35,13 +35,13 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Status configuration
 const STATUS_CONFIG = {
-  draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: FileText },
+  draft: { label: 'Draft', color: 'bg-warm-accent/20 text-warm-muted border-warm-accent/30', icon: FileText },
   // 'sent' is staff language — to the customer the invoice arrived, so the badge reads Received
   sent: { label: 'Received', color: 'bg-blue-100 text-blue-600 border-blue-200', icon: Clock },
   paid: { label: 'Paid', color: 'bg-green-100 text-green-600 border-green-200', icon: CheckCircle },
   partially_paid: { label: 'Partially Paid', color: 'bg-amber-100 text-amber-600 border-amber-200', icon: AlertCircle },
   overdue: { label: 'Overdue', color: 'bg-red-100 text-red-600 border-red-200', icon: AlertCircle },
-  cancelled: { label: 'Cancelled', color: 'bg-gray-500/20 text-gray-500 border-gray-500/30', icon: X }
+  cancelled: { label: 'Cancelled', color: 'bg-warm-accent/20 text-warm-muted border-warm-accent/30', icon: X }
 };
 
 // All Payment methods - unified list (no online/offline separation in UI)
@@ -362,14 +362,14 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-warm-section rounded-2xl shadow-2xl border border-warm-accent-hover/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header with Step Indicator */}
-        <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20">
+        <div className="bg-gradient-to-r from-warm-accent-hover/20 to-warm-accent/10 px-6 py-4 border-b border-warm-accent-hover/20">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Make Payment</h2>
+            <h2 className="text-xl font-bold text-warm-text">Make Payment</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+              className="p-2 rounded-lg hover:bg-warm-accent-soft text-warm-muted hover:text-warm-text transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -381,21 +381,21 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div key={s} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                   step >= s 
-                    ? 'bg-gold-500 text-gray-900' 
-                    : 'bg-gray-200 text-gray-500'
+                    ? 'bg-warm-accent-hover text-warm-text' 
+                    : 'bg-warm-border text-warm-muted'
                 }`}>
                   {step > s ? <Check className="w-4 h-4" /> : s}
                 </div>
                 {s < 3 && (
-                  <div className={`w-12 h-0.5 mx-1 ${step > s ? 'bg-gold-500' : 'bg-gray-200'}`} />
+                  <div className={`w-12 h-0.5 mx-1 ${step > s ? 'bg-warm-accent-hover' : 'bg-warm-border'}`} />
                 )}
               </div>
             ))}
           </div>
-          <div className="flex justify-center gap-8 mt-2 text-xs text-gray-500">
-            <span className={step === 1 ? 'text-gold-600' : ''}>Select Method</span>
-            <span className={step === 2 ? 'text-gold-600' : ''}>Review</span>
-            <span className={step === 3 ? 'text-gold-600' : ''}>Confirm</span>
+          <div className="flex justify-center gap-8 mt-2 text-xs text-warm-muted">
+            <span className={step === 1 ? 'text-warm-accent-hover' : ''}>Select Method</span>
+            <span className={step === 2 ? 'text-warm-accent-hover' : ''}>Review</span>
+            <span className={step === 3 ? 'text-warm-accent-hover' : ''}>Confirm</span>
           </div>
         </div>
 
@@ -407,25 +407,25 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               {/* Payment Amount — full balance or half of it */}
               {canSplit && (
                 <div className="mb-5">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Amount</h3>
+                  <h3 className="text-lg font-semibold text-warm-text mb-3">Payment Amount</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setPayHalf(false)}
                       className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                         !payHalf
-                          ? 'bg-gold-500/10 border-gold-500/50'
-                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
+                          ? 'bg-warm-accent-hover/10 border-warm-accent/50'
+                          : 'bg-warm-accent-soft border-warm-border hover:border-warm-border'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        !payHalf ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
+                        !payHalf ? 'border-warm-accent bg-warm-accent-hover' : 'border-warm-border'
                       }`}>
-                        {!payHalf && <div className="w-2 h-2 rounded-full bg-white" />}
+                        {!payHalf && <div className="w-2 h-2 rounded-full bg-warm-section" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-gray-900 text-sm font-semibold">Pay Full Amount</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{formatCurrency(balanceNum)}</p>
+                        <p className="text-warm-text text-sm font-semibold">Pay Full Amount</p>
+                        <p className="text-warm-muted text-xs mt-0.5">{formatCurrency(balanceNum)}</p>
                       </div>
                     </button>
                     <button
@@ -433,29 +433,29 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       onClick={() => setPayHalf(true)}
                       className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                         payHalf
-                          ? 'bg-gold-500/10 border-gold-500/50'
-                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
+                          ? 'bg-warm-accent-hover/10 border-warm-accent/50'
+                          : 'bg-warm-accent-soft border-warm-border hover:border-warm-border'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        payHalf ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
+                        payHalf ? 'border-warm-accent bg-warm-accent-hover' : 'border-warm-border'
                       }`}>
-                        {payHalf && <div className="w-2 h-2 rounded-full bg-white" />}
+                        {payHalf && <div className="w-2 h-2 rounded-full bg-warm-section" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-gray-900 text-sm font-semibold">Pay 50% Now</p>
-                        <p className="text-gray-500 text-xs mt-0.5">{formatCurrency(halfAmount)}, rest later</p>
+                        <p className="text-warm-text text-sm font-semibold">Pay 50% Now</p>
+                        <p className="text-warm-muted text-xs mt-0.5">{formatCurrency(halfAmount)}, rest later</p>
                       </div>
                     </button>
                   </div>
 
                   {payHalf && (
-                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-gold-500/10 border border-gold-500/20 px-4 py-3">
-                      <Wallet className="w-5 h-5 text-gold-600 shrink-0" />
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        You will be charged <span className="text-gold-600 font-semibold">{formatCurrency(halfAmount)}</span> now.
-                        The remaining <span className="text-gray-900 font-medium">{formatCurrency(balanceNum - halfAmount)}</span> is
-                        due by <span className="text-gray-900 font-medium">{secondDue}</span> (30 days before the next service period).
+                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-warm-accent-hover/10 border border-warm-accent/20 px-4 py-3">
+                      <Wallet className="w-5 h-5 text-warm-accent-hover shrink-0" />
+                      <p className="text-xs text-warm-muted leading-relaxed">
+                        You will be charged <span className="text-warm-accent-hover font-semibold">{formatCurrency(halfAmount)}</span> now.
+                        The remaining <span className="text-warm-text font-medium">{formatCurrency(balanceNum - halfAmount)}</span> is
+                        due by <span className="text-warm-text font-medium">{secondDue}</span> (30 days before the next service period).
                       </p>
                     </div>
                   )}
@@ -464,8 +464,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Header */}
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Choose Payment Method</h3>
-                <p className="text-gray-500 text-sm">Select any one payment method to proceed</p>
+                <h3 className="text-lg font-semibold text-warm-text">Choose Payment Method</h3>
+                <p className="text-warm-muted text-sm">Select any one payment method to proceed</p>
               </div>
 
               {/* Payment Methods List */}
@@ -479,30 +479,30 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       onClick={() => setSelectedMethod(method.id)}
                       className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                         isSelected 
-                          ? 'bg-gold-500/10 border-gold-500/50' 
-                          : 'bg-gray-100 border-gray-200 hover:border-gray-300'
+                          ? 'bg-warm-accent-hover/10 border-warm-accent/50' 
+                          : 'bg-warm-accent-soft border-warm-border hover:border-warm-border'
                       }`}
                     >
                       {/* Radio Button */}
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'border-gold-500 bg-gold-500' : 'border-gray-300'
+                        isSelected ? 'border-warm-accent bg-warm-accent-hover' : 'border-warm-border'
                       }`}>
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-warm-section" />}
                       </div>
 
                       {/* Icon */}
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'bg-gold-500/20' : 'bg-gray-200'
+                        isSelected ? 'bg-warm-accent-hover/20' : 'bg-warm-border'
                       }`}>
-                        <Icon className={`w-6 h-6 ${isSelected ? 'text-gold-600' : 'text-gray-600'}`} />
+                        <Icon className={`w-6 h-6 ${isSelected ? 'text-warm-accent-hover' : 'text-warm-muted'}`} />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0 text-left">
-                        <p className={`font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
+                        <p className={`font-semibold ${isSelected ? 'text-warm-text' : 'text-warm-text'}`}>
                           {method.label}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">{method.description}</p>
+                        <p className="text-xs text-warm-muted mt-0.5">{method.description}</p>
                         
                         {/* Payment Brand Icons */}
                         {method.badges && (
@@ -536,21 +536,21 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                                 )}
                                 {/* Net Banking */}
                                 {badge === 'Net Banking' && (
-                                  <div className="flex items-center gap-1.5 bg-white border border-gray-300 px-2.5 py-1 rounded text-[11px] text-gray-700">
+                                  <div className="flex items-center gap-1.5 bg-warm-section border border-warm-border px-2.5 py-1 rounded text-[11px] text-warm-text">
                                     <Landmark className="w-3.5 h-3.5" />
                                     <span>Net Banking</span>
                                   </div>
                                 )}
                                 {/* Google Pay */}
                                 {badge === 'GPay' && (
-                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1 shadow-sm">
+                                  <div className="flex items-center bg-warm-section border border-warm-border rounded px-2 py-1 shadow-warm">
                                     <svg viewBox="0 0 24 24" className="w-4 h-4 mr-1">
                                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                                       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                                     </svg>
-                                    <span className="text-[11px] text-gray-600 font-medium">Pay</span>
+                                    <span className="text-[11px] text-warm-muted font-medium">Pay</span>
                                   </div>
                                 )}
                                 {/* PhonePe */}
@@ -561,7 +561,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                                 )}
                                 {/* Paytm - Official Logo */}
                                 {badge === 'Paytm' && (
-                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                  <div className="flex items-center bg-warm-section border border-warm-border rounded px-2 py-1">
                                     <span className="text-[12px] font-bold">
                                       <span className="text-[#002E6E]">Pay</span>
                                       <span className="text-[#00BAF2]">tm</span>
@@ -570,8 +570,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                                 )}
                                 {/* BHIM - Official Logo */}
                                 {badge === 'BHIM' && (
-                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                                    <span className="text-gray-600 text-[11px] font-bold tracking-tight">BHIM</span>
+                                  <div className="flex items-center bg-warm-section border border-warm-border rounded px-2 py-1">
+                                    <span className="text-warm-muted text-[11px] font-bold tracking-tight">BHIM</span>
                                     <svg viewBox="0 0 20 20" className="w-4 h-4 ml-0.5">
                                       <path d="M10 2L18 10L14 10L14 18L10 14" fill="#FF9933"/>
                                       <path d="M10 6L14 10L10 10L10 14L6 10L10 10L10 6" fill="white"/>
@@ -589,15 +589,15 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                           a direct payment -- the same wording as the emailed payment link */}
                       <div className="flex-shrink-0 self-start text-right">
                         {method.feeAmount ? (<>
-                          <p className="text-[11px] text-gray-500">{method.feeText}</p>
+                          <p className="text-[11px] text-warm-muted">{method.feeText}</p>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
-                            <span className="text-sm font-semibold text-gray-900">{method.feeAmount}</span>
-                            <HelpCircle className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />
+                            <span className="text-sm font-semibold text-warm-text">{method.feeAmount}</span>
+                            <HelpCircle className="h-3.5 w-3.5 text-warm-muted" aria-hidden="true" />
                           </div>
                           <div className="mt-1.5 flex items-center justify-end gap-1">
                             {method.id === 'upi'
                               ? <span className="text-[11px] font-semibold text-green-600">{method.tags[0]}</span>
-                              : <><Lock className="h-3 w-3 text-gray-500" /><span className="text-[11px] text-gray-600">{method.tags[0]}</span></>}
+                              : <><Lock className="h-3 w-3 text-warm-muted" /><span className="text-[11px] text-warm-muted">{method.tags[0]}</span></>}
                           </div>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
                             <Shield className="h-3 w-3 text-blue-600" />
@@ -607,7 +607,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                           <p className="text-xs font-semibold text-green-600">{method.feeText}</p>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
                             <CheckCircle className="h-3 w-3 text-green-600" />
-                            <span className="text-[11px] text-gray-600">{method.tags[0]}</span>
+                            <span className="text-[11px] text-warm-muted">{method.tags[0]}</span>
                           </div>
                           <div className="mt-0.5 flex items-center justify-end gap-1">
                             <CheckCircle className="h-3 w-3 text-green-600" />
@@ -623,13 +623,13 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all"
                 >
                   Continue
                   <ChevronRight className="w-5 h-5" />
@@ -642,45 +642,45 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
           {step === 2 && (
             <div className="p-6">
               {/* Invoice Summary */}
-              <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 mb-4">
+              <div className="bg-warm-accent-soft rounded-xl p-4 border border-warm-border mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-500 text-sm">Invoice</span>
-                  <span className="text-gray-900 font-semibold">{invoice.invoiceId}</span>
+                  <span className="text-warm-muted text-sm">Invoice</span>
+                  <span className="text-warm-text font-semibold">{invoice.invoiceId}</span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-500 text-sm">Property</span>
-                  <span className="text-gray-900 text-sm">{invoice.propertyName || invoice.propertyCode}</span>
+                  <span className="text-warm-muted text-sm">Property</span>
+                  <span className="text-warm-text text-sm">{invoice.propertyName || invoice.propertyCode}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500 text-sm">Amount to Pay{payHalf && canSplit ? ' (50%)' : ''}</span>
-                  <span className="text-gold-600 font-bold text-lg">{formatCurrency(amountToPay)}</span>
+                  <span className="text-warm-muted text-sm">Amount to Pay{payHalf && canSplit ? ' (50%)' : ''}</span>
+                  <span className="text-warm-accent-hover font-bold text-lg">{formatCurrency(amountToPay)}</span>
                 </div>
                 {payHalf && canSplit && (
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
-                    <span className="text-gray-500 text-xs">Remaining due by {secondDue}</span>
-                    <span className="text-gray-600 text-sm font-medium">{formatCurrency(balanceNum - halfAmount)}</span>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-warm-border">
+                    <span className="text-warm-muted text-xs">Remaining due by {secondDue}</span>
+                    <span className="text-warm-muted text-sm font-medium">{formatCurrency(balanceNum - halfAmount)}</span>
                   </div>
                 )}
               </div>
 
               {/* Selected Payment Method */}
-              <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 mb-4">
+              <div className="bg-warm-accent-soft rounded-xl p-4 border border-warm-border mb-4">
                 <div className="flex items-center gap-3">
                   {(() => {
                     const method = ALL_PAYMENT_METHODS.find(m => m.id === selectedMethod);
                     const Icon = method?.icon || CreditCard;
                     return (
                       <>
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${method?.color || 'from-gray-200 to-gray-100'}`}>
-                          <Icon className="w-5 h-5 text-gray-900" />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${method?.color || 'from-warm-border to-warm-accent-soft'}`}>
+                          <Icon className="w-5 h-5 text-warm-text" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-gray-900 font-medium">{method?.label}</p>
-                          <p className="text-gray-500 text-sm">{method?.description}</p>
+                          <p className="text-warm-text font-medium">{method?.label}</p>
+                          <p className="text-warm-muted text-sm">{method?.description}</p>
                         </div>
                         <button
                           onClick={() => setStep(1)}
-                          className="text-gold-600 text-sm hover:text-gold-600"
+                          className="text-warm-accent-hover text-sm hover:text-warm-accent-hover"
                         >
                           Change
                         </button>
@@ -699,39 +699,39 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Account Name</span>
+                      <span className="text-warm-muted">Account Name</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-900">{BANK_DETAILS.accountName}</span>
+                        <span className="text-warm-text">{BANK_DETAILS.accountName}</span>
                         <button onClick={() => handleCopy(BANK_DETAILS.accountName, 'name')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'name' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Account Number</span>
+                      <span className="text-warm-muted">Account Number</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-900 font-mono">{BANK_DETAILS.accountNumber}</span>
+                        <span className="text-warm-text font-mono">{BANK_DETAILS.accountNumber}</span>
                         <button onClick={() => handleCopy(BANK_DETAILS.accountNumber, 'account')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'account' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500">IFSC Code</span>
+                      <span className="text-warm-muted">IFSC Code</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-900 font-mono">{BANK_DETAILS.ifscCode}</span>
+                        <span className="text-warm-text font-mono">{BANK_DETAILS.ifscCode}</span>
                         <button onClick={() => handleCopy(BANK_DETAILS.ifscCode, 'ifsc')} className="text-cyan-600 hover:text-cyan-700">
                           {copiedField === 'ifsc' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Bank & Branch</span>
-                      <span className="text-gray-900 text-right">{BANK_DETAILS.bankName}, {BANK_DETAILS.branch}</span>
+                      <span className="text-warm-muted">Bank & Branch</span>
+                      <span className="text-warm-text text-right">{BANK_DETAILS.bankName}, {BANK_DETAILS.branch}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-3">
-                    Please use Invoice ID <span className="text-gray-900 font-mono">{invoice.invoiceId}</span> as payment reference
+                  <p className="text-xs text-warm-muted mt-3">
+                    Please use Invoice ID <span className="text-warm-text font-mono">{invoice.invoiceId}</span> as payment reference
                   </p>
                 </div>
               )}
@@ -747,23 +747,23 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="text-gray-500 block text-xs mb-1">Visit our office at:</span>
-                      <p className="text-gray-900">{OFFICE_ADDRESS.line1}</p>
-                      <p className="text-gray-900">{OFFICE_ADDRESS.line2}</p>
-                      <p className="text-gray-900">{OFFICE_ADDRESS.city}</p>
+                      <span className="text-warm-muted block text-xs mb-1">Visit our office at:</span>
+                      <p className="text-warm-text">{OFFICE_ADDRESS.line1}</p>
+                      <p className="text-warm-text">{OFFICE_ADDRESS.line2}</p>
+                      <p className="text-warm-text">{OFFICE_ADDRESS.city}</p>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-orange-200">
-                      <span className="text-gray-500">Contact</span>
-                      <span className="text-gray-900">{OFFICE_ADDRESS.phone}</span>
+                      <span className="text-warm-muted">Contact</span>
+                      <span className="text-warm-text">{OFFICE_ADDRESS.phone}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Office Hours</span>
-                      <span className="text-gray-900">{OFFICE_ADDRESS.timings}</span>
+                      <span className="text-warm-muted">Office Hours</span>
+                      <span className="text-warm-text">{OFFICE_ADDRESS.timings}</span>
                     </div>
                   </div>
                   {selectedMethod === 'cheque' && (
-                    <p className="text-xs text-gray-500 mt-3">
-                      Make cheque payable to: <span className="text-gray-900 font-semibold">{BANK_DETAILS.accountName}</span>
+                    <p className="text-xs text-warm-muted mt-3">
+                      Make cheque payable to: <span className="text-warm-text font-semibold">{BANK_DETAILS.accountName}</span>
                     </p>
                   )}
                 </div>
@@ -771,7 +771,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Security Badge for Online */}
               {isOnlineMethod && (
-                <div className="flex items-center justify-center gap-2 text-gray-500 text-xs mb-4">
+                <div className="flex items-center justify-center gap-2 text-warm-muted text-xs mb-4">
                   <Shield className="w-4 h-4" />
                   <span>Secured by Razorpay | 256-bit SSL Encryption</span>
                 </div>
@@ -779,7 +779,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
               {/* Offline Payment Note */}
               {!isOnlineMethod && (
-                <div className="flex items-center gap-2 text-gray-500 text-xs mb-4 justify-center">
+                <div className="flex items-center gap-2 text-warm-muted text-xs mb-4 justify-center">
                   <Info className="w-4 h-4" />
                   <span>Payment will be verified by our team within 24-48 hours</span>
                 </div>
@@ -788,7 +788,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                   Back
@@ -796,7 +796,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                 <button
                   onClick={handlePayment}
                   disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all disabled:opacity-50"
                 >
                   {loading ? (
                     <>
@@ -824,11 +824,11 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
             <div className="p-6">
               {paymentStatus === 'processing' && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-gold-600/20 border border-gold-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Loader2 className="w-10 h-10 text-gold-600 animate-spin" />
+                  <div className="w-20 h-20 bg-warm-accent-hover/20 border border-warm-accent/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Loader2 className="w-10 h-10 text-warm-accent-hover animate-spin" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing Payment</h3>
-                  <p className="text-gray-600">
+                  <h3 className="text-xl font-semibold text-warm-text mb-2">Processing Payment</h3>
+                  <p className="text-warm-muted">
                     {isOnlineMethod ? 'Please complete the payment in the popup window...' : 'Submitting your payment details...'}
                   </p>
                 </div>
@@ -839,29 +839,29 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   <div className="w-20 h-20 bg-green-100 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="w-10 h-10 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Successful!</h3>
-                  <p className="text-gray-600 mb-6">Your payment has been processed successfully.</p>
+                  <h3 className="text-xl font-semibold text-warm-text mb-2">Payment Successful!</h3>
+                  <p className="text-warm-muted mb-6">Your payment has been processed successfully.</p>
                   
                   {paymentDetails && (
-                    <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 text-left mb-6">
+                    <div className="bg-warm-accent-soft rounded-xl p-4 border border-warm-border text-left mb-6">
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-500 text-sm">Amount Paid</span>
+                        <span className="text-warm-muted text-sm">Amount Paid</span>
                         <span className="text-green-600 font-semibold">{formatCurrency(paymentDetails.amount)}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-500 text-sm">Invoice</span>
-                        <span className="text-gray-900 text-sm">{paymentDetails.invoiceId}</span>
+                        <span className="text-warm-muted text-sm">Invoice</span>
+                        <span className="text-warm-text text-sm">{paymentDetails.invoiceId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500 text-sm">Transaction ID</span>
-                        <span className="text-gray-900 text-sm font-mono">{paymentDetails.paymentId}</span>
+                        <span className="text-warm-muted text-sm">Transaction ID</span>
+                        <span className="text-warm-text text-sm font-mono">{paymentDetails.paymentId}</span>
                       </div>
                     </div>
                   )}
 
                   <button
                     onClick={onClose}
-                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all"
                   >
                     Done
                   </button>
@@ -874,37 +874,37 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   <div className="w-20 h-20 bg-blue-100 border border-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="w-10 h-10 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Details Submitted!</h3>
-                  <p className="text-gray-600 mb-6">
+                  <h3 className="text-xl font-semibold text-warm-text mb-2">Payment Details Submitted!</h3>
+                  <p className="text-warm-muted mb-6">
                     {selectedMethod === 'bank_transfer' 
                       ? 'Please complete the bank transfer using the details provided. Your payment will be verified within 24-48 hours.'
                       : 'Please visit our office to complete the payment. Your invoice details have been recorded.'}
                   </p>
                   
                   {paymentDetails && (
-                    <div className="bg-gray-100 rounded-xl p-4 border border-gray-200 text-left mb-6">
+                    <div className="bg-warm-accent-soft rounded-xl p-4 border border-warm-border text-left mb-6">
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-500 text-sm">Amount</span>
-                        <span className="text-gray-900 font-semibold">{formatCurrency(paymentDetails.amount)}</span>
+                        <span className="text-warm-muted text-sm">Amount</span>
+                        <span className="text-warm-text font-semibold">{formatCurrency(paymentDetails.amount)}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-500 text-sm">Invoice</span>
-                        <span className="text-gray-900 text-sm">{paymentDetails.invoiceId}</span>
+                        <span className="text-warm-muted text-sm">Invoice</span>
+                        <span className="text-warm-text text-sm">{paymentDetails.invoiceId}</span>
                       </div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-gray-500 text-sm">Payment Method</span>
-                        <span className="text-gray-900 text-sm">{paymentDetails.method}</span>
+                        <span className="text-warm-muted text-sm">Payment Method</span>
+                        <span className="text-warm-text text-sm">{paymentDetails.method}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500 text-sm">Reference ID</span>
-                        <span className="text-gray-900 text-sm font-mono">{paymentDetails.referenceId}</span>
+                        <span className="text-warm-muted text-sm">Reference ID</span>
+                        <span className="text-warm-text text-sm font-mono">{paymentDetails.referenceId}</span>
                       </div>
                     </div>
                   )}
 
                   <button
                     onClick={onClose}
-                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all"
                   >
                     Done
                   </button>
@@ -916,13 +916,13 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   <div className="w-20 h-20 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
                     <X className="w-10 h-10 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Failed</h3>
-                  <p className="text-gray-600 mb-6">Something went wrong. Please try again.</p>
+                  <h3 className="text-xl font-semibold text-warm-text mb-2">Payment Failed</h3>
+                  <p className="text-warm-muted mb-6">Something went wrong. Please try again.</p>
                   
                   <div className="flex gap-3">
                     <button
                       onClick={onClose}
-                      className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
+                      className="flex-1 px-4 py-3 rounded-xl border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
                     >
                       Cancel
                     </button>
@@ -931,7 +931,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                         setStep(1);
                         setPaymentStatus(null);
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
+                      className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all"
                     >
                       Try Again
                     </button>
@@ -959,16 +959,16 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-warm-section rounded-2xl shadow-2xl border border-warm-accent-hover/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-warm-accent-hover/20 to-warm-accent/10 px-6 py-4 border-b border-warm-accent-hover/20 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Invoice Details</h2>
-            <p className="text-gold-600 text-sm">{invoice.invoiceId}</p>
+            <h2 className="text-xl font-bold text-warm-text">Invoice Details</h2>
+            <p className="text-warm-accent-hover text-sm">{invoice.invoiceId}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors"
+            className="p-2 rounded-lg hover:bg-warm-accent-soft text-warm-muted hover:text-warm-text transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -991,12 +991,12 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
             </div>
             <div className="flex gap-6 text-sm">
               <div>
-                <span className="text-gray-500">Invoice Date:</span>
-                <span className="ml-2 text-gray-900 font-medium">{formatDate(invoice.invoiceDate)}</span>
+                <span className="text-warm-muted">Invoice Date:</span>
+                <span className="ml-2 text-warm-text font-medium">{formatDate(invoice.invoiceDate)}</span>
               </div>
               <div>
-                <span className={isOverdue && !isPaid ? 'text-red-600' : 'text-gray-500'}>Due Date:</span>
-                <span className={`ml-2 font-medium ${isOverdue && !isPaid ? 'text-red-600' : 'text-gray-900'}`}>
+                <span className={isOverdue && !isPaid ? 'text-red-600' : 'text-warm-muted'}>Due Date:</span>
+                <span className={`ml-2 font-medium ${isOverdue && !isPaid ? 'text-red-600' : 'text-warm-text'}`}>
                   {formatDate(invoice.dueDate)}
                 </span>
               </div>
@@ -1004,42 +1004,42 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           </div>
 
           {/* Customer & Property Info - Combined */}
-          <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
+          <div className="bg-warm-accent-soft rounded-xl p-4 border border-warm-border">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
               {invoice.customerName && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Customer:</span>
-                  <span className="text-gray-900">{invoice.customerName}</span>
+                  <span className="text-warm-muted">Customer:</span>
+                  <span className="text-warm-text">{invoice.customerName}</span>
                 </div>
               )}
               {invoice.propertyCode && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Property ID:</span>
-                  <span className="text-gray-900">{invoice.propertyCode}</span>
+                  <span className="text-warm-muted">Property ID:</span>
+                  <span className="text-warm-text">{invoice.propertyCode}</span>
                 </div>
               )}
               {invoice.customerEmail && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Email:</span>
-                  <span className="text-gray-900 truncate">{invoice.customerEmail}</span>
+                  <span className="text-warm-muted">Email:</span>
+                  <span className="text-warm-text truncate">{invoice.customerEmail}</span>
                 </div>
               )}
               {invoice.propertyName && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Property:</span>
-                  <span className="text-gray-900">{invoice.propertyName}</span>
+                  <span className="text-warm-muted">Property:</span>
+                  <span className="text-warm-text">{invoice.propertyName}</span>
                 </div>
               )}
               {invoice.customerPhone && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Phone:</span>
-                  <span className="text-gray-900">{invoice.customerPhone}</span>
+                  <span className="text-warm-muted">Phone:</span>
+                  <span className="text-warm-text">{invoice.customerPhone}</span>
                 </div>
               )}
               {invoice.propertyType && (
                 <div className="flex gap-2">
-                  <span className="text-gray-500">Type:</span>
-                  <span className="text-gray-900">{invoice.propertyType}</span>
+                  <span className="text-warm-muted">Type:</span>
+                  <span className="text-warm-text">{invoice.propertyType}</span>
                 </div>
               )}
             </div>
@@ -1053,16 +1053,16 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500 block text-xs">Work Order ID</span>
-                  <span className="text-gray-900 font-medium">{invoice.workOrderId}</span>
+                  <span className="text-warm-muted block text-xs">Work Order ID</span>
+                  <span className="text-warm-text font-medium">{invoice.workOrderId}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block text-xs">Category</span>
-                  <span className="text-gray-900">{invoice.workOrderCategory || '-'}</span>
+                  <span className="text-warm-muted block text-xs">Category</span>
+                  <span className="text-warm-text">{invoice.workOrderCategory || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block text-xs">Subcategory</span>
-                  <span className="text-gray-900">{invoice.workOrderSubcategory || '-'}</span>
+                  <span className="text-warm-muted block text-xs">Subcategory</span>
+                  <span className="text-warm-text">{invoice.workOrderSubcategory || '-'}</span>
                 </div>
               </div>
             </div>
@@ -1071,28 +1071,28 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           {/* Services Table */}
           {services.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gold-600 mb-3">Services Included</h3>
-              <div className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
+              <h3 className="text-sm font-semibold text-warm-accent-hover mb-3">Services Included</h3>
+              <div className="bg-warm-accent-soft rounded-xl border border-warm-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-gray-600 font-medium">#</th>
-                      <th className="px-4 py-3 text-left text-gray-600 font-medium">Service</th>
-                      <th className="px-4 py-3 text-center text-gray-600 font-medium">Frequency</th>
-                      <th className="px-4 py-3 text-right text-gray-600 font-medium">Visits</th>
+                    <tr className="bg-warm-accent-soft border-b border-warm-border">
+                      <th className="px-4 py-3 text-left text-warm-muted font-medium">#</th>
+                      <th className="px-4 py-3 text-left text-warm-muted font-medium">Service</th>
+                      <th className="px-4 py-3 text-center text-warm-muted font-medium">Frequency</th>
+                      <th className="px-4 py-3 text-right text-warm-muted font-medium">Visits</th>
                     </tr>
                   </thead>
                   <tbody>
                     {services.map((item, idx) => (
-                      <tr key={idx} className="border-b border-gray-200 last:border-0">
-                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                      <tr key={idx} className="border-b border-warm-border last:border-0">
+                        <td className="px-4 py-3 text-warm-muted">{idx + 1}</td>
                         <td className="px-4 py-3">
-                          <span className="text-gray-900 font-medium">{item.name || item.description || 'Service'}</span>
+                          <span className="text-warm-text font-medium">{item.name || item.description || 'Service'}</span>
                         </td>
-                        <td className="px-4 py-3 text-center text-gray-600">
+                        <td className="px-4 py-3 text-center text-warm-muted">
                           {item.frequency || item.frequencyType || '-'}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-900">
+                        <td className="px-4 py-3 text-right text-warm-text">
                           {item.visits || item.frequencyCount || item.quantity || 1}
                         </td>
                       </tr>
@@ -1104,12 +1104,12 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           )}
 
           {/* Price Summary */}
-          <div className="bg-gradient-to-br from-gold-600/10 to-gold-500/5 rounded-xl p-5 border border-gold-600/20">
-            <h3 className="text-sm font-semibold text-gold-600 mb-4">Price Summary</h3>
+          <div className="bg-gradient-to-br from-warm-accent-hover/10 to-warm-accent/5 rounded-xl p-5 border border-warm-accent-hover/20">
+            <h3 className="text-sm font-semibold text-warm-accent-hover mb-4">Price Summary</h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="text-gray-900">{formatCurrency(invoice.subtotal)}</span>
+                <span className="text-warm-muted">Subtotal</span>
+                <span className="text-warm-text">{formatCurrency(invoice.subtotal)}</span>
               </div>
               {invoice.discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
@@ -1118,13 +1118,13 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
                 </div>
               )}
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">GST ({parseFloat(invoice.taxPercentage) || 0}%)</span>
-                <span className="text-gray-900">{formatCurrency(invoice.taxAmount)}</span>
+                <span className="text-warm-muted">GST ({parseFloat(invoice.taxPercentage) || 0}%)</span>
+                <span className="text-warm-text">{formatCurrency(invoice.taxAmount)}</span>
               </div>
-              <div className="border-t border-gold-600/20 pt-3">
+              <div className="border-t border-warm-accent-hover/20 pt-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-900 font-semibold">Total Amount</span>
-                  <span className="text-gold-600 text-lg font-bold">{formatCurrency(invoice.totalAmount)}</span>
+                  <span className="text-warm-text font-semibold">Total Amount</span>
+                  <span className="text-warm-accent-hover text-lg font-bold">{formatCurrency(invoice.totalAmount)}</span>
                 </div>
               </div>
               {invoice.amountPaid > 0 && (
@@ -1133,8 +1133,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
                     <span className="text-green-600">Amount Paid</span>
                     <span className="text-green-600">{formatCurrency(invoice.amountPaid)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-gold-600/20 pt-3">
-                    <span className="text-gray-900 font-semibold">Balance Due</span>
+                  <div className="flex justify-between border-t border-warm-accent-hover/20 pt-3">
+                    <span className="text-warm-text font-semibold">Balance Due</span>
                     <span className="text-red-600 text-lg font-bold">{formatCurrency(invoice.balanceAmount)}</span>
                   </div>
                 </>
@@ -1144,10 +1144,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
         </div>
 
         {/* Footer with Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-t border-warm-border bg-warm-page flex items-center justify-between gap-4">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors"
+            className="px-6 py-2.5 rounded-xl border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
           >
             Close
           </button>
@@ -1155,7 +1155,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           {!isPaid && invoice.balanceAmount > 0 && (
             <button
               onClick={() => onPay(invoice)}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-gray-900 font-semibold transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-warm-accent-hover to-warm-accent hover:from-warm-accent hover:to-warm-accent text-warm-text font-semibold transition-all"
             >
               <CreditCard className="w-5 h-5" />
               Pay Now
@@ -1288,47 +1288,47 @@ const Payment = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-warm-text mb-2">
           Payments & Invoices
         </h1>
-        <p className="text-gray-600">
+        <p className="text-warm-muted">
           View and pay your invoices securely
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-warm-border rounded-xl p-5 border border-warm-accent-hover/20">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
               <Receipt className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-gray-500 text-sm">Total Invoices</p>
-              <p className="text-2xl font-bold text-gray-900">{displayedInvoices.length}</p>
+              <p className="text-warm-muted text-sm">Total Invoices</p>
+              <p className="text-2xl font-bold text-warm-text">{displayedInvoices.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-warm-border rounded-xl p-5 border border-warm-accent-hover/20">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
               <Clock className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-gray-500 text-sm">Pending Amount</p>
+              <p className="text-warm-muted text-sm">Pending Amount</p>
               <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-200 rounded-xl p-5 border border-gold-600/20">
+        <div className="bg-warm-border rounded-xl p-5 border border-warm-accent-hover/20">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-gray-500 text-sm">Total Paid</p>
+              <p className="text-warm-muted text-sm">Total Paid</p>
               <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
             </div>
           </div>
@@ -1339,26 +1339,26 @@ const Payment = () => {
       <div className="flex items-center gap-3 mb-6">
         <label htmlFor="invoice-filter" className="sr-only">Show invoices</label>
         <div className="relative">
-          <Filter className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Filter className="w-4 h-4 text-warm-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <select
             id="invoice-filter"
             value={invoiceFilter}
             onChange={(e) => setInvoiceFilter(e.target.value)}
-            className="appearance-none pl-9 pr-9 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 font-medium hover:border-gray-300 focus:outline-none focus:border-gold-500/50 transition-colors"
+            className="appearance-none pl-9 pr-9 py-2.5 rounded-xl bg-warm-section border border-warm-border text-warm-text font-medium hover:border-warm-border focus:outline-none focus:border-warm-accent/50 transition-colors"
           >
             {INVOICE_FILTERS.map(option => (
-              <option key={option.value} value={option.value} className="bg-white">
+              <option key={option.value} value={option.value} className="bg-warm-section">
                 {option.label} ({option.count})
               </option>
             ))}
           </select>
-          <ChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <ChevronDown className="w-4 h-4 text-warm-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
 
         <button
           onClick={fetchInvoices}
           disabled={loading}
-          className="ml-auto p-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors disabled:opacity-50"
+          className="ml-auto p-2.5 rounded-xl bg-warm-section border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors disabled:opacity-50"
           title="Refresh"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1366,22 +1366,22 @@ const Payment = () => {
       </div>
 
       {/* Invoice List */}
-      <div className="bg-gray-200 rounded-2xl shadow-lg border border-gold-600/20 overflow-hidden">
+      <div className="bg-warm-border rounded-2xl shadow-lg border border-warm-accent-hover/20 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <RefreshCw className="w-8 h-8 text-gold-600 animate-spin mx-auto mb-3" />
-              <p className="text-gray-600">Loading invoices...</p>
+              <RefreshCw className="w-8 h-8 text-warm-accent-hover animate-spin mx-auto mb-3" />
+              <p className="text-warm-muted">Loading invoices...</p>
             </div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-              <p className="text-gray-600">{error}</p>
+              <p className="text-warm-muted">{error}</p>
               <button
                 onClick={fetchInvoices}
-                className="mt-4 px-4 py-2 rounded-lg bg-gold-600/20 text-gold-600 hover:bg-gold-600/30 transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg bg-warm-accent-hover/20 text-warm-accent-hover hover:bg-warm-accent-hover/30 transition-colors"
               >
                 Try Again
               </button>
@@ -1390,15 +1390,15 @@ const Payment = () => {
         ) : displayedInvoices.length === 0 ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <FileText className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-gray-600">
+              <FileText className="w-12 h-12 text-warm-muted mx-auto mb-3" />
+              <p className="text-warm-muted">
                 No {invoiceFilter === 'amc' ? 'AMC ' : invoiceFilter === 'workorder' ? 'work order ' : ''}invoices found
               </p>
-              <p className="text-gray-500 text-sm mt-1">Invoices will appear here once generated</p>
+              <p className="text-warm-muted text-sm mt-1">Invoices will appear here once generated</p>
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-warm-border">
             {displayedInvoices.map((invoice) => {
               const isPaid = invoice.status === 'paid' || invoice.balanceAmount <= 0;
               const isOverdue = invoice.status === 'overdue' || (invoice.dueDate && new Date(invoice.dueDate) < new Date() && !isPaid);
@@ -1409,39 +1409,39 @@ const Payment = () => {
               return (
                 <div
                   key={invoice.id}
-                  className="p-4 sm:p-5 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="p-4 sm:p-5 hover:bg-warm-accent-soft transition-colors cursor-pointer"
                   onClick={() => fetchInvoiceDetails(invoice.id)}
                 >
                   <div className="flex items-center gap-4">
                     {/* Invoice Icon. Read from the invoice itself, not from the filter: on All
                         the two kinds sit in one list, and the icon is what tells them apart. */}
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      isWorkOrder ? 'bg-blue-100' : 'bg-gold-600/20'
+                      isWorkOrder ? 'bg-blue-100' : 'bg-warm-accent-hover/20'
                     }`}>
                       {isWorkOrder ? (
                         <Briefcase className="w-6 h-6 text-blue-600" />
                       ) : (
-                        <FileText className="w-6 h-6 text-gold-600" />
+                        <FileText className="w-6 h-6 text-warm-accent-hover" />
                       )}
                     </div>
 
                     {/* Invoice Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-gray-900 font-semibold">{invoice.invoiceId}</h3>
+                        <h3 className="text-warm-text font-semibold">{invoice.invoiceId}</h3>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_CONFIG[invoice.status]?.color || STATUS_CONFIG.draft.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {STATUS_CONFIG[invoice.status]?.label || invoice.status}
                           {invoice.status === 'partially_paid' && paidPct > 0 && ` (${paidPct}%)`}
                         </span>
                       </div>
-                      <p className="text-gray-500 text-sm truncate">
+                      <p className="text-warm-muted text-sm truncate">
                         {invoice.propertyName || invoice.propertyCode || 'Property'}
                         {invoice.invoiceType === 'work_order' && invoice.workOrderId && (
                           <span className="ml-2 text-blue-600">• WO: {invoice.workOrderId}</span>
                         )}
                       </p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 mt-2 text-xs text-warm-muted">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {formatDate(invoice.invoiceDate)}
@@ -1455,7 +1455,7 @@ const Payment = () => {
 
                     {/* Amount & Action */}
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">{formatCurrency(invoice.totalAmount)}</p>
+                      <p className="text-lg font-bold text-warm-text">{formatCurrency(invoice.totalAmount)}</p>
                       {!isPaid && invoice.balanceAmount > 0 && (
                         <p className="text-sm text-amber-600">Due: {formatCurrency(invoice.balanceAmount)}</p>
                       )}
@@ -1467,7 +1467,7 @@ const Payment = () => {
                     </div>
 
                     {/* Arrow */}
-                    <ChevronRight className="w-5 h-5 text-gray-500" />
+                    <ChevronRight className="w-5 h-5 text-warm-muted" />
                   </div>
                 </div>
               );

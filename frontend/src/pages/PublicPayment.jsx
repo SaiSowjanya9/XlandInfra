@@ -176,10 +176,10 @@ const PublicPayment = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
-          <p className="text-gray-600">Loading invoice details...</p>
+          <p className="text-warm-muted">Loading invoice details...</p>
         </div>
       </div>
     );
@@ -187,13 +187,13 @@ const PublicPayment = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-sm p-8 max-w-md w-full text-center border border-gray-200">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+        <div className="bg-warm-section rounded-xl shadow-warm p-8 max-w-md w-full text-center border border-warm-border">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Invoice</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-xl font-bold text-warm-text mb-2">Unable to Load Invoice</h2>
+          <p className="text-warm-muted mb-6">{error}</p>
           <button 
             onClick={() => navigate('/')}
             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
@@ -208,16 +208,16 @@ const PublicPayment = () => {
   // Already paid
   if (step === 4) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-sm p-8 max-w-md w-full text-center border border-gray-200">
+      <div className="min-h-screen bg-warm-page flex items-center justify-center p-4">
+        <div className="bg-warm-section rounded-xl shadow-warm p-8 max-w-md w-full text-center border border-warm-border">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Invoice Already Paid</h2>
-          <p className="text-gray-600 mb-4">This invoice has already been paid. Thank you!</p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-gray-500 text-sm">Invoice</p>
-            <p className="text-gray-900 font-semibold">{invoice?.invoiceId}</p>
+          <h2 className="text-xl font-bold text-warm-text mb-2">Invoice Already Paid</h2>
+          <p className="text-warm-muted mb-4">This invoice has already been paid. Thank you!</p>
+          <div className="bg-warm-page rounded-lg p-4 mb-6">
+            <p className="text-warm-muted text-sm">Invoice</p>
+            <p className="text-warm-text font-semibold">{invoice?.invoiceId}</p>
           </div>
           <button 
             onClick={() => navigate('/')}
@@ -231,20 +231,20 @@ const PublicPayment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-warm-page">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-warm-section border-b border-warm-border">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => step > 1 ? setStep(step - 1) : navigate('/')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-warm-accent-soft rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-warm-muted" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Make Payment</h1>
-              <p className="text-sm text-gray-500">Choose a payment method and complete your payment</p>
+              <h1 className="text-xl font-bold text-warm-text">Make Payment</h1>
+              <p className="text-sm text-warm-muted">Choose a payment method and complete your payment</p>
             </div>
           </div>
         </div>
@@ -255,30 +255,30 @@ const PublicPayment = () => {
         {step === 1 && (
           <>
             {/* Invoice Details Card */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h2>
+            <div className="bg-warm-section rounded-xl border border-warm-border p-6 mb-6">
+              <h2 className="text-lg font-semibold text-warm-text mb-4">Invoice Details</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-xs text-blue-600 font-medium uppercase mb-1">Invoice ID</p>
                   <p className="text-sm font-semibold text-blue-600">{invoice?.invoiceId}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Property / Customer</p>
-                  <p className="text-sm font-medium text-gray-900">{invoice?.propertyName || invoice?.customerName || '-'}</p>
+                  <p className="text-xs text-warm-muted uppercase mb-1">Property / Customer</p>
+                  <p className="text-sm font-medium text-warm-text">{invoice?.propertyName || invoice?.customerName || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Invoice Date</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDate(invoice?.invoiceDate)}</p>
+                  <p className="text-xs text-warm-muted uppercase mb-1">Invoice Date</p>
+                  <p className="text-sm font-medium text-warm-text">{formatDate(invoice?.invoiceDate)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Due Date</p>
+                  <p className="text-xs text-warm-muted uppercase mb-1">Due Date</p>
                   <p className="text-sm font-medium text-red-600">{formatDate(invoice?.dueDate)}</p>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+              <div className="mt-4 pt-4 border-t border-warm-accent-soft flex justify-end">
                 <div className="text-right">
                   <p className="text-xs text-green-600 font-medium uppercase">Total Amount</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(invoice?.totalAmount)}</p>
+                  <p className="text-2xl font-bold text-warm-text">{formatCurrency(invoice?.totalAmount)}</p>
                   <p className="text-xs text-green-600 mt-1">Due Amount</p>
                   <p className="text-xl font-bold text-green-600">{formatCurrency(invoice?.balanceAmount)}</p>
                 </div>
@@ -286,9 +286,9 @@ const PublicPayment = () => {
             </div>
 
             {/* Payment Methods Card */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Choose Payment Method</h2>
-              <p className="text-sm text-gray-500 mb-4">Select any one payment method to proceed</p>
+            <div className="bg-warm-section rounded-xl border border-warm-border p-6 mb-6">
+              <h2 className="text-lg font-semibold text-warm-text mb-1">Choose Payment Method</h2>
+              <p className="text-sm text-warm-muted mb-4">Select any one payment method to proceed</p>
 
               <div className="space-y-3">
                 {PAYMENT_METHODS.map((method) => {
@@ -302,7 +302,7 @@ const PublicPayment = () => {
                       className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         isSelected 
                           ? 'border-blue-300 bg-blue-50/50' 
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          : 'border-warm-border hover:border-warm-border bg-warm-section'
                       }`}
                     >
                       <input
@@ -311,16 +311,16 @@ const PublicPayment = () => {
                         value={method.id}
                         checked={isSelected}
                         onChange={() => setSelectedMethod(method.id)}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-300"
+                        className="mt-1 w-4 h-4 text-blue-600 border-warm-border focus:ring-blue-300"
                       />
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        isSelected ? 'bg-blue-100' : 'bg-gray-100'
+                        isSelected ? 'bg-blue-100' : 'bg-warm-accent-soft'
                       }`}>
-                        <Icon className={`w-6 h-6 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
+                        <Icon className={`w-6 h-6 ${isSelected ? 'text-blue-600' : 'text-warm-muted'}`} />
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{method.label}</p>
-                        <p className="text-sm text-gray-500">{method.description}</p>
+                        <p className="font-semibold text-warm-text">{method.label}</p>
+                        <p className="text-sm text-warm-muted">{method.description}</p>
                         {method.badges && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {method.badges.map((badge, idx) => (
@@ -330,12 +330,12 @@ const PublicPayment = () => {
                                   badge === 'VISA' ? 'bg-blue-900 text-white' :
                                   badge === 'RuPay' ? 'bg-green-600 text-white' :
                                   badge === 'maestro' ? 'bg-red-600 text-white' :
-                                  badge === 'Net Banking' ? 'bg-gray-200 text-gray-700' :
-                                  badge === 'GPay' ? 'bg-white border text-gray-700' :
+                                  badge === 'Net Banking' ? 'bg-warm-border text-warm-text' :
+                                  badge === 'GPay' ? 'bg-warm-section border text-warm-text' :
                                   badge === 'PhonePe' ? 'bg-purple-600 text-white' :
                                   badge === 'Paytm' ? 'bg-blue-500 text-white' :
                                   badge === 'BHIM' ? 'bg-orange-500 text-white' :
-                                  'bg-gray-100 text-gray-600'
+                                  'bg-warm-accent-soft text-warm-muted'
                                 }`}
                               >
                                 {badge}
@@ -349,7 +349,7 @@ const PublicPayment = () => {
                           {method.feeText}
                         </p>
                         {method.feeAmount && (
-                          <p className="text-sm text-gray-500">{method.feeAmount}</p>
+                          <p className="text-sm text-warm-muted">{method.feeAmount}</p>
                         )}
                         {method.tags && (
                           <div className="mt-1 space-y-0.5">
@@ -379,7 +379,7 @@ const PublicPayment = () => {
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={() => navigate('/')}
-                className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-2.5 border border-warm-border text-warm-text rounded-lg font-medium hover:bg-warm-page transition-colors"
               >
                 Cancel
               </button>
@@ -409,14 +409,14 @@ const PublicPayment = () => {
         {step === 2 && (
           <>
             {/* Invoice Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <div className="bg-warm-section rounded-xl border border-warm-border p-6 mb-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-gray-500">Invoice</p>
-                  <p className="font-semibold text-gray-900">{invoice?.invoiceId}</p>
+                  <p className="text-sm text-warm-muted">Invoice</p>
+                  <p className="font-semibold text-warm-text">{invoice?.invoiceId}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Amount to Pay</p>
+                  <p className="text-sm text-warm-muted">Amount to Pay</p>
                   <p className="text-xl font-bold text-green-600">{formatCurrency(invoice?.balanceAmount)}</p>
                 </div>
               </div>
@@ -424,8 +424,8 @@ const PublicPayment = () => {
 
             {/* Bank Transfer Instructions */}
             {selectedMethod === 'bank_transfer' && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="bg-warm-section rounded-xl border border-warm-border p-6 mb-6">
+                <h3 className="text-lg font-semibold text-warm-text mb-4 flex items-center gap-2">
                   <Landmark className="w-5 h-5 text-blue-600" />
                   Bank Transfer Details
                 </h3>
@@ -437,13 +437,13 @@ const PublicPayment = () => {
                     { label: 'Branch', value: BANK_DETAILS.branch, key: 'branch' },
                     { label: 'IFSC Code', value: BANK_DETAILS.ifscCode, key: 'ifsc' },
                   ].map(item => (
-                    <div key={item.key} className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-gray-600">{item.label}</span>
+                    <div key={item.key} className="flex justify-between items-center py-2 border-b border-warm-accent-soft">
+                      <span className="text-warm-muted">{item.label}</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{item.value}</span>
+                        <span className="font-medium text-warm-text">{item.value}</span>
                         <button 
                           onClick={() => handleCopy(item.value, item.key)}
-                          className="p-1.5 hover:bg-gray-100 rounded-lg text-blue-600"
+                          className="p-1.5 hover:bg-warm-accent-soft rounded-lg text-blue-600"
                         >
                           {copiedField === item.key ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                         </button>
@@ -464,17 +464,17 @@ const PublicPayment = () => {
 
             {/* Cash/Cheque Instructions */}
             {(selectedMethod === 'cash' || selectedMethod === 'cheque') && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="bg-warm-section rounded-xl border border-warm-border p-6 mb-6">
+                <h3 className="text-lg font-semibold text-warm-text mb-4 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-blue-600" />
                   Office Address
                 </h3>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <p className="font-medium text-gray-900">{OFFICE_ADDRESS.line1}</p>
-                  <p className="text-gray-700">{OFFICE_ADDRESS.line2}</p>
-                  <p className="text-gray-700">{OFFICE_ADDRESS.city}</p>
-                  <p className="text-gray-600 mt-2">Phone: {OFFICE_ADDRESS.phone}</p>
-                  <p className="text-gray-600">Timings: {OFFICE_ADDRESS.timings}</p>
+                <div className="bg-warm-page rounded-lg p-4 mb-4">
+                  <p className="font-medium text-warm-text">{OFFICE_ADDRESS.line1}</p>
+                  <p className="text-warm-text">{OFFICE_ADDRESS.line2}</p>
+                  <p className="text-warm-text">{OFFICE_ADDRESS.city}</p>
+                  <p className="text-warm-muted mt-2">Phone: {OFFICE_ADDRESS.phone}</p>
+                  <p className="text-warm-muted">Timings: {OFFICE_ADDRESS.timings}</p>
                 </div>
                 {selectedMethod === 'cheque' && (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -492,7 +492,7 @@ const PublicPayment = () => {
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={() => setStep(1)}
-                className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-2.5 border border-warm-border text-warm-text rounded-lg font-medium hover:bg-warm-page transition-colors"
               >
                 Choose Different Method
               </button>

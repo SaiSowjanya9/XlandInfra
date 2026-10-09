@@ -50,6 +50,19 @@ export default {
           700: '#1A1A1A',
           600: '#222222',
           500: '#2D2D2D',
+        },
+        warm: {
+          page: '#FAF7F2',
+          section: '#FFF9EE',
+          border: '#EADFCF',
+          accent: '#D4A574',
+          'accent-hover': '#C69250',
+          'accent-soft': '#FEF3E2',
+          text: '#1F2937',
+          muted: '#6B7280',
+          success: '#ECFDF5',
+          info: '#EEF4FF',
+          warning: '#FEF3C7',
         }
       },
       fontFamily: {
@@ -112,6 +125,10 @@ export default {
         'gold-shimmer': 'linear-gradient(90deg, #B89A3C, #D8B25C, #E8C26C, #D8B25C, #B89A3C)',
         'dark-gradient': 'linear-gradient(180deg, #0D0D0D 0%, #141414 50%, #0D0D0D 100%)',
         'hero-gradient': 'linear-gradient(135deg, rgba(13,13,13,0.95) 0%, rgba(20,20,20,0.9) 50%, rgba(13,13,13,0.95) 100%)',
+      },
+      boxShadow: {
+        'warm': '0 3px 8px rgba(0, 0, 0, 0.04)',
+        'warm-hover': '0 4px 16px rgba(0, 0, 0, 0.06)',
       },
     },
   },

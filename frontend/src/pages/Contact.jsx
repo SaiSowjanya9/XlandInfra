@@ -31,18 +31,18 @@ const Contact = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-warm-text mb-2">
           Contact / Help
         </h1>
-        <p className="text-gray-600">
+        <p className="text-warm-muted">
           Get in touch with our support team
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Contact Information */}
-        <div className="bg-gray-200 rounded-2xl shadow-lg border border-gold-600/20 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="bg-warm-border rounded-2xl shadow-lg border border-warm-accent-hover/20 p-6">
+          <h2 className="text-lg font-semibold text-warm-text mb-6">
             Contact Information
           </h2>
           <div className="space-y-6">
@@ -50,13 +50,13 @@ const Contact = () => {
               const Icon = item.icon;
               return (
                 <div key={index} className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-gold-600/20 border border-gold-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-6 h-6 text-gold-600" />
+                  <div className="w-12 h-12 bg-warm-accent-hover/20 border border-warm-accent/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-6 h-6 text-warm-accent-hover" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">{item.title}</h3>
-                    <p className="text-gray-700">{item.details}</p>
-                    <p className="text-sm text-gray-500">{item.subtext}</p>
+                    <h3 className="font-medium text-warm-text">{item.title}</h3>
+                    <p className="text-warm-text">{item.details}</p>
+                    <p className="text-sm text-warm-muted">{item.subtext}</p>
                   </div>
                 </div>
               );
@@ -65,8 +65,8 @@ const Contact = () => {
         </div>
 
         {/* Emergency Contact */}
-        <div className="bg-gray-200 rounded-2xl shadow-lg border border-gold-600/20 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        <div className="bg-warm-border rounded-2xl shadow-lg border border-warm-accent-hover/20 p-6">
+          <h2 className="text-lg font-semibold text-warm-text mb-6">
             Need Help?
           </h2>
           <div className="space-y-4">
