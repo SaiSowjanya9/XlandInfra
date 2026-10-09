@@ -235,7 +235,7 @@ const Dashboard = ({ user }) => {
       in_progress: { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200', label: 'In Progress' },
       under_review: { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200', label: 'Under Review' },
       completed: { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200', label: 'Completed' },
-      closed: { bg: 'bg-warm-accent/20', text: 'text-warm-muted', border: 'border-warm-accent/30', label: 'Closed' },
+      closed: { bg: 'bg-gold-500/20', text: 'text-gray-500', border: 'border-gold-500/30', label: 'Closed' },
       cancelled: { bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-200', label: 'Cancelled' }
     };
     const config = statusConfig[status] || statusConfig.pending;
@@ -276,7 +276,7 @@ const Dashboard = ({ user }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-2 border-warm-accent/30 border-t-warm-accent rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -286,12 +286,12 @@ const Dashboard = ({ user }) => {
       {/* Welcome Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-warm-text mb-2">
-            Welcome, <span className="text-warm-accent-hover">{user?.firstName}!</span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            Welcome, <span className="text-gold-600">{user?.firstName}!</span>
           </h1>
-          <p className="text-warm-muted">Here's what's happening with your property today.</p>
+          <p className="text-gray-500">Here's what's happening with your property today.</p>
           {user?.propertyCode && (
-            <p className="text-warm-muted text-sm mt-1">Property ID: <span className="text-warm-accent-hover font-medium">{user.propertyCode}</span></p>
+            <p className="text-gray-500 text-sm mt-1">Property ID: <span className="text-gold-600 font-medium">{user.propertyCode}</span></p>
           )}
         </div>
         <div className="flex items-center gap-3">
@@ -302,10 +302,10 @@ const Dashboard = ({ user }) => {
                 setShowNotifications(!showNotifications);
                 if (!showNotifications) fetchNotifications();
               }}
-              className="relative flex items-center justify-center w-10 h-10 bg-warm-section border border-warm-border rounded-lg hover:bg-warm-accent-soft transition-colors text-warm-text"
+              className="relative flex items-center justify-center w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-900"
             >
               {unreadCount > 0 ? (
-                <BellRing className="w-5 h-5 text-warm-accent-hover" />
+                <BellRing className="w-5 h-5 text-gold-600" />
               ) : (
                 <Bell className="w-5 h-5" />
               )}
@@ -318,16 +318,16 @@ const Dashboard = ({ user }) => {
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 top-12 w-80 sm:w-96 bg-warm-section border border-warm-border rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-warm-border">
-                  <h3 className="text-warm-text font-semibold flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-warm-accent-hover" />
+              <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <h3 className="text-gray-900 font-semibold flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-gold-600" />
                     Notifications
                   </h3>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllNotificationsAsRead}
-                      className="text-xs text-warm-accent-hover hover:text-warm-accent flex items-center gap-1"
+                      className="text-xs text-gold-600 hover:text-gold-500 flex items-center gap-1"
                     >
                       <CheckCheck className="w-3 h-3" />
                       Mark all read
@@ -338,12 +338,12 @@ const Dashboard = ({ user }) => {
                 <div className="max-h-80 overflow-y-auto">
                   {notificationsLoading ? (
                     <div className="flex items-center justify-center p-8">
-                      <Loader2 className="w-6 h-6 text-warm-accent-hover animate-spin" />
+                      <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="p-8 text-center">
-                      <Bell className="w-10 h-10 text-warm-muted mx-auto mb-2" />
-                      <p className="text-warm-muted text-sm">No notifications yet</p>
+                      <Bell className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No notifications yet</p>
                     </div>
                   ) : (
                     notifications.map((notification) => (
@@ -358,24 +358,24 @@ const Dashboard = ({ user }) => {
                           }
                           setShowNotifications(false);
                         }}
-                        className={`w-full text-left p-4 border-b border-warm-border hover:bg-warm-accent-soft transition-colors ${
-                          !notification.isRead ? 'bg-warm-accent-hover/5' : ''
+                        className={`w-full text-left p-4 border-b border-gray-200 hover:bg-gray-100 transition-colors ${
+                          !notification.isRead ? 'bg-gold-600/5' : ''
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            !notification.isRead ? 'bg-warm-accent' : 'bg-warm-border'
+                            !notification.isRead ? 'bg-gold-500' : 'bg-gray-200'
                           }`} />
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-medium ${
-                              !notification.isRead ? 'text-warm-text' : 'text-warm-muted'
+                              !notification.isRead ? 'text-gray-900' : 'text-gray-500'
                             }`}>
                               {notification.title}
                             </p>
-                            <p className="text-xs text-warm-muted mt-1 line-clamp-2">
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                               {notification.message}
                             </p>
-                            <p className="text-xs text-warm-muted mt-2">
+                            <p className="text-xs text-gray-500 mt-2">
                               {new Date(notification.createdAt).toLocaleString('en-IN', {
                                 day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
                               })}
@@ -396,7 +396,7 @@ const Dashboard = ({ user }) => {
               fetchDashboard();
               fetchNotifications();
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-warm-section border border-warm-border rounded-lg hover:bg-warm-accent-soft transition-colors text-warm-text"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-900"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Refresh</span>
@@ -409,50 +409,50 @@ const Dashboard = ({ user }) => {
       <div className="flex flex-col">
       {/* Stats Row - 4 cards */}
       <div className="order-2 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        <button onClick={() => navigate('/dashboard/work-order')} className="bg-warm-section border border-warm-border rounded-2xl p-3 sm:p-5 hover:bg-warm-accent-soft transition-all duration-200 group text-left min-w-0">
+        <button onClick={() => navigate('/dashboard/work-order')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-6 h-6 text-warm-text" />
+              <ClipboardList className="w-6 h-6 text-gray-900" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-warm-muted truncate">Total Orders</p>
-              <p className="text-2xl font-bold text-warm-text">{stats?.total || 0}</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Total Orders</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.total || 0}</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-warm-section border border-warm-border rounded-2xl p-3 sm:p-5 hover:bg-warm-accent-soft transition-all duration-200 group text-left min-w-0">
+        <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-6 h-6 text-warm-text" />
+              <Clock className="w-6 h-6 text-gray-900" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-warm-muted truncate">Pending</p>
-              <p className="text-2xl font-bold text-warm-text">{Number(stats?.pending) || 0}</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Pending</p>
+              <p className="text-2xl font-bold text-gray-900">{Number(stats?.pending) || 0}</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-warm-section border border-warm-border rounded-2xl p-3 sm:p-5 hover:bg-warm-accent-soft transition-all duration-200 group text-left min-w-0">
+        <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-6 h-6 text-warm-text" />
+              <CheckCircle className="w-6 h-6 text-gray-900" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-warm-muted truncate">Completed</p>
-              <p className="text-2xl font-bold text-warm-text">{stats?.completed || 0}</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.completed || 0}</p>
             </div>
           </div>
         </button>
 
-        <button onClick={() => navigate('/dashboard/contact')} className="bg-warm-section border border-warm-border rounded-2xl p-3 sm:p-5 hover:bg-warm-accent-soft transition-all duration-200 group text-left min-w-0">
+        <button onClick={() => navigate('/dashboard/contact')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-warm-accent to-warm-accent-hover rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6 text-warm-text" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-6 h-6 text-gray-900" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm text-warm-muted truncate">Property</p>
-              <p className="text-base sm:text-lg font-bold text-warm-text truncate lg:max-w-[120px]">{user?.propertyName || 'N/A'}</p>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Property</p>
+              <p className="text-base sm:text-lg font-bold text-gray-900 truncate lg:max-w-[120px]">{user?.propertyName || 'N/A'}</p>
             </div>
           </div>
         </button>
@@ -460,23 +460,23 @@ const Dashboard = ({ user }) => {
 
       {/* Quick Access Cards */}
       <div className="order-1 mb-8">
-        <h2 className="text-lg font-semibold text-warm-text mb-4">Quick Access</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Access</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {menuItems.map((item) => {
             const Icon = item.icon;
             
             if (item.locked) {
               return (
-                <div key={item.path} className="relative bg-warm-section rounded-2xl shadow-lg border border-warm-border overflow-hidden opacity-60 cursor-not-allowed p-3 sm:p-5">
+                <div key={item.path} className="relative bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden opacity-60 cursor-not-allowed p-3 sm:p-5">
                   <div className="absolute top-3 right-3 z-10">
-                    <div className="bg-warm-accent-soft border border-warm-border rounded-full p-1.5">
-                      <Lock className="w-4 h-4 text-warm-muted" />
+                    <div className="bg-gray-100 border border-gray-200 rounded-full p-1.5">
+                      <Lock className="w-4 h-4 text-gray-500" />
                     </div>
                   </div>
-                  <div className="w-10 h-10 bg-warm-accent-soft rounded-xl flex items-center justify-center mb-3">
-                    <Icon className="w-5 h-5 text-warm-muted" />
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-gray-500" />
                   </div>
-                  <h3 className="text-warm-text font-semibold mb-1">{item.title}</h3>
+                  <h3 className="text-gray-900 font-semibold mb-1">{item.title}</h3>
                 </div>
               );
             }
@@ -485,17 +485,17 @@ const Dashboard = ({ user }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-warm-section border border-warm-border rounded-xl hover:bg-warm-accent-soft transition-colors group min-w-0"
+                className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors group min-w-0"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-warm-accent to-warm-accent-hover rounded-lg flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-warm-text" />
+                  <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-gray-900" />
                   </div>
                   <div className="text-left min-w-0">
-                    <p className="font-medium text-warm-text text-sm sm:text-base leading-snug">{item.title}</p>
+                    <p className="font-medium text-gray-900 text-sm sm:text-base leading-snug">{item.title}</p>
                   </div>
                 </div>
-                <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-warm-muted group-hover:text-warm-accent-hover transition-colors" />
+                <ArrowRight className="hidden sm:block w-4 h-4 shrink-0 text-gray-500 group-hover:text-gold-600 transition-colors" />
               </Link>
             );
           })}
@@ -507,8 +507,8 @@ const Dashboard = ({ user }) => {
       {recentWorkOrders.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-warm-text">Recent Work Orders</h2>
-            <Link to="/dashboard/work-order" className="text-sm text-warm-accent-hover hover:text-warm-accent flex items-center gap-1">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Work Orders</h2>
+            <Link to="/dashboard/work-order" className="text-sm text-gold-600 hover:text-gold-500 flex items-center gap-1">
               View All <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
@@ -517,20 +517,20 @@ const Dashboard = ({ user }) => {
               <button
                 key={order.id}
                 onClick={() => setSelectedWorkOrder(order)}
-                className="w-full text-left bg-warm-section border border-warm-border rounded-xl p-4 hover:bg-warm-accent-soft transition-all group"
+                className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-all group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-warm-accent-hover">{order.work_order_id}</span>
+                      <span className="text-sm font-medium text-gold-600">{order.work_order_id}</span>
                       {getStatusBadge(order.status)}
                       {order.priority && getPriorityBadge(order.priority)}
                     </div>
-                    <p className="text-warm-text font-medium mb-1">{order.category_name}</p>
-                    <p className="text-warm-muted text-sm line-clamp-1">{order.description}</p>
-                    <p className="text-warm-muted text-xs mt-2">{formatDate(order.created_at)}</p>
+                    <p className="text-gray-900 font-medium mb-1">{order.category_name}</p>
+                    <p className="text-gray-500 text-sm line-clamp-1">{order.description}</p>
+                    <p className="text-gray-500 text-xs mt-2">{formatDate(order.created_at)}</p>
                   </div>
-                  <Eye className="w-5 h-5 text-warm-muted group-hover:text-warm-accent-hover transition-colors mt-1" />
+                  <Eye className="w-5 h-5 text-gray-500 group-hover:text-gold-600 transition-colors mt-1" />
                 </div>
               </button>
             ))}
@@ -542,11 +542,11 @@ const Dashboard = ({ user }) => {
       {renewals.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-warm-text flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-warm-accent-hover" />
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-gold-600" />
               Service Renewals
             </h2>
-            <span className="px-2 py-1 bg-warm-accent-hover/20 text-warm-accent-hover text-xs font-medium rounded-full">
+            <span className="px-2 py-1 bg-gold-600/20 text-gold-600 text-xs font-medium rounded-full">
               {renewals.length} Pending
             </span>
           </div>
@@ -554,22 +554,22 @@ const Dashboard = ({ user }) => {
             {renewals.map((renewal) => (
               <div
                 key={renewal.id}
-                className="bg-gradient-to-r from-warm-accent/10 to-warm-accent-hover/5 border border-warm-accent/30 rounded-xl p-4"
+                className="bg-gradient-to-r from-gold-500/10 to-gold-600/5 border border-gold-500/30 rounded-xl p-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-warm-accent-hover">{renewal.serviceName}</span>
+                      <span className="text-sm font-medium text-gold-600">{renewal.serviceName}</span>
                       {renewal.daysUntilExpiry !== null && renewal.daysUntilExpiry <= 7 && (
                         <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">
                           Expires in {renewal.daysUntilExpiry} days
                         </span>
                       )}
                     </div>
-                    <p className="text-warm-text font-medium text-sm mb-1">
+                    <p className="text-gray-900 font-medium text-sm mb-1">
                       Renewal Period: {new Date(renewal.renewalStartDate).toLocaleDateString('en-IN')} - {new Date(renewal.renewalEndDate).toLocaleDateString('en-IN')}
                     </p>
-                    <p className="text-warm-muted text-xs">
+                    <p className="text-gray-500 text-xs">
                       {renewal.totalVisits} visits ({renewal.frequency}) | Vendor: {renewal.vendorCompany || renewal.vendorName || 'TBA'}
                     </p>
                   </div>
@@ -589,7 +589,7 @@ const Dashboard = ({ user }) => {
                     <button
                       onClick={() => handleDeclineRenewal(renewal.id)}
                       disabled={processingRenewal === renewal.id}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-warm-accent-soft hover:bg-warm-border text-warm-muted text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                     >
                       <ThumbsDown className="w-4 h-4" />
                       Decline
@@ -611,24 +611,24 @@ const Dashboard = ({ user }) => {
         >
           <div 
             ref={modalRef}
-            className="bg-warm-section border border-warm-border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto"
+            className="bg-white border border-gray-200 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-warm-accent-hover/20 to-warm-accent-hover/20 border-b border-warm-border p-4 sm:p-6">
+            <div className="bg-gradient-to-r from-gold-600/20 to-gold-600/20 border-b border-gray-200 p-4 sm:p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-warm-accent-hover text-sm font-medium">{selectedWorkOrder.work_order_id}</p>
-                  <h3 className="text-xl font-bold text-warm-text mt-1">{selectedWorkOrder.category_name}</h3>
+                  <p className="text-gold-600 text-sm font-medium">{selectedWorkOrder.work_order_id}</p>
+                  <h3 className="text-xl font-bold text-gray-900 mt-1">{selectedWorkOrder.category_name}</h3>
                   {selectedWorkOrder.subcategory_name && (
-                    <p className="text-warm-muted text-sm mt-0.5">{selectedWorkOrder.subcategory_name}</p>
+                    <p className="text-gray-500 text-sm mt-0.5">{selectedWorkOrder.subcategory_name}</p>
                   )}
                 </div>
                 <button
                   onClick={() => setSelectedWorkOrder(null)}
-                  className="p-2 hover:bg-warm-accent-soft rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5 text-warm-muted" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -641,32 +641,32 @@ const Dashboard = ({ user }) => {
             <div className="p-4 sm:p-6 space-y-6 max-h-[60vh] overflow-y-auto">
               {/* Description */}
               <div>
-                <h4 className="text-sm font-medium text-warm-muted mb-2">Description</h4>
-                <p className="text-warm-text">{selectedWorkOrder.description || 'No description provided'}</p>
+                <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
+                <p className="text-gray-900">{selectedWorkOrder.description || 'No description provided'}</p>
               </div>
 
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-warm-muted text-xs mb-1">Created</p>
-                  <p className="text-warm-text text-sm">{formatDate(selectedWorkOrder.created_at)}</p>
+                  <p className="text-gray-500 text-xs mb-1">Created</p>
+                  <p className="text-gray-900 text-sm">{formatDate(selectedWorkOrder.created_at)}</p>
                 </div>
                 {selectedWorkOrder.scheduled_date && (
                   <div>
-                    <p className="text-warm-muted text-xs mb-1">Scheduled</p>
-                    <p className="text-warm-text text-sm">{formatDate(selectedWorkOrder.scheduled_date)}</p>
+                    <p className="text-gray-500 text-xs mb-1">Scheduled</p>
+                    <p className="text-gray-900 text-sm">{formatDate(selectedWorkOrder.scheduled_date)}</p>
                   </div>
                 )}
                 {selectedWorkOrder.completed_at && (
                   <div>
-                    <p className="text-warm-muted text-xs mb-1">Completed</p>
-                    <p className="text-warm-text text-sm">{formatDate(selectedWorkOrder.completed_at)}</p>
+                    <p className="text-gray-500 text-xs mb-1">Completed</p>
+                    <p className="text-gray-900 text-sm">{formatDate(selectedWorkOrder.completed_at)}</p>
                   </div>
                 )}
                 {selectedWorkOrder.property_type && (
                   <div>
-                    <p className="text-warm-muted text-xs mb-1">Property Type</p>
-                    <p className="text-warm-text text-sm capitalize">{selectedWorkOrder.property_type}</p>
+                    <p className="text-gray-500 text-xs mb-1">Property Type</p>
+                    <p className="text-gray-900 text-sm capitalize">{selectedWorkOrder.property_type}</p>
                   </div>
                 )}
               </div>
@@ -674,9 +674,9 @@ const Dashboard = ({ user }) => {
               {/* Location Info */}
               {(selectedWorkOrder.block || selectedWorkOrder.flat_number) && (
                 <div>
-                  <h4 className="text-sm font-medium text-warm-muted mb-2">Location</h4>
-                  <div className="flex items-center gap-2 text-warm-text">
-                    <MapPin className="w-4 h-4 text-warm-accent-hover" />
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Location</h4>
+                  <div className="flex items-center gap-2 text-gray-900">
+                    <MapPin className="w-4 h-4 text-gold-600" />
                     <span>
                       {selectedWorkOrder.block && `Block ${selectedWorkOrder.block}`}
                       {selectedWorkOrder.block && selectedWorkOrder.flat_number && ', '}
@@ -689,10 +689,10 @@ const Dashboard = ({ user }) => {
               {/* Entry Permission */}
               {selectedWorkOrder.permission_to_enter && (
                 <div>
-                  <h4 className="text-sm font-medium text-warm-muted mb-2">Entry Permission</h4>
-                  <p className="text-warm-text capitalize">{selectedWorkOrder.permission_to_enter}</p>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Entry Permission</h4>
+                  <p className="text-gray-900 capitalize">{selectedWorkOrder.permission_to_enter}</p>
                   {selectedWorkOrder.entry_notes && (
-                    <p className="text-warm-muted text-sm mt-1">{selectedWorkOrder.entry_notes}</p>
+                    <p className="text-gray-500 text-sm mt-1">{selectedWorkOrder.entry_notes}</p>
                   )}
                 </div>
               )}
@@ -700,7 +700,7 @@ const Dashboard = ({ user }) => {
               {/* Attachments */}
               {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-warm-muted mb-2 flex items-center gap-1">
+                  <h4 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
                     <Paperclip className="w-4 h-4" />
                     Attachments ({selectedWorkOrder.attachments.length})
                   </h4>
@@ -717,14 +717,14 @@ const Dashboard = ({ user }) => {
                           href={fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="bg-warm-accent-soft rounded-lg p-2 hover:bg-warm-border transition-colors flex items-center gap-2"
+                          className="bg-gray-100 rounded-lg p-2 hover:bg-gray-200 transition-colors flex items-center gap-2"
                         >
                           {isImage ? (
-                            <Image className="w-4 h-4 text-warm-accent-hover" />
+                            <Image className="w-4 h-4 text-gold-600" />
                           ) : (
-                            <FileText className="w-4 h-4 text-warm-accent-hover" />
+                            <FileText className="w-4 h-4 text-gold-600" />
                           )}
-                          <span className="text-sm text-warm-text truncate">{att.original_name || att.file_name}</span>
+                          <span className="text-sm text-gray-900 truncate">{att.original_name || att.file_name}</span>
                         </a>
                       );
                     })}

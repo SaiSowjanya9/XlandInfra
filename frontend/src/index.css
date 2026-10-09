@@ -1274,17 +1274,18 @@ body {
 }
 
 /* ============ HOMEHUB CUSTOMER PORTAL - LIGHT THEME ============ */
-/* Warm-beige variants used ONLY by the customer portal pages (dashboard, work orders,
-   schedule, payments). Palette matches the FP portal's warm skin. The public website
-   and the auth pages keep the dark classes above. */
+/* Light variants used ONLY by the customer portal pages (dashboard, work orders,
+   schedule, payments). Palette matches the user/admin portals: white cards on a
+   gray-50 page with gray-200 borders and gold accents. The public website and the
+   auth pages keep the dark classes above. */
 
 .portal-field {
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
   background-color: #FFFFFF;
-  border: 1px solid #EADFCF;
-  border-radius: 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
   color: #1F2937;
   outline: none;
   transition: all 0.2s ease;
@@ -1295,8 +1296,8 @@ body {
 }
 
 .portal-field:focus {
-  border-color: #C69250;
-  box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.3);
+  border-color: #B8860B;
+  box-shadow: 0 0 0 2px rgba(216, 178, 92, 0.25);
 }
 
 select.portal-field {
@@ -1304,10 +1305,10 @@ select.portal-field {
 }
 
 .portal-card {
-  background-color: #FFF9EE;
+  background-color: #FFFFFF;
   border-radius: 0.75rem;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #EADFCF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E5E7EB;
   padding: 1.5rem;
 }
 
@@ -1318,7 +1319,7 @@ select.portal-field {
   overscroll-behavior-y: contain;
   touch-action: auto;
   scrollbar-width: thin;
-  scrollbar-color: #D4A574 #FFF9EE;
+  scrollbar-color: #D4AF37 #F3F4F6;
 }
 
 .portal-dropdown::-webkit-scrollbar {
@@ -1327,18 +1328,18 @@ select.portal-field {
 }
 
 .portal-dropdown::-webkit-scrollbar-track {
-  background: #FFF9EE;
+  background: #F3F4F6;
   border-radius: 4px;
 }
 
 .portal-dropdown::-webkit-scrollbar-thumb {
-  background: #D4A574;
+  background: #D4AF37;
   border-radius: 4px;
   min-height: 40px;
 }
 
 .portal-dropdown::-webkit-scrollbar-thumb:active {
-  background: #C69250;
+  background: #B8860B;
 }
 
 @media (max-width: 768px) {
