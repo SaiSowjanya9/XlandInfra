@@ -194,7 +194,9 @@ const FPMarketingTracker = ({ user }) => {
     }
   };
 
-  const cellSelectCls = 'w-full min-w-[110px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
+  // w-auto lets a native select size itself to its widest option, so long stages like
+  // "Pending Coordinator Review" never get clipped; max-w-full is the safety cap.
+  const cellSelectCls = 'w-auto max-w-full px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
   const cellInputCls = 'w-full min-w-[90px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
 
   const saveTracker = async () => {
@@ -479,7 +481,7 @@ const FPMarketingTracker = ({ user }) => {
                           value={est.coordinator_reviewed || ''}
                           disabled={savingRowId === est.id}
                           onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
-                          className={`${cellSelectCls} !min-w-0`}
+                          className={cellSelectCls}
                           title="Coordinator Reviewed?"
                         >
                           <option value="">Reviewed?</option>
