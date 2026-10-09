@@ -10,6 +10,7 @@ const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } =
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
 const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
+const { decodeEntities } = require('../utils/htmlEntities');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -7208,6 +7209,251 @@ router.put('/marketing/tracker/:id/unarchive', requireFPScope, requireFPAccount,
   } catch (error) {
     console.error('Marketing tracker unarchive error:', error);
     res.status(500).json({ success: false, message: 'Failed to restore tracker entry', error: error.message });
+  }
+});
+
+// ============================================
+// MARKETING COMPLAINTS
+// ============================================
+//
+// Marketing > Complaint Form logs a customer complaint against a property -- the same fields the
+// "XLAND Customer complaints form" collects. Deleting a row only archives it: it leaves the form's
+// list and lands in Marketing > Archived under its own tab, restorable from there.
+const COMPLAINT_TABLE = 'fp_marketing_complaints';
+
+const ensureMarketingComplaintsTable = async () => {
+  try {
+    const [tables] = await pool.execute(
+      `SELECT COUNT(*) AS n FROM information_schema.tables
+       WHERE table_schema = DATABASE() AND table_name = ?`,
+      [COMPLAINT_TABLE]
+    );
+    if (tables[0].n === 0) {
+      // Same statement as schema_v47_marketing_complaints.sql, so a deployment that has not
+      // applied the file still works.
+      await pool.execute(
+        `CREATE TABLE ${COMPLAINT_TABLE} (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          franchise_partner_id INT NOT NULL,
+          property_id VARCHAR(255) NOT NULL,
+          zone VARCHAR(255) NOT NULL,
+          responsible_person VARCHAR(255) NOT NULL,
+          concern_with VARCHAR(100) NOT NULL,
+          concern_with_other VARCHAR(255) NULL,
+          contact_person_name VARCHAR(255) NOT NULL,
+          phone_number VARCHAR(50) NOT NULL,
+          comments TEXT NOT NULL,
+          archived_at TIMESTAMP NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY idx_fp_marketing_complaints_fp (franchise_partner_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+      );
+    }
+  } catch (e) { /* table exists or cannot be created; the query below will say which */ }
+};
+
+// The concern options the complaint form offers; 'Other' carries its free text in
+// concern_with_other. Keep in step with CONCERN_OPTIONS in FPMarketingComplaintForm.jsx.
+const CONCERN_OPTIONS = ['Service Delay', 'Poor Quality Work', 'Incomplete Work', 'Safety Issue', 'Vendor Issue', 'Maintenance Issue', 'Pricing/Payments', 'Other'];
+
+const COMPLAINT_TEXT_FIELDS = [
+  ['property_id', 'Property ID', 255],
+  ['zone', 'Zone', 255],
+  ['responsible_person', 'Responsible person', 255],
+  ['contact_person_name', 'Contact Person Name', 255],
+  ['phone_number', 'Phone number', 50],
+  ['comments', 'Comments', 4000]
+];
+
+const COMPLAINT_SELECT = `id, property_id, zone, responsible_person,
+  concern_with, concern_with_other, contact_person_name, phone_number, comments,
+  archived_at, created_at, updated_at`;
+
+// Every field is required, exactly as the complaint form marks them. Request text arrives
+// HTML-escaped (middleware/security.js); it is stored exactly as it came so the escapes are not
+// doubled, but validation judges the decoded text -- 'Pricing&#x2F;Payments' has to match
+// 'Pricing/Payments'.
+const parseComplaintBody = (body) => {
+  const errors = [];
+  const complaint = {};
+  for (const [field, label, max] of COMPLAINT_TEXT_FIELDS) {
+    const raw = (body[field] || '').toString().trim().slice(0, max);
+    complaint[field] = raw;
+    if (!decodeEntities(raw).trim()) errors.push(`${label} is required`);
+  }
+  const concernRaw = (body.concern_with || '').toString().trim().slice(0, 100);
+  const concern = decodeEntities(concernRaw).trim();
+  if (!concern) {
+    errors.push('Concern With is required');
+  } else if (!CONCERN_OPTIONS.includes(concern)) {
+    errors.push(`Concern With must be one of: ${CONCERN_OPTIONS.join(', ')}`);
+  } else {
+    complaint.concern_with = concernRaw;
+  }
+  const otherRaw = (body.concern_with_other || '').toString().trim().slice(0, 255);
+  complaint.concern_with_other = concern === 'Other' ? otherRaw : null;
+  if (concern === 'Other' && !decodeEntities(otherRaw).trim()) {
+    errors.push('Please specify the concern when Other is selected');
+  }
+  return { errors, complaint };
+};
+
+const parseComplaintId = (value) => {
+  const id = parseInt(value, 10);
+  return Number.isInteger(id) ? id : null;
+};
+
+// Complaints the FP logged -- newest first.
+router.get('/marketing/complaints', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT}
+       FROM ${COMPLAINT_TABLE}
+       WHERE franchise_partner_id = ? AND archived_at IS NULL
+       ORDER BY created_at DESC`,
+      [req.fpId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Marketing complaints list error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
+  }
+});
+
+// Complaints the FP deleted -- newest archive first. Declared before /:id so it is not swallowed
+// as an id (there is no GET /:id, but keep the ordering the other marketing routes follow).
+router.get('/marketing/complaints/archived', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT}
+       FROM ${COMPLAINT_TABLE}
+       WHERE franchise_partner_id = ? AND archived_at IS NOT NULL
+       ORDER BY archived_at DESC`,
+      [req.fpId]
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Marketing archived complaints error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch archived complaints', error: error.message });
+  }
+});
+
+// Log a complaint.
+router.post('/marketing/complaints', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const { errors, complaint } = parseComplaintBody(req.body);
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join('; ') });
+    }
+    const [result] = await pool.execute(
+      `INSERT INTO ${COMPLAINT_TABLE}
+         (franchise_partner_id, property_id, zone, responsible_person,
+          concern_with, concern_with_other, contact_person_name, phone_number, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.fpId, complaint.property_id, complaint.zone, complaint.responsible_person,
+        complaint.concern_with, complaint.concern_with_other,
+        complaint.contact_person_name, complaint.phone_number, complaint.comments
+      ]
+    );
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE} WHERE id = ? AND franchise_partner_id = ?`,
+      [result.insertId, req.fpId]
+    );
+    res.json({ success: true, message: 'Complaint logged', data: rows[0] });
+  } catch (error) {
+    console.error('Marketing complaint create error:', error);
+    res.status(500).json({ success: false, message: 'Failed to save complaint', error: error.message });
+  }
+});
+
+// Modify a complaint. Archived rows are read-only here -- restore them first.
+router.put('/marketing/complaints/:id', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const id = parseComplaintId(req.params.id);
+    if (id === null) {
+      return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+    }
+    const { errors, complaint } = parseComplaintBody(req.body);
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join('; ') });
+    }
+    const [result] = await pool.execute(
+      `UPDATE ${COMPLAINT_TABLE} SET
+         property_id = ?, zone = ?, responsible_person = ?,
+         concern_with = ?, concern_with_other = ?,
+         contact_person_name = ?, phone_number = ?, comments = ?
+       WHERE id = ? AND franchise_partner_id = ? AND archived_at IS NULL`,
+      [
+        complaint.property_id, complaint.zone, complaint.responsible_person,
+        complaint.concern_with, complaint.concern_with_other,
+        complaint.contact_person_name, complaint.phone_number, complaint.comments,
+        id, req.fpId
+      ]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Complaint not found' });
+    }
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE} WHERE id = ? AND franchise_partner_id = ?`,
+      [id, req.fpId]
+    );
+    res.json({ success: true, message: 'Complaint updated', data: rows[0] });
+  } catch (error) {
+    console.error('Marketing complaint update error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update complaint', error: error.message });
+  }
+});
+
+// Soft-delete a complaint; it lands in Marketing > Archived under the Complaint Forms tab.
+router.put('/marketing/complaints/:id/archive', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const id = parseComplaintId(req.params.id);
+    if (id === null) {
+      return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+    }
+    const [result] = await pool.execute(
+      `UPDATE ${COMPLAINT_TABLE} SET archived_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ? AND archived_at IS NULL`,
+      [id, req.fpId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Complaint not found' });
+    }
+    res.json({ success: true, message: 'Moved to Archived' });
+  } catch (error) {
+    console.error('Marketing complaint archive error:', error);
+    res.status(500).json({ success: false, message: 'Failed to archive complaint', error: error.message });
+  }
+});
+
+// Bring an archived complaint back to the complaint form list.
+router.put('/marketing/complaints/:id/unarchive', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const id = parseComplaintId(req.params.id);
+    if (id === null) {
+      return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+    }
+    const [result] = await pool.execute(
+      `UPDATE ${COMPLAINT_TABLE} SET archived_at = NULL
+       WHERE id = ? AND franchise_partner_id = ? AND archived_at IS NOT NULL`,
+      [id, req.fpId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Archived complaint not found' });
+    }
+    res.json({ success: true, message: 'Restored to complaints' });
+  } catch (error) {
+    console.error('Marketing complaint unarchive error:', error);
+    res.status(500).json({ success: false, message: 'Failed to restore complaint', error: error.message });
   }
 });
 
