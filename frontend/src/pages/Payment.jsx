@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CreditCard, 
   FileText, 
@@ -360,7 +361,10 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
     }
   };
 
-  return (
+  // Portal to document.body so the overlay always centres on the viewport —
+  // an ancestor with transform/filter/backdrop-filter would otherwise capture
+  // position:fixed and centre the modal on the whole page instead.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header with Step Indicator */}
@@ -942,7 +946,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -957,7 +962,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
   const services = (invoice.lineItems || []).filter(item => item.type !== 'addon');
   const addons = (invoice.lineItems || []).filter(item => item.type === 'addon');
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -1163,7 +1168,8 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
