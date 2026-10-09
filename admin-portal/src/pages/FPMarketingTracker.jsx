@@ -539,10 +539,10 @@ const FPMarketingTracker = ({ user }) => {
 
       {/* Edit modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 overflow-y-auto py-8 px-4">
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-5xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
               <div>
                 <h3 className="text-base font-semibold text-warm-text">Track Estimate</h3>
                 <p className="text-xs text-warm-muted">{editing.estimate_id} · {decodeEntities(editing.client_name) || '-'}</p>
