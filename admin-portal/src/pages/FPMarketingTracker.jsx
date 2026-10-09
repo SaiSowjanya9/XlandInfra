@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText, Building2
+  ClipboardList, FileText, Building2, Pencil
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
@@ -10,13 +10,16 @@ import EmptyState from '../components/common/EmptyState';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-// The five answers the tracker collects on a direct estimate. Keep these option sets in step with
+// The answers the tracker collects on a direct estimate. Keep these option sets in step with
 // TRACKER_OPTIONS in backend/routes/franchisePartner.js -- the route refuses anything outside them.
 const LEAD_SOURCE_OPTIONS = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'];
 const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'];
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
 const DECISION_OPTIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
+const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+const COORDINATOR_REVIEWED_OPTIONS = ['Yes', 'No'];
+const FOLLOW_UP_OPTIONS = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -24,6 +27,22 @@ const formatDate = (value) => {
   if (isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
+
+const formatAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '-';
+  return `₹${amount.toLocaleString('en-IN')}`;
+};
+
+// Badge colour by where the estimate sits in the pipeline.
+const STATUS_STYLES = {
+  'Approved': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Rejected': 'bg-red-50 text-red-700 border-red-200',
+  'Estimate Sent': 'bg-warm-info text-blue-700 border-[#D5E3FA]',
+  'Revised Estimate Sent': 'bg-warm-info text-blue-700 border-[#D5E3FA]',
+  'Not Started': 'bg-gray-50 text-gray-600 border-gray-200',
+};
+const DEFAULT_STATUS_STYLE = 'bg-warm-warning text-amber-700 border-[#F3E2B3]';
 
 // A saved answer is a fixed option or, where the option is "Other", the typed text alongside it.
 const displayAnswer = (value, other) => {
@@ -41,6 +60,10 @@ const emptyTrackerForm = {
   proposal_given_other: '',
   customer_decision: '',
   customer_decision_other: '',
+  tracker_status: '',
+  coordinator_reviewed: '',
+  follow_up_stage: '',
+  coordinator_name: '',
 };
 
 const PRIORITY_STYLES = {
@@ -102,6 +125,10 @@ const FPMarketingTracker = ({ user }) => {
       proposal_given_other: decodeEntities(estimate.proposal_given_other || ''),
       customer_decision: estimate.customer_decision || '',
       customer_decision_other: decodeEntities(estimate.customer_decision_other || ''),
+      tracker_status: estimate.tracker_status || '',
+      coordinator_reviewed: estimate.coordinator_reviewed || '',
+      follow_up_stage: estimate.follow_up_stage || '',
+      coordinator_name: decodeEntities(estimate.coordinator_name || ''),
     });
     setFormError('');
   };
@@ -330,10 +357,16 @@ const FPMarketingTracker = ({ user }) => {
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Visit Date</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Executive</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Amount</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Status</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Lead Source</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Priority</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Proposal</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer Decision</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coord. Reviewed</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Follow-Up Stage</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,13 +377,19 @@ const FPMarketingTracker = ({ user }) => {
                       className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
                       title="Click to edit"
                     >
-                      <td className="py-3 px-4 font-medium text-warm-text">{est.estimate_id}</td>
+                      <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
                       <td className="py-3 px-3">
                         <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                         <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                       </td>
-                      <td className="py-3 px-3 text-warm-muted">{formatDate(est.created_at)}</td>
+                      <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
                       <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
+                      <td className="py-3 px-3 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}>
+                          {est.tracker_status || 'Not Started'}
+                        </span>
+                      </td>
                       <td className="py-3 px-3 text-warm-text">{decodeEntities(est.lead_source) || '-'}</td>
                       <td className="py-3 px-3">
                         {est.priority ? (
@@ -361,6 +400,18 @@ const FPMarketingTracker = ({ user }) => {
                       </td>
                       <td className="py-3 px-3 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
                       <td className="py-3 px-3 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
+                      <td className="py-3 px-3 text-warm-text">{est.coordinator_reviewed || '-'}</td>
+                      <td className="py-3 px-3 text-warm-text">{est.follow_up_stage || '-'}</td>
+                      <td className="py-3 px-3 text-warm-text">{decodeEntities(est.coordinator_name) || '-'}</td>
+                      <td className="py-3 px-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditor(est); }}
+                          className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
+                          title="Edit tracker"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -397,6 +448,7 @@ const FPMarketingTracker = ({ user }) => {
                   <div className="min-w-0"><label className={labelCls}>Email</label><div className={readOnlyCls}>{decodeEntities(editing.client_email) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Property Type</label><div className={readOnlyCls}>{getPropertyTypeLabel(editing.property_type)}</div></div>
                   <div className="min-w-0"><label className={labelCls}>No. of Units</label><div className={readOnlyCls}>{editing.total_units ?? '-'}</div></div>
+                  <div className="min-w-0"><label className={labelCls}>Estimate Amount</label><div className={readOnlyCls}>{formatAmount(editing.total_amount)}</div></div>
                 </div>
 
                 {/* Unit details by property type - the same block/unit split the estimate form shows */}
@@ -515,6 +567,42 @@ const FPMarketingTracker = ({ user }) => {
               {radioField('Current Maintenance System', 'maintenance_system', 'maintenance_system_other', MAINTENANCE_OPTIONS, false)}
               {radioField('Proposal Given', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
+
+              {/* Follow-up workflow: status auto-mirrors the estimate once it is sent/approved/rejected */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Estimate Status</label>
+                  <select value={form.tracker_status} onChange={(e) => setField('tracker_status', e.target.value)} className={`${inputCls} ${form.tracker_status ? 'text-warm-text' : 'text-warm-muted'}`}>
+                    <option value="" className="text-warm-muted">Select status</option>
+                    {TRACKER_STATUS_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Coordinator Reviewed?</label>
+                  <select value={form.coordinator_reviewed} onChange={(e) => setField('coordinator_reviewed', e.target.value)} className={`${inputCls} ${form.coordinator_reviewed ? 'text-warm-text' : 'text-warm-muted'}`}>
+                    <option value="" className="text-warm-muted">Select</option>
+                    {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Follow-Up Stage</label>
+                  <select value={form.follow_up_stage} onChange={(e) => setField('follow_up_stage', e.target.value)} className={`${inputCls} ${form.follow_up_stage ? 'text-warm-text' : 'text-warm-muted'}`}>
+                    <option value="" className="text-warm-muted">Select stage</option>
+                    {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Coordinator Name</label>
+                  <input
+                    type="text"
+                    value={form.coordinator_name}
+                    onChange={(e) => setField('coordinator_name', e.target.value)}
+                    maxLength={255}
+                    placeholder="Enter coordinator name"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
 
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">

@@ -6974,7 +6974,12 @@ const MARKETING_TRACKER_COLUMNS = [
   { name: 'proposal_given_other', def: 'VARCHAR(255) NULL' },
   { name: 'customer_decision', def: 'VARCHAR(100) NULL' },
   { name: 'customer_decision_other', def: 'VARCHAR(255) NULL' },
-  { name: 'tracked_at', def: 'TIMESTAMP NULL' }
+  { name: 'tracked_at', def: 'TIMESTAMP NULL' },
+  // Follow-up workflow fields (schema_v43_marketing_tracker_stages.sql)
+  { name: 'tracker_status', def: 'VARCHAR(60) NULL' },
+  { name: 'coordinator_reviewed', def: 'VARCHAR(10) NULL' },
+  { name: 'follow_up_stage', def: 'VARCHAR(60) NULL' },
+  { name: 'coordinator_name', def: 'VARCHAR(255) NULL' }
 ];
 
 const ensureMarketingTrackerColumns = async () => {
@@ -7010,7 +7015,10 @@ const TRACKER_OPTIONS = {
   priority: ['Low', 'Medium', 'High', 'Urgent'],
   maintenance_system: ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'],
   proposal_given: ['Yes', 'No', 'Other'],
-  customer_decision: ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other']
+  customer_decision: ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'],
+  tracker_status: ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'],
+  coordinator_reviewed: ['Yes', 'No'],
+  follow_up_stage: ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed']
 };
 const TRACKER_OTHER_FIELDS = {
   maintenance_system: 'maintenance_system_other',
@@ -7019,14 +7027,26 @@ const TRACKER_OTHER_FIELDS = {
 };
 
 const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email,
-  property_type, property_name, total_units,
+  property_type, property_name, total_units, total_amount, status,
   number_of_blocks, units_per_block, block_names, block_unit_types,
   tower_name, block_number, villa_plot_number,
   created_at, created_by_name, created_by_role,
   lead_source, priority,
   maintenance_system, maintenance_system_other,
   proposal_given, proposal_given_other,
-  customer_decision, customer_decision_other, tracked_at`;
+  customer_decision, customer_decision_other,
+  tracker_status, coordinator_reviewed, follow_up_stage, coordinator_name, tracked_at`;
+
+// The tracker status the row should show. The estimate's own status is the authority at the ends
+// of the pipeline -- approved/rejected always win, and a sent estimate defaults to Estimate Sent
+// until the FP moves it further along by hand.
+const effectiveTrackerStatus = (est) => {
+  if (est.status === 'approved') return 'Approved';
+  if (est.status === 'rejected') return 'Rejected';
+  if (est.tracker_status) return est.tracker_status;
+  if (est.status === 'sent') return 'Estimate Sent';
+  return 'Not Started';
+};
 
 // Direct estimates for the tracker list and the New picker; latest first.
 router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, res) => {
@@ -7040,7 +7060,7 @@ router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, r
        ORDER BY created_at DESC`,
       [req.fpId]
     );
-    res.json({ success: true, data: rows });
+    res.json({ success: true, data: rows.map(r => ({ ...r, tracker_status: effectiveTrackerStatus(r) })) });
   } catch (error) {
     console.error('Marketing tracker list error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tracker data', error: error.message });
@@ -7081,6 +7101,8 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
         updates[otherField] = value === 'Other' ? otherText : null;
       }
     }
+    // Free-text coordinator name: optional, just capped.
+    updates.coordinator_name = (req.body.coordinator_name || '').toString().trim().slice(0, 255) || null;
     if (errors.length > 0) {
       return res.status(400).json({ success: false, message: errors.join('; ') });
     }
@@ -7091,6 +7113,7 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
          maintenance_system = ?, maintenance_system_other = ?,
          proposal_given = ?, proposal_given_other = ?,
          customer_decision = ?, customer_decision_other = ?,
+         tracker_status = ?, coordinator_reviewed = ?, follow_up_stage = ?, coordinator_name = ?,
          tracked_at = NOW(), updated_at = NOW()
        WHERE id = ? AND franchise_partner_id = ? AND estimate_type = 'direct'`,
       [
@@ -7098,6 +7121,7 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
         updates.maintenance_system, updates.maintenance_system_other,
         updates.proposal_given, updates.proposal_given_other,
         updates.customer_decision, updates.customer_decision_other,
+        updates.tracker_status, updates.coordinator_reviewed, updates.follow_up_stage, updates.coordinator_name,
         id, req.fpId
       ]
     );
@@ -7109,7 +7133,7 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
       `SELECT ${TRACKER_SELECT} FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
-    res.json({ success: true, message: 'Tracker updated', data: rows[0] });
+    res.json({ success: true, message: 'Tracker updated', data: { ...rows[0], tracker_status: effectiveTrackerStatus(rows[0]) } });
   } catch (error) {
     console.error('Marketing tracker save error:', error);
     res.status(500).json({ success: false, message: 'Failed to save tracker data', error: error.message });

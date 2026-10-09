@@ -286,7 +286,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 </div>
 
                 {/* Vendor Management Section */}
-                <div className="mt-3 pt-3" >
+                <div className="mt-1">
                   <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                       <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
@@ -383,7 +383,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                 </div>
 
                 {/* Vendor Management Section - Only for regular executives */}
-                <div className="mt-3 pt-3" >
+                <div className="mt-1">
                   <button onClick={toggleVendors} className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`} style={{ background: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }} onMouseEnter={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }} onMouseLeave={(e) => { if (!expandedMenus.vendors && !(isVendorActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }} title={sidebarCollapsed ? 'Vendor Management' : ''}>
                     <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
                       <Store className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.vendors || (isVendorActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
