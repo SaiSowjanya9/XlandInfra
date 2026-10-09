@@ -109,13 +109,13 @@ const PaymentSuccess = () => {
       case 'loading':
         return (
           <div className="text-center">
-            <div className="w-20 h-20 bg-warm-accent-hover/20 border border-warm-accent/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader className="w-10 h-10 text-warm-accent-hover animate-spin" />
+            <div className="w-20 h-20 bg-gold-600/20 border border-gold-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader className="w-10 h-10 text-gold-600 animate-spin" />
             </div>
-            <h2 className="text-2xl font-semibold text-warm-text mb-3">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
               Processing Payment...
             </h2>
-            <p className="text-warm-muted">
+            <p className="text-gray-500">
               Please wait while we confirm your payment.
             </p>
           </div>
@@ -128,10 +128,10 @@ const PaymentSuccess = () => {
             <div className="w-24 h-24 bg-green-100 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-14 h-14 text-green-600" />
             </div>
-            <h2 className="text-3xl font-bold text-warm-text mb-3">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
               {status === 'partial' ? 'Partial Payment Received!' : 'Payment Successful!'}
             </h2>
-            <p className="text-warm-muted max-w-md mx-auto mb-8">
+            <p className="text-gray-500 max-w-md mx-auto mb-8">
               {status === 'partial' 
                 ? 'Your partial payment has been received successfully. The remaining balance will be reflected in your invoice.'
                 : 'Thank you for your payment. Your transaction has been completed successfully.'}
@@ -147,45 +147,45 @@ const PaymentSuccess = () => {
 
             {/* Payment Details */}
             {paymentDetails && (
-              <div className="bg-warm-accent-soft border border-warm-border rounded-xl p-6 max-w-md mx-auto mb-8">
-                <h3 className="text-sm font-semibold text-warm-accent-hover uppercase tracking-wider mb-4">
+              <div className="bg-gray-100 border border-gray-200 rounded-xl p-6 max-w-md mx-auto mb-8">
+                <h3 className="text-sm font-semibold text-gold-600 uppercase tracking-wider mb-4">
                   Transaction Details
                 </h3>
                 <div className="space-y-3 text-left">
                   {paymentDetails.amount && (
                     <div className="flex justify-between items-center">
-                      <span className="text-warm-muted">Amount Paid</span>
-                      <span className="text-warm-text font-semibold text-lg">
+                      <span className="text-gray-500">Amount Paid</span>
+                      <span className="text-gray-900 font-semibold text-lg">
                         {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(paymentDetails.amount)}
                       </span>
                     </div>
                   )}
                   {paymentDetails.invoiceId && (
                     <div className="flex justify-between items-center">
-                      <span className="text-warm-muted">Invoice</span>
-                      <span className="text-warm-text font-mono text-sm">{paymentDetails.invoiceId}</span>
+                      <span className="text-gray-500">Invoice</span>
+                      <span className="text-gray-900 font-mono text-sm">{paymentDetails.invoiceId}</span>
                     </div>
                   )}
                   {paymentDetails.customerName && (
                     <div className="flex justify-between items-center">
-                      <span className="text-warm-muted">Customer</span>
-                      <span className="text-warm-text text-sm">{paymentDetails.customerName}</span>
+                      <span className="text-gray-500">Customer</span>
+                      <span className="text-gray-900 text-sm">{paymentDetails.customerName}</span>
                     </div>
                   )}
                   {paymentDetails.paymentId && (
                     <div className="flex justify-between items-center">
-                      <span className="text-warm-muted">Payment ID</span>
-                      <span className="text-warm-text font-mono text-sm">{paymentDetails.paymentId}</span>
+                      <span className="text-gray-500">Payment ID</span>
+                      <span className="text-gray-900 font-mono text-sm">{paymentDetails.paymentId}</span>
                     </div>
                   )}
                   {paymentDetails.referenceId && (
                     <div className="flex justify-between items-center">
-                      <span className="text-warm-muted">Reference</span>
-                      <span className="text-warm-text font-mono text-sm">{paymentDetails.referenceId}</span>
+                      <span className="text-gray-500">Reference</span>
+                      <span className="text-gray-900 font-mono text-sm">{paymentDetails.referenceId}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-3 border-t border-warm-border">
-                    <span className="text-warm-muted">Status</span>
+                  <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                    <span className="text-gray-500">Status</span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
                       <CheckCircle className="w-3.5 h-3.5" />
                       {status === 'partial' ? 'Partially Paid' : 'Paid'}
@@ -199,14 +199,14 @@ const PaymentSuccess = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-warm-accent-soft hover:bg-warm-border text-warm-text font-medium rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium rounded-xl transition-colors"
               >
                 <Home className="w-5 h-5" />
                 Back to Home
               </Link>
               <Link
                 to="/dashboard/payment"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-warm-accent-hover hover:bg-warm-accent text-warm-text font-semibold rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gold-600 hover:bg-gold-500 text-gray-900 font-semibold rounded-xl transition-colors"
               >
                 <FileText className="w-5 h-5" />
                 View Invoices
@@ -222,10 +222,10 @@ const PaymentSuccess = () => {
             <div className="w-24 h-24 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
               <XCircle className="w-14 h-14 text-red-600" />
             </div>
-            <h2 className="text-3xl font-bold text-warm-text mb-3">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
               Payment Failed
             </h2>
-            <p className="text-warm-muted max-w-md mx-auto mb-8">
+            <p className="text-gray-500 max-w-md mx-auto mb-8">
               Unfortunately, your payment could not be processed. This could be due to insufficient funds, 
               payment cancellation, or a technical issue.
             </p>
@@ -233,14 +233,14 @@ const PaymentSuccess = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-warm-accent-soft hover:bg-warm-border text-warm-text font-medium rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium rounded-xl transition-colors"
               >
                 <Home className="w-5 h-5" />
                 Back to Home
               </Link>
               <button
                 onClick={() => window.history.back()}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-warm-accent-hover hover:bg-warm-accent text-warm-text font-semibold rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gold-600 hover:bg-gold-500 text-gray-900 font-semibold rounded-xl transition-colors"
               >
                 Try Again
                 <ArrowRight className="w-4 h-4" />
@@ -256,17 +256,17 @@ const PaymentSuccess = () => {
             <div className="w-24 h-24 bg-amber-100 border border-amber-200 rounded-full flex items-center justify-center mx-auto mb-6">
               <XCircle className="w-14 h-14 text-amber-600" />
             </div>
-            <h2 className="text-3xl font-bold text-warm-text mb-3">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">
               Invalid Payment Link
             </h2>
-            <p className="text-warm-muted max-w-md mx-auto mb-8">
+            <p className="text-gray-500 max-w-md mx-auto mb-8">
               This page is meant to be accessed after completing a payment. 
               If you just made a payment, please check your email for confirmation.
             </p>
 
             <Link
               to="/"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-warm-accent-hover hover:bg-warm-accent text-warm-text font-semibold rounded-xl transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gold-600 hover:bg-gold-500 text-gray-900 font-semibold rounded-xl transition-colors"
             >
               <Home className="w-5 h-5" />
               Go to Homepage
@@ -277,11 +277,11 @@ const PaymentSuccess = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-warm-page relative overflow-hidden px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden px-4">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-warm-accent-hover/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-warm-accent-hover/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gold-600/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gold-600/5 rounded-full blur-3xl"></div>
         {status === 'success' && (
           <div className="absolute top-1/3 right-1/3 w-64 h-64 bg-green-50 rounded-full blur-3xl animate-pulse"></div>
         )}
@@ -296,17 +296,17 @@ const PaymentSuccess = () => {
         </div>
 
         {/* Content Card */}
-        <div className="bg-warm-border backdrop-blur-sm border border-warm-border rounded-2xl p-8 sm:p-12 shadow-xl">
+        <div className="bg-white backdrop-blur-sm border border-gray-200 rounded-2xl p-8 sm:p-12 shadow-xl">
           {renderContent()}
         </div>
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-warm-muted text-sm">
+          <p className="text-gray-500 text-sm">
             Need help?{' '}
             <a 
               href="mailto:info@xlandinfra.com" 
-              className="text-warm-accent-hover hover:text-warm-accent transition-colors"
+              className="text-gold-600 hover:text-gold-500 transition-colors"
             >
               Contact Support
             </a>

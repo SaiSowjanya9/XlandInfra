@@ -79,14 +79,14 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const SummaryCard = ({ icon: Icon, label, value, iconClass, valueClass = 'text-warm-text' }) => (
-  <div className="bg-warm-border rounded-xl p-5 border border-warm-accent-hover/20">
+const SummaryCard = ({ icon: Icon, label, value, iconClass, valueClass = 'text-gray-900' }) => (
+  <div className="bg-white rounded-xl p-5 border border-gold-600/20">
     <div className="flex items-center gap-3">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClass}`}>
         <Icon className="w-6 h-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-warm-muted text-sm truncate">{label}</p>
+        <p className="text-gray-500 text-sm truncate">{label}</p>
         <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
       </div>
     </div>
@@ -100,27 +100,27 @@ const VisitRow = ({ visit, today, onSelect }) => {
   return (
     <button
       onClick={() => onSelect(visit)}
-      className="w-full text-left p-4 hover:bg-warm-accent-soft transition-colors"
+      className="w-full text-left p-4 hover:bg-gray-100 transition-colors"
     >
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 bg-warm-accent-hover/15 border border-warm-accent-hover/25 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-          <span className="text-[10px] uppercase tracking-wide text-warm-accent-hover font-medium">
+        <div className="w-14 h-14 bg-gold-600/15 border border-gold-600/25 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+          <span className="text-[10px] uppercase tracking-wide text-gold-600 font-medium">
             {date ? date.toLocaleDateString('en-IN', { month: 'short' }) : '--'}
           </span>
-          <span className="text-lg font-bold text-warm-text leading-tight">
+          <span className="text-lg font-bold text-gray-900 leading-tight">
             {date ? date.getDate() : '--'}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-warm-text font-medium truncate">{visit.serviceName || 'Service visit'}</p>
+          <p className="text-gray-900 font-medium truncate">{visit.serviceName || 'Service visit'}</p>
           <div className="mt-1.5 space-y-1">
-            <p className="flex items-center gap-2 text-sm text-warm-muted">
-              <Clock className="w-4 h-4 text-warm-muted flex-shrink-0" />
+            <p className="flex items-center gap-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span className="truncate">{formatDay(visit.scheduledDate)} &middot; {formatTimeRange(visit.scheduledTimeStart, visit.scheduledTimeEnd)}</span>
             </p>
-            <p className="flex items-center gap-2 text-sm text-warm-muted">
-              <Truck className="w-4 h-4 text-warm-muted flex-shrink-0" />
+            <p className="flex items-center gap-2 text-sm text-gray-500">
+              <Truck className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span className="truncate">{visit.vendorName || 'Service partner to be assigned'}</span>
             </p>
           </div>
@@ -129,7 +129,7 @@ const VisitRow = ({ visit, today, onSelect }) => {
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <StatusBadge status={status} />
           {visit.visitNumber && visit.totalVisits ? (
-            <span className="text-xs text-warm-muted">Visit {visit.visitNumber} of {visit.totalVisits}</span>
+            <span className="text-xs text-gray-500">Visit {visit.visitNumber} of {visit.totalVisits}</span>
           ) : null}
         </div>
       </div>
@@ -141,15 +141,15 @@ const VisitList = ({ visits, today, onSelect, emptyIcon: EmptyIcon, emptyTitle, 
   if (visits.length === 0) {
     return (
       <div className="p-12 text-center">
-        <EmptyIcon className="w-12 h-12 text-warm-muted mx-auto mb-3" />
-        <p className="text-warm-muted">{emptyTitle}</p>
-        <p className="text-warm-muted text-sm mt-1">{emptyHint}</p>
+        <EmptyIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+        <p className="text-gray-500">{emptyTitle}</p>
+        <p className="text-gray-500 text-sm mt-1">{emptyHint}</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-warm-border">
+    <div className="divide-y divide-gray-200">
       {visits.map((visit) => (
         <VisitRow key={visit.id} visit={visit} today={today} onSelect={onSelect} />
       ))}
@@ -179,22 +179,22 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="bg-warm-section border border-warm-accent-hover/20 rounded-2xl w-full max-w-lg shadow-2xl"
+        className="bg-white border border-gold-600/20 rounded-2xl w-full max-w-lg shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-warm-border">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-warm-accent-hover/20 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-warm-accent-hover" />
+            <div className="w-10 h-10 rounded-xl bg-gold-600/20 flex items-center justify-center">
+              <Wrench className="w-5 h-5 text-gold-600" />
             </div>
             <div>
-              <h2 className="text-warm-text font-semibold">Visit Details</h2>
-              {visit.visitId && <p className="text-xs text-warm-muted">{visit.visitId}</p>}
+              <h2 className="text-gray-900 font-semibold">Visit Details</h2>
+              {visit.visitId && <p className="text-xs text-gray-500">{visit.visitId}</p>}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-warm-muted hover:text-warm-text hover:bg-warm-accent-soft rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -207,17 +207,17 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {rows.map((row) => (
               <div key={row.label}>
-                <p className="text-xs text-warm-muted mb-1">{row.label}</p>
-                <p className="text-sm text-warm-text break-words">{row.value}</p>
+                <p className="text-xs text-gray-500 mb-1">{row.label}</p>
+                <p className="text-sm text-gray-900 break-words">{row.value}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-warm-border">
-          <p className="text-xs text-warm-muted">
+        <div className="px-5 py-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500">
             Need a change to this visit?{' '}
-            <Link to="/dashboard/contact" className="text-warm-accent-hover hover:text-warm-accent">
+            <Link to="/dashboard/contact" className="text-gold-600 hover:text-gold-500">
               Contact your property manager
             </Link>
             .
@@ -248,14 +248,14 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-warm-border">
-        <h2 className="text-lg font-semibold text-warm-text">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-900">
           {MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => shiftMonth(-1)}
-            className="p-2 rounded-lg bg-warm-page border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
+            className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
             title="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -266,13 +266,13 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
               onMonthChange(new Date(now.getFullYear(), now.getMonth(), 1));
               onSelectDay(istToday());
             }}
-            className="px-3 py-2 rounded-lg bg-warm-page border border-warm-border text-sm text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
+            className="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
           >
             Today
           </button>
           <button
             onClick={() => shiftMonth(1)}
-            className="p-2 rounded-lg bg-warm-page border border-warm-border text-warm-muted hover:text-warm-text hover:border-warm-border transition-colors"
+            className="p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
             title="Next month"
           >
             <ChevronRight className="w-4 h-4" />
@@ -280,9 +280,9 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
         </div>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-warm-border">
+      <div className="grid grid-cols-7 border-b border-gray-200">
         {DAY_NAMES.map((day) => (
-          <div key={day} className="px-1 py-2 text-center text-xs font-medium text-warm-muted">
+          <div key={day} className="px-1 py-2 text-center text-xs font-medium text-gray-500">
             {day}
           </div>
         ))}
@@ -299,20 +299,20 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
             <button
               key={key}
               onClick={() => onSelectDay(key)}
-              className={`min-h-[84px] sm:min-h-[104px] p-1.5 text-left border-b border-r border-warm-border transition-colors ${
-                isCurrentMonth ? 'hover:bg-warm-accent-soft' : 'bg-warm-page'
-              } ${isSelected ? 'ring-1 ring-inset ring-warm-accent/50 bg-warm-section' : ''}`}
+              className={`min-h-[84px] sm:min-h-[104px] p-1.5 text-left border-b border-r border-gray-200 transition-colors ${
+                isCurrentMonth ? 'hover:bg-gray-100' : 'bg-gray-50'
+              } ${isSelected ? 'ring-1 ring-inset ring-gold-500/50 bg-white' : ''}`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                   isToday
-                    ? 'bg-warm-accent-hover text-warm-text'
-                    : isCurrentMonth ? 'text-warm-text' : 'text-warm-muted'
+                    ? 'bg-gold-600 text-gray-900'
+                    : isCurrentMonth ? 'text-gray-900' : 'text-gray-500'
                 }`}>
                   {date.getDate()}
                 </span>
                 {dayVisits.length > 0 && (
-                  <span className="text-[10px] text-warm-muted">{dayVisits.length}</span>
+                  <span className="text-[10px] text-gray-500">{dayVisits.length}</span>
                 )}
               </div>
 
@@ -320,16 +320,16 @@ const ScheduleCalendar = ({ visitsByDay, today, month, onMonthChange, selectedDa
                 {dayVisits.slice(0, 2).map((visit) => (
                   <div
                     key={visit.id}
-                    className="flex items-center gap-1 px-1 py-0.5 rounded bg-warm-page/70 border border-warm-border"
+                    className="flex items-center gap-1 px-1 py-0.5 rounded bg-gray-50/70 border border-gray-200"
                   >
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusConfig(displayStatus(visit, today)).dot}`} />
-                    <span className="text-[10px] text-warm-text truncate">
+                    <span className="text-[10px] text-gray-900 truncate">
                       {visit.serviceName || 'Service visit'}
                     </span>
                   </div>
                 ))}
                 {dayVisits.length > 2 && (
-                  <span className="block text-[10px] text-warm-accent-hover px-1">
+                  <span className="block text-[10px] text-gold-600 px-1">
                     +{dayVisits.length - 2} more
                   </span>
                 )}
@@ -462,18 +462,18 @@ const Schedule = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-warm-text mb-2">Schedules</h1>
-          <p className="text-warm-muted">Service visits scheduled for your property</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Schedules</h1>
+          <p className="text-gray-500">Service visits scheduled for your property</p>
           {user?.propertyName && (
-            <p className="text-warm-muted text-sm mt-1">
-              Property: <span className="text-warm-accent-hover font-medium">{user.propertyName}</span>
+            <p className="text-gray-500 text-sm mt-1">
+              Property: <span className="text-gold-600 font-medium">{user.propertyName}</span>
             </p>
           )}
         </div>
         <button
           onClick={fetchSchedules}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-warm-section border border-warm-border rounded-lg hover:bg-warm-accent-soft transition-colors text-warm-text disabled:opacity-50 self-start"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-900 disabled:opacity-50 self-start"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -492,8 +492,8 @@ const Schedule = ({ user }) => {
           icon={CalendarDays}
           label="Upcoming"
           value={stats?.upcoming || 0}
-          iconClass="bg-warm-accent-hover/20 text-warm-accent-hover"
-          valueClass="text-warm-accent-hover"
+          iconClass="bg-gold-600/20 text-gold-600"
+          valueClass="text-gold-600"
         />
         <SummaryCard
           icon={Clock}
@@ -519,9 +519,9 @@ const Schedule = ({ user }) => {
             <p className="text-red-600 font-medium">
               {stats.overdue} {stats.overdue === 1 ? 'visit is' : 'visits are'} past the scheduled date
             </p>
-            <p className="text-sm text-warm-muted mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               Our team is following these up.{' '}
-              <Link to="/dashboard/contact" className="text-warm-accent-hover hover:text-warm-accent">Contact us</Link>{' '}
+              <Link to="/dashboard/contact" className="text-gold-600 hover:text-gold-500">Contact us</Link>{' '}
               if you need an update.
             </p>
           </div>
@@ -534,8 +534,8 @@ const Schedule = ({ user }) => {
           onClick={() => setView('list')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
             view === 'list'
-              ? 'bg-warm-accent-hover/20 text-warm-accent-hover border border-warm-accent/30'
-              : 'bg-warm-section text-warm-muted border border-warm-border hover:text-warm-text hover:border-warm-border'
+              ? 'bg-gold-600/20 text-gold-600 border border-gold-500/30'
+              : 'bg-white text-gray-500 border border-gray-200 hover:text-gray-900 hover:border-gray-200'
           }`}
         >
           <List className="w-4 h-4" />
@@ -545,8 +545,8 @@ const Schedule = ({ user }) => {
           onClick={() => setView('calendar')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
             view === 'calendar'
-              ? 'bg-warm-accent-hover/20 text-warm-accent-hover border border-warm-accent/30'
-              : 'bg-warm-section text-warm-muted border border-warm-border hover:text-warm-text hover:border-warm-border'
+              ? 'bg-gold-600/20 text-gold-600 border border-gold-500/30'
+              : 'bg-white text-gray-500 border border-gray-200 hover:text-gray-900 hover:border-gray-200'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -566,13 +566,13 @@ const Schedule = ({ user }) => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
                   isActive
-                    ? 'bg-warm-accent-soft text-warm-text border border-warm-border'
-                    : 'bg-warm-section text-warm-muted border border-warm-border hover:text-warm-text hover:border-warm-border'
+                    ? 'bg-gray-100 text-gray-900 border border-gray-200'
+                    : 'bg-white text-gray-500 border border-gray-200 hover:text-gray-900 hover:border-gray-200'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-warm-page' : 'bg-warm-accent-soft'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-gray-50' : 'bg-gray-100'}`}>
                   {tab.count}
                 </span>
               </button>
@@ -582,18 +582,18 @@ const Schedule = ({ user }) => {
       )}
 
       {/* Content */}
-      <div className="bg-warm-border rounded-2xl border border-warm-accent-hover/20 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gold-600/20 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 text-warm-accent-hover animate-spin" />
+            <Loader2 className="w-8 h-8 text-gold-600 animate-spin" />
           </div>
         ) : error ? (
           <div className="p-12 text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
-            <p className="text-warm-text">{error}</p>
+            <p className="text-gray-900">{error}</p>
             <button
               onClick={fetchSchedules}
-              className="mt-4 px-4 py-2 bg-warm-accent-soft border border-warm-border rounded-lg text-warm-text hover:bg-warm-border transition-colors"
+              className="mt-4 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-900 hover:bg-gray-200 transition-colors"
             >
               Try Again
             </button>
@@ -608,12 +608,12 @@ const Schedule = ({ user }) => {
               selectedDay={selectedDay}
               onSelectDay={setSelectedDay}
             />
-            <div className="border-t border-warm-border">
+            <div className="border-t border-gray-200">
               <div className="px-4 py-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-warm-text">
+                <h3 className="text-sm font-semibold text-gray-900">
                   Visits on {formatDay(selectedDay)}
                 </h3>
-                <span className="text-xs text-warm-muted">
+                <span className="text-xs text-gray-500">
                   {selectedDayVisits.length} {selectedDayVisits.length === 1 ? 'visit' : 'visits'}
                 </span>
               </div>
@@ -643,7 +643,7 @@ const Schedule = ({ user }) => {
       {!loading && !error && visits.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
           {['scheduled', 'work_order_created', 'in_progress', 'completed', 'rescheduled', 'overdue', 'cancelled'].map((status) => (
-            <span key={status} className="flex items-center gap-2 text-xs text-warm-muted">
+            <span key={status} className="flex items-center gap-2 text-xs text-gray-500">
               <span className={`w-2 h-2 rounded-full ${statusConfig(status).dot}`} />
               {statusConfig(status).label}
             </span>
@@ -653,15 +653,15 @@ const Schedule = ({ user }) => {
 
       {/* How scheduling works */}
       {!loading && !error && (
-        <div className="mt-6 flex items-start gap-3 bg-warm-section border border-warm-border rounded-xl p-4">
-          <RotateCcw className="w-5 h-5 text-warm-accent-hover flex-shrink-0 mt-0.5" />
+        <div className="mt-6 flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4">
+          <RotateCcw className="w-5 h-5 text-gold-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-warm-text font-medium">How Your Schedule Works</p>
-            <p className="text-sm text-warm-muted mt-1">
+            <p className="text-gray-900 font-medium">How Your Schedule Works</p>
+            <p className="text-sm text-gray-500 mt-1">
               Our team schedules every service visit for your property from your approved plan, then
               assigns a service partner and raises a work order before each visit. This page is your
               read-only view of that schedule &mdash; to request a change,{' '}
-              <Link to="/dashboard/contact" className="text-warm-accent-hover hover:text-warm-accent">contact your property manager</Link>.
+              <Link to="/dashboard/contact" className="text-gold-600 hover:text-gold-500">contact your property manager</Link>.
             </p>
           </div>
         </div>
