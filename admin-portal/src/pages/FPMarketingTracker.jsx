@@ -135,6 +135,48 @@ const FPMarketingTracker = ({ user }) => {
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // Inline row edits (phase 2): one field changes in the table and the whole saved payload goes
+  // back -- proposal_given/customer_decision are required by the PUT, so they ride along.
+  const [savingRowId, setSavingRowId] = useState(null);
+  const saveRowField = async (est, patch) => {
+    const payload = {
+      lead_source: est.lead_source || '',
+      priority: est.priority || '',
+      maintenance_system: est.maintenance_system || '',
+      maintenance_system_other: est.maintenance_system_other || '',
+      proposal_given: est.proposal_given || '',
+      proposal_given_other: est.proposal_given_other || '',
+      customer_decision: est.customer_decision || '',
+      customer_decision_other: est.customer_decision_other || '',
+      tracker_status: est.tracker_status || '',
+      coordinator_reviewed: est.coordinator_reviewed || '',
+      follow_up_stage: est.follow_up_stage || '',
+      coordinator_name: est.coordinator_name || '',
+      ...patch
+    };
+    setSavingRowId(est.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (result.success) {
+        setEstimates(prev => prev.map(e => e.id === est.id ? result.data : e));
+      } else {
+        showToast(result.message || 'Failed to save.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to save. Please try again.', 'error');
+    } finally {
+      setSavingRowId(null);
+    }
+  };
+
+  const cellSelectCls = 'w-full min-w-[130px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
+  const cellInputCls = 'w-full min-w-[110px] px-2 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
+
   const saveTracker = async () => {
     // The required pair, and an Other that has nothing typed, are the only ways to fail here.
     const errors = [];
@@ -357,13 +399,13 @@ const FPMarketingTracker = ({ user }) => {
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Visit Date</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Executive</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Amount</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Status</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate Amount</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate Status</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Lead Source</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Priority</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Proposal</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer Decision</th>
-                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coord. Reviewed</th>
+                    <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator Reviewed?</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Follow-Up Stage</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Coordinator</th>
                     <th className="text-left py-3 px-3 font-medium text-warm-muted">Actions</th>
@@ -384,25 +426,73 @@ const FPMarketingTracker = ({ user }) => {
                       </td>
                       <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
                       <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
-                      <td className="py-3 px-3 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}>
-                          {est.tracker_status || 'Not Started'}
-                        </span>
+                      <td className="py-2 px-3 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
+                      {/* Estimate Status is inline-editable, except at the ends of the pipeline where
+                          the estimate's own status (sent/approved/rejected) drives it. */}
+                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                        {['approved', 'rejected'].includes(est.status) ? (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}
+                            title="Set by the estimate's status in All Estimates">
+                            {est.tracker_status}
+                          </span>
+                        ) : (
+                          <select
+                            value={est.tracker_status || 'Not Started'}
+                            disabled={savingRowId === est.id}
+                            onChange={(e) => saveRowField(est, { tracker_status: e.target.value })}
+                            className={cellSelectCls}
+                          >
+                            {TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected').map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        )}
                       </td>
-                      <td className="py-3 px-3 text-warm-text">{decodeEntities(est.lead_source) || '-'}</td>
-                      <td className="py-3 px-3">
+                      <td className="py-2 px-3 text-warm-text">{decodeEntities(est.lead_source) || '-'}</td>
+                      <td className="py-2 px-3">
                         {est.priority ? (
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
                             {est.priority}
                           </span>
                         ) : '-'}
                       </td>
-                      <td className="py-3 px-3 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
-                      <td className="py-3 px-3 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
-                      <td className="py-3 px-3 text-warm-text">{est.coordinator_reviewed || '-'}</td>
-                      <td className="py-3 px-3 text-warm-text">{est.follow_up_stage || '-'}</td>
-                      <td className="py-3 px-3 text-warm-text">{decodeEntities(est.coordinator_name) || '-'}</td>
+                      <td className="py-2 px-3 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
+                      <td className="py-2 px-3 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
+                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={est.coordinator_reviewed || ''}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
+                          className={`${cellSelectCls} !min-w-[70px]`}
+                        >
+                          <option value="">-</option>
+                          {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={est.follow_up_stage || ''}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { follow_up_stage: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          key={est.tracked_at || est.id}
+                          defaultValue={decodeEntities(est.coordinator_name) || ''}
+                          maxLength={255}
+                          placeholder="Name"
+                          disabled={savingRowId === est.id}
+                          onBlur={(e) => {
+                            const v = e.target.value.trim();
+                            if (v !== (decodeEntities(est.coordinator_name) || '')) saveRowField(est, { coordinator_name: v });
+                          }}
+                          className={cellInputCls}
+                        />
+                      </td>
                       <td className="py-3 px-3">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditor(est); }}
@@ -551,42 +641,6 @@ const FPMarketingTracker = ({ user }) => {
               {radioField('Current Maintenance System', 'maintenance_system', 'maintenance_system_other', MAINTENANCE_OPTIONS, false)}
               {radioField('Proposal Given', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
-
-              {/* Follow-up workflow: status auto-mirrors the estimate once it is sent/approved/rejected */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Estimate Status</label>
-                  <select value={form.tracker_status} onChange={(e) => setField('tracker_status', e.target.value)} className={`${inputCls} ${form.tracker_status ? 'text-warm-text' : 'text-warm-muted'}`}>
-                    <option value="" className="text-warm-muted">Select status</option>
-                    {TRACKER_STATUS_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Coordinator Reviewed?</label>
-                  <select value={form.coordinator_reviewed} onChange={(e) => setField('coordinator_reviewed', e.target.value)} className={`${inputCls} ${form.coordinator_reviewed ? 'text-warm-text' : 'text-warm-muted'}`}>
-                    <option value="" className="text-warm-muted">Select</option>
-                    {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Follow-Up Stage</label>
-                  <select value={form.follow_up_stage} onChange={(e) => setField('follow_up_stage', e.target.value)} className={`${inputCls} ${form.follow_up_stage ? 'text-warm-text' : 'text-warm-muted'}`}>
-                    <option value="" className="text-warm-muted">Select stage</option>
-                    {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Coordinator Name</label>
-                  <input
-                    type="text"
-                    value={form.coordinator_name}
-                    onChange={(e) => setField('coordinator_name', e.target.value)}
-                    maxLength={255}
-                    placeholder="Enter coordinator name"
-                    className={inputCls}
-                  />
-                </div>
-              </div>
 
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
