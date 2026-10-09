@@ -12,7 +12,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // The five answers the tracker collects on a direct estimate. Keep these option sets in step with
 // TRACKER_OPTIONS in backend/routes/franchisePartner.js -- the route refuses anything outside them.
-const LEAD_SOURCE_OPTIONS = ['WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
+const LEAD_SOURCE_OPTIONS = ['WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Field Visit', 'Referral', 'Other'];
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'];
 const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'];
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
