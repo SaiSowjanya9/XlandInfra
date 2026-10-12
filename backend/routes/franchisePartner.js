@@ -7283,6 +7283,9 @@ const parseComplaintBody = (body) => {
     complaint[field] = raw;
     if (!decodeEntities(raw).trim()) errors.push(`${label} is required`);
   }
+  if (complaint.phone_number && !/^\d{10}$/.test(complaint.phone_number)) {
+    errors.push('Phone number must be 10 digits');
+  }
   const concernRaw = (body.concern_with || '').toString().trim().slice(0, 100);
   const concern = decodeEntities(concernRaw).trim();
   if (!concern) {
