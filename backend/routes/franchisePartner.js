@@ -17,7 +17,7 @@ const {
 } = require('../utils/marketingDashboard');
 const {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
-  toDateOnly, dueStatus
+  toDateOnly, dueStatus, effectiveCustomerResponse
 } = require('../utils/marketingFollowUp');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -7075,7 +7075,8 @@ const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email
 
 // What a tracker row looks like to the portal: the resolved status the list shows, the two dates
 // as plain 'YYYY-MM-DD' (mysql2 hands back a Date, which JSON would turn into a UTC timestamp and
-// read a day early in IST), and the derived Due Status, which is never stored.
+// read a day early in IST), the Customer Response the estimate dictates once it is approved or
+// rejected, and the derived Due Status. None of the derived values are stored.
 const presentTrackerRow = (row) => {
   const lead_status = row.lead_status || '';
   const last_contact_date = toDateOnly(row.last_contact_date);
@@ -7085,6 +7086,7 @@ const presentTrackerRow = (row) => {
     tracker_status: effectiveTrackerStatus(row),
     last_contact_date,
     next_follow_up_date,
+    customer_response: effectiveCustomerResponse(row.status, row.customer_response),
     due_status: dueStatus(next_follow_up_date, lead_status)
   };
 };

@@ -5,7 +5,8 @@ import {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS, DUE_STATUSES,
   COMPLETED_LEAD_STATUSES, FOLLOW_UP_INTERVAL_DAYS,
   istToday, toDateOnly, addDays, nextFollowUpFrom, dueStatus, isOpenLead,
-  contactStamp, DUE_STATUS_STYLES
+  contactStamp, DUE_STATUS_STYLES, ESTIMATE_DRIVEN_RESPONSES,
+  isCustomerResponseLocked, effectiveCustomerResponse
 } from './followUpDates.js';
 
 const require = createRequire(import.meta.url);
@@ -98,6 +99,32 @@ test('a contact stamps today in IST and schedules four days out', () => {
     last_contact_date: '2026-10-12',
     next_follow_up_date: '2026-10-16'
   });
+});
+
+test('both copies resolve the estimate-driven Customer Response identically', () => {
+  assert.deepEqual(ESTIMATE_DRIVEN_RESPONSES, server.ESTIMATE_DRIVEN_RESPONSES);
+  const statuses = ['approved', 'rejected', 'draft', 'sent', '', null, undefined, ' Approved ', 'APPROVED'];
+  const stored = ['', 'Interested', 'Received - Reviewing', null];
+  for (const status of statuses) {
+    assert.equal(isCustomerResponseLocked(status), server.isCustomerResponseLocked(status), String(status));
+    for (const value of stored) {
+      assert.equal(
+        effectiveCustomerResponse(status, value),
+        server.effectiveCustomerResponse(status, value),
+        `${String(status)} / ${String(value)}`
+      );
+    }
+  }
+});
+
+test('approving or rejecting the estimate overrules the stored response', () => {
+  assert.equal(effectiveCustomerResponse('approved', 'Received - Reviewing'), 'Approved');
+  assert.equal(effectiveCustomerResponse('rejected', 'Interested'), 'Rejected');
+  assert.equal(effectiveCustomerResponse('sent', 'Interested'), 'Interested');
+  // The locked values must be selectable, or the PUT would refuse what the UI shows.
+  for (const response of Object.values(ESTIMATE_DRIVEN_RESPONSES)) {
+    assert.ok(CUSTOMER_RESPONSES.includes(response), `${response} must be a valid option`);
+  }
 });
 
 test('every due status has a style, and nothing styles a status that cannot happen', () => {

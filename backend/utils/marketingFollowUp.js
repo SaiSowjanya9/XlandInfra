@@ -25,10 +25,18 @@ const LEAD_STATUSES = [
 
 const CONTACT_METHODS = ['WhatsApp', 'SMS/Text', 'Email', 'Phone Call', 'Field Visit', 'Portal Message', 'Other'];
 
+// The workbook's list, plus 'Rejected'. The sheet had only 'Approved' because a rejection was
+// recorded as 'Not Interested', but the two ends of the estimate's own lifecycle now drive this
+// column directly, and "the customer rejected the estimate" is not the same answer as "the
+// customer was never interested".
 const CUSTOMER_RESPONSES = [
   'Received - Reviewing', 'Interested', 'Need Changes', 'Need Call Back', 'Need More Details',
-  'Approved', 'Not Ready Now', 'No Response', 'Not Interested'
+  'Approved', 'Rejected', 'Not Ready Now', 'No Response', 'Not Interested'
 ];
+
+// An approved or rejected estimate answers the Customer Response column itself; the FP cannot
+// have told us the customer approved while the estimate says rejected. Keyed by fp_estimates.status.
+const ESTIMATE_DRIVEN_RESPONSES = { approved: 'Approved', rejected: 'Rejected' };
 
 const NEXT_ACTIONS = [
   'Coordinator Review', 'Send Thank You Message', 'Share Estimate', 'Send Follow-Up 1',
@@ -116,6 +124,26 @@ const dueStatus = (nextFollowUpDate, leadStatus, today = istToday()) => {
 /** An open lead is one still being chased -- the workbook's "Missing Next Follow-Up Date" check. */
 const isOpenLead = (leadStatus) => !COMPLETED_LEAD_STATUSES.includes(String(leadStatus || '').trim());
 
+/**
+ * Is the Customer Response answered by the estimate rather than by the FP? True once the estimate
+ * is approved or rejected, which is when the tracker stops being allowed to disagree with it.
+ */
+const isCustomerResponseLocked = (estimateStatus) =>
+  Object.prototype.hasOwnProperty.call(ESTIMATE_DRIVEN_RESPONSES, String(estimateStatus || '').trim().toLowerCase());
+
+/**
+ * The Customer Response the row should show. Derived rather than stored, exactly as the tracker
+ * status is: approving an estimate in All Estimates has to move the tracker with it, and a stored
+ * copy would only be right until the next time somebody changed the estimate.
+ *
+ * @param {string} estimateStatus  fp_estimates.status
+ * @param {string} storedResponse  what the FP last chose, used while the estimate is still open
+ */
+const effectiveCustomerResponse = (estimateStatus, storedResponse) => {
+  const key = String(estimateStatus || '').trim().toLowerCase();
+  return ESTIMATE_DRIVEN_RESPONSES[key] || storedResponse || '';
+};
+
 module.exports = {
   LEAD_STATUSES,
   CONTACT_METHODS,
@@ -123,7 +151,10 @@ module.exports = {
   NEXT_ACTIONS,
   DUE_STATUSES,
   COMPLETED_LEAD_STATUSES,
+  ESTIMATE_DRIVEN_RESPONSES,
   FOLLOW_UP_INTERVAL_DAYS,
+  isCustomerResponseLocked,
+  effectiveCustomerResponse,
   istToday,
   toDateOnly,
   addDays,

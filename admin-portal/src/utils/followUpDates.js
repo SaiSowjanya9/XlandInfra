@@ -16,10 +16,15 @@ export const LEAD_STATUSES = [
 
 export const CONTACT_METHODS = ['WhatsApp', 'SMS/Text', 'Email', 'Phone Call', 'Field Visit', 'Portal Message', 'Other'];
 
+// The workbook's list, plus 'Rejected' -- the two ends of the estimate's own lifecycle drive this
+// column, and a rejection is not the same answer as "never interested".
 export const CUSTOMER_RESPONSES = [
   'Received - Reviewing', 'Interested', 'Need Changes', 'Need Call Back', 'Need More Details',
-  'Approved', 'Not Ready Now', 'No Response', 'Not Interested'
+  'Approved', 'Rejected', 'Not Ready Now', 'No Response', 'Not Interested'
 ];
+
+// An approved or rejected estimate answers Customer Response itself, keyed by fp_estimates.status.
+export const ESTIMATE_DRIVEN_RESPONSES = { approved: 'Approved', rejected: 'Rejected' };
 
 export const NEXT_ACTIONS = [
   'Coordinator Review', 'Send Thank You Message', 'Share Estimate', 'Send Follow-Up 1',
@@ -83,6 +88,17 @@ export const dueStatus = (nextFollowUpDate, leadStatus, today = istToday()) => {
 };
 
 export const isOpenLead = (leadStatus) => !COMPLETED_LEAD_STATUSES.includes(String(leadStatus || '').trim());
+
+// True once the estimate is approved or rejected, which is when the tracker stops being allowed
+// to disagree with it -- the select is shown as a read-only badge from then on.
+export const isCustomerResponseLocked = (estimateStatus) =>
+  Object.prototype.hasOwnProperty.call(ESTIMATE_DRIVEN_RESPONSES, String(estimateStatus || '').trim().toLowerCase());
+
+// Derived, not stored: approving an estimate in All Estimates moves the tracker with it.
+export const effectiveCustomerResponse = (estimateStatus, storedResponse) => {
+  const key = String(estimateStatus || '').trim().toLowerCase();
+  return ESTIMATE_DRIVEN_RESPONSES[key] || storedResponse || '';
+};
 
 // Picking a follow-up stage is a contact: it stamps today and schedules the next one four days
 // out. Returned as a patch so the caller can merge it into whatever else the row is saving.

@@ -9,7 +9,8 @@ import { getPropertyTypeLabel } from '../utils/estimatePackageUtils';
 import EmptyState from '../components/common/EmptyState';
 import {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
-  DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly
+  DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly,
+  isCustomerResponseLocked, effectiveCustomerResponse
 } from '../utils/followUpDates';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -595,16 +596,29 @@ const FPMarketingTracker = ({ user }) => {
                           {CONTACT_METHODS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
+                      {/* Once the estimate is approved or rejected it answers this column itself,
+                          so the select gives way to a badge -- the same rule Estimate Status
+                          above follows. */}
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={decodeEntities(est.customer_response || '')}
-                          disabled={savingRowId === est.id}
-                          onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
-                          className={cellSelectCls}
-                        >
-                          <option value="">-</option>
-                          {CUSTOMER_RESPONSES.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                        {isCustomerResponseLocked(est.status) ? (
+                          <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${
+                            est.status === 'approved'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`} title="Set by the estimate's status in All Estimates">
+                            {effectiveCustomerResponse(est.status, est.customer_response)}
+                          </span>
+                        ) : (
+                          <select
+                            value={decodeEntities(est.customer_response || '')}
+                            disabled={savingRowId === est.id}
+                            onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
+                            className={cellSelectCls}
+                          >
+                            <option value="">-</option>
+                            {CUSTOMER_RESPONSES.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -848,11 +862,20 @@ const FPMarketingTracker = ({ user }) => {
                   </div>
                   <div>
                     <label className={labelCls}>Customer Response</label>
-                    <select value={form.customer_response} onChange={(e) => setField('customer_response', e.target.value)}
-                            className={`${inputCls} ${form.customer_response ? 'text-warm-text' : 'text-warm-muted'}`}>
-                      <option value="">Select response</option>
-                      {CUSTOMER_RESPONSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                    </select>
+                    {isCustomerResponseLocked(editing.status) ? (
+                      <>
+                        <div className={`${readOnlyCls} flex items-center`}>
+                          {effectiveCustomerResponse(editing.status, form.customer_response)}
+                        </div>
+                        <p className="text-[11px] text-warm-muted mt-1">Set by the estimate's status</p>
+                      </>
+                    ) : (
+                      <select value={form.customer_response} onChange={(e) => setField('customer_response', e.target.value)}
+                              className={`${inputCls} ${form.customer_response ? 'text-warm-text' : 'text-warm-muted'}`}>
+                        <option value="">Select response</option>
+                        {CUSTOMER_RESPONSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className={labelCls}>Next Follow-Up Date</label>
