@@ -16,6 +16,9 @@ const row = (overrides = {}) => ({
   property_type: 'apartment',
   total_amount: 0,
   created_at: '2026-08-10T00:00:00Z',
+  lead_status: '',
+  next_follow_up_date: null,
+  next_action: '',
   ...overrides
 });
 
@@ -210,6 +213,86 @@ test('property type keeps whatever codes the rows hold, for the portal to label'
   ]);
   assert.strictEqual(find(d.byPropertyType, 'apartment').value, 2);
   assert.strictEqual(find(d.byPropertyType, 'gated_community').value, 1);
+});
+
+test('overdue, due today and upcoming are counted off the next follow-up date', () => {
+  // `now` is 10 Aug 2026 in IST; the rows straddle it.
+  const now = new Date('2026-08-10T06:00:00Z');
+  const d = buildMarketingDashboard([
+    row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-08' }),
+    row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-09' }),
+    row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-10' }),
+    row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-11' }),
+    row({ lead_status: 'Customer Review', next_follow_up_date: null })
+  ], { now });
+
+  assert.strictEqual(d.totals.overdue, 2);
+  assert.strictEqual(d.totals.dueToday, 1);
+  assert.strictEqual(d.totals.upcoming, 1);
+  assert.strictEqual(find(d.byDueStatus, 'No Date').value, 1);
+});
+
+test('a finished lead is Completed, never overdue, however old its date', () => {
+  const now = new Date('2026-08-10T06:00:00Z');
+  const d = buildMarketingDashboard([
+    row({ lead_status: 'Service Started', next_follow_up_date: '2026-01-01' }),
+    row({ lead_status: 'Closed', next_follow_up_date: '2026-01-01' }),
+    row({ lead_status: 'Not Interested', next_follow_up_date: '2026-01-01' })
+  ], { now });
+
+  assert.strictEqual(d.totals.overdue, 0, 'a closed lead is not chased');
+  assert.strictEqual(find(d.byDueStatus, 'Completed').value, 3);
+});
+
+test('missing next follow-up date counts only the leads still being chased', () => {
+  const now = new Date('2026-08-10T06:00:00Z');
+  const d = buildMarketingDashboard([
+    row({ lead_status: 'Customer Review', next_follow_up_date: null }),
+    row({ lead_status: 'Agreement Pending', next_follow_up_date: '' }),
+    row({ lead_status: 'Closed', next_follow_up_date: null }),
+    row({ lead_status: 'Service Started', next_follow_up_date: null }),
+    row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-20' })
+  ], { now });
+
+  assert.strictEqual(d.totals.missingNextDate, 2, 'the two open ones, not the finished ones');
+});
+
+test('the whole page is judged against one today, not one per row', () => {
+  // Every row carries the same date, so they must all land in the same bucket -- a per-row clock
+  // read could split them if the aggregation ran across midnight IST.
+  const now = new Date('2026-08-10T18:29:00Z'); // 23:59 IST on the 10th
+  const rows = [];
+  for (let i = 0; i < 50; i += 1) rows.push(row({ lead_status: 'Customer Review', next_follow_up_date: '2026-08-10' }));
+  const d = buildMarketingDashboard(rows, { now });
+  assert.strictEqual(d.totals.dueToday, 50);
+  assert.strictEqual(d.totals.overdue, 0);
+});
+
+test('service started is read off lead status, as the workbook does', () => {
+  const d = buildMarketingDashboard([
+    row({ lead_status: 'Service Started' }),
+    row({ lead_status: 'Service Started' }),
+    row({ lead_status: 'Payment Pending' })
+  ]);
+  assert.strictEqual(d.totals.serviceStarted, 2);
+});
+
+test('lead status and next action chart every option the workbook lists', () => {
+  const d = buildMarketingDashboard([
+    row({ lead_status: 'Customer Review', next_action: 'Executive Call' }),
+    row({ lead_status: 'Customer Review', next_action: 'Close Lead' })
+  ]);
+  assert.strictEqual(d.byLeadStatus.length, 18, 'all 18 lead statuses are drawn');
+  assert.strictEqual(d.byNextAction.length, 14, 'all 14 next actions are drawn');
+  assert.strictEqual(find(d.byLeadStatus, 'Customer Review').value, 2);
+  assert.strictEqual(find(d.byLeadStatus, 'Closed').value, 0);
+  assert.strictEqual(find(d.byNextAction, 'Executive Call').value, 1);
+  assert.strictEqual(d.byDueStatus.length, 5);
+});
+
+test('an escaped lead status still counts', () => {
+  const d = buildMarketingDashboard([row({ lead_status: 'No Response &#x2D; Call' })]);
+  assert.strictEqual(find(d.byLeadStatus, 'No Response - Call').value, 1);
 });
 
 test('the route and the dashboard share one set of tracker options', () => {

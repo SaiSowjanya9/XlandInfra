@@ -11,6 +11,9 @@
 // option, including the ones nobody has reached yet, so the pipeline keeps its shape at low volume.
 
 const { decodeEntities } = require('./htmlEntities');
+const {
+  LEAD_STATUSES, NEXT_ACTIONS, DUE_STATUSES, istToday, dueStatus, isOpenLead, toDateOnly
+} = require('./marketingFollowUp');
 
 const LEAD_SOURCES = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
@@ -105,6 +108,12 @@ const buildMarketingDashboard = (rows, options = {}) => {
   const statusOf = (row) => clean(row.tracker_status);
   const decisionOf = (row) => clean(row.customer_decision);
 
+  // The workbook counts Overdue / Due Today / Upcoming off the Due Status column, which is itself
+  // derived -- so derive it here too, against one "today" for the whole page rather than letting
+  // each row read the clock separately.
+  const today = istToday(now);
+  const dueOf = (row) => dueStatus(row.next_follow_up_date, clean(row.lead_status), today);
+
   const totalLeads = list.length;
   const estimatesSent = list.filter((row) => SENT_STATUSES.includes(statusOf(row))).length;
   const approved = list.filter((row) => statusOf(row) === 'Approved').length;
@@ -117,6 +126,17 @@ const buildMarketingDashboard = (rows, options = {}) => {
   const referralLeads = list.filter((row) => clean(row.lead_source) === 'Referral').length;
   // Rows carrying no follow-up step at all -- they fall out of the pipeline silently otherwise.
   const missingStage = list.filter((row) => !clean(row.follow_up_stage)).length;
+  // The workbook's "Missing Next Follow-Up Date": a lead still being chased that nobody has
+  // scheduled. A finished lead is meant to have no next date, so it is not a gap.
+  const missingNextDate = list.filter(
+    (row) => isOpenLead(clean(row.lead_status)) && !toDateOnly(row.next_follow_up_date)
+  ).length;
+
+  const overdue = list.filter((row) => dueOf(row) === 'Overdue').length;
+  const dueToday = list.filter((row) => dueOf(row) === 'Due Today').length;
+  const upcoming = list.filter((row) => dueOf(row) === 'Upcoming').length;
+  // Counted off Lead Status, which is what the workbook's Service Started figure reads.
+  const serviceStarted = list.filter((row) => clean(row.lead_status) === 'Service Started').length;
 
   const openRows = list.filter((row) => !CLOSED_STATUSES.includes(statusOf(row)));
   const openValue = openRows.reduce((sum, row) => sum + toAmount(row.total_amount), 0);
@@ -149,6 +169,11 @@ const buildMarketingDashboard = (rows, options = {}) => {
       pendingReview,
       referralLeads,
       missingStage,
+      missingNextDate,
+      overdue,
+      dueToday,
+      upcoming,
+      serviceStarted,
       openValue,
       wonValue,
       // Guarded: an FP with no tracked estimates must read 0%, not NaN%.
@@ -156,6 +181,10 @@ const buildMarketingDashboard = (rows, options = {}) => {
     },
     funnel,
     byFollowUpStage: distribution(list, (row) => clean(row.follow_up_stage), FOLLOW_UP_STAGES),
+    // The workbook's two headline breakdowns, now that the tracker records them.
+    byLeadStatus: distribution(list, (row) => clean(row.lead_status), LEAD_STATUSES),
+    byNextAction: distribution(list, (row) => clean(row.next_action), NEXT_ACTIONS),
+    byDueStatus: distribution(list, dueOf, DUE_STATUSES),
     byTrackerStatus: distribution(list, statusOf, TRACKER_STATUSES),
     byLeadSource: distribution(list, (row) => clean(row.lead_source), LEAD_SOURCES),
     byPriority: distribution(list, (row) => clean(row.priority), PRIORITIES),

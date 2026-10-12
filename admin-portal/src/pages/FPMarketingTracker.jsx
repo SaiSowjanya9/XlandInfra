@@ -7,6 +7,10 @@ import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
 import { getPropertyTypeLabel } from '../utils/estimatePackageUtils';
 import EmptyState from '../components/common/EmptyState';
+import {
+  LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
+  DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly
+} from '../utils/followUpDates';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -64,7 +68,19 @@ const emptyTrackerForm = {
   coordinator_reviewed: '',
   follow_up_stage: '',
   coordinator_name: '',
+  // Follow-up columns from the workbook. Due Status is derived from the next date and the lead
+  // status, so it is never part of the form.
+  lead_status: '',
+  last_contact_date: '',
+  last_contact_method: '',
+  customer_response: '',
+  next_follow_up_date: '',
+  next_action: '',
 };
+
+// The fields a saved row contributes to a PUT. Every save sends the whole tracker payload, so a
+// field missing from this list would be wiped by an unrelated inline edit.
+const TRACKER_FIELDS = Object.keys(emptyTrackerForm);
 
 const PRIORITY_STYLES = {
   Low: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -130,31 +146,47 @@ const FPMarketingTracker = ({ user }) => {
       coordinator_reviewed: estimate.coordinator_reviewed || '',
       follow_up_stage: estimate.follow_up_stage || '',
       coordinator_name: decodeEntities(estimate.coordinator_name || ''),
+      lead_status: decodeEntities(estimate.lead_status || ''),
+      last_contact_date: toDateOnly(estimate.last_contact_date),
+      last_contact_method: decodeEntities(estimate.last_contact_method || ''),
+      customer_response: decodeEntities(estimate.customer_response || ''),
+      next_follow_up_date: toDateOnly(estimate.next_follow_up_date),
+      next_action: decodeEntities(estimate.next_action || ''),
     });
     setFormError('');
   };
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // Picking a follow-up stage *is* the record of a contact, so it stamps today (IST) and schedules
+  // the next one four days out. Changing the contact date by hand re-schedules from that date --
+  // the next date stays editable afterwards, so a deliberate choice is never overwritten.
+  const setFormStage = (stage) => setForm(prev => ({
+    ...prev,
+    follow_up_stage: stage,
+    ...(stage ? contactStamp() : {})
+  }));
+
+  const setFormContactDate = (date) => setForm(prev => ({
+    ...prev,
+    last_contact_date: date,
+    next_follow_up_date: date ? nextFollowUpFrom(date) : ''
+  }));
+
   // Inline row edits (phase 2): one field changes in the table and the whole saved payload goes
   // back -- proposal_given/customer_decision are required by the PUT, so they ride along.
   const [savingRowId, setSavingRowId] = useState(null);
   const saveRowField = async (est, patch) => {
-    const payload = {
-      lead_source: est.lead_source || '',
-      priority: est.priority || '',
-      maintenance_system: est.maintenance_system || '',
-      maintenance_system_other: est.maintenance_system_other || '',
-      proposal_given: est.proposal_given || '',
-      proposal_given_other: est.proposal_given_other || '',
-      customer_decision: est.customer_decision || '',
-      customer_decision_other: est.customer_decision_other || '',
-      tracker_status: est.tracker_status || '',
-      coordinator_reviewed: est.coordinator_reviewed || '',
-      follow_up_stage: est.follow_up_stage || '',
-      coordinator_name: est.coordinator_name || '',
-      ...patch
-    };
+    // The whole saved payload goes back every time -- proposal_given/customer_decision are
+    // required by the PUT -- so the row is rebuilt from TRACKER_FIELDS and the one edit applied
+    // on top. Building it by hand is how a newly added column gets silently wiped.
+    const payload = { ...patch };
+    for (const field of TRACKER_FIELDS) {
+      if (field in payload) continue;
+      payload[field] = (field === 'last_contact_date' || field === 'next_follow_up_date')
+        ? toDateOnly(est[field])
+        : (est[field] || '');
+    }
     setSavingRowId(est.id);
     try {
       const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}`, {
@@ -174,6 +206,14 @@ const FPMarketingTracker = ({ user }) => {
       setSavingRowId(null);
     }
   };
+
+  // Inline equivalents of the modal's two date rules, so a stage picked in the table stamps the
+  // contact the same way one picked in the modal does.
+  const saveRowStage = (est, stage) =>
+    saveRowField(est, { follow_up_stage: stage, ...(stage ? contactStamp() : {}) });
+
+  const saveRowContactDate = (est, date) =>
+    saveRowField(est, { last_contact_date: date, next_follow_up_date: date ? nextFollowUpFrom(date) : '' });
 
   // Soft delete: the row leaves the tracker and lands in Marketing > Archived.
   const archiveRow = async (est) => {
@@ -199,6 +239,8 @@ const FPMarketingTracker = ({ user }) => {
   // "Pending Coordinator Review" never get clipped; max-w-full is the safety cap.
   const cellSelectCls = 'w-auto max-w-full px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
   const cellInputCls = 'w-full min-w-[90px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
+  // A date input needs its own width: left to w-full it collapses under the native calendar icon.
+  const cellDateCls = 'w-[130px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
 
   const saveTracker = async () => {
     // The required pair, and an Other that has nothing typed, are the only ways to fail here.
@@ -423,6 +465,12 @@ const FPMarketingTracker = ({ user }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Proposal / Decision</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Response</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -502,16 +550,94 @@ const FPMarketingTracker = ({ user }) => {
                           className={`${cellInputCls} !min-w-0 mt-1`}
                         />
                       </td>
+                      {/* Picking a stage records a contact: today (IST) in Last Contact and the
+                          next follow-up four days out, both still editable afterwards. */}
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.follow_up_stage || ''}
                           disabled={savingRowId === est.id}
-                          onChange={(e) => saveRowField(est, { follow_up_stage: e.target.value })}
+                          onChange={(e) => saveRowStage(est, e.target.value)}
                           className={cellSelectCls}
+                          title="Picking a stage stamps today as the last contact"
                         >
                           <option value="">-</option>
                           {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={decodeEntities(est.lead_status || '')}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { lead_status: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {LEAD_STATUSES.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="date"
+                          value={toDateOnly(est.last_contact_date)}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowContactDate(est, e.target.value)}
+                          className={cellDateCls}
+                          title="Changing this re-schedules the next follow-up four days later"
+                        />
+                        <select
+                          value={decodeEntities(est.last_contact_method || '')}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { last_contact_method: e.target.value })}
+                          className={`${cellSelectCls} mt-1`}
+                          title="Last Contact Method"
+                        >
+                          <option value="">Method</option>
+                          {CONTACT_METHODS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={decodeEntities(est.customer_response || '')}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {CUSTOMER_RESPONSES.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="date"
+                          value={toDateOnly(est.next_follow_up_date)}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { next_follow_up_date: e.target.value })}
+                          className={cellDateCls}
+                        />
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={decodeEntities(est.next_action || '')}
+                          disabled={savingRowId === est.id}
+                          onChange={(e) => saveRowField(est, { next_action: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Derived from the next date and the lead status, so it is never edited --
+                          the server sends it, and it is recomputed here in case the tab has been
+                          left open across midnight. */}
+                      <td className="py-2 px-2">
+                        {(() => {
+                          const due = dueStatus(est.next_follow_up_date, decodeEntities(est.lead_status || ''));
+                          return (
+                            <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${DUE_STATUS_STYLES[due]}`}>
+                              {due}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -671,6 +797,79 @@ const FPMarketingTracker = ({ user }) => {
               {radioField('Current Maintenance System', 'maintenance_system', 'maintenance_system_other', MAINTENANCE_OPTIONS, false)}
               {radioField('Proposal Sent', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
+
+              {/* Follow-up block. Choosing a stage stamps the contact date and schedules the next
+                  one; both dates stay editable, and Due Status is derived from them. */}
+              <div className="pt-4 border-t border-warm-border">
+                <h4 className="text-sm font-semibold text-warm-text mb-3">Follow-Up</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Follow-Up Stage</label>
+                    <select value={form.follow_up_stage} onChange={(e) => setFormStage(e.target.value)}
+                            className={`${inputCls} ${form.follow_up_stage ? 'text-warm-text' : 'text-warm-muted'}`}>
+                      <option value="">Select stage</option>
+                      {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                    </select>
+                    <p className="text-[11px] text-warm-muted mt-1">Stamps today as the last contact</p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Lead Status</label>
+                    <select value={form.lead_status} onChange={(e) => setField('lead_status', e.target.value)}
+                            className={`${inputCls} ${form.lead_status ? 'text-warm-text' : 'text-warm-muted'}`}>
+                      <option value="">Select lead status</option>
+                      {LEAD_STATUSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Due Status</label>
+                    <div className="h-[42px] flex items-center">
+                      {(() => {
+                        const due = dueStatus(form.next_follow_up_date, form.lead_status);
+                        return (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${DUE_STATUS_STYLES[due]}`}>
+                            {due}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Last Contact Date</label>
+                    <input type="date" value={form.last_contact_date}
+                           onChange={(e) => setFormContactDate(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Last Contact Method</label>
+                    <select value={form.last_contact_method} onChange={(e) => setField('last_contact_method', e.target.value)}
+                            className={`${inputCls} ${form.last_contact_method ? 'text-warm-text' : 'text-warm-muted'}`}>
+                      <option value="">Select method</option>
+                      {CONTACT_METHODS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Customer Response</label>
+                    <select value={form.customer_response} onChange={(e) => setField('customer_response', e.target.value)}
+                            className={`${inputCls} ${form.customer_response ? 'text-warm-text' : 'text-warm-muted'}`}>
+                      <option value="">Select response</option>
+                      {CUSTOMER_RESPONSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Next Follow-Up Date</label>
+                    <input type="date" value={form.next_follow_up_date}
+                           onChange={(e) => setField('next_follow_up_date', e.target.value)} className={inputCls} />
+                    <p className="text-[11px] text-warm-muted mt-1">Four days after the last contact</p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Next Action</label>
+                    <select value={form.next_action} onChange={(e) => setField('next_action', e.target.value)}
+                            className={`${inputCls} ${form.next_action ? 'text-warm-text' : 'text-warm-muted'}`}>
+                      <option value="">Select next action</option>
+                      {NEXT_ACTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
 
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
