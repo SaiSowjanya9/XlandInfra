@@ -49,6 +49,7 @@ const FPMarketingComplaintForm = ({ user }) => {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [archiveTarget, setArchiveTarget] = useState(null);
   const [properties, setProperties] = useState([]);
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
   // True while the Zone text came from a property match rather than the keyboard, so a Property ID
@@ -194,7 +195,7 @@ const FPMarketingComplaintForm = ({ user }) => {
 
   // Soft delete: the row leaves this list and lands in Marketing > Archived, Complaint Forms tab.
   const archiveRow = async (row) => {
-    if (!window.confirm(`Move the complaint for ${decodeEntities(row.property_id) || 'this property'} to Archived? You can restore it from Marketing > Archived.`)) return;
+    setArchiveTarget(null);
     try {
       const res = await fetch(`${API_BASE}/api/fp/marketing/complaints/${row.id}/archive`, {
         method: 'PUT',
@@ -282,27 +283,27 @@ const FPMarketingComplaintForm = ({ user }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-warm-border bg-warm-section">
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted">Property ID</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Zone</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Responsible Person</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Concern</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Contact Person</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Phone</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Logged On</th>
-                  <th className="text-left py-3 px-3 font-medium text-warm-muted">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Property ID</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Zone</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Responsible Person</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Concern</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Contact Person</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Phone</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Logged On</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {complaints.map((row) => (
                   <tr key={row.id} className="border-b border-warm-border/70 hover:bg-warm-section transition-colors">
                     <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
-                    <td className="py-3 px-3 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
-                    <td className="py-3 px-3 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
-                    <td className="py-3 px-3 text-warm-text max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
-                    <td className="py-3 px-3 text-warm-text">{decodeEntities(row.contact_person_name) || '-'}</td>
-                    <td className="py-3 px-3 text-warm-text whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
-                    <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{formatDate(row.created_at)}</td>
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-text max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
+                    <td className="py-3 px-4 text-warm-text">{decodeEntities(row.contact_person_name) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.created_at)}</td>
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-0.5">
                         <button
                           onClick={() => openView(row)}
@@ -319,7 +320,7 @@ const FPMarketingComplaintForm = ({ user }) => {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => archiveRow(row)}
+                          onClick={() => setArchiveTarget(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
                           title="Move to Archived"
                         >
@@ -509,6 +510,33 @@ const FPMarketingComplaintForm = ({ user }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Archive confirmation -- same backdrop offset as the form modal so the card
+          centers in the content area beside the expanded sidebar. */}
+      {archiveTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72" onClick={() => setArchiveTarget(null)}>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-warm-text mb-2">Move to Archived?</h3>
+            <p className="text-sm text-warm-muted mb-5">
+              The complaint for <span className="font-medium text-warm-text">{decodeEntities(archiveTarget.property_id) || 'this property'}</span> will leave this list. You can restore it from Marketing &gt; Archived.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setArchiveTarget(null)}
+                className="px-4 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text hover:bg-warm-section transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => archiveRow(archiveTarget)}
+                className="px-4 py-2 bg-red-600 text-white rounded-[10px] text-sm hover:bg-red-700 transition-colors"
+              >
+                Move to Archived
+              </button>
+            </div>
           </div>
         </div>
       )}
