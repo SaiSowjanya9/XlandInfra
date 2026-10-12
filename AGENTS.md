@@ -288,6 +288,15 @@ nothing here may be applied globally.
   follow-up `FOLLOW_UP_INTERVAL_DAYS` (4) later. Editing Last Contact Date re-schedules from it;
   Next Follow-Up Date then stays editable, so a deliberate date is never overwritten. The table
   and the modal both go through `contactStamp` / `nextFollowUpFrom` so they cannot disagree.
+- **An approved or rejected estimate answers Customer Response itself.** `effectiveCustomerResponse`
+  resolves it on read — approving in All Estimates must move the tracker with it, and a stored copy
+  would be right only until the estimate next changed. It overrules whatever the FP had chosen, so
+  the tracker cannot claim the customer is still reviewing an estimate that is approved, and the
+  portal shows a badge instead of the select from then on, exactly as Estimate Status does. The
+  workbook's response list had `Approved` but no `Rejected`, because the sheet recorded a rejection
+  as `Not Interested`; `Rejected` is added as a tenth option, since a rejected estimate is not the
+  same answer as a customer who was never interested. Anything in `ESTIMATE_DRIVEN_RESPONSES` must
+  stay inside `CUSTOMER_RESPONSES`, or the PUT would reject the value its own UI displays.
 - **An inline edit resends the whole payload, built from `TRACKER_FIELDS`.** `proposal_given` and
   `customer_decision` are required by the PUT, so every save carries them. Listing the fields by
   hand is how a newly added column gets wiped by an unrelated edit in another cell.

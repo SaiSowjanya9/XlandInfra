@@ -3,8 +3,9 @@ const assert = require('node:assert');
 
 const {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS, DUE_STATUSES,
-  COMPLETED_LEAD_STATUSES, FOLLOW_UP_INTERVAL_DAYS,
-  istToday, toDateOnly, addDays, nextFollowUpFrom, dueStatus, isOpenLead
+  COMPLETED_LEAD_STATUSES, ESTIMATE_DRIVEN_RESPONSES, FOLLOW_UP_INTERVAL_DAYS,
+  istToday, toDateOnly, addDays, nextFollowUpFrom, dueStatus, isOpenLead,
+  isCustomerResponseLocked, effectiveCustomerResponse
 } = require('./marketingFollowUp');
 
 test('the option lists are the workbook Dropdown Lists sheet, in its order', () => {
@@ -13,8 +14,12 @@ test('the option lists are the workbook Dropdown Lists sheet, in its order', () 
   assert.strictEqual(LEAD_STATUSES[LEAD_STATUSES.length - 1], 'Closed');
   assert.deepStrictEqual(CONTACT_METHODS,
     ['WhatsApp', 'SMS/Text', 'Email', 'Phone Call', 'Field Visit', 'Portal Message', 'Other']);
-  assert.strictEqual(CUSTOMER_RESPONSES.length, 9);
+  // The sheet listed nine; 'Rejected' is the tenth, because the estimate's own status drives
+  // this column and a rejection is not the same answer as "never interested".
+  assert.strictEqual(CUSTOMER_RESPONSES.length, 10);
   assert.ok(CUSTOMER_RESPONSES.includes('Not Interested'), 'Not Interested is offered as a response');
+  assert.ok(CUSTOMER_RESPONSES.includes('Approved'), 'an approved estimate needs a response to map to');
+  assert.ok(CUSTOMER_RESPONSES.includes('Rejected'), 'and so does a rejected one');
   assert.strictEqual(NEXT_ACTIONS.length, 14);
   assert.strictEqual(NEXT_ACTIONS[0], 'Coordinator Review');
   assert.strictEqual(NEXT_ACTIONS[NEXT_ACTIONS.length - 1], 'Close Lead');
@@ -116,6 +121,59 @@ test('every due status the helper returns is one the workbook lists', () => {
   ]);
   assert.strictEqual(produced.size, 5, 'all five branches are reachable');
   for (const value of produced) assert.ok(DUE_STATUSES.includes(value), `${value} is a listed status`);
+});
+
+test('an approved or rejected estimate answers Customer Response itself', () => {
+  assert.strictEqual(effectiveCustomerResponse('approved', ''), 'Approved');
+  assert.strictEqual(effectiveCustomerResponse('rejected', ''), 'Rejected');
+  // And it overrules whatever the FP had chosen -- the tracker cannot say the customer is still
+  // reviewing an estimate that has been approved.
+  assert.strictEqual(effectiveCustomerResponse('approved', 'Received - Reviewing'), 'Approved');
+  assert.strictEqual(effectiveCustomerResponse('rejected', 'Interested'), 'Rejected');
+});
+
+test('while the estimate is open the FP keeps their own answer', () => {
+  for (const status of ['draft', 'sent', '', null, undefined, 'pending']) {
+    assert.strictEqual(effectiveCustomerResponse(status, 'Need Call Back'), 'Need Call Back', String(status));
+  }
+  assert.strictEqual(effectiveCustomerResponse('sent', ''), '', 'no answer stays no answer');
+  assert.strictEqual(effectiveCustomerResponse('draft', null), '');
+});
+
+test('the estimate status is matched case- and space-insensitively', () => {
+  // fp_estimates.status is lowercase today, but the column is free text and the portal has sent
+  // 'Approved' before now.
+  for (const status of ['Approved', 'APPROVED', ' approved ']) {
+    assert.strictEqual(effectiveCustomerResponse(status, 'Interested'), 'Approved', status);
+  }
+  assert.strictEqual(effectiveCustomerResponse(' Rejected ', 'Interested'), 'Rejected');
+});
+
+test('the response is locked exactly when the estimate has been decided', () => {
+  assert.strictEqual(isCustomerResponseLocked('approved'), true);
+  assert.strictEqual(isCustomerResponseLocked('rejected'), true);
+  for (const status of ['draft', 'sent', '', null, undefined]) {
+    assert.strictEqual(isCustomerResponseLocked(status), false, String(status));
+  }
+  // A status that merely looks like one of them must not lock the field.
+  assert.strictEqual(isCustomerResponseLocked('approved_by_manager'), false);
+});
+
+test('every value the estimate can force is a selectable response', () => {
+  for (const response of Object.values(ESTIMATE_DRIVEN_RESPONSES)) {
+    assert.ok(CUSTOMER_RESPONSES.includes(response),
+      `${response} is forced onto the row but the PUT would reject it`);
+  }
+});
+
+test('the tracker list derives the response rather than storing it', () => {
+  // A stored copy would be right only until somebody changed the estimate; presentTrackerRow has
+  // to resolve it on every read, the same way it resolves the tracker status.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'franchisePartner.js'), 'utf8');
+  assert.match(source, /customer_response: effectiveCustomerResponse\(row\.status, row\.customer_response\)/,
+    'presentTrackerRow must derive customer_response from the estimate status');
 });
 
 test('the tracker PUT validates options on the decoded value', () => {
