@@ -39,6 +39,7 @@ import {
   RefreshCw,
   RefreshCcw,
   Ban,
+  FileWarning,
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -166,6 +167,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   const navItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/manager/customers/add', icon: UserPlus, label: 'Add Customer' },
+    { path: '/manager/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
   ];
   // Stands alone rather than inside a section; rendered last, where Employee Management sits

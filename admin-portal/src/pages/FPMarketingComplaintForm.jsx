@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Eye, Pencil, Trash2, Search, Building2 } from 'lucide-react';
+import { FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
 import EmptyState from '../components/common/EmptyState';
@@ -295,7 +295,12 @@ const FPMarketingComplaintForm = ({ user }) => {
               </thead>
               <tbody>
                 {complaints.map((row) => (
-                  <tr key={row.id} className="border-b border-warm-border/70 hover:bg-warm-section transition-colors">
+                  <tr
+                    key={row.id}
+                    onClick={() => openView(row)}
+                    className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
+                    title="Click to view"
+                  >
                     <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
@@ -303,15 +308,8 @@ const FPMarketingComplaintForm = ({ user }) => {
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.contact_person_name) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.created_at)}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => openView(row)}
-                          className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
-                          title="View complaint"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                         <button
                           onClick={() => openEdit(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"

@@ -40,6 +40,7 @@ import {
   CalendarClock,
   RefreshCcw,
   Ban,
+  FileWarning,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -101,6 +102,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
+    { path: '/employee/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
     // The QR endpoints are admin/super_admin only (`adminOnly` in backend/routes/qr.js), so for an
     // Operations Manager this opened a page whose every request answered 403 and whose every figure

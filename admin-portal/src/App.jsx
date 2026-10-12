@@ -36,6 +36,7 @@ import FPCustomers from './pages/FPCustomers';
 import FPMarketingDashboard from './pages/FPMarketingDashboard';
 import FPMarketingTracker from './pages/FPMarketingTracker';
 import FPMarketingComplaintForm from './pages/FPMarketingComplaintForm';
+import ComplaintsInbox from './pages/ComplaintsInbox';
 import FPMarketingArchived from './pages/FPMarketingArchived';
 
 import ManagerLogin from './pages/ManagerLogin';
@@ -362,6 +363,7 @@ function App() {
                 <EmployeeLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="customer-submissions" element={<CustomerSubmissions />} />
+                    <Route path="complaints" element={<ComplaintsInbox endpoint="/api/admin/marketing/complaints" showPartner />} />
                     <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="employee" />} />
                     <Route path="work-orders" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/pending" element={<EmployeeWorkOrders admin={user} />} />
@@ -527,6 +529,7 @@ function App() {
                 <ManagerLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="properties" element={<ManagerProperties user={user} />} />
+                    <Route path="complaints" element={<ComplaintsInbox endpoint="/api/manager/marketing/complaints" />} />
                     <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="manager" />} />
                     <Route path="work-orders" element={<ManagerWorkOrders user={user} />} />
                     <Route path="work-orders/pending" element={<ManagerWorkOrders user={user} />} />
