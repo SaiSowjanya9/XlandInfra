@@ -223,10 +223,10 @@ const Dashboard = ({ user }) => {
   }, []);
 
   const menuItems = [
-    { path: '/dashboard/work-order', icon: ClipboardList, title: 'Work Order', description: 'Submit a new maintenance or repair request' },
-    { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View your scheduled service visits' },
-    { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history' },
-    { path: '/dashboard/contact', icon: HelpCircle, title: 'Contact / Help', description: 'Get support and contact information' },
+    { path: '/dashboard/work-order', icon: ClipboardList, title: 'Work Order', description: 'Submit a new maintenance or repair request', tile: 'bg-blue-50 border-blue-100', iconColor: 'text-blue-600' },
+    { path: '/dashboard/schedule', icon: Calendar, title: 'Schedules', description: 'View your scheduled service visits', tile: 'bg-violet-50 border-violet-100', iconColor: 'text-violet-600' },
+    { path: '/dashboard/payment', icon: CreditCard, title: 'Payment', description: 'Make payments and view billing history', tile: 'bg-emerald-50 border-emerald-100', iconColor: 'text-emerald-600' },
+    { path: '/dashboard/contact', icon: HelpCircle, title: 'Contact / Help', description: 'Get support and contact information', tile: 'bg-gold-600/10 border-gold-600/20', iconColor: 'text-gold-600' },
   ];
 
   const getStatusBadge = (status) => {
@@ -412,8 +412,8 @@ const Dashboard = ({ user }) => {
       <div className="order-2 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <button onClick={() => navigate('/dashboard/work-order')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-6 h-6 text-gray-900" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ClipboardList className="w-6 h-6 text-blue-600" />
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-gray-500 truncate">Total Orders</p>
@@ -424,8 +424,8 @@ const Dashboard = ({ user }) => {
 
         <button onClick={() => navigate('/dashboard/work-order?status=pending')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-6 h-6 text-gray-900" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock className="w-6 h-6 text-amber-600" />
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-gray-500 truncate">Pending</p>
@@ -436,8 +436,8 @@ const Dashboard = ({ user }) => {
 
         <button onClick={() => navigate('/dashboard/work-order?status=completed')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-6 h-6 text-gray-900" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-gray-500 truncate">Completed</p>
@@ -448,8 +448,8 @@ const Dashboard = ({ user }) => {
 
         <button onClick={() => navigate('/dashboard/contact')} className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-5 hover:bg-gray-100 transition-all duration-200 group text-left min-w-0">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6 text-gray-900" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 bg-gold-600/10 border border-gold-600/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-6 h-6 text-gold-600" />
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm text-gray-500 truncate">Property</p>
@@ -489,8 +489,8 @@ const Dashboard = ({ user }) => {
                 className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors group min-w-0"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-gold-500 to-gold-600 rounded-lg flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-gray-900" />
+                  <div className={`w-10 h-10 shrink-0 rounded-lg border flex items-center justify-center ${item.tile}`}>
+                    <Icon className={`w-5 h-5 ${item.iconColor}`} />
                   </div>
                   <div className="text-left min-w-0">
                     <p className="font-medium text-gray-900 text-sm sm:text-base leading-snug">{item.title}</p>
