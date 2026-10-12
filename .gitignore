@@ -47,3 +47,8 @@ credentials/
 # Misc
 coverage/
 .nyc_output/
+
+# Throwaway design preview served from a local static server. It vendors React, Recharts, Babel
+# and Tailwind (~4MB) so it runs offline, none of which belongs in the repo -- the shipped page is
+# admin-portal/src/pages/FPMarketingDashboard.jsx.
+preview-marketing-dashboard/
