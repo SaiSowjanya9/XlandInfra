@@ -12,6 +12,11 @@ import {
 import { getAuthToken } from '../utils/safeStorage';
 import { getPropertyTypeLabel } from '../utils/estimatePackageUtils';
 import EmptyState from '../components/common/EmptyState';
+import {
+  MARKETING_PHASE_COLORS, MARKETING_DUE_COLORS, MARKETING_PRIORITY_COLORS,
+  MARKETING_STATUS_COLORS, MARKETING_LEAD_STATUS_COLORS, MARKETING_OWNER_COLORS,
+  MARKETING_CATEGORICAL
+} from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -21,62 +26,28 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 //
 // The page follows the FP portal's warm beige skin, and gold #B5812A -- not the lighter
 // warm-accent -- carries white text, the same contrast rule the warm estimate screens follow.
-const GOLD = '#B5812A';
-
-// Each follow-up step gets the colour of the phase it belongs to, so the stage chart reads as a
+// The chart colours are the muted MARKETING_* palette in utils/chartColors.js: the saturated
+// defaults read as warnings against cream, so every hue here is pulled down to sit on the beige.
+// Each follow-up step takes the colour of the phase it belongs to, so the stage chart reads as a
 // pipeline rather than seven unrelated bars.
 const STAGE_COLORS = {
-  'Step 1 - Thank You': '#8B5CF6',
-  'Step 2 - Estimate Shared': '#FBBF24',
-  'Step 3 - Follow-Up 1': '#3B82F6',
-  'Step 4 - Follow-Up 2': '#3B82F6',
-  'Step 5A - Executive Call': '#06B6D4',
-  'Step 5B - Customer Visit': '#06B6D4',
-  'Closed': '#10B981'
+  'Step 1 - Thank You': MARKETING_PHASE_COLORS.Visit,
+  'Step 2 - Estimate Shared': MARKETING_PHASE_COLORS.Estimate,
+  'Step 3 - Follow-Up 1': MARKETING_PHASE_COLORS['Follow-Up'],
+  'Step 4 - Follow-Up 2': MARKETING_PHASE_COLORS['Follow-Up'],
+  'Step 5A - Executive Call': MARKETING_PHASE_COLORS.Closing,
+  'Step 5B - Customer Visit': MARKETING_PHASE_COLORS.Closing,
+  'Closed': MARKETING_PHASE_COLORS.Won
 };
 
-// Pipeline order, ending at the two outcomes. Matches STATUS_COLORS in utils/chartColors.js where
-// the names overlap (Approved teal, Rejected red) so a status keeps one colour across the portal.
-const STATUS_COLORS = {
-  'Not Started': '#9CA3AF',
-  'Created by Executive': '#8B5CF6',
-  'Pending Coordinator Review': '#F59E0B',
-  'Reviewed by Coordinator': '#6366F1',
-  'Estimate Sent': '#FBBF24',
-  'Revision Required': '#F97316',
-  'Revised Estimate Sent': '#EAB308',
-  'Approved': '#14B8A6',
-  'Rejected': '#EF4444'
-};
-
-const PRIORITY_COLORS = { Urgent: '#DC2626', High: '#EA580C', Medium: '#CA8A04', Low: '#0D9488' };
-
-// Due Status drives the day's work, so the colours match the badges on the tracker: overdue is
-// the only loud one, because it is the only state that means somebody is late.
-const DUE_COLORS = {
-  'Overdue': '#EF4444',
-  'Due Today': '#F59E0B',
-  'Upcoming': '#3B82F6',
-  'Completed': '#10B981',
-  'No Date': '#9CA3AF'
-};
-
-// The workbook's 18 lead statuses, grouped so the chart reads as a pipeline rather than 18
-// unrelated bars.
-const LEAD_STATUS_COLORS = {
-  'New Visit Completed': '#8B5CF6', 'Thank You Sent': '#8B5CF6',
-  'Estimate Sent': '#FBBF24', 'Follow-Up 1 Sent': '#3B82F6', 'Follow-Up 2 Sent': '#3B82F6',
-  'No Response - Call': '#F97316', 'No Response - Visit': '#F97316',
-  'Customer Review': '#FBBF24', 'Changes Requested': '#F97316', 'Revised Estimate Sent': '#EAB308',
-  'Customer Approved': '#14B8A6', 'Agreement Pending': '#06B6D4', 'Payment Pending': '#06B6D4',
-  'Onboarding Pending': '#06B6D4', 'Service Started': '#10B981',
-  'Follow-Up Later': '#9CA3AF', 'Not Interested': '#EF4444', 'Closed': '#78716C'
-};
+const STATUS_COLORS = MARKETING_STATUS_COLORS;
+const PRIORITY_COLORS = MARKETING_PRIORITY_COLORS;
+const DUE_COLORS = MARKETING_DUE_COLORS;
+const LEAD_STATUS_COLORS = MARKETING_LEAD_STATUS_COLORS;
+const SOURCE_PALETTE = MARKETING_CATEGORICAL;
 
 // Who the next action belongs to, so the queue says at a glance whose day it is.
 const EXECUTIVE_ACTIONS = ['Executive Call', 'Executive Visit', 'Onboard Property', 'Start Service'];
-
-const SOURCE_PALETTE = ['#8B5CF6', '#3B82F6', '#14B8A6', '#FBBF24', '#EF4444', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#78716C'];
 
 const inr = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
@@ -105,12 +76,15 @@ const Card = ({ title, subtitle, right, children, className = '' }) => (
   </div>
 );
 
-// One tooltip for every chart on the page.
-const ChartTip = ({ active, payload, label, formatter }) => {
+// One tooltip for every chart on the page. It always names the point and states its value; where
+// a `total` is given it adds the share, which is the question a slice of a donut actually raises.
+const ChartTip = ({ active, payload, label, formatter, total }) => {
   if (!active || !payload || !payload.length) return null;
+  // A pie hands the slice name on the datum rather than as the axis label.
+  const heading = label != null && label !== '' ? label : payload[0]?.payload?.name;
   return (
-    <div className="bg-white border border-warm-border rounded-lg shadow-lg px-3 py-2 text-xs">
-      {label != null && label !== '' && <div className="font-semibold text-warm-text mb-1">{label}</div>}
+    <div className="bg-white border border-warm-border rounded-lg shadow-lg px-3 py-2 text-xs min-w-[132px]">
+      {heading && <div className="font-semibold text-warm-text mb-1">{heading}</div>}
       {payload.map((entry, i) => (
         <div key={i} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: entry.color || entry.payload?.fill }} />
@@ -118,6 +92,51 @@ const ChartTip = ({ active, payload, label, formatter }) => {
           <span className="font-semibold text-warm-text ml-auto">
             {formatter ? formatter(entry.value) : entry.value}
           </span>
+        </div>
+      ))}
+      {total > 0 && (
+        <div className="text-[11px] text-warm-muted mt-1 pt-1 border-t border-warm-border">
+          {Math.round((payload[0].value / total) * 100)}% of {total}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const sumOf = (rows) => (rows || []).reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+
+// Value drawn on the slice itself, so the donut is readable without hovering. Thin slices are
+// skipped -- a number that does not fit is worse than no number.
+const sliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) => {
+  if (percent < 0.06) return null;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const radian = Math.PI / 180;
+  const x = cx + radius * Math.cos(-midAngle * radian);
+  const y = cy + radius * Math.sin(-midAngle * radian);
+  return (
+    <text x={x} y={y} fill="#FFFFFF" textAnchor="middle" dominantBaseline="central"
+          fontSize={12} fontWeight={600} style={{ pointerEvents: 'none' }}>
+      {value}
+    </text>
+  );
+};
+
+// Name, count and share under a donut. The legend is where the labels live, because 18 stage
+// names will not fit around a 240px circle.
+const DonutLegend = ({ rows, columns = 2 }) => {
+  const total = sumOf(rows);
+  return (
+    <div className={`grid ${columns === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-x-3 gap-y-1.5 mt-2`}>
+      {rows.map((row) => (
+        <div key={row.name} className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: row.fill }} />
+          <span className="text-warm-muted truncate" title={row.name}>{row.name}</span>
+          <span className="font-semibold text-warm-text ml-auto">{row.value}</span>
+          {total > 0 && (
+            <span className="text-warm-muted/80 tabular-nums w-9 text-right">
+              {Math.round((row.value / total) * 100)}%
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -203,7 +222,7 @@ const FPMarketingDashboard = ({ user }) => {
       nextActions: (data.byNextAction || [])
         .slice()
         .sort((a, b) => b.value - a.value)
-        .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? '#8B5CF6' : GOLD })),
+        .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator })),
       dueSlices: (data.byDueStatus || [])
         .filter(d => d.value > 0)
         .map(d => ({ ...d, fill: DUE_COLORS[d.name] || '#94A3B8' }))
@@ -370,7 +389,7 @@ const FPMarketingDashboard = ({ user }) => {
                   <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                   <XAxis type="number" allowDecimals={false} {...axisProps} />
                   <YAxis type="category" dataKey="name" width={152} {...axisProps} />
-                  <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                  <Tooltip content={<ChartTip total={sumOf(charts.leadStatuses)} />} cursor={{ fill: '#FFF9EE' }} />
                   <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={15} isAnimationActive={false}>
                     {charts.leadStatuses.map((s, i) => <Cell key={i} fill={s.value > 0 ? s.fill : '#EADFCF'} />)}
                     <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
@@ -392,7 +411,7 @@ const FPMarketingDashboard = ({ user }) => {
                     <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                     <XAxis type="number" allowDecimals={false} {...axisProps} />
                     <YAxis type="category" dataKey="name" width={165} {...axisProps} />
-                    <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                    <Tooltip content={<ChartTip total={sumOf(charts.nextActions)} />} cursor={{ fill: '#FFF9EE' }} />
                     <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={15} isAnimationActive={false}>
                       {charts.nextActions.map((a, i) => <Cell key={i} fill={a.value > 0 ? a.fill : '#EADFCF'} />)}
                       <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
@@ -409,21 +428,14 @@ const FPMarketingDashboard = ({ user }) => {
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
                       <Pie data={charts.dueSlices} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                           innerRadius={58} outerRadius={94} paddingAngle={2} isAnimationActive={false}>
+                           innerRadius={58} outerRadius={94} paddingAngle={2} isAnimationActive={false}
+                           label={sliceLabel} labelLine={false}>
                         {charts.dueSlices.map((s, i) => <Cell key={i} fill={s.fill} />)}
                       </Pie>
-                      <Tooltip content={<ChartTip />} />
+                      <Tooltip content={<ChartTip total={sumOf(charts.dueSlices)} />} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2">
-                    {charts.dueSlices.map((s) => (
-                      <div key={s.name} className="flex items-center gap-2 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.fill }} />
-                        <span className="text-warm-muted truncate">{s.name}</span>
-                        <span className="font-semibold text-warm-text ml-auto">{s.value}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutLegend rows={charts.dueSlices} />
                 </>
               ) : <NoData height={240} note="No follow-up dates set" />}
             </Card>
@@ -439,7 +451,7 @@ const FPMarketingDashboard = ({ user }) => {
                     <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                     <XAxis type="number" allowDecimals={false} {...axisProps} />
                     <YAxis type="category" dataKey="name" width={150} {...axisProps} />
-                    <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                    <Tooltip content={<ChartTip total={sumOf(charts.stages)} />} cursor={{ fill: '#FFF9EE' }} />
                     <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={18} isAnimationActive={false}>
                       {charts.stages.map((s, i) => <Cell key={i} fill={s.value > 0 ? s.fill : '#EADFCF'} />)}
                       <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
@@ -456,25 +468,18 @@ const FPMarketingDashboard = ({ user }) => {
                   <ResponsiveContainer width="100%" height={240}>
                     <PieChart>
                       <Pie data={charts.statusSlices} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                           innerRadius={62} outerRadius={96} paddingAngle={2} isAnimationActive={false}>
+                           innerRadius={62} outerRadius={96} paddingAngle={2} isAnimationActive={false}
+                           label={sliceLabel} labelLine={false}>
                         {charts.statusSlices.map((s, i) => <Cell key={i} fill={s.fill} />)}
                       </Pie>
-                      <Tooltip content={<ChartTip />} />
+                      <Tooltip content={<ChartTip total={sumOf(charts.statusSlices)} />} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ height: 240 }}>
                     <div className="text-2xl font-bold text-warm-text">{totals.totalLeads}</div>
                     <div className="text-[11px] text-warm-muted">Total Leads</div>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2">
-                    {charts.statusSlices.map((s) => (
-                      <div key={s.name} className="flex items-center gap-2 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.fill }} />
-                        <span className="text-warm-muted truncate" title={s.name}>{s.name}</span>
-                        <span className="font-semibold text-warm-text ml-auto">{s.value}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutLegend rows={charts.statusSlices} />
                 </div>
               ) : <NoData height={240} />}
             </Card>
@@ -543,7 +548,7 @@ const FPMarketingDashboard = ({ user }) => {
                     <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                     <XAxis type="number" allowDecimals={false} {...axisProps} />
                     <YAxis type="category" dataKey="name" width={112} {...axisProps} />
-                    <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                    <Tooltip content={<ChartTip total={sumOf(charts.sources)} />} cursor={{ fill: '#FFF9EE' }} />
                     <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false}>
                       {charts.sources.map((s, i) => <Cell key={i} fill={s.fill} />)}
                       <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }} />
@@ -558,21 +563,15 @@ const FPMarketingDashboard = ({ user }) => {
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={charts.priorities} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                         innerRadius={56} outerRadius={92} paddingAngle={2} isAnimationActive={false}>
+                         innerRadius={56} outerRadius={92} paddingAngle={2} isAnimationActive={false}
+                         label={sliceLabel} labelLine={false}>
                       {charts.priorities.map((p, i) => <Cell key={i} fill={p.fill} />)}
                     </Pie>
-                    <Tooltip content={<ChartTip />} />
+                    <Tooltip content={<ChartTip total={sumOf(charts.priorities)} />} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <NoData height={260} note="No priority set" />}
-              <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
-                {charts.priorities.map((p) => (
-                  <span key={p.name} className="flex items-center gap-1.5 text-xs text-warm-muted">
-                    <span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.fill }} />
-                    {p.name} <span className="font-semibold text-warm-text">{p.value}</span>
-                  </span>
-                ))}
-              </div>
+              {charts.priorities.length > 0 && <DonutLegend rows={charts.priorities} />}
             </Card>
 
             <Card title="Property Type" subtitle="What kind of properties are in play">
@@ -582,7 +581,7 @@ const FPMarketingDashboard = ({ user }) => {
                     <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                     <XAxis type="number" allowDecimals={false} {...axisProps} />
                     <YAxis type="category" dataKey="name" width={112} {...axisProps} />
-                    <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                    <Tooltip content={<ChartTip total={sumOf(charts.propertyTypes)} />} cursor={{ fill: '#FFF9EE' }} />
                     <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false}>
                       {charts.propertyTypes.map((p, i) => <Cell key={i} fill={p.fill} />)}
                       <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }} />
