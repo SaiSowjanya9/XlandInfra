@@ -220,18 +220,20 @@ const Estimates = ({ admin, defaultTab = 'list' }) => {
         {/* The Estimates header reads the same in every portal: the cream section card, the tan
             icon tile, and the shared stat cards on the right */}
         <div className={`bg-warm-section rounded-xl border border-warm-border shadow-warm px-5 py-4 mb-4 ${defaultTab === 'add-service' ? 'hidden' : ''}`}>
-          <div className="flex items-center justify-between gap-4">
+          {/* flex-col on phones, like the Executive header: the stat cards get a row of their
+              own (and scroll inside it) instead of squeezing the title into an ellipsis */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0">
                 <FileText className="w-6 h-6 text-warm-accent" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1>
-                <p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p>
+                <p className="text-sm text-warm-muted truncate">Create and manage estimates, AMC packages, and services</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
               {/* FP Switcher - Show on all tabs */}
               <div className="relative">
                 <button

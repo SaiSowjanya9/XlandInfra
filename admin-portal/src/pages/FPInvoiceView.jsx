@@ -165,11 +165,15 @@ const FPInvoiceView = ({ user }) => {
     
     setDownloading(true);
     try {
+      // windowWidth lays the clone out at desktop width: without it the canvas is the
+      // invoice as this device's viewport draws it, so a tablet's narrower render
+      // (and its squeezes) would be baked into the PDF
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: 1280
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -400,10 +404,12 @@ const FPInvoiceView = ({ user }) => {
         </div>
       )}
 
-      {/* Invoice Document */}
-      <div 
+      {/* Invoice Document -- print-document: a browser print is the invoice alone, at
+          document width (index.css keeps it at paper width rather than this screen's) */}
+      <div className="overflow-x-auto">
+      <div
         ref={invoiceRef}
-        className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden print:shadow-none print:border-0 print:rounded-none"
+        className="print-document bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden print:shadow-none print:border-0 print:rounded-none"
       >
         {/* Invoice Content */}
         <div className="p-8 md:p-12" style={{ fontFamily: 'Georgia, serif' }}>
@@ -596,6 +602,7 @@ const FPInvoiceView = ({ user }) => {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Payment History */}

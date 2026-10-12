@@ -3866,7 +3866,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
           </button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
+      <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-x-auto">
         {/* FP is internal — the services table also shows Vendor Cost, XLAND Cost and Margin % */}
         <EstimateDetailPanel estimate={estimate} decode={decodeHtml} internal onPrint={() => handlePrintEstimate(estimate)} />
       </div>
@@ -3893,10 +3893,12 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     <div className="bg-warm-page">
       <div className="max-w-7xl mx-auto">
         <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4">
-          <div className="flex items-center justify-between gap-4">
+          {/* flex-col on phones, like the Executive header: the stat cards get a row of their
+              own (and scroll inside it) instead of squeezing the title into an ellipsis */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-warm-accent" /></div>
-              <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-warm-muted">Create and manage estimates, AMC packages, and services</p></div>
+              <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">{TAB_TITLES[defaultTab] || 'Estimates'}</h1><p className="text-sm text-warm-muted truncate">Create and manage estimates, AMC packages, and services</p></div>
             </div>
             {/* The retired add-on count is gone with its list; configured services are counted on their own panel */}
             <EstimateStatCards

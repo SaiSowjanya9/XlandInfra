@@ -122,6 +122,23 @@ const COLUMN_SHARE = {
   plain: { '#': 4, Service: 16, Description: 28, 'Input / Details': 14, Method: 10, Frequency: 10, 'Visits / Year': 7, 'Customer Price': 11 }
 };
 
+// A fixed-layout table keeps a column's share even when every cell in it is print:hidden, so a
+// print of the internal table used to carry the cost columns' third of the width as dead space.
+// A second colgroup, swapped in only on paper, re-deals the hidden columns' share among the ones
+// that stay -- the printed table fills its width like the generated PDF does. The hidden columns
+// stay in the structure at width 0, so the totals row's colSpans still line up.
+const printShares = (columns, internal) => {
+  const shares = COLUMN_SHARE[internal ? 'internal' : 'plain'];
+  const visible = column => !/print:hidden/.test(column.head);
+  const total = columns.reduce((sum, column) => sum + (visible(column) ? shares[column.label] || 8 : 0), 0);
+  return columns.map(column => (visible(column) ? ((shares[column.label] || 8) / total) * 100 : 0));
+};
+const PrintColgroup = ({ columns, internal }) => (
+  <colgroup className="hidden print:table-column-group">
+    {printShares(columns, internal).map((share, index) => <col key={columns[index].label} style={{ width: `${share}%` }} />)}
+  </colgroup>
+);
+
 // The totals of a set of service rows, for the footer cells. Read from the same figures as the row
 // cells -- a package's own service against its share of the package price -- so a column's total
 // is the sum of what it lists. A row with no vendor cost on record leaves the cost totals unknown
@@ -166,7 +183,8 @@ export function EstimateGrandTotal({ rows, price, internal = false, label = 'Tot
   return (
     <div className="overflow-hidden rounded-lg border border-warm-border">
       <table className="w-full table-fixed border-collapse">
-        <colgroup>{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
+        <colgroup className="print:hidden">{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
+        <PrintColgroup columns={columns} internal={internal} />
         <tbody className="bg-warm-section">
           <TotalsCells columns={columns} label={label} totals={totals} internal={internal} cell={cell} strong />
         </tbody>
@@ -195,7 +213,8 @@ export default function EstimateServicesTable({ rows, total, note = null, totalL
     // there is no sideways scroller and nothing is cut off (the user asked for the scroller to go)
     <div className={`overflow-hidden border border-warm-border ${topRadius} ${bottomRadius}`}>
       <table className="w-full table-fixed border-collapse">
-        <colgroup>{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
+        <colgroup className="print:hidden">{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
+        <PrintColgroup columns={columns} internal={internal} />
         <thead className="bg-warm-section">
           <tr>
             {columns.map(column => (

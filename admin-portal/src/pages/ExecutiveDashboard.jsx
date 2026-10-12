@@ -226,8 +226,8 @@ const ExecutiveDashboard = ({ user }) => {
       <PageHeader icon={LayoutDashboard}
         title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!`}
         subtitle="Here's what's happening with your assigned areas today.">
-          <div className="flex items-center gap-3 flex-nowrap">
-            <button onClick={() => navigate('/executive/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
+          <div className="flex min-w-0 items-center gap-3 flex-nowrap overflow-x-auto">
+            <button onClick={() => navigate('/executive/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Building2 className="w-5 h-5 text-blue-600" />
@@ -239,7 +239,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Store className="w-5 h-5 text-purple-600" />
@@ -251,7 +251,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-orange-600" />
@@ -263,7 +263,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/work-orders')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/work-orders')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <ClipboardList className="w-5 h-5 text-indigo-600" />

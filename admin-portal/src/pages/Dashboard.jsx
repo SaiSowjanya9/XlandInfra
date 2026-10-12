@@ -775,11 +775,12 @@ const Dashboard = () => {
           </div>
         </PageHeader>
 
-        {/* First Stats Row - 5 KPI Cards with Real-Time Data */}
-        <div className="flex flex-wrap gap-3">
+        {/* First Stats Row - 5 KPI Cards with Real-Time Data. One row; it scrolls
+            sideways on narrow screens instead of wrapping or squeezing the cards. */}
+        <div className="flex flex-nowrap gap-3 overflow-x-auto py-1">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
-            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
+            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -795,7 +796,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/assigned-vendors')}
-            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
+            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -811,7 +812,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/employee-details')}
-            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
+            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -827,7 +828,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/work-orders')}
-            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
+            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -843,7 +844,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/estimates/list')}
-            className="bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
+            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
