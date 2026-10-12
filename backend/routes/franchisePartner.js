@@ -11,6 +11,10 @@ const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
 const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
 const { decodeEntities } = require('../utils/htmlEntities');
+const {
+  LEAD_SOURCES, PRIORITIES, CUSTOMER_DECISIONS, TRACKER_STATUSES, FOLLOW_UP_STAGES,
+  buildMarketingDashboard
+} = require('../utils/marketingDashboard');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -7014,15 +7018,20 @@ const requireFPAccount = (req, res, next) => {
 
 // The fixed option sets the tracker modal offers. 'Other' carries its free text in the matching
 // *_other column, so the option itself never holds typed input.
+//
+// The five lists the dashboard also charts live in utils/marketingDashboard.js and are imported
+// here, so adding a stage makes the PUT accept it and the dashboard draw it in one change --
+// they used to be declared in both places. Regression test:
+// `node --test backend/utils/marketingDashboard.test.js`.
 const TRACKER_OPTIONS = {
-  lead_source: ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'],
-  priority: ['Low', 'Medium', 'High', 'Urgent'],
+  lead_source: LEAD_SOURCES,
+  priority: PRIORITIES,
   maintenance_system: ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'],
   proposal_given: ['Yes', 'No', 'Other'],
-  customer_decision: ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'],
-  tracker_status: ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'],
+  customer_decision: CUSTOMER_DECISIONS,
+  tracker_status: TRACKER_STATUSES,
   coordinator_reviewed: ['Yes', 'No'],
-  follow_up_stage: ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed']
+  follow_up_stage: FOLLOW_UP_STAGES
 };
 const TRACKER_OTHER_FIELDS = {
   maintenance_system: 'maintenance_system_other',
@@ -7089,6 +7098,32 @@ router.get('/marketing/tracker/archived', requireFPScope, requireFPAccount, asyn
   } catch (error) {
     console.error('Marketing archived list error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch archived tracker data', error: error.message });
+  }
+});
+
+// Everything Marketing > Dashboard draws, from the rows Marketing > Tracker edits: tracked,
+// non-archived direct estimates. The counting rules live in utils/marketingDashboard.js so they
+// can be tested without a database.
+router.get('/marketing/dashboard', requireFPScope, requireFPAccount, async (req, res) => {
+  try {
+    await ensureMarketingTrackerColumns();
+    const [rows] = await pool.execute(
+      `SELECT ${TRACKER_SELECT}
+       FROM fp_estimates
+       WHERE franchise_partner_id = ? AND estimate_type = 'direct'
+         AND (is_archived = 0 OR is_archived IS NULL)
+         AND tracker_archived_at IS NULL
+         AND tracked_at IS NOT NULL
+       ORDER BY created_at DESC`,
+      [req.fpId]
+    );
+    // The dashboard reports on the status the tracker shows, not the raw column -- an approved
+    // estimate reads Approved there even when nobody set tracker_status by hand.
+    const resolved = rows.map((row) => ({ ...row, tracker_status: effectiveTrackerStatus(row) }));
+    res.json({ success: true, data: buildMarketingDashboard(resolved) });
+  } catch (error) {
+    console.error('Marketing dashboard error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch dashboard data', error: error.message });
   }
 });
 

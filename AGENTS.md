@@ -269,6 +269,33 @@ nothing here may be applied globally.
 - Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
   are how a state is read at a glance, and the warm palette has a single accent.
 
+## Marketing Dashboard
+
+- **The tracker's option lists live in `backend/utils/marketingDashboard.js`, not in the route.**
+  `LEAD_SOURCES`, `PRIORITIES`, `CUSTOMER_DECISIONS`, `TRACKER_STATUSES` and `FOLLOW_UP_STAGES` are
+  imported by `franchisePartner.js` to compose its `TRACKER_OPTIONS`, so a stage added once is
+  accepted by `PUT /marketing/tracker/:id` *and* charted by the dashboard. They were declared in
+  both files before, which is the same "keep in step" drift that bites elsewhere in this file.
+  `node --test backend/utils/marketingDashboard.test.js` fails if the route re-declares them.
+- **Every figure is aggregated in `buildMarketingDashboard`, never in SQL.**
+  `GET /api/fp/marketing/dashboard` runs one query for the tracked, non-archived direct estimates
+  and hands the rows to the util, so the counting rules are testable without a database. The rules
+  that are easy to get wrong, and are each pinned by a test: *Estimates Sent* is cumulative (an
+  approved lead still had its estimate shared); *Not Interested* counts a rejection **or** a
+  declining `customer_decision` but never the same row twice; *Pending Coordinator Review* is
+  anything not positively marked `Yes`; open pipeline value excludes approved and rejected rows,
+  which are reported separately as approved value.
+- **The dashboard reads the resolved status, not the raw column.** Rows go through
+  `effectiveTrackerStatus` first, so an approved estimate counts as Approved even when nobody set
+  `tracker_status` by hand — the same status the tracker list displays.
+- **A zero divisor must read 0%, not `NaN%`.** An FP with no tracked estimates loads this page
+  first; win rate and every funnel step guard their denominator.
+- **A count chart draws every option, a money chart drops the empty ones.** The stage and status
+  bars keep their zero entries so the pipeline holds its shape at low volume; nine zero-height
+  rupee bars just read as broken, so `valueByStatus` is filtered.
+- Charts are `recharts` (already a dependency, used by 14 other dashboards) and the page follows
+  the warm beige skin, with gold `#B5812A` — not `warm-accent` — behind white button text.
+
 ## Chart Legends
 
 - **A legend label wraps; it is never truncated.** Every dashboard had written its own legend and
