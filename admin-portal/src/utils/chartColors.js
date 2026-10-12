@@ -197,6 +197,80 @@ export const createEstimateTypeDataArray = (counts) => [
   { name: 'Work Order', value: counts.WorkOrder || 0, color: ESTIMATE_TYPE_COLORS['Work Order'] }
 ];
 
+// =============================================================================
+// MARKETING (FP PORTAL) - muted palette for the warm beige skin
+// =============================================================================
+// The saturated web colours above are right on the slate/blue dashboards, but against the warm
+// cream cards they shout: a #8B5CF6 violet bar beside #FBBF24 amber on #FFF9EE reads as a warning,
+// not as data. These are the same hues pulled down in saturation and slightly darker, so they sit
+// on the beige rather than vibrate against it, while staying far enough apart to tell one series
+// from another. Semantics are kept: green is good, rose is lost, amber is waiting.
+//
+// Only the FP marketing screens use these. Do not apply them to the other dashboards, which are
+// on the original palette.
+
+// The six phases an 18-stage lead pipeline rolls into.
+export const MARKETING_PHASE_COLORS = {
+  'Visit': '#9B8AA6',      // dusty mauve - first contact
+  'Estimate': '#BFA56B',   // soft ochre  - waiting on the customer
+  'Follow-Up': '#8CA9C4',  // dusty blue  - being chased
+  'Closing': '#7FA7A3',    // muted teal  - nearly won
+  'Won': '#87A878',        // sage        - won
+  'Lost': '#C08A8A'        // muted rose  - lost
+};
+
+// Due Status. Overdue stays the one that catches the eye -- it is the only state that means
+// somebody is already late -- but as a warm terracotta rather than a signal red.
+export const MARKETING_DUE_COLORS = {
+  'Overdue': '#C07C6D',
+  'Due Today': '#BD9D66',
+  'Upcoming': '#8CA9C4',
+  'Completed': '#87A878',
+  'No Date': '#B3A99F'
+};
+
+export const MARKETING_PRIORITY_COLORS = {
+  Urgent: '#B5705F',
+  High: '#BF9069',
+  Medium: '#C2AD72',
+  Low: '#86A892'
+};
+
+// The nine tracker statuses, in pipeline order.
+export const MARKETING_STATUS_COLORS = {
+  'Not Started': '#B3A99F',
+  'Created by Executive': '#9B8AA6',
+  'Pending Coordinator Review': '#BD9D66',
+  'Reviewed by Coordinator': '#8E9BC4',
+  'Estimate Sent': '#BFA56B',
+  'Revision Required': '#BF9069',
+  'Revised Estimate Sent': '#C1B06F',
+  'Approved': '#7FA7A3',
+  'Rejected': '#C08A8A'
+};
+
+// The workbook's 18 lead statuses, each taking the colour of the phase it belongs to.
+export const MARKETING_LEAD_STATUS_COLORS = {
+  'New Visit Completed': '#9B8AA6', 'Thank You Sent': '#9B8AA6',
+  'Estimate Sent': '#BFA56B', 'Customer Review': '#BFA56B', 'Revised Estimate Sent': '#C1B06F',
+  'Follow-Up 1 Sent': '#8CA9C4', 'Follow-Up 2 Sent': '#8CA9C4',
+  'No Response - Call': '#BF9069', 'No Response - Visit': '#BF9069', 'Changes Requested': '#BF9069',
+  'Customer Approved': '#7FA7A3', 'Agreement Pending': '#8FB0AC',
+  'Payment Pending': '#8FB0AC', 'Onboarding Pending': '#8FB0AC',
+  'Service Started': '#87A878',
+  'Follow-Up Later': '#B3A99F', 'Not Interested': '#C08A8A', 'Closed': '#A89C92'
+};
+
+// Whose job the next action is.
+export const MARKETING_OWNER_COLORS = { Coordinator: '#BFA06A', Executive: '#9B8AA6' };
+
+// Ranked lists with no fixed meaning -- lead source, property type. Ordered so neighbouring bars
+// stay distinguishable.
+export const MARKETING_CATEGORICAL = [
+  '#9B8AA6', '#8CA9C4', '#7FA7A3', '#BFA56B', '#C08A8A',
+  '#87A878', '#B08BA5', '#C7A17B', '#7E93A8', '#A89C92'
+];
+
 export default {
   STATUS_COLORS,
   SCHEDULE_STATUS_COLORS,
@@ -208,6 +282,13 @@ export default {
   ESTIMATE_TYPE_COLORS,
   BAR_CHART_COLORS,
   CATEGORY_COLORS,
+  MARKETING_PHASE_COLORS,
+  MARKETING_DUE_COLORS,
+  MARKETING_PRIORITY_COLORS,
+  MARKETING_STATUS_COLORS,
+  MARKETING_LEAD_STATUS_COLORS,
+  MARKETING_OWNER_COLORS,
+  MARKETING_CATEGORICAL,
   getConsistentColor,
   getServiceColor,
   createStatusDataArray,
