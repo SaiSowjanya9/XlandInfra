@@ -61,6 +61,9 @@ const {
   getEmployeeIdForZoneLookup,
   getCreatorIdentifier
 } = require('../middleware/zoneHelper');
+const {
+  COMPLAINT_TABLE, COMPLAINT_SELECT, ensureMarketingComplaintsTable
+} = require('../utils/marketingComplaints');
 
 // ============================================
 // MANAGER AUTHENTICATION (Public - No Auth Required)
@@ -3619,6 +3622,36 @@ router.put('/schedules/notifications/:notificationId/read', requireManagerScope,
   } catch (error) {
     console.error('Error marking notification as read:', error);
     res.status(500).json({ success: false, message: 'Error marking notification as read', error: error.message });
+  }
+});
+
+// Marketing complaints for this manager's FP, filtered to their assigned zones -- the same list
+// the FP sees under Marketing > Complaint Form, so a complaint a customer files from their portal
+// reaches the zone manager too. Read-only; the FP account owns edits and archiving.
+router.get('/marketing/complaints', requireManagerScope, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const employeeId = await getEmployeeIdForZoneLookup(req);
+    const creatorEmail = getCreatorIdentifier(req);
+    const rawZones = await getAssignedZones(employeeId, creatorEmail);
+    const unrestricted = rawZones.includes('__ALL__');
+    const zones = unrestricted ? [] : rawZones;
+    if (!unrestricted && zones.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+    let sql = `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE}
+               WHERE franchise_partner_id = ? AND archived_at IS NULL`;
+    const params = [req.franchisePartnerId];
+    if (!unrestricted) {
+      sql += ` AND zone IN (${zones.map(() => '?').join(',')})`;
+      params.push(...zones);
+    }
+    sql += ' ORDER BY created_at DESC';
+    const [rows] = await pool.execute(sql, params);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Manager marketing complaints error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
   }
 });
 

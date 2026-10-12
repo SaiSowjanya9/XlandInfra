@@ -1,6 +1,7 @@
 const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
+const { COMPLAINT_TABLE, ensureMarketingComplaintsTable } = require('../utils/marketingComplaints');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
 const { pool } = require('../config/database');
@@ -4966,6 +4967,32 @@ router.get('/schedules/all', authenticate, async (req, res) => {
       message: 'Error fetching all schedules',
       error: error.message
     });
+  }
+});
+
+// ============================================
+// MARKETING COMPLAINTS (read-only for Admin / Operations Manager)
+// ============================================
+// A complaint is owned by one franchise partner -- the FP portal edits and archives it. Admin and
+// the Operations Manager read every complaint here, with the owning partner's name joined on, so a
+// customer filing from their portal reaches all three parties (FP, admin, ops manager) and the
+// zone manager reads the same table through /api/manager/marketing/complaints.
+router.get('/marketing/complaints', authenticate, adminOnly, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const [rows] = await pool.execute(
+      `SELECT c.id, c.property_id, c.zone, c.responsible_person,
+              c.concern_with, c.concern_with_other, c.contact_person_name, c.phone_number, c.comments,
+              c.archived_at, c.created_at, c.updated_at,
+              COALESCE(fp.company_name, fp.owner_name, fp.contact_person) AS franchise_partner_name
+       FROM ${COMPLAINT_TABLE} c
+       LEFT JOIN franchise_partners fp ON c.franchise_partner_id = fp.id
+       ORDER BY (c.archived_at IS NOT NULL), c.created_at DESC`
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Admin marketing complaints error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
   }
 });
 
