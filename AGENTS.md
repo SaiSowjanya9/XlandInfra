@@ -269,6 +269,36 @@ nothing here may be applied globally.
 - Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
   are how a state is read at a glance, and the warm palette has a single accent.
 
+## Marketing Tracker Follow-Up Fields
+
+- **`backend/utils/marketingFollowUp.js` owns the workbook's follow-up columns**, and
+  `admin-portal/src/utils/followUpDates.js` mirrors it for the tracker screen — the same
+  arrangement `halfPayment.js` uses, because a browser cannot require the CommonJS module the
+  server validates with. `followUpDates.test.js` compares the two option list by option list and
+  branch by branch; if they drift, the tracker offers something the PUT rejects.
+- **Due Status is derived on read, never stored.** A stored "Due Today" is wrong by the next
+  morning. The rule is the workbook's column U formula exactly, and **the blank test comes first**:
+  a finished lead with no next date reads `No Date`, not `Completed`. Getting that order backwards
+  silently reclassifies every closed lead.
+- **Dates are stamped in IST, not in the server's timezone.** `istToday()` goes through
+  `Intl` with `Asia/Kolkata`. A server in UTC would file an evening contact under the previous day
+  for 5.5 hours out of every 24. The columns are `DATE`, and `toDateOnly` reads a mysql2 `Date` by
+  its *local* components — `toISOString()` there rolls the day back anywhere east of UTC.
+- **Picking a Follow-Up Stage is what records a contact**: it stamps today and schedules the next
+  follow-up `FOLLOW_UP_INTERVAL_DAYS` (4) later. Editing Last Contact Date re-schedules from it;
+  Next Follow-Up Date then stays editable, so a deliberate date is never overwritten. The table
+  and the modal both go through `contactStamp` / `nextFollowUpFrom` so they cannot disagree.
+- **An inline edit resends the whole payload, built from `TRACKER_FIELDS`.** `proposal_given` and
+  `customer_decision` are required by the PUT, so every save carries them. Listing the fields by
+  hand is how a newly added column gets wiped by an unrelated edit in another cell.
+- **The option check must decode before it compares.** `middleware/security.js` escapes `/` to
+  `&#x2F;`, so `SMS/Text` arrives escaped and a raw `options.includes(value)` answers 400 — the
+  Last Contact Method select just stops saving, with nothing in the log to explain it. Validate
+  `decodeEntities(value)` and store the escaped form, so it is escaped exactly once. Of the 84
+  options across the nine tracker lists, `SMS/Text` is currently the only one affected, which is
+  precisely why this is easy to reintroduce. Regression test:
+  `node --test backend/utils/marketingFollowUp.test.js`.
+
 ## Marketing Dashboard
 
 - **The tracker's option lists live in `backend/utils/marketingDashboard.js`, not in the route.**
@@ -290,6 +320,9 @@ nothing here may be applied globally.
   `tracker_status` by hand — the same status the tracker list displays.
 - **A zero divisor must read 0%, not `NaN%`.** An FP with no tracked estimates loads this page
   first; win rate and every funnel step guard their denominator.
+- **Overdue / Due Today / Upcoming are judged against one "today" for the whole page.** The
+  aggregation resolves `istToday()` once and passes it to every row, so a page built across
+  midnight cannot split identical dates between two buckets.
 - **A count chart draws every option, a money chart drops the empty ones.** The stage and status
   bars keep their zero entries so the pipeline holds its shape at low volume; nine zero-height
   rupee bars just read as broken, so `valueByStatus` is filtered.

@@ -15,6 +15,10 @@ const {
   LEAD_SOURCES, PRIORITIES, CUSTOMER_DECISIONS, TRACKER_STATUSES, FOLLOW_UP_STAGES,
   buildMarketingDashboard
 } = require('../utils/marketingDashboard');
+const {
+  LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
+  toDateOnly, dueStatus
+} = require('../utils/marketingFollowUp');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -6987,7 +6991,15 @@ const MARKETING_TRACKER_COLUMNS = [
   { name: 'coordinator_name', def: 'VARCHAR(255) NULL' },
   // Soft delete from the tracker only (schema_v44_marketing_tracker_archive.sql); the estimate
   // itself stays live in All Estimates -- is_archived is the estimate's own flag.
-  { name: 'tracker_archived_at', def: 'TIMESTAMP NULL' }
+  { name: 'tracker_archived_at', def: 'TIMESTAMP NULL' },
+  // Follow-up columns from the workbook (schema_v48_marketing_followup_fields.sql). The dates are
+  // DATE, not DATETIME: they are calendar days in IST. Due Status is derived, never stored.
+  { name: 'lead_status', def: 'VARCHAR(60) NULL' },
+  { name: 'last_contact_date', def: 'DATE NULL' },
+  { name: 'last_contact_method', def: 'VARCHAR(60) NULL' },
+  { name: 'customer_response', def: 'VARCHAR(60) NULL' },
+  { name: 'next_follow_up_date', def: 'DATE NULL' },
+  { name: 'next_action', def: 'VARCHAR(60) NULL' }
 ];
 
 const ensureMarketingTrackerColumns = async () => {
@@ -7031,8 +7043,16 @@ const TRACKER_OPTIONS = {
   customer_decision: CUSTOMER_DECISIONS,
   tracker_status: TRACKER_STATUSES,
   coordinator_reviewed: ['Yes', 'No'],
-  follow_up_stage: FOLLOW_UP_STAGES
+  follow_up_stage: FOLLOW_UP_STAGES,
+  // The workbook's follow-up columns; their lists live in utils/marketingFollowUp.js.
+  lead_status: LEAD_STATUSES,
+  last_contact_method: CONTACT_METHODS,
+  customer_response: CUSTOMER_RESPONSES,
+  next_action: NEXT_ACTIONS
 };
+
+// The two date columns, validated as calendar days rather than against an option list.
+const TRACKER_DATE_FIELDS = ['last_contact_date', 'next_follow_up_date'];
 const TRACKER_OTHER_FIELDS = {
   maintenance_system: 'maintenance_system_other',
   proposal_given: 'proposal_given_other',
@@ -7049,7 +7069,25 @@ const TRACKER_SELECT = `id, estimate_id, client_name, client_phone, client_email
   proposal_given, proposal_given_other,
   customer_decision, customer_decision_other,
   tracker_status, coordinator_reviewed, follow_up_stage, coordinator_name,
+  lead_status, last_contact_date, last_contact_method, customer_response,
+  next_follow_up_date, next_action,
   tracked_at, tracker_archived_at`;
+
+// What a tracker row looks like to the portal: the resolved status the list shows, the two dates
+// as plain 'YYYY-MM-DD' (mysql2 hands back a Date, which JSON would turn into a UTC timestamp and
+// read a day early in IST), and the derived Due Status, which is never stored.
+const presentTrackerRow = (row) => {
+  const lead_status = row.lead_status || '';
+  const last_contact_date = toDateOnly(row.last_contact_date);
+  const next_follow_up_date = toDateOnly(row.next_follow_up_date);
+  return {
+    ...row,
+    tracker_status: effectiveTrackerStatus(row),
+    last_contact_date,
+    next_follow_up_date,
+    due_status: dueStatus(next_follow_up_date, lead_status)
+  };
+};
 
 // The tracker status the row should show. The estimate's own status is the authority at the ends
 // of the pipeline -- approved/rejected always win, and a sent estimate defaults to Estimate Sent
@@ -7075,7 +7113,7 @@ router.get('/marketing/tracker', requireFPScope, requireFPAccount, async (req, r
        ORDER BY created_at DESC`,
       [req.fpId]
     );
-    res.json({ success: true, data: rows.map(r => ({ ...r, tracker_status: effectiveTrackerStatus(r) })) });
+    res.json({ success: true, data: rows.map(presentTrackerRow) });
   } catch (error) {
     console.error('Marketing tracker list error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tracker data', error: error.message });
@@ -7094,7 +7132,7 @@ router.get('/marketing/tracker/archived', requireFPScope, requireFPAccount, asyn
        ORDER BY tracker_archived_at DESC`,
       [req.fpId]
     );
-    res.json({ success: true, data: rows.map(r => ({ ...r, tracker_status: effectiveTrackerStatus(r) })) });
+    res.json({ success: true, data: rows.map(presentTrackerRow) });
   } catch (error) {
     console.error('Marketing archived list error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch archived tracker data', error: error.message });
@@ -7148,7 +7186,12 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
         updates[field] = null;
         continue;
       }
-      if (!options.includes(value)) {
+      // middleware/security.js escapes every request string, so 'SMS/Text' reaches us as
+      // 'SMS&#x2F;Text'. Validation judges the decoded text -- comparing the raw value would
+      // reject every option containing a slash, apostrophe or ampersand with a 400 the portal
+      // cannot explain. The escaped form is what gets stored, so it is escaped exactly once.
+      const decoded = decodeEntities(String(value)).trim();
+      if (!options.includes(decoded)) {
         errors.push(`${field} must be one of: ${options.join(', ')}`);
         continue;
       }
@@ -7157,12 +7200,33 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
       const otherField = TRACKER_OTHER_FIELDS[field];
       if (otherField) {
         const otherText = (req.body[otherField] || '').toString().trim().slice(0, 255);
-        if (value === 'Other' && !otherText) errors.push(`${otherField} is required when ${field} is Other`);
-        updates[otherField] = value === 'Other' ? otherText : null;
+        // Judged on the decoded value for the same reason as the option itself.
+        if (decoded === 'Other' && !decodeEntities(otherText).trim()) {
+          errors.push(`${otherField} is required when ${field} is Other`);
+        }
+        updates[otherField] = decoded === 'Other' ? otherText : null;
       }
     }
     // Free-text coordinator name: optional, just capped.
     updates.coordinator_name = (req.body.coordinator_name || '').toString().trim().slice(0, 255) || null;
+
+    // The two dates. The portal fills them in -- picking a follow-up stage stamps today in IST and
+    // schedules four days out -- but they stay editable, so anything that is not a calendar date
+    // is refused rather than silently stored as NULL and read as "No Date".
+    for (const field of TRACKER_DATE_FIELDS) {
+      const raw = req.body[field];
+      if (raw === undefined || raw === null || raw === '') {
+        updates[field] = null;
+        continue;
+      }
+      const date = toDateOnly(raw);
+      if (!date) {
+        errors.push(`${field} must be a date`);
+        continue;
+      }
+      updates[field] = date;
+    }
+
     if (errors.length > 0) {
       return res.status(400).json({ success: false, message: errors.join('; ') });
     }
@@ -7174,6 +7238,8 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
          proposal_given = ?, proposal_given_other = ?,
          customer_decision = ?, customer_decision_other = ?,
          tracker_status = ?, coordinator_reviewed = ?, follow_up_stage = ?, coordinator_name = ?,
+         lead_status = ?, last_contact_date = ?, last_contact_method = ?,
+         customer_response = ?, next_follow_up_date = ?, next_action = ?,
          tracked_at = NOW(), updated_at = NOW()
        WHERE id = ? AND franchise_partner_id = ? AND estimate_type = 'direct'`,
       [
@@ -7182,6 +7248,8 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
         updates.proposal_given, updates.proposal_given_other,
         updates.customer_decision, updates.customer_decision_other,
         updates.tracker_status, updates.coordinator_reviewed, updates.follow_up_stage, updates.coordinator_name,
+        updates.lead_status, updates.last_contact_date, updates.last_contact_method,
+        updates.customer_response, updates.next_follow_up_date, updates.next_action,
         id, req.fpId
       ]
     );
@@ -7193,7 +7261,7 @@ router.put('/marketing/tracker/:id', requireFPScope, requireFPAccount, async (re
       `SELECT ${TRACKER_SELECT} FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?`,
       [id, req.fpId]
     );
-    res.json({ success: true, message: 'Tracker updated', data: { ...rows[0], tracker_status: effectiveTrackerStatus(rows[0]) } });
+    res.json({ success: true, message: 'Tracker updated', data: presentTrackerRow(rows[0]) });
   } catch (error) {
     console.error('Marketing tracker save error:', error);
     res.status(500).json({ success: false, message: 'Failed to save tracker data', error: error.message });

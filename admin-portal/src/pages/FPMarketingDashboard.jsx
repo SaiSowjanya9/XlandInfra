@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   BarChart3, Megaphone, Loader2, AlertCircle, RefreshCw, Target,
-  Users, Send, CheckCircle, XCircle, ClipboardCheck, Share2, TrendingUp
+  Users, Send, CheckCircle, XCircle, ClipboardCheck, Share2, TrendingUp,
+  AlertTriangle, CalendarClock, CalendarDays, PlayCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -49,6 +50,31 @@ const STATUS_COLORS = {
 };
 
 const PRIORITY_COLORS = { Urgent: '#DC2626', High: '#EA580C', Medium: '#CA8A04', Low: '#0D9488' };
+
+// Due Status drives the day's work, so the colours match the badges on the tracker: overdue is
+// the only loud one, because it is the only state that means somebody is late.
+const DUE_COLORS = {
+  'Overdue': '#EF4444',
+  'Due Today': '#F59E0B',
+  'Upcoming': '#3B82F6',
+  'Completed': '#10B981',
+  'No Date': '#9CA3AF'
+};
+
+// The workbook's 18 lead statuses, grouped so the chart reads as a pipeline rather than 18
+// unrelated bars.
+const LEAD_STATUS_COLORS = {
+  'New Visit Completed': '#8B5CF6', 'Thank You Sent': '#8B5CF6',
+  'Estimate Sent': '#FBBF24', 'Follow-Up 1 Sent': '#3B82F6', 'Follow-Up 2 Sent': '#3B82F6',
+  'No Response - Call': '#F97316', 'No Response - Visit': '#F97316',
+  'Customer Review': '#FBBF24', 'Changes Requested': '#F97316', 'Revised Estimate Sent': '#EAB308',
+  'Customer Approved': '#14B8A6', 'Agreement Pending': '#06B6D4', 'Payment Pending': '#06B6D4',
+  'Onboarding Pending': '#06B6D4', 'Service Started': '#10B981',
+  'Follow-Up Later': '#9CA3AF', 'Not Interested': '#EF4444', 'Closed': '#78716C'
+};
+
+// Who the next action belongs to, so the queue says at a glance whose day it is.
+const EXECUTIVE_ACTIONS = ['Executive Call', 'Executive Visit', 'Onboard Property', 'Start Service'];
 
 const SOURCE_PALETTE = ['#8B5CF6', '#3B82F6', '#14B8A6', '#FBBF24', '#EF4444', '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#78716C'];
 
@@ -172,7 +198,15 @@ const FPMarketingDashboard = ({ user }) => {
         .slice()
         .sort((a, b) => b.value - a.value)
         .map(v => ({ ...v, fill: STATUS_COLORS[v.name] || '#94A3B8' })),
-      trend: data.trend || []
+      trend: data.trend || [],
+      leadStatuses: (data.byLeadStatus || []).map(s => ({ ...s, fill: LEAD_STATUS_COLORS[s.name] || '#94A3B8' })),
+      nextActions: (data.byNextAction || [])
+        .slice()
+        .sort((a, b) => b.value - a.value)
+        .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? '#8B5CF6' : GOLD })),
+      dueSlices: (data.byDueStatus || [])
+        .filter(d => d.value > 0)
+        .map(d => ({ ...d, fill: DUE_COLORS[d.name] || '#94A3B8' }))
     };
   }, [data]);
 
@@ -262,6 +296,16 @@ const FPMarketingDashboard = ({ user }) => {
                       hint={inr(totals.wonValue)} />
           </div>
 
+          {/* The day's follow-up position. Overdue leads the row because it is the only figure
+              that means somebody is already late. */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon={AlertTriangle} label="Overdue Follow-Ups" value={totals.overdue} tone="#EF4444"
+                      hint="Next follow-up date has passed" />
+            <StatCard icon={CalendarClock} label="Due Today" value={totals.dueToday} tone="#F59E0B" />
+            <StatCard icon={CalendarDays} label="Upcoming" value={totals.upcoming} tone="#3B82F6" />
+            <StatCard icon={PlayCircle} label="Service Started" value={totals.serviceStarted} tone="#10B981" />
+          </div>
+
           {/* Funnel + win rate */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2" title="Conversion Funnel"
@@ -314,6 +358,74 @@ const FPMarketingDashboard = ({ user }) => {
                   <div className="text-[11px] text-warm-muted">{totals.approved} of {totals.totalLeads}</div>
                 </div>
               </div>
+            </Card>
+          </div>
+
+          {/* Lead status: the workbook's own 18-stage breakdown */}
+          <Card title="Lead Status" subtitle="Every stage on the tracker, coloured by phase"
+                right={totals.missingNextDate > 0 ? `${totals.missingNextDate} open with no next date` : null}>
+            {charts.leadStatuses.some(s => s.value > 0) ? (
+              <ResponsiveContainer width="100%" height={430}>
+                <BarChart data={charts.leadStatuses} layout="vertical" margin={{ left: 8, right: 30, top: 4, bottom: 4 }}>
+                  <CartesianGrid horizontal={false} stroke="#F3EDE3" />
+                  <XAxis type="number" allowDecimals={false} {...axisProps} />
+                  <YAxis type="category" dataKey="name" width={152} {...axisProps} />
+                  <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                  <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={15} isAnimationActive={false}>
+                    {charts.leadStatuses.map((s, i) => <Cell key={i} fill={s.value > 0 ? s.fill : '#EADFCF'} />)}
+                    <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
+                               formatter={(v) => (v > 0 ? v : '')} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : <NoData height={430} note="No lead status set yet" />}
+          </Card>
+
+          {/* The day's work: what is due, and what has to be done next */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <Card className="lg:col-span-3" title="Next Action Queue"
+                  subtitle="What has to happen next, most common first"
+                  right="gold = Coordinator · violet = Executive">
+              {charts.nextActions.some(a => a.value > 0) ? (
+                <ResponsiveContainer width="100%" height={330}>
+                  <BarChart data={charts.nextActions} layout="vertical" margin={{ left: 8, right: 30, top: 4, bottom: 4 }}>
+                    <CartesianGrid horizontal={false} stroke="#F3EDE3" />
+                    <XAxis type="number" allowDecimals={false} {...axisProps} />
+                    <YAxis type="category" dataKey="name" width={165} {...axisProps} />
+                    <Tooltip content={<ChartTip />} cursor={{ fill: '#FFF9EE' }} />
+                    <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={15} isAnimationActive={false}>
+                      {charts.nextActions.map((a, i) => <Cell key={i} fill={a.value > 0 ? a.fill : '#EADFCF'} />)}
+                      <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
+                                 formatter={(v) => (v > 0 ? v : '')} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : <NoData height={330} note="No next action set yet" />}
+            </Card>
+
+            <Card className="lg:col-span-2" title="Due Status" subtitle="How the follow-up queue stands today">
+              {charts.dueSlices.length ? (
+                <>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie data={charts.dueSlices} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                           innerRadius={58} outerRadius={94} paddingAngle={2} isAnimationActive={false}>
+                        {charts.dueSlices.map((s, i) => <Cell key={i} fill={s.fill} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2">
+                    {charts.dueSlices.map((s) => (
+                      <div key={s.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.fill }} />
+                        <span className="text-warm-muted truncate">{s.name}</span>
+                        <span className="font-semibold text-warm-text ml-auto">{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : <NoData height={240} note="No follow-up dates set" />}
             </Card>
           </div>
 
