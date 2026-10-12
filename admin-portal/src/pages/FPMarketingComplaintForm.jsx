@@ -162,7 +162,7 @@ const FPMarketingComplaintForm = ({ user }) => {
     if (!form.concern_with) errors.push('Concern With is required');
     if (form.concern_with === 'Other' && !form.concern_with_other.trim()) errors.push('Please specify the concern');
     if (!form.contact_person_name.trim()) errors.push('Contact Person Name is required');
-    if (!form.phone_number.trim()) errors.push('Phone number is required');
+    if (!/^\d{10}$/.test(form.phone_number)) errors.push('Phone number must be 10 digits');
     if (!form.comments.trim()) errors.push('Comments are required');
     if (errors.length) { setFormError(errors.join('. ')); return; }
 
@@ -439,7 +439,7 @@ const FPMarketingComplaintForm = ({ user }) => {
                   </div>
                   <div className="min-w-0">
                     <label className={labelCls}>Phone Number <span className="text-red-500">*</span></label>
-                    <input type="tel" value={form.phone_number} maxLength={20} onChange={(e) => setField('phone_number', e.target.value.replace(/[^\d+\-() ]/g, ''))} className={inputCls} placeholder="Enter phone number" />
+                    <input type="tel" value={form.phone_number} maxLength={10} onChange={(e) => setField('phone_number', e.target.value.replace(/\D/g, ''))} className={inputCls} placeholder="10-digit phone number" />
                   </div>
                 </div>
 
