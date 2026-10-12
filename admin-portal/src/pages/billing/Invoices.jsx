@@ -1094,13 +1094,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Invoice ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Property ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Archived On</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Invoice ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Property ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Archived On</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Total</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -1109,18 +1109,18 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           <td className="px-4 py-3.5">
                             <button
                               onClick={() => handlePreviewPDF(invoice)}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap"
                               title="Click to view invoice"
                             >
                               {invoice.invoiceId}
                             </button>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
+                            <span className={`text-sm font-medium whitespace-nowrap ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
                               {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600">{invoice.propertyCode || invoice.propertyName || '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{invoice.propertyCode || invoice.propertyName || '-'}</td>
                           <td className="px-4 py-3.5 text-sm text-gray-800">{invoice.customerName || '-'}</td>
                           <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">{formatDate(invoice.archivedAt || invoice.updatedAt)}</td>
                           <td className="px-4 py-3.5 text-right">
@@ -1183,18 +1183,18 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoice ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Property ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Property Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoice Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoice Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Due Date</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Amount</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Paid</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Balance</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1206,14 +1206,14 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           <td className="px-4 py-3.5">
                             <button
                               onClick={() => handlePreviewPDF(invoice)}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer whitespace-nowrap"
                               title="Click to view invoice"
                             >
                               {invoice.invoiceId}
                             </button>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className="text-sm text-gray-600">{invoice.propertyCode || '-'}</span>
+                            <span className="text-sm text-gray-600 whitespace-nowrap">{invoice.propertyCode || '-'}</span>
                           </td>
                           <td className="px-4 py-3.5">
                             <span className="text-sm text-gray-600">{formatPropertyType(invoice.propertyType)}</span>
@@ -1222,7 +1222,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                             <span className="text-sm text-gray-800">{invoice.customerName || invoice.propertyName || '-'}</span>
                           </td>
                           <td className="px-4 py-3.5">
-                            <span className={`text-sm font-medium ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
+                            <span className={`text-sm font-medium whitespace-nowrap ${INVOICE_TYPE_CONFIG[invoice.invoiceType]?.color || 'text-gray-600'}`}>
                               {INVOICE_TYPE_CONFIG[invoice.invoiceType]?.label || 'Manual'}
                             </span>
                           </td>

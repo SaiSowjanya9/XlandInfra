@@ -664,8 +664,10 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       </div>
 
       <div className="p-4 sm:p-6">
-        {/* Stats Cards - Responsive grid with consistent heights */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 sm:mb-6">
+        {/* Stats Cards - one row, always. Below 2xl the row scrolls sideways so every
+            label shows in full; six squeezed columns is what truncated them before. */}
+        <div className="-mx-1 mb-4 overflow-x-auto px-1 py-1 sm:mb-6">
+          <div className="grid min-w-full grid-flow-col auto-cols-[minmax(11rem,1fr)] gap-3 2xl:grid-flow-row 2xl:grid-cols-6">
           {/* Total Invoice Amount */}
           <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-blue-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
             <div className="flex items-center gap-2 mb-auto">
@@ -779,12 +781,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </button>
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Charts Row 1 - Responsive */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* Charts Row 1 - Responsive. min-w-0 keeps each card inside its cell (same
+            fix as the schedules dashboard tables); 3 across only where they fit. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Collection Trend */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900">Collection Trend</h3>
@@ -844,7 +848,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
 
           {/* Payments by Mode */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Mode</h3>
               <div className="relative">
@@ -859,7 +863,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
+            <div className="flex flex-col 2xl:flex-row items-center 2xl:items-start justify-center gap-4 2xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChart 
                   data={dashboardData.paymentsByMode}
@@ -868,12 +872,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <ChartLegend className="xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
 
-          {/* Payments by Status */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          {/* Payments by Status - spans the row below xl */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0 md:col-span-2 xl:col-span-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Status</h3>
               <div className="relative">
@@ -888,7 +892,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
+            <div className="flex flex-col 2xl:flex-row items-center 2xl:items-start justify-center gap-4 2xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChart 
                   data={dashboardData.paymentsByStatus}
@@ -897,15 +901,15 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <ChartLegend className="xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>
 
-        {/* Charts Row 2 - Responsive */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* Charts Row 2 - Responsive (same grid + min-w-0 rules as the row above) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {/* Outstanding by Aging */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Outstanding by Aging</h3>
               <Info className="w-4 h-4 text-gray-400 hidden sm:block" />
@@ -938,7 +942,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           </div>
 
           {/* Top 5 Customers by Collection */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Top 5 Customers</h3>
               <div className="relative">
@@ -978,8 +982,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             {customerChart.node}
           </div>
 
-          {/* Invoices by Payment Status */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+          {/* Invoices by Payment Status - spans the row below xl */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0 md:col-span-2 xl:col-span-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Invoices by Status</h3>
               <div className="relative">
@@ -994,7 +998,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
+            <div className="flex flex-col 2xl:flex-row items-center 2xl:items-start justify-center gap-4 2xl:gap-5">
               <div className="flex-shrink-0">
                 <DonutChartCount 
                   data={dashboardData.invoicesByStatus}
@@ -1002,7 +1006,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={130}
                 />
               </div>
-              <ChartLegend className="xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>

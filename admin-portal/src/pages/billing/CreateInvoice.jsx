@@ -95,12 +95,9 @@ const getLocalDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-// Generate Invoice ID
-const generateInvoiceId = () => {
-  const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 90000) + 10000;
-  return `INV-${year}-${String(random).padStart(5, '0')}`;
-};
+// The invoice ID is generated server-side (INV-00001 sequence in payments.js /
+// invoiceService.js). A client-side INV-YYYY-XXXXX guess used to be sent along and,
+// on older backends, stored -- which is how mixed ID formats reached the table.
 
 const CreateInvoice = ({ user, portalType = 'admin' }) => {
   const navigate = useNavigate();
@@ -116,7 +113,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     phone: '',
     contactPerson: ''
   });
-  const [invoiceId] = useState(generateInvoiceId());
+  // (no invoiceId state — the ID is assigned by the server on save)
   const [invoiceDate, setInvoiceDate] = useState(getLocalDateString());
   const [dueDate, setDueDate] = useState('');
   const [workOrderId, setWorkOrderId] = useState('');
@@ -382,8 +379,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
     try {
       const invoiceData = {
-        // Invoice details
-        invoiceId,
+        // Invoice details (invoice ID is generated server-side)
         propertyId: propertyDetails?.id || null,
         propertyCode: propertyDetails?.propertyCode || propertyId,
         propertyName: propertyDetails?.propertyName || propertyDetails?.societyName || '',
@@ -450,7 +446,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       const result = await response.json();
       
       if (result.success) {
-        showToast(`Invoice ${invoiceId} created successfully!`);
+        showToast(`Invoice ${result.data?.invoiceId || ''} created successfully!`);
         setTimeout(() => {
           navigate(`${getBasePath()}/billing/invoices`);
         }, 1500);
@@ -598,7 +594,8 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Invoice ID</label>
                 <input
                   type="text"
-                  value={invoiceId}
+                  value=""
+                  placeholder="Assigned on save"
                   readOnly
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600"
                 />
@@ -920,7 +917,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                     <div className="text-center p-4">
                       <FileText className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                       <p className="text-xs text-gray-500">Invoice Preview</p>
-                      <p className="text-sm font-semibold text-gray-700 mt-1">{invoiceId}</p>
+                      <p className="text-sm font-semibold text-gray-700 mt-1">Auto-generated ID</p>
                       <p className="text-lg font-bold text-gray-900 mt-2">₹{formatCurrency(totals.grandTotal)}</p>
                     </div>
                   </div>

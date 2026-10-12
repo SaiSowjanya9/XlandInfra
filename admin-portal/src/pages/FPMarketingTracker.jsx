@@ -409,7 +409,7 @@ const FPMarketingTracker = ({ user }) => {
               ) : null}
             />
           ) : (
-            <div>
+            <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-warm-border bg-warm-section">

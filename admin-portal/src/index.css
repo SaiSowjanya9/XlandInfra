@@ -362,7 +362,24 @@ body {
 
 /* ========== PRINTING ========== */
 
+/* A marked document lays out at document width, not viewport width: under ~672px
+   it scrolls sideways inside its container instead of squeezing its tables, so a
+   screen capture or Save-as-PDF of the view keeps the desktop proportions.
+   42rem ~= the 180mm content width the generated PDFs are drawn at. */
+.print-document {
+  min-width: 42rem;
+}
+
 @media print {
+  /* On paper the document is exactly the generated PDF's content width (A4 less
+     the 15mm margins), whatever device the print came from */
+  .print-document {
+    min-width: 0;
+    width: 180mm;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   /* Where a screen marks its document with .print-document, that subtree prints alone. The
      :has() chain keeps the document's own ancestors -- they carry its layout -- while every
      other element stays on screen: navigation, page headers, stat cards, back buttons and
@@ -372,12 +389,21 @@ body {
   }
 
   /* An ancestor that pins or clips on screen must do neither on paper: a fixed overlay shows
-     only the first viewport of a long document, and an overflow scroller cuts the rest off. */
+     only the first viewport of a long document, and an overflow scroller cuts the rest off.
+     And it must not shape the document either: the layout's sidebar offset (lg:ml-72), a
+     container's padding or max-width and a drawer's transform all carry onto paper and would
+     squeeze or shift the document into a fraction of the page. The document's own 180mm
+     width supplies all the layout it needs. */
   html:has(.print-document),
   html:has(.print-document) body,
   body:has(.print-document) *:has(.print-document) {
     overflow: visible !important;
     max-height: none !important;
     position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
   }
 }

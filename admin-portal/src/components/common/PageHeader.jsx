@@ -71,13 +71,13 @@ const PageHeader = ({ icon: Icon = FileText, title, subtitle, stats = [], childr
         <>
           {/* The rule separates the page's name from its figures, as the design draws it */}
           <span className="shrink-0 self-stretch w-px bg-[#E8DFC9]" aria-hidden="true" />
-          <div className="flex items-center gap-6 shrink-0 overflow-x-auto">
+          <div className="flex min-w-0 items-center gap-6 overflow-x-auto">
             {stats.map(stat => <PageHeaderStat key={stat.label} {...stat} />)}
           </div>
         </>
       )}
 
-      {children && <div className="ml-auto flex items-center gap-3 shrink-0">{children}</div>}
+      {children && <div className="ml-auto flex min-w-0 items-center gap-3">{children}</div>}
     </div>
   </div>
 );

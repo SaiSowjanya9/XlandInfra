@@ -48,7 +48,9 @@ export const EstimateStatCard = ({ tone, label, value }) => {
  * A count passed as undefined is left out — Executive and FP do not list every one of them.
  */
 const EstimateStatCards = ({ active, amc, services, archived, onRefresh, refreshing = false }) => (
-  <div className="flex items-center gap-3 shrink-0 overflow-x-auto">
+  /* min-w-0, not shrink-0: shrink-0 pinned the row to its full width, so the scroller never
+     engaged and the page title was squeezed instead -- the exact thing the scroller is for */
+  <div className="flex items-center gap-3 min-w-0 overflow-x-auto">
     {onRefresh && (
       <button onClick={onRefresh} title="Refresh"
         className="shrink-0 p-2.5 bg-white border border-[#F1E3C6] rounded-[10px] hover:bg-warm-accent-soft transition-colors">

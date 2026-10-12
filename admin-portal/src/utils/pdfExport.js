@@ -1266,6 +1266,19 @@ export const printEstimatePDF = (estimate) => {
     const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true, forPrint: true });
     if (!doc) return false;
     const url = URL.createObjectURL(doc.output('blob'));
+    // iOS cannot print a PDF in a hidden frame: contentWindow.print() on it silently does
+    // nothing, and the fallback window.print() then ships a squeezed page print instead of the
+    // document. Open the generated PDF in a tab of its own -- Share > Print there carries the
+    // file itself. If the popup is refused, the file downloads instead.
+    if (isIOS()) {
+      const opened = window.open(url, '_blank');
+      if (opened) setTimeout(() => URL.revokeObjectURL(url), 60000);
+      else {
+        URL.revokeObjectURL(url);
+        savePDFCrossPlatform(doc, `Estimate-${exportData.estimateId}.pdf`);
+      }
+      return true;
+    }
     const frame = document.createElement('iframe');
     frame.title = `Estimate ${exportData.estimateId}`;
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';

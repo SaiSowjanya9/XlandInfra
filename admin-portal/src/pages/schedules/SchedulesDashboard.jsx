@@ -524,8 +524,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </>
       </PageHeader>
 
-      {/* Stat Cards - Responsive grid with consistent heights */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      {/* Stat Cards - one row, always. Below 2xl the row scrolls sideways so every
+          label shows in full; six squeezed columns is what truncated them before. */}
+      <div className="-mx-1 overflow-x-auto px-1 py-1">
+        <div className="grid min-w-full grid-flow-col auto-cols-[minmax(11rem,1fr)] gap-3 sm:gap-4 2xl:grid-flow-row 2xl:grid-cols-6">
         {[
           { label: "Today's", sublabel: "Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
           { label: 'Upcoming', sublabel: '(7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
@@ -555,6 +557,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Charts Row - Responsive grid */}
@@ -633,10 +636,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Schedule Trend + Tables Row - Responsive */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Schedule Trend + Tables Row - Responsive. min-w-0 keeps each card inside its
+          grid cell: without it the tables' min-content width outgrows the card and the
+          last column overflows the viewport on tablet widths. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {/* Schedule Trend */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedule Trend</h3>
             <PeriodFilter value={trendFilter} onChange={setTrendFilter} />
@@ -662,7 +667,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Upcoming Schedules */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Upcoming Schedules</h3>
             <div className="flex items-center gap-2">
@@ -690,8 +695,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Pending Property Schedules */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        {/* Pending Property Schedules - spans the row below xl so its table gets full width */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Pending Property Schedules</h3>
             <div className="flex items-center gap-2">
@@ -732,10 +737,10 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Bottom Tables Row - Responsive */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Bottom Tables Row - Responsive (same grid + min-w-0 rules as the row above) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {/* Recently Created */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Recently Created</h3>
             <div className="flex items-center gap-2">
@@ -773,7 +778,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Reschedule Requests */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Reschedule Requests</h3>
             <div className="flex items-center gap-2">
@@ -813,8 +818,8 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* Overdue Schedules */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        {/* Overdue Schedules - spans the row below xl */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Overdue Schedules</h3>
             <div className="flex items-center gap-2">

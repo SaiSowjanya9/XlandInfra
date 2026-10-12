@@ -214,11 +214,11 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
                 {service.pricing_method === 'capacity_slab' && service.capacity_slabs?.length
                   ? <button type="button" onClick={() => setOpenSlabs(current => current === service.id ? null : service.id)}
                       aria-expanded={openSlabs === service.id} aria-label={`${openSlabs === service.id ? 'Hide' : 'Show'} slabs for ${service.service_name}`}
-                      className={sk(`inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-1 font-medium hover:brightness-95 ${methodStyle(service.pricing_method)}`)}>
+                      className={sk(`inline-flex items-center gap-1 rounded px-1.5 py-1 text-left font-medium leading-tight hover:brightness-95 ${methodStyle(service.pricing_method)}`)}>
                       {methodLabel(service.pricing_method)}
-                      <ChevronDown className={sk(`h-3 w-3 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`)} />
+                      <ChevronDown className={sk(`h-3 w-3 shrink-0 transition-transform ${openSlabs === service.id ? 'rotate-180' : ''}`)} />
                     </button>
-                  : <span className={sk(`inline-block whitespace-nowrap rounded px-1.5 py-1 font-medium ${methodStyle(service.pricing_method)}`)}>{methodLabel(service.pricing_method)}</span>}
+                  : <span className={sk(`inline-block rounded px-1.5 py-1 font-medium leading-tight ${methodStyle(service.pricing_method)}`)}>{methodLabel(service.pricing_method)}</span>}
               </td>
               {/* The input only: the vendor rate has its own column rather than sitting underneath */}
               {/* Shown in full and wrapped -- a clamp cut "Lift Fully Manual Capacity" to "Lift Fully Manual..." */}

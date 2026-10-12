@@ -976,7 +976,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-12 h-12 bg-warm-accent-soft rounded-xl flex items-center justify-center shrink-0"><FileText className="w-6 h-6 text-warm-accent" /></div>
-          <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">Estimates / AMC Management</h1><p className="text-sm text-warm-muted">Create estimates and view AMC packages</p></div>
+          <div className="min-w-0"><h1 className="text-2xl font-bold text-warm-text truncate">Estimates / AMC Management</h1><p className="text-sm text-warm-muted truncate">Create estimates and view AMC packages</p></div>
         </div>
         <EstimateStatCards
           active={filteredEstimates.length}
