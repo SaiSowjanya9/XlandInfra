@@ -86,6 +86,7 @@ const FPMarketingTracker = ({ user }) => {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [archiveTarget, setArchiveTarget] = useState(null);
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
 
@@ -176,7 +177,7 @@ const FPMarketingTracker = ({ user }) => {
 
   // Soft delete: the row leaves the tracker and lands in Marketing > Archived.
   const archiveRow = async (est) => {
-    if (!window.confirm(`Move ${est.estimate_id} to Archived? You can restore it from Marketing > Archived.`)) return;
+    setArchiveTarget(null);
     try {
       const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}/archive`, {
         method: 'PUT',
@@ -346,11 +347,11 @@ const FPMarketingTracker = ({ user }) => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-warm-border bg-warm-section">
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Estimate ID</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Customer</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Property Type</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Visit Date</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted">Executive</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Customer</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Executive</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -413,16 +414,16 @@ const FPMarketingTracker = ({ user }) => {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-warm-border bg-warm-section">
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Estimate ID</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Customer</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Visit / Executive</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Amount</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Estimate Status</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Lead / Priority</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Proposal / Decision</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Coordinator</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Follow-Up Stage</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted">Actions</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit / Executive</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Amount</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead / Priority</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Proposal / Decision</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -522,7 +523,7 @@ const FPMarketingTracker = ({ user }) => {
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => archiveRow(est)}
+                            onClick={() => setArchiveTarget(est)}
                             className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
                             title="Move to Archived"
                           >
@@ -695,6 +696,32 @@ const FPMarketingTracker = ({ user }) => {
                   {saving ? 'Saving...' : 'Save'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive confirmation */}
+      {archiveTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72" onClick={() => setArchiveTarget(null)}>
+          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-warm-text mb-2">Move to Archived?</h3>
+            <p className="text-sm text-warm-muted mb-5">
+              <span className="font-medium text-warm-text">{archiveTarget.estimate_id}</span> will leave the tracker. You can restore it from Marketing &gt; Archived.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setArchiveTarget(null)}
+                className="px-4 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text hover:bg-warm-section transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => archiveRow(archiveTarget)}
+                className="px-4 py-2 bg-red-600 text-white rounded-[10px] text-sm hover:bg-red-700 transition-colors"
+              >
+                Move to Archived
+              </button>
             </div>
           </div>
         </div>

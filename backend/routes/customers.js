@@ -6,7 +6,10 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
 // Rate limiting for login and password reset endpoints
-const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
+const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../middleware/security');
+const {
+  COMPLAINT_TABLE, COMPLAINT_SELECT, ensureMarketingComplaintsTable, parseCustomerComplaintBody
+} = require('../utils/marketingComplaints');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
@@ -2824,6 +2827,89 @@ router.get('/schedules', authenticateCustomer, async (req, res) => {
   } catch (error) {
     console.error('Error fetching customer schedules:', error);
     res.status(500).json({ success: false, message: 'Error fetching schedules', error: error.message });
+  }
+});
+
+// ============================================
+// POST /api/customers/complaints - File a complaint from the Contact page
+// ============================================
+// The customer picks only the concern and writes the comments; every other column of the
+// FP complaint row is derived from their account: the property supplies Property ID, zone and the
+// owning franchise partner, the profile supplies contact name and phone, and the responsible
+// person is the FP's owner/contact. Server-derived text is escaped with the same sanitizeString
+// the request middleware applies, so stored text stays consistent with FP-entered complaints.
+router.post('/complaints', authenticateCustomer, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const { errors, complaint } = parseCustomerComplaintBody(req.body);
+    if (errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join('; ') });
+    }
+
+    const [accounts] = await pool.execute(
+      `SELECT ca.first_name, ca.last_name, ca.phone, ca.property_code,
+              op.property_id AS op_code, op.zone AS op_zone, op.franchise_partner_id AS op_fp,
+              p.property_id AS p_code, p.division AS p_division, p.franchise_partner_id AS p_fp,
+              COALESCE(z.name, zn.name, p.zone_id) AS p_zone
+       FROM customer_accounts ca
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN properties p ON ca.property_id = p.id
+       LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
+       LEFT JOIN zones zn ON p.zone_id = zn.name
+       WHERE ca.id = ? AND ca.is_active = 1`,
+      [req.customer.id]
+    );
+    const account = accounts[0];
+    if (!account) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+
+    const fpId = account.op_fp || account.p_fp;
+    const propertyCode = account.op_code || account.p_code || account.property_code;
+    const zone = account.op_zone || account.p_zone || account.p_division;
+    if (!fpId || !propertyCode || !zone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your property is not linked to a service partner yet, so complaints cannot be filed. Please call or email us instead.'
+      });
+    }
+
+    const [fps] = await pool.execute(
+      `SELECT owner_name, contact_person, company_name FROM franchise_partners WHERE id = ?`,
+      [fpId]
+    );
+    const fp = fps[0] || {};
+    const responsible = fp.owner_name || fp.contact_person || fp.company_name || 'Franchise Partner';
+
+    const contactName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || req.customer.email;
+    const phoneDigits = (account.phone || '').replace(/\D/g, '');
+    const phone = phoneDigits.length > 10 ? phoneDigits.slice(-10) : phoneDigits;
+    if (phone.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your profile has no 10-digit phone number. Please call or email us instead.'
+      });
+    }
+
+    const [result] = await pool.execute(
+      `INSERT INTO ${COMPLAINT_TABLE}
+         (franchise_partner_id, property_id, zone, responsible_person,
+          concern_with, concern_with_other, contact_person_name, phone_number, comments)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        fpId, sanitizeString(propertyCode), sanitizeString(zone), sanitizeString(responsible),
+        complaint.concern_with, complaint.concern_with_other,
+        sanitizeString(contactName), sanitizeString(phone), complaint.comments
+      ]
+    );
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE} WHERE id = ?`,
+      [result.insertId]
+    );
+    res.json({ success: true, message: 'Complaint submitted', data: rows[0] });
+  } catch (error) {
+    console.error('Customer complaint create error:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit complaint', error: error.message });
   }
 });
 
