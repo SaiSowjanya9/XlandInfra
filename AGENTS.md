@@ -397,6 +397,24 @@ nothing here may be applied globally.
   "no packages" with no way for the screen to say otherwise. Only `ER_NO_SUCH_TABLE` returns an
   empty list now.
 
+## A Fixed Overlay Must Not Inherit a Page's Spacing
+
+- **`space-y-*` moves modals.** Almost every page is `<div className="p-6 space-y-6">` with its
+  modals written at the end, which makes each overlay a *later sibling* — and Tailwind's rule is
+  `.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem }`, applied purely by
+  position, with no idea the child is `position: fixed`. A margin still applies to a fixed box, so
+  `fixed inset-0` was being pushed 24px down and a strip of the page showed above **every**
+  lightbox, in every portal. `space-x-*` does the same thing sideways.
+- The fix is one rule in each app's `index.css` (`admin-portal` covers all the staff portals,
+  `frontend` the customer one):
+  `[class*="space-y-"] > .fixed.inset-0 { margin: 0 }`. It matches Tailwind's specificity — three
+  class-level selectors, since `:not([hidden])` counts as one each — and is declared **after**
+  `@tailwind utilities`, so it wins the tie on source order rather than with `!important`. Moving
+  it above the directive, or dropping `.inset-0` from the selector, silently stops it working.
+- A new full-screen overlay should therefore be `fixed inset-0`, not `fixed top-0 left-0 w-full
+  h-full`: the rule keys off `.inset-0`. Bottom-anchored floating buttons (`fixed bottom-6
+  right-6`) are unaffected — with no `top`, a stray `margin-top` moves nothing.
+
 ## Dates Are dd/mm/yyyy, in IST
 
 - **`admin-portal/src/utils/dateFormat.js` is the only date formatter.** `formatDate` (dd/mm/yyyy),

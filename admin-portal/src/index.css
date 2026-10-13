@@ -8,6 +8,22 @@
   box-sizing: border-box;
 }
 
+/* A modal overlay covers the viewport, so a page's own spacing must never move it.
+ *
+ * Almost every page is `<div className="p-6 space-y-6">` with its modals written at the end, which
+ * makes each overlay a later sibling -- and Tailwind's space-y is
+ * `.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem }`, applied by position, with
+ * no idea the child is fixed. On `position: fixed; inset: 0` that margin shifts the box down
+ * 24px, so a strip of the page showed above every lightbox, across all the portals. space-x does
+ * the same thing sideways.
+ *
+ * This matches Tailwind's specificity (three class-level selectors) and is declared after
+ * `@tailwind utilities`, so it wins the tie on source order without !important. */
+[class*="space-y-"] > .fixed.inset-0,
+[class*="space-x-"] > .fixed.inset-0 {
+  margin: 0;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* The warm page colour, so anything the layouts do not cover matches them rather than showing a

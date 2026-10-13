@@ -55,6 +55,16 @@
   box-sizing: border-box;
 }
 
+/* A modal overlay covers the viewport, so a page's own spacing must never move it. Tailwind's
+ * space-y is `.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem }`, applied by
+ * position and with no idea the child is fixed, so a modal written at the end of a spaced page
+ * was pushed 24px down and left a strip of the page showing above it. The same rule is in
+ * admin-portal/src/index.css, which covers the staff portals. */
+[class*="space-y-"] > .fixed.inset-0,
+[class*="space-x-"] > .fixed.inset-0 {
+  margin: 0;
+}
+
 html {
   scroll-behavior: smooth;
   /* Prevent unwanted zoom on mobile */
