@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader from '../../components/common/PageHeader';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 import { 
   generateScheduleDates, 
   formatSchedulesForDisplay, 
@@ -118,12 +120,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
   // Helper functions - defined before use
   const formatDateFull = (date) => {
     if (!date) return '';
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return formatDate(date);
   };
 
   const formatDateShort = (date) => {
     if (!date) return '';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatDate(date);
   };
 
   // Handle editing a planned visit date (in the visit series cards)
@@ -609,8 +611,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             return {
               visitNumber: visit.visit_number || visit.visitNumber,
               date: visitDate,
-              dateStr: visitDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-              shortDateStr: visitDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              dateStr: formatDate(visitDate),
+              shortDateStr: formatDate(visitDate),
               time: visit.scheduled_time_start ? formatTimeFromDB(visit.scheduled_time_start) : '10:00 AM',
               status: visit.status === 'scheduled' ? 'Scheduled' : visit.status,
               isEdited: false,
@@ -978,7 +980,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
       i === index ? {
         ...v,
         scheduledDate: newDate,
-        scheduledDateStr: newDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+        scheduledDateStr: formatDate(newDate),
         time: newTime || v.time,
         isEdited: true
       } : v
@@ -1440,7 +1442,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
           v.visitNumber === rescheduleVisit.visitNumber ? {
             ...v,
             scheduledDate: newDate,
-            scheduledDateStr: new Date(newDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            scheduledDateStr: formatDate(new Date(newDate)),
             time: newTime || v.time,
             status: 'rescheduled',
             originalDate: v.scheduledDate,
@@ -1460,7 +1462,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
             return {
               ...v,
               scheduledDate: shiftedDate,
-              scheduledDateStr: shiftedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              scheduledDateStr: formatDate(shiftedDate),
               time: i === visitIndex ? (newTime || v.time) : v.time,
               status: i === visitIndex ? 'rescheduled' : v.status,
               isEdited: true
@@ -1893,8 +1895,8 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     <th className="w-14 sm:w-20 px-1 sm:px-2 py-2 sm:py-3 text-[10px] sm:text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10">Time</th>
                     {weekDays.map((day, i) => (
                       <th key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[70px] sm:min-w-[90px]">
-                        <p className="text-[10px] sm:text-xs font-medium text-gray-500">{day.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                        <p className="text-xs sm:text-sm font-semibold">{day.getDate()} {day.toLocaleDateString('en-US', { month: 'short' })}</p>
+                        <p className="text-[10px] sm:text-xs font-medium text-gray-500">{day.toLocaleDateString('en-IN', { weekday: 'short' })}</p>
+                        <p className="text-xs sm:text-sm font-semibold">{day.getDate()} {day.toLocaleDateString('en-IN', { month: 'short' })}</p>
                       </th>
                     ))}
                   </tr>
@@ -1907,12 +1909,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         const status = getSlotStatus(day, timeIndex);
                         const isSelected = selectedSlot?.date?.getDate() === day.getDate() && selectedSlot?.time === time;
                         const tooltipText = status === 'booked' 
-                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Already booked\nVendor is not available`
+                          ? `${day.toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Already booked\nVendor is not available`
                           : status === 'recommended'
-                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Recommended\nVendor: ${selectedService?.vendorName || 'N/A'}\nOptimal slot based on vendor schedule`
+                          ? `${day.toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Recommended\nVendor: ${selectedService?.vendorName || 'N/A'}\nOptimal slot based on vendor schedule`
                           : status === 'limited'
-                          ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Limited availability\nVendor has other commitments nearby`
-                          : `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Available\nVendor: ${selectedService?.vendorName || 'N/A'}\nClick to select this slot`;
+                          ? `${day.toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Limited availability\nVendor has other commitments nearby`
+                          : `${day.toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })} at ${time}\nStatus: Available\nVendor: ${selectedService?.vendorName || 'N/A'}\nClick to select this slot`;
                         return (
                           <td key={dayIndex} className="px-0.5 sm:px-1 py-0.5 sm:py-1">
                             <button
@@ -1977,7 +1979,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-semibold text-gray-900">Selected Slot</p>
                       <p className="text-xs sm:text-sm text-blue-700 truncate">
-                        {selectedSlot.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {selectedSlot.time}
+                        {selectedSlot.date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} at {selectedSlot.time}
                       </p>
                     </div>
                   </div>
@@ -2167,9 +2169,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                   <p className="text-[10px] sm:text-xs text-gray-500">Visit {visit.visitNumber}</p>
                   {editingVisitIndex === i && selectedService.status !== 'Scheduled' ? (
                     <div className="mt-1 space-y-1" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="date"
-                        value={visit.date ? (() => {
+                      <DateField value={visit.date ? (() => {
                           const d = visit.date;
                           const year = d.getFullYear();
                           const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -2299,9 +2299,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                         </td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3">
                           {editingVisitIndex === index ? (
-                            <input
-                              type="date"
-                              value={(() => {
+                            <DateField value={(() => {
                                 if (!visit.scheduledDate) return '';
                                 const d = visit.scheduledDate instanceof Date ? visit.scheduledDate : new Date(visit.scheduledDate);
                                 const year = d.getFullYear();
@@ -2320,7 +2318,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                             <span className={`font-medium text-xs sm:text-sm ${visit.isEdited ? 'text-amber-700' : 'text-gray-900'}`}>
                               {visit.scheduledDateStr}
                               {visit.isEdited && visit.status === 'rescheduled' && (
-                                <span className="text-[10px] sm:text-xs text-gray-500 ml-1 hidden sm:inline">(was {new Date(visit.originalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
+                                <span className="text-[10px] sm:text-xs text-gray-500 ml-1 hidden sm:inline">(was {new Date(visit.originalDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })})</span>
                               )}
                             </span>
                           )}
@@ -2415,9 +2413,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
               {/* New Date */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Date</label>
-                <input
-                  type="date"
-                  id="reschedule-date"
+                <DateField id="reschedule-date"
                   defaultValue={rescheduleVisit.scheduledDate ? (() => {
                     const d = new Date(rescheduleVisit.scheduledDate);
                     const year = d.getFullYear();

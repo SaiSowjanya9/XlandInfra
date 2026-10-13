@@ -7,6 +7,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -300,12 +301,6 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', day: 'numeric', year: 'numeric' 
-    });
-  };
 
   const getWeekDays = () => {
     const days = [];

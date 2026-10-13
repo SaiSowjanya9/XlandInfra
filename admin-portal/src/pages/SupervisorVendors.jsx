@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap, Wind, Sparkles, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -48,10 +49,6 @@ const SupervisorVendors = ({ user }) => {
 
   const viewVendorDetails = (vendor) => { setSelectedVendor(vendor); setShowDetailModal(true); };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const getServiceBadgeColor = () => 'bg-gray-100 text-gray-700';
 

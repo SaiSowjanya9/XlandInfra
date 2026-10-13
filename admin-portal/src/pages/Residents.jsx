@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
+import DateField from '../components/common/DateField';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -333,18 +334,14 @@ const Residents = ({ admin }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lease Start</label>
-                  <input
-                    type="date"
-                    value={formData.leaseStartDate}
+                  <DateField value={formData.leaseStartDate}
                     onChange={(e) => setFormData({ ...formData, leaseStartDate: e.target.value })}
                     className="input-field"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lease End</label>
-                  <input
-                    type="date"
-                    value={formData.leaseEndDate}
+                  <DateField value={formData.leaseEndDate}
                     onChange={(e) => setFormData({ ...formData, leaseEndDate: e.target.value })}
                     className="input-field"
                   />

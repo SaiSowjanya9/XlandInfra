@@ -22,6 +22,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { paidPercent } from '../utils/invoiceStatus';
 import AmountExceedsCaution from '../components/common/AmountExceedsCaution';
+import DateField from '../components/common/DateField';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -534,9 +535,7 @@ const FPRecordPayment = ({ user }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Payment Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  name="paymentDate"
+                <DateField name="paymentDate"
                   value={formData.paymentDate}
                   onChange={handleInputChange}
                   max={new Date().toISOString().split('T')[0]}

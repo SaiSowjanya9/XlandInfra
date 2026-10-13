@@ -14,6 +14,7 @@ import {
   Printer
 } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { formatDateTime } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -95,22 +96,9 @@ const PaymentSuccess = () => {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return new Date().toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    return new Date(date).toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // The shared dd/mm/yyyy formatter. This screen is a receipt, so a missing date falls back to
+  // now rather than to a dash.
+  const formatDate = (date) => formatDateTime(date || new Date());
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { 

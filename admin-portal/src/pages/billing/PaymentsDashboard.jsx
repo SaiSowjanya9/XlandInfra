@@ -32,6 +32,7 @@ import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -571,7 +572,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const formatDateRange = () => {
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
-    return `${start.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} - ${end.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
   const basePath = portalType === 'employee' || portalType === 'admin' ? '/employee' : `/${portalType}`;
@@ -1082,7 +1083,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
                         tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
                       <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={marginTrendValue}
-                        footer={row => [row.property, row.propertyCode, row.createdAt && new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })].filter(Boolean).join(' · ')} />} />
+                        footer={row => [row.property, row.propertyCode, row.createdAt && formatDate(new Date(row.createdAt))].filter(Boolean).join(' · ')} />} />
                       {/* The figures are compact -- ₹1.5L, not ₹1,50,300 -- because an exact label
                           is wider than the bar it belongs to and runs into its neighbour. Exact
                           figures are in the hover and in the cards above. */}

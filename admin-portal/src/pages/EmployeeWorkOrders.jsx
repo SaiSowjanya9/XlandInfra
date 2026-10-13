@@ -39,6 +39,7 @@ import { getCategories, addCategory, getSubcategories, addSubcategory } from '..
 import { extractBlockNames, extractTotalUnits, extractUnitNumber } from '../utils/propertyStore';
 import { useFP } from '../contexts/FPContext';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
+import { formatDateTime } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -367,18 +368,9 @@ const EmployeeWorkOrders = ({ admin }) => {
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Asia/Kolkata'
-    });
-  };
+  // The shared dd/mm/yyyy formatter (utils/dateFormat.js); this screen's own
+  // fallback for an empty value is kept.
+  const formatDate = (dateString) => formatDateTime(dateString, '-');
 
   const filtered = workOrders.filter(wo => {
     const search = searchTerm.toLowerCase();

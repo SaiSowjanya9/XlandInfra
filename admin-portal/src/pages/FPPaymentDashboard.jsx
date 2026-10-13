@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -72,14 +73,6 @@ const FPPaymentDashboard = ({ user }) => {
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const getPaymentMethodLabel = (method) => {
     const labels = {

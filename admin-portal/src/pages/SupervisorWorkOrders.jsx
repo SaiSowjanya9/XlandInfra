@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
+import { formatDateTime } from '../utils/dateFormat';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List,
@@ -531,7 +532,7 @@ const SupervisorWorkOrders = ({ user }) => {
     }
   };
 
-  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : '-';
+  const formatDate = (dateString) => formatDateTime(dateString);
 
   // Filter by tab (all/completed) first, then by status filter, then by search
   const tabFilteredWorkOrders = activeTab === 'completed'

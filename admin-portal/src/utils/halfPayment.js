@@ -2,6 +2,8 @@
 // backend/utils/halfPayment.js — this is its mirror, because the server computes every amount it
 // is actually asked to charge and a browser cannot require a CommonJS module.
 // halfPayment.test.js compares the two against each other.
+import { formatDate } from './dateFormat.js';
+
 const SERVICE_PERIOD_MONTHS = 6;
 const SECOND_HALF_LEAD_DAYS = 30;
 const MIN_INSTALMENT = 1;
@@ -56,13 +58,11 @@ export const splitPaymentPlan = (balance, firstAmount, from = new Date()) => {
 export const halfPaymentPlan = (balance, from = new Date()) =>
   splitPaymentPlan(balance, round2(balance) / 2, from);
 
-// "02 Mar 2027", the way the payment screens write every other date
+// "02/03/2027", the way the payment screens write every other date -- utils/dateFormat.js owns
+// that format, and reads a plain yyyy-mm-dd from its own digits, so the day cannot shift.
 export const formatPlanDate = value => {
   if (!value) return '—';
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC'
-  });
+  return formatDate(value, '—');
 };
 
 // What a part payment says about itself, so the remainder is traceable from the payment record

@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -83,7 +85,7 @@ const formatCurrency = (amount) => {
 const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDate(date);
 };
 
 // Get local date string
@@ -580,9 +582,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Invoice Date *</label>
                 <div className="relative">
-                  <input
-                    type="date"
-                    value={invoiceDate}
+                  <DateField value={invoiceDate}
                     onChange={(e) => setInvoiceDate(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
@@ -605,9 +605,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
               {/* Due Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Due Date *</label>
-                <input
-                  type="date"
-                  value={dueDate}
+                <DateField value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   min={invoiceDate}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"

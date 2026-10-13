@@ -8,6 +8,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -264,12 +265,6 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     return styles[status] || styles.scheduled;
   };
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-US', { 
-      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
-    });
-  };
 
   const formatTime = (time) => {
     if (!time) return '-';
@@ -445,7 +440,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
         case 'vendor': val = s.vendorName; break;
         case 'status': val = s.status; break;
         case 'scheduledDate': 
-          val = s.scheduledDate ? new Date(s.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+          val = s.scheduledDate ? formatDate(new Date(s.scheduledDate)) : null;
           break;
         case 'time': val = s.scheduledTime; break;
         default: val = null;
@@ -473,7 +468,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
     }
     if (newFilters.scheduledDate !== 'all') {
       filtered = filtered.filter(s => {
-        const dateStr = s.scheduledDate ? new Date(s.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const dateStr = s.scheduledDate ? formatDate(new Date(s.scheduledDate)) : '';
         return dateStr === newFilters.scheduledDate;
       });
     }
@@ -602,7 +597,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 <td>${schedule.serviceName || ''}</td>
                 <td>${schedule.vendorName || ''}</td>
                 <td>${schedule.visitNumber} of ${schedule.totalVisits}</td>
-                <td>${schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</td>
+                <td>${schedule.scheduledDate ? formatDate(new Date(schedule.scheduledDate)) : ''}</td>
                 <td>${schedule.scheduledTime || ''}</td>
                 <td>${schedule.status || 'Scheduled'}</td>
               </tr>
@@ -610,7 +605,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
           </tbody>
         </table>
         <div class="footer">
-          <p>Generated on ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+          <p>Generated on ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
           <p>XLAND INFRA Property Management System</p>
         </div>
         </div>
@@ -2065,7 +2060,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
                 {/* Footer */}
                 <div className="mt-6 pt-3 border-t border-gray-200 text-center text-xs text-gray-400">
-                  <p>Generated on {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                  <p>Generated on {new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                   <p className="mt-0.5">XLAND INFRA Property Management System</p>
                 </div>
               </div>
@@ -2545,7 +2540,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                         <td className="px-4 py-2 text-gray-700">{schedule.vendorName || '-'}</td>
                         <td className="px-4 py-2 text-gray-600">{schedule.visitNumber} of {schedule.totalVisits}</td>
                         <td className="px-4 py-2 text-gray-700">
-                          {schedule.scheduledDate ? new Date(schedule.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                          {schedule.scheduledDate ? formatDate(new Date(schedule.scheduledDate)) : '-'}
                         </td>
                         <td className="px-4 py-2 text-gray-600">{schedule.scheduledTime || '-'}</td>
                         <td className="px-4 py-2">

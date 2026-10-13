@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDate } from '../../utils/dateFormat';
 import { 
   Check, X, Clock, MapPin, Calendar, User, Wrench, 
   Camera, Play, CheckCircle, AlertCircle, ChevronRight,
@@ -53,14 +54,6 @@ const VendorWorkOrderCard = ({
     return labels[status] || status;
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
 
   const formatTime = (time) => {
     if (!time) return '';

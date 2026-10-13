@@ -25,6 +25,7 @@ import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -784,11 +785,6 @@ const CustomerSubmissions = () => {
     units: zoneFilteredProperties.filter(p => normalizePropertyType(p.entryType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || 0), 0)
   }));
 
-  const formatDate = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const timeAgo = (iso) => {
     if (!iso) return '';

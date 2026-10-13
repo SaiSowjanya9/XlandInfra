@@ -25,6 +25,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
+import DateField from '../components/common/DateField';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -113,14 +115,6 @@ const FPPaymentHistory = ({ user }) => {
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '-';
@@ -303,9 +297,7 @@ const FPPaymentHistory = ({ user }) => {
             {/* Start Date */}
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
-              <input
-                type="date"
-                value={dateRange.start}
+              <DateField value={dateRange.start}
                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
               />
@@ -314,9 +306,7 @@ const FPPaymentHistory = ({ user }) => {
             {/* End Date */}
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
-              <input
-                type="date"
-                value={dateRange.end}
+              <DateField value={dateRange.end}
                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
               />

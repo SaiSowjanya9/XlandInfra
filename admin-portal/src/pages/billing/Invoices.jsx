@@ -35,6 +35,8 @@ import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { statusLabel, paidPercent } from '../../utils/invoiceStatus';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -293,14 +295,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }).format(amount || 0).replace('₹', '₹');
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const handleSendInvoice = async (invoice) => {
     setActionLoading(invoice.id);
@@ -952,10 +946,8 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   onClick={() => startDateRef.current?.click()}
                   className="text-sm border-none focus:outline-none bg-transparent w-[90px] cursor-pointer"
                 />
-                <input
-                  ref={startDateRef}
-                  type="date"
-                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                <input type="date"
+                  ref={startDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, start: e.target.value }));
@@ -978,10 +970,8 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                   onClick={() => endDateRef.current?.click()}
                   className="text-sm border-none focus:outline-none bg-transparent w-[90px] cursor-pointer"
                 />
-                <input
-                  ref={endDateRef}
-                  type="date"
-                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                <input type="date"
+                  ref={endDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   onChange={(e) => {
                     if (e.target.value) {
                       setDateRange(prev => ({ ...prev, end: e.target.value }));
@@ -2192,9 +2182,7 @@ const RecordPaymentModal = ({ invoice, onClose, onSuccess, formatCurrency }) => 
           {/* Payment Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Date *</label>
-            <input
-              type="date"
-              value={paymentDate}
+            <DateField value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               required

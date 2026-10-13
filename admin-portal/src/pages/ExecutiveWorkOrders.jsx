@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
+import { formatDateTime } from '../utils/dateFormat';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List,
@@ -349,7 +350,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   };
 
   const getPriorityColor = (priority) => priorityOptions.find(p => p.value === priority)?.color || 'bg-gray-100 text-gray-700';
-  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : '-';
+  const formatDate = (dateString) => formatDateTime(dateString);
 
   return (
     <div className="space-y-6">

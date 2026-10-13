@@ -40,6 +40,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
+import { formatDate } from '../utils/dateFormat';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -558,14 +559,6 @@ const SupervisorProperties = ({ user }) => {
     );
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -930,7 +923,7 @@ const SupervisorProperties = ({ user }) => {
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedProperty.created_at ? new Date(selectedProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {selectedProperty.created_at ? formatDate(new Date(selectedProperty.created_at)) : '-'}
                     </p>
                   </div>
                 </div>

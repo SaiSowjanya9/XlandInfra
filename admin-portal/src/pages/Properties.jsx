@@ -20,6 +20,7 @@ import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { useFP } from '../contexts/FPContext';
 import * as XLSX from 'xlsx';
+import { formatDate } from '../utils/dateFormat';
 
 // Category options for Properties (same as Onboarding)
 const PROPERTY_CATEGORIES = [
@@ -663,11 +664,6 @@ const Properties = () => {
     units: zoneFilteredProperties.filter(p => normalizePropertyType(p.property_type || p.entryType || p.propertyType) === tab.id).reduce((sum, p) => sum + (p.totalUnits || p.total_units || 0), 0)
   }));
 
-  const formatDate = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const timeAgo = (iso) => {
     if (!iso) return '';

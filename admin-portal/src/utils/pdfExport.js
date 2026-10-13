@@ -7,6 +7,7 @@ import { estimateTermsLines } from './estimateTerms';
 import { packageInternalSummary } from './packageServicePricing';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } from './companyInfo';
 import { XLAND_LOGO_ICON } from './logoIconBase64.js';
+import { formatDate } from '../utils/dateFormat';
 
 // Debug logger - only logs in development
 const isDev = import.meta.env.DEV;
@@ -104,11 +105,6 @@ const formatCurrency = (amount) => {
 };
 
 // Format date
-const formatDate = (dateStr) => {
-  if (!dateStr) return new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-  return new Date(dateStr).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-};
-
 // Safe string helper - ensures all values passed to jsPDF are valid strings
 const safeStr = (val, fallback = '-') => {
   if (val === null || val === undefined || val === '') return fallback;

@@ -3,6 +3,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download, Lock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -1063,7 +1064,7 @@ const WorkOrders = ({ admin }) => {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
-                      {new Date(wo.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {formatDate(new Date(wo.created_at))}
                     </td>
                     <td className="px-4 py-4">
                       <div>

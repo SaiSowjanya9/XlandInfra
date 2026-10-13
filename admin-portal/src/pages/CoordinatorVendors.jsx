@@ -30,6 +30,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
+import { formatDate } from '../utils/dateFormat';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -494,7 +495,7 @@ const CoordinatorVendors = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-500">
-                        {vendor.created_at ? new Date(vendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {vendor.created_at ? formatDate(new Date(vendor.created_at)) : '-'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
@@ -763,7 +764,7 @@ const CoordinatorVendors = ({ user }) => {
                 <div>
                   <p className="text-sm text-gray-500">Created</p>
                   <p className="font-medium text-gray-900">
-                    {selectedVendor.created_at ? new Date(selectedVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    {selectedVendor.created_at ? formatDate(new Date(selectedVendor.created_at)) : '-'}
                   </p>
                 </div>
                 </div>

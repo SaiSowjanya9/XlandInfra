@@ -8,6 +8,7 @@ import {
   TrendingUp, X, Check, AlertCircle, Repeat
 } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -218,13 +219,6 @@ const QRManagement = () => {
     return num.toString();
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString('en-IN', {
@@ -1058,7 +1052,7 @@ const ScanTrendChart = ({ series, granularity = 'day' }) => {
   const showLabels = series.length <= 10;
   const label = (at) => granularity === 'hour'
     ? new Date(at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    : new Date(at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    : new Date(at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
   return (
     <div className="overflow-x-auto">
@@ -1071,7 +1065,7 @@ const ScanTrendChart = ({ series, granularity = 'day' }) => {
             {...chart.hover({
               title: granularity === 'hour'
                 ? new Date(item.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-                : new Date(item.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+                : formatDate(new Date(item.at)),
               rows: [
                 { label: 'Scans', value: item.scans.toLocaleString('en-IN'), color: '#6366F1' },
                 { label: 'Visitors', value: item.visitors.toLocaleString('en-IN'), color: '#A5B4FC' }

@@ -22,6 +22,7 @@ import { stripInternalServiceDetails } from '../utils/estimatePackageUtils';
 import { billToParty } from '../utils/estimateStore';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { formatDate, formatDateTime } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -134,27 +135,7 @@ const FPInvoiceView = ({ user }) => {
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const handlePrint = () => {
     window.print();

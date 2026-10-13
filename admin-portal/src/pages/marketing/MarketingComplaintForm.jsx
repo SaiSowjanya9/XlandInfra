@@ -5,6 +5,7 @@ import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint } from '../../utils/marketingApi';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -13,12 +14,6 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 // refuses anything outside them. 'Other' carries its free text in concern_with_other.
 const CONCERN_OPTIONS = ['Service Delay', 'Poor Quality Work', 'Incomplete Work', 'Safety Issue', 'Vendor Issue', 'Maintenance Issue', 'Pricing/Payments', 'Other'];
 
-const formatDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 // A saved concern is a fixed option or, where the option is "Other", the typed text alongside it.
 const displayConcern = (complaint) => {

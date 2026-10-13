@@ -380,6 +380,44 @@ nothing here may be applied globally.
   "no packages" with no way for the screen to say otherwise. Only `ER_NO_SUCH_TABLE` returns an
   empty list now.
 
+## Dates Are dd/mm/yyyy, in IST
+
+- **`admin-portal/src/utils/dateFormat.js` is the only date formatter.** `formatDate` (dd/mm/yyyy),
+  `formatDateTime` (dd/mm/yyyy with a 12-hour clock), `toDateInputValue` (the yyyy-mm-dd wire
+  format), `maskTypedDate` / `parseTypedDate` (typing), `istTodayValue`. `formatDate` had been
+  redefined in **fifty** files: 33 rendered "05 Aug 2026", 43 call sites used the **en-US** locale
+  and so put the month first, nine were already dd/mm/yyyy and nine were the bare locale default —
+  the same record read differently depending on which screen you opened.
+- **A date-only value must never go through `new Date()` for display.**
+  `new Date('2026-08-05')` is parsed as **UTC** midnight and `toLocaleDateString` then renders it
+  in the browser's timezone, which is the previous day anywhere west of UTC. `formatDate` reads a
+  `yyyy-mm-dd` from its own digits and resolves a real timestamp in `Asia/Kolkata`, so the day is
+  the Indian day for every viewer. Same rule, same reason as `toDateOnly` / `istToday` in
+  `backend/utils/marketingFollowUp.js`.
+- **`<input type="date">` cannot be made to show dd/mm/yyyy.** Browsers take that format from the
+  operating system's locale and ignore the `lang` attribute, so one screen read dd/mm/yyyy in India
+  and mm/dd/yyyy on a machine set to en-US. Use
+  **`admin-portal/src/components/common/DateField.jsx`**: it is a drop-in for the native input —
+  same `value` (yyyy-mm-dd), and `onChange` receives `{ target: { name, value } }` carrying
+  yyyy-mm-dd — with its own calendar, so every existing handler keeps working.
+- **A date that does not exist is refused, not rolled forward.** `new Date('2026-02-31')` silently
+  becomes 3 March, which stores a day the user never chose; `parseTypedDate` returns `''` instead.
+- **Two patterns still hold 22 native date inputs**, in the estimate/billing filter rows: a visible
+  dd/mm/yyyy text box with a transparent `type="date"` on top of it purely to borrow the browser's
+  calendar, alongside 19 local copies of `formatDateIST` / `parseISTDate` / `handleDateInput`.
+  Those already read dd/mm/yyyy, so they were left alone — but they are the same logic again, and
+  converting one means replacing the **pair** with a single `DateField` and deleting the local
+  helpers. Converting only the hidden overlay leaves an invisible field whose popover is invisible
+  too.
+- Chart axis labels keep their compact shape ("05 Aug", "Aug 26"); only the locale was corrected so
+  the day comes first. Times stay 12-hour, because that is what those screens already showed.
+- Regression test: `node --test admin-portal/src/utils/dateFormat.test.js`.
+- **A missing import of a shared formatter is not a build error** — it is an undefined variable at
+  runtime, and the bundler will happily ship it. After any bulk edit, check that every file calling
+  `formatDate` / `formatDateTime` / `<DateField>` imports it, and that no file both imports and
+  declares the same name (that one *is* a parse error). Rewriting the body of a helper that shares
+  the name made `pdfExport.js` call itself.
+
 ## Marketing Tracker Follow-Up Fields
 
 - **`backend/utils/marketingFollowUp.js` owns the workbook's follow-up columns**, and

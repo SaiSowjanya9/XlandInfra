@@ -12,6 +12,8 @@
  */
 
 // Frequency configuration
+import { formatDate } from '../utils/dateFormat';
+
 export const FREQUENCY_CONFIG = {
   'monthly': {
     label: 'Monthly',
@@ -168,7 +170,7 @@ export const generateScheduleDates = (
       date: new Date(visitDate),
       suggestedDate: new Date(visitDate),
       dayOfMonth: visitDate.getDate(),
-      month: visitDate.toLocaleString('en-US', { month: 'short' }),
+      month: visitDate.toLocaleString('en-IN', { month: 'short' }),
       year: visitDate.getFullYear(),
       status: i === 0 ? 'scheduled' : 'target',
       isManual: false,
@@ -367,25 +369,13 @@ export const formatSchedulesForDisplay = (schedules) => {
   return schedules.map(schedule => ({
     ...schedule,
     dateStr: schedule.date 
-      ? schedule.date.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
-          day: 'numeric', 
-          year: 'numeric' 
-        })
+      ? formatDate(schedule.date)
       : 'To be scheduled',
     shortDateStr: schedule.date
-      ? schedule.date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
-        })
+      ? formatDate(schedule.date)
       : 'TBD',
     monthYear: schedule.date
-      ? schedule.date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: 'numeric' 
-        })
+      ? formatDate(schedule.date)
       : 'TBD'
   }));
 };
@@ -400,7 +390,7 @@ export const generateScheduleSummary = (frequencyType, firstServiceDate) => {
   const config = getFrequencyConfig(frequencyType);
   const startDate = new Date(firstServiceDate);
   const dayOfMonth = startDate.getDate();
-  const monthName = startDate.toLocaleString('en-US', { month: 'long' });
+  const monthName = startDate.toLocaleString('en-IN', { month: 'long' });
   
   if (!config.autoGenerate) {
     return `${config.label}: Schedule to be determined based on customer requirements`;

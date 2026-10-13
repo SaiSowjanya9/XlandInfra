@@ -47,6 +47,7 @@ import {
   markAllEmployeeNotificationsRead,
 } from '../utils/employeeStore';
 import { filterOptions } from '../utils/filterOptions';
+import { formatDate } from '../utils/dateFormat';
 
 const EmployeeDetails = () => {
   const navigate = useNavigate();
@@ -235,14 +236,6 @@ const EmployeeDetails = () => {
       (Array.isArray(employee.assignedZones) && employee.assignedZones.length > 0);
   };
 
-  const formatDate = (iso) => {
-    if (!iso) return '-';
-    return new Date(iso).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   const formatZones = (zones) => {
     if (zones === 'all') return 'All Zones';

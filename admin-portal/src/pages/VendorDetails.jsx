@@ -10,6 +10,7 @@ import {
 import PageHeader from '../components/common/PageHeader';
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Service Types - shared with Add Vendor section
@@ -437,11 +438,6 @@ const VendorDetails = () => {
     count: vendors.filter(v => (v.serviceType || v.service_type) === tab.id).length,
   }));
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const timeAgo = (timestamp) => {
     const now = new Date();

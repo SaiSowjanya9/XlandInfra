@@ -18,6 +18,7 @@ import {
 import { formatPlanDate, halfPaymentPlan } from '../utils/halfPayment';
 import { paidAmount, paidPercent } from '../utils/invoiceStatus';
 import PaymentAmountSection from '../components/common/PaymentAmountSection';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LdawI4tAAAAAOTX1dcJvQNM8mF8F_v8pSG7bm-x';
@@ -434,10 +435,6 @@ const PublicPayment = () => {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { 

@@ -41,6 +41,7 @@ const ITEMS_PER_PAGE = 10;
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
+import { formatDate } from '../utils/dateFormat';
 
 const ManagerProperties = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
@@ -807,7 +808,7 @@ const ManagerProperties = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">
-                        {property.created_at ? new Date(property.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {property.created_at ? formatDate(new Date(property.created_at)) : '-'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
@@ -1147,7 +1148,7 @@ const ManagerProperties = ({ user }) => {
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {viewingProperty.created_at ? new Date(viewingProperty.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {viewingProperty.created_at ? formatDate(new Date(viewingProperty.created_at)) : '-'}
                     </p>
                   </div>
                 </div>

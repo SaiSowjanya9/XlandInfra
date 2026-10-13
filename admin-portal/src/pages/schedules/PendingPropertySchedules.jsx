@@ -39,6 +39,7 @@ import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import VendorAssignmentModal from '../../components/VendorAssignmentModal';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -61,14 +62,6 @@ const isWorkOrderEstimate = (estimateType) =>
   String(estimateType || '').toLowerCase().replace(/[^a-z]/g, '').startsWith('workorder');
 
 // Format date helper
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
 
 // Format time helper
 const formatTime = (dateString) => {
@@ -779,7 +772,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                     {/* Added On */}
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-700 whitespace-nowrap">
-                        {new Date(property.addedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {formatDate(new Date(property.addedOn))}
                       </div>
                       <div className="text-xs text-gray-400 whitespace-nowrap">
                         {new Date(property.addedOn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}

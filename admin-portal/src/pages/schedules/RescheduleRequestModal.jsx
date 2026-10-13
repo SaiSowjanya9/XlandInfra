@@ -4,6 +4,7 @@ import {
   Check, ChevronRight, RefreshCw, MapPin
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -83,7 +84,7 @@ const RescheduleRequestModal = ({
       
       availability.push({
         date: date.toISOString().split('T')[0],
-        dateStr: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        dateStr: date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }),
         dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
         status,
         sameZoneJobs,
@@ -320,7 +321,7 @@ const RescheduleRequestModal = ({
                 <div>
                   <p className="text-gray-600">New Date:</p>
                   <p className="font-medium text-green-700">
-                    {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – {selectedTime}
+                    {formatDate(new Date(selectedDate))} – {selectedTime}
                   </p>
                 </div>
               </div>
