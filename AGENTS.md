@@ -318,6 +318,13 @@ nothing here may be applied globally.
 - The role is stored as its code and the readable label is resolved server-side into
   `tracker_updated_by_role_label`, because `config/roles.js` is CommonJS and the browser cannot
   import it — otherwise the portal would carry a fourth copy of the role names to keep in step.
+- **`coordinator_name` is not typed in either**: setting Reviewed to Yes records whoever did it.
+  It is resolved **in the UPDATE**, `CASE WHEN ? = 'Yes' THEN COALESCE(NULLIF(coordinator_name,
+  ''), ?) ELSE NULL END`, rather than in JavaScript — the table re-sends the whole payload on
+  every inline edit, so recomputing it from the caller would hand the review to the next person
+  who touched an unrelated cell. The first reviewer keeps the credit, and clearing the flag
+  clears the name, so no review is left with a name nobody stands behind. The route ignores a
+  `coordinator_name` in the body.
 - Regression test: `node --test backend/routes/marketing.test.js` (scope isolation per portal,
   refused writes, the recorded editor, no bound `LIMIT`) and
   `node --test admin-portal/src/utils/marketingApi.test.js`.
