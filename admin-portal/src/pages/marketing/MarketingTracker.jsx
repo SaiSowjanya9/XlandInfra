@@ -471,8 +471,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   <tr className="border-b border-warm-border bg-warm-section">
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
                     {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit / Executive</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
                     {/* The estimate amount is not a column: the table is already wide enough to
                         scroll sideways, and the figure is not something the tracker is read for.
                         It is on the row's own view -- clicking the row opens it as Estimate
@@ -503,12 +503,12 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
                       {showPartner && <td className="py-2 px-2 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}
                       <td className="py-2 px-2">
-                        <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
-                        <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
-                      </td>
-                      <td className="py-2 px-2">
                         <div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div>
                         <div className="text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</div>
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
+                        <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                       </td>
                       {/* Estimate Status is inline-editable, except at the ends of the pipeline where
                           the estimate's own status (sent/approved/rejected) drives it. */}
