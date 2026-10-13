@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { getZones, createZone, updateZone, deactivateZone, reactivateZone, deleteZone } from '../utils/zoneStore';
 import { getEmployees, updateEmployeeZones } from '../utils/employeeStore';
+import { formatDate } from '../utils/dateFormat';
 
 const ZoneManagement = () => {
   const [zones, setZones] = useState([]);
@@ -141,14 +142,6 @@ const ZoneManagement = () => {
     z.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatDate = (iso) => {
-    if (!iso) return '-';
-    return new Date(iso).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   return (
     <div className="space-y-6">

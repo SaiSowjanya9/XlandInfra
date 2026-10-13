@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import { useFP } from '../contexts/FPContext';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -287,14 +288,6 @@ const AssignedVendors = ({ user }) => {
     });
   };
 
-  const formatDate = (iso) => {
-    if (!iso) return '-';
-    return new Date(iso).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   // Get unique zones and service types from all assignments
   const allZones = [...new Set([
@@ -597,7 +590,7 @@ const AssignedVendors = ({ user }) => {
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-gray-600">
-                          {(assignment.assigned_date || assignment.assignedDate || assignment.created_at) ? new Date(assignment.assigned_date || assignment.assignedDate || assignment.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                          {(assignment.assigned_date || assignment.assignedDate || assignment.created_at) ? formatDate(new Date(assignment.assigned_date || assignment.assignedDate || assignment.created_at)) : '-'}
                         </span>
                       </td>
                       <td className="py-4 px-4">

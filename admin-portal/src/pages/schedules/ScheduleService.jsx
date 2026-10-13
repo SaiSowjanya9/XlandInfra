@@ -35,6 +35,8 @@ import {
   Copy
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -73,14 +75,6 @@ const getApiPath = (portalType) => {
 };
 
 // Format date helper
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
 
 // Format time helper
 const formatTime = (dateString) => {
@@ -456,12 +450,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
     } else if (calendarView === 'Year') {
       return calendarDate.getFullYear().toString();
     } else {
-      return calendarDate.toLocaleDateString('en-IN', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      });
+      return formatDate(calendarDate);
     }
   };
 
@@ -1026,7 +1015,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                       {calendarDate.toLocaleDateString('en-IN', { weekday: 'long' })}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {calendarDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {formatDate(calendarDate)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -1142,7 +1131,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
               <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
                 {Array.from({ length: 12 }, (_, month) => {
                   const year = calendarDate.getFullYear();
-                  const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'short' });
+                  const monthName = new Date(year, month, 1).toLocaleDateString('en-IN', { month: 'short' });
                   const monthDays = getDaysInSpecificMonth(year, month);
                   const monthSchedules = getSchedulesForMonth(year, month);
                   const filteredMonthSchedules = monthSchedules.filter(s => {
@@ -1414,9 +1403,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                       className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                      <input
-                        type="date"
-                        value={formData.startDate}
+                      <DateField value={formData.startDate}
                         onChange={(e) => {
                           if (e.target.value) {
                             handleFormChange('startDate', e.target.value);
@@ -1462,9 +1449,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                       className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                      <input
-                        type="date"
-                        value={formData.endDate}
+                      <DateField value={formData.endDate}
                         onChange={(e) => {
                           if (e.target.value) {
                             handleFormChange('endDate', e.target.value);
@@ -1539,9 +1524,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                           className="w-full px-4 py-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                          <input
-                            type="date"
-                            value={formData.recurringEndDate}
+                          <DateField value={formData.recurringEndDate}
                             onChange={(e) => {
                               if (e.target.value) {
                                 handleFormChange('recurringEndDate', e.target.value);

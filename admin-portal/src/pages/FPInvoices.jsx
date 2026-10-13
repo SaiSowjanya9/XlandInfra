@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { statusLabel } from '../utils/invoiceStatus';
 import * as XLSX from 'xlsx';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -119,14 +120,6 @@ const FPInvoices = ({ user }) => {
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const exportToExcel = () => {
     if (invoices.length === 0) {

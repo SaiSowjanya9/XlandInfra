@@ -39,6 +39,8 @@ import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } fr
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import AmountExceedsCaution from '../../components/common/AmountExceedsCaution';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -46,7 +48,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatDate(date);
 };
 
 // Format date to IST (dd/mm/yyyy)
@@ -142,11 +144,7 @@ const formatCurrencyShort = (amount) => {
 const formatDateTime = (dateStr) => {
   if (!dateStr) return { date: '-', time: '' };
   const date = new Date(dateStr);
-  const dateFormatted = date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
+  const dateFormatted = formatDate(date);
   const timeFormatted = date.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -425,11 +423,9 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
-                      <input 
-                        type="date" 
-                        value={formData.receivedDate} 
+                      <DateField value={formData.receivedDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, receivedDate: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -1003,11 +999,9 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Date <span className="text-red-500">*</span></label>
-                      <input 
-                        type="date" 
-                        value={formData.checkDate} 
+                      <DateField value={formData.checkDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, checkDate: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -1873,11 +1867,9 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Transfer Date <span className="text-red-500">*</span></label>
-                        <input 
-                          type="date" 
-                          value={formData.transferDate} 
+                        <DateField value={formData.transferDate}
                           onChange={(e) => setFormData(prev => ({ ...prev, transferDate: e.target.value }))}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -3071,10 +3063,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                   onClick={() => offlineStartDateRef.current?.click()}
                   className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                 />
-                <input
-                  ref={offlineStartDateRef}
-                  type="date"
-                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                <input type="date"
+                  ref={offlineStartDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   value={dateRange.start}
                   onChange={(e) => {
                     if (e.target.value) {
@@ -3103,10 +3093,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                   onClick={() => offlineEndDateRef.current?.click()}
                   className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                 />
-                <input
-                  ref={offlineEndDateRef}
-                  type="date"
-                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                <input type="date"
+                  ref={offlineEndDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                   value={dateRange.end}
                   onChange={(e) => {
                     if (e.target.value) {
@@ -3353,10 +3341,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     onClick={() => onlineStartDateRef.current?.click()}
                     className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                   />
-                  <input
-                    ref={onlineStartDateRef}
-                    type="date"
-                    className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                  <input type="date"
+                    ref={onlineStartDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                     value={dateRange.start}
                     onChange={(e) => {
                       if (e.target.value) {
@@ -3385,10 +3371,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
                     onClick={() => onlineEndDateRef.current?.click()}
                     className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
                   />
-                  <input
-                    ref={onlineEndDateRef}
-                    type="date"
-                    className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
+                  <input type="date"
+                    ref={onlineEndDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                     value={dateRange.end}
                     onChange={(e) => {
                       if (e.target.value) {

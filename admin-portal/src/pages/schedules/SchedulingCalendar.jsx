@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -37,13 +38,6 @@ const getApiPath = (portalType) => {
 };
 
 // Format date helper
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
 
 // Get days in month
 const getDaysInMonth = (year, month) => {

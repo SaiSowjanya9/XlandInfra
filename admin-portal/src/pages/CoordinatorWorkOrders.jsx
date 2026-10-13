@@ -42,6 +42,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
+import { formatDateTime } from '../utils/dateFormat';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -635,18 +636,9 @@ const CoordinatorWorkOrders = ({ user }) => {
     return priorityOptions.find(p => p.value === priority)?.color || 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Asia/Kolkata'
-    });
-  };
+  // The shared dd/mm/yyyy formatter (utils/dateFormat.js); this screen's own
+  // fallback for an empty value is kept.
+  const formatDate = (dateString) => formatDateTime(dateString, '-');
 
   // Filter by tab (all/completed) first, then by status filter, then by search
   const tabFilteredWorkOrders = viewType === 'completed'

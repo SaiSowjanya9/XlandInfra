@@ -36,6 +36,8 @@ import { useFP } from '../../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { statusLabel } from '../../utils/invoiceStatus';
+import DateField from '../../components/common/DateField';
+import { formatDate, formatDateTime } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -86,14 +88,6 @@ const formatCurrency = (amount) => {
   }).format(num);
 };
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
 
 // Format date to IST (dd/mm/yyyy) for input display
 const formatDateIST = (dateStr) => {
@@ -499,9 +493,7 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
                   className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer">
-                  <input
-                    type="date"
-                    value={dueDate}
+                  <DateField value={dueDate}
                     onChange={(e) => {
                       if (e.target.value) {
                         setDueDate(e.target.value);
@@ -602,17 +594,6 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
     currentPage * itemsPerPage
   );
 
-  // Format date/time for work orders
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   if (loading) {
     return (
@@ -954,10 +935,6 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   
   // Format helpers
   const formatCurrency = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);

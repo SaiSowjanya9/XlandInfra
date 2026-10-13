@@ -36,7 +36,7 @@ test('the second half is due 30 days before the next six-month period starts', (
 });
 
 test('a date is never read in the browser timezone and shifted a day', () => {
-  assert.equal(formatPlanDate('2027-03-02'), '02 Mar 2027');
+  assert.equal(formatPlanDate('2027-03-02'), '02/03/2027');
   assert.equal(formatPlanDate(null), '—');
   assert.equal(formatPlanDate('not a date'), '—');
 });

@@ -5,15 +5,10 @@ import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const formatDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 const formatAmount = (value) => {
   const amount = Number(value);

@@ -43,6 +43,7 @@ import {
 import DonutChart from './common/DonutChart';
 import useChartTooltip from './common/ChartTooltip';
 import { getAuthToken } from '../utils/safeStorage';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -390,7 +391,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         const endDate = new Date(date);
         endDate.setHours(23, 59, 59, 999);
         timePoints.push({
-          label: date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          label: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
           startDate: date,
           endDate: endDate
         });
@@ -427,7 +428,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       for (let i = monthCount - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         timePoints.push({
-          label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          label: formatDate(date),
           startDate: date,
           endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
         });
@@ -481,7 +482,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         const endDate = new Date(date);
         endDate.setHours(23, 59, 59, 999);
         timePoints.push({
-          label: date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          label: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
           startDate: date,
           endDate: endDate
         });
@@ -518,7 +519,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       for (let i = monthCount - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         timePoints.push({
-          label: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          label: formatDate(date),
           startDate: date,
           endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
         });
@@ -632,11 +633,6 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   };
 
   // Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   // Status badge
   const getStatusBadge = (status) => {

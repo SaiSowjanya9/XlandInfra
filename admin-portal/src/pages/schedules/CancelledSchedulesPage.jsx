@@ -7,6 +7,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate, formatDateTime } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -82,20 +83,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-IN', { 
-      day: '2-digit', month: 'short', year: 'numeric' 
-    });
-  };
 
-  const formatDateTime = (dateTime) => {
-    if (!dateTime) return '-';
-    return new Date(dateTime).toLocaleString('en-IN', { 
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true
-    });
-  };
 
   const getBasePath = () => {
     const pathMap = {

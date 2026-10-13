@@ -37,6 +37,8 @@ import { CHEQUE_BANKS, DEFAULT_PAYEE_NAME, OTHER_BANK, paymentLocationLabel } fr
 import { formatPlanDate, halfPaymentPlan, splitPaymentPlan, halfPaymentRemark } from '../../utils/halfPayment';
 import { paidPercent } from '../../utils/invoiceStatus';
 import { useFP } from '../../contexts/FPContext';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -47,14 +49,6 @@ const formatCurrency = (amount) => {
 };
 
 // Format date
-const formatDate = (date) => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
 
 // Format date to IST (dd/mm/yyyy)
 const formatDateIST = (dateStr) => {
@@ -976,7 +970,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 text-sm">{paymentProof.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">Uploaded on: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                      <p className="text-xs text-gray-500 mt-1">Uploaded on: {formatDate(new Date())}, {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                       <p className="text-xs text-gray-500">Uploaded by: {paymentDetails.receivedBy || user?.firstName || 'Admin'}</p>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full mt-2">
                         <CheckCircle className="w-3 h-3" /> Proof Uploaded
@@ -1365,11 +1359,9 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received Date <span className="text-red-500">*</span></label>
                       <div className="relative">
-                        <input 
-                          type="date" 
-                          value={paymentDetails.receivedDate} 
+                        <DateField value={paymentDetails.receivedDate}
                           onChange={(e) => setPaymentDetails(prev => ({ ...prev, receivedDate: e.target.value }))}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -1513,9 +1505,7 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Cheque Date <span className="text-red-500">*</span></label>
-                        <input
-                          type="date"
-                          value={paymentDetails.chequeDate}
+                        <DateField value={paymentDetails.chequeDate}
                           onChange={(e) => setPaymentDetails(prev => ({ ...prev, chequeDate: e.target.value }))}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                         />

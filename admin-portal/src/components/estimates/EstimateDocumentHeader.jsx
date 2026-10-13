@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Globe, Mail, Phone } from 'lucide-react';
 import { COMPANY, COMPANY_CONTACT_LINES, COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 import { billToParty } from '../../utils/estimateStore';
+import { formatDate } from '../../utils/dateFormat';
 
 // The icon beside each contact line. The PDFs draw the same three from primitives.
 const CONTACT_ICONS = { phone: Phone, email: Mail, website: Globe };
@@ -20,13 +21,6 @@ const CONTACT_ICONS = { phone: Phone, email: Mail, website: Globe };
  */
 
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
-
-const formatDate = value => {
-  if (!value) return '-';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-'
-    : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 const BillRow = ({ label, nowrap = false, children }) => (
   <div className="flex gap-2">

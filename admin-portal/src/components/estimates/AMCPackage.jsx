@@ -5,6 +5,7 @@ import {
   getAddons, FREQUENCY_TYPES, createEstimate, seedTestData
 } from '../../utils/estimateStore';
 import { getProperties } from '../../utils/propertyStore';
+import DateField from '../../components/common/DateField';
 
 const PROPERTY_ICONS = {
   APT: Home,
@@ -359,9 +360,7 @@ const AMCPackage = ({ showToast }) => {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Estimate Date <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              value={estimateForm.estimateDate}
+            <DateField value={estimateForm.estimateDate}
               onChange={(e) => setEstimateForm({ ...estimateForm, estimateDate: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
             />

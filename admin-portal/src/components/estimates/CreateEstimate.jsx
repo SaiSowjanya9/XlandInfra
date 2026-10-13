@@ -25,6 +25,7 @@ import {
 import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, extractUnitNumber } from '../../utils/propertyStore';
 import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType, getAddonName, getServiceInput } from '../../utils/estimatePackageUtils';
 import EstimateDraftServicesTable from './EstimateDraftServicesTable';
+import { formatDate } from '../../utils/dateFormat';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -3760,7 +3761,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Created Date</label>
                       <p className="text-sm font-medium text-gray-800">
-                        {workOrderData.created_at ? new Date(workOrderData.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                        {workOrderData.created_at ? formatDate(new Date(workOrderData.created_at)) : 'N/A'}
                       </p>
                     </div>
                   </div>

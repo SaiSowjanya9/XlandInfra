@@ -2,15 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, AlertCircle, FileWarning } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
+import { formatDate } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-const formatDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 // A saved concern is a fixed option or, where the option is "Other", the typed text alongside it.
 const displayConcern = (complaint) => {

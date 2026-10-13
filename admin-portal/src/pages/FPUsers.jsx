@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { formatDateTime } from '../utils/dateFormat';
 import {
   Shield,
   Plus,
@@ -126,16 +127,9 @@ const FPUsers = ({ user }) => {
     return roleOptions.find(r => r.value === role)?.label || role;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // The shared dd/mm/yyyy formatter (utils/dateFormat.js); this screen's own
+  // fallback for an empty value is kept.
+  const formatDate = (dateString) => formatDateTime(dateString, 'Never');
 
   const filteredUsers = users.filter(u =>
     u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||

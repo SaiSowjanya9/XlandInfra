@@ -25,6 +25,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { filterOptions } from '../utils/filterOptions';
+import { formatDate } from '../utils/dateFormat';
 
 const FPEmployees = ({ user }) => {
   const navigate = useNavigate();
@@ -143,14 +144,6 @@ const FPEmployees = ({ user }) => {
     return empZones === 'all' || (Array.isArray(empZones) && empZones.length > 0);
   };
 
-  const formatDate = (iso) => {
-    if (!iso) return '-';
-    return new Date(iso).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   const formatZones = (zones) => {
     if (zones === 'all') return 'All Zones';

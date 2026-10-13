@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import { formatDate } from '../utils/dateFormat';
 import { 
   Building2, Users, ClipboardList, Wrench, UserCheck, MapPin, 
   FileText, Package, PlusCircle, Archive, ChevronDown, Search,
@@ -212,12 +213,6 @@ const FPView = ({ admin }) => {
     fp.fpId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatDate = (date) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
-  };
 
   const getStatusBadge = (status) => {
     const colors = {

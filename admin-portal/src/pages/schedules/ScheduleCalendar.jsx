@@ -8,6 +8,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -423,7 +424,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
   const days = getDaysInMonth();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthName = formatDate(currentDate);
 
   return (
     <div className="min-h-screen bg-warm-page">
@@ -521,8 +522,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">
                 {viewMode === 'Month' && monthName}
-                {viewMode === 'Week' && `Week of ${getWeekDays()[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${getWeekDays()[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                {viewMode === 'Day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {viewMode === 'Week' && `Week of ${getWeekDays()[0].toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - ${getWeekDays()[6].toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                {viewMode === 'Day' && formatDate(currentDate)}
                 {viewMode === 'Year' && currentDate.getFullYear().toString()}
               </h2>
               {loading && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
@@ -686,7 +687,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
                 {Array.from({ length: 12 }, (_, month) => {
                   const year = currentDate.getFullYear();
-                  const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'short' });
+                  const monthName = new Date(year, month, 1).toLocaleDateString('en-IN', { month: 'short' });
                   const monthDays = getDaysInSpecificMonth(year, month);
                   const monthSchedules = getSchedulesForMonth(year, month);
                   const isCurrentMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
@@ -928,7 +929,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{selectedSchedule.service}</h2>
                   <p className="text-sm text-gray-600 mt-0.5">
-                    {selectedSchedule.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {formatDate(selectedSchedule.date)}
                   </p>
                 </div>
                 <button 

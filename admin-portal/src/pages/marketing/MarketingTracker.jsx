@@ -7,6 +7,8 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import { getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import EmptyState from '../../components/common/EmptyState';
+import DateField from '../../components/common/DateField';
+import { formatDate } from '../../utils/dateFormat';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
 import {
@@ -27,13 +29,6 @@ const DECISION_OPTIONS = ['Interested', 'Interested Need Follow-up', 'Not Intere
 const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
 const COORDINATOR_REVIEWED_OPTIONS = ['Yes', 'No'];
 const FOLLOW_UP_OPTIONS = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
-
-const formatDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
 
 const formatAmount = (value) => {
   const amount = Number(value);
@@ -596,8 +591,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         </select>
                       </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="date"
+                        <DateField
                           value={toDateOnly(est.last_contact_date)}
                           disabled={savingRowId === est.id}
                           onChange={(e) => saveRowContactDate(est, e.target.value)}
@@ -640,8 +634,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         )}
                       </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="date"
+                        <DateField
                           value={toDateOnly(est.next_follow_up_date)}
                           disabled={savingRowId === est.id}
                           onChange={(e) => saveRowField(est, { next_follow_up_date: e.target.value })}
@@ -868,8 +861,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   </div>
                   <div>
                     <label className={labelCls}>Last Contact Date</label>
-                    <input type="date" value={form.last_contact_date}
-                           onChange={(e) => setFormContactDate(e.target.value)} className={inputCls} />
+                    <DateField value={form.last_contact_date}
+                               onChange={(e) => setFormContactDate(e.target.value)} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Last Contact Method</label>
@@ -898,8 +891,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   </div>
                   <div>
                     <label className={labelCls}>Next Follow-Up Date</label>
-                    <input type="date" value={form.next_follow_up_date}
-                           onChange={(e) => setField('next_follow_up_date', e.target.value)} className={inputCls} />
+                    <DateField value={form.next_follow_up_date}
+                               onChange={(e) => setField('next_follow_up_date', e.target.value)} className={inputCls} />
                     <p className="text-[11px] text-warm-muted mt-1">Four days after the last contact</p>
                   </div>
                   <div>

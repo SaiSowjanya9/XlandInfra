@@ -13,6 +13,7 @@ import DonutChart from '../../components/common/DonutChart';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import { formatDate } from '../../utils/dateFormat';
 import { 
   SCHEDULE_STATUS_COLORS, 
   PROPERTY_TYPE_COLORS, 
@@ -54,7 +55,6 @@ const getZoneName = (zone) => {
   return zone.name || zone.zone_name || zone.zone || '';
 };
 
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
 // scheduled_time_start comes back as a TIME string (HH:MM:SS), not a timestamp
 const formatTimeOfDay = (t) => {
@@ -352,7 +352,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
-      const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+      const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
       
       // Filter schedules for this specific date
       const daySchedules = trendFilteredData.filter(s => {

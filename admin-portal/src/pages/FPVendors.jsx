@@ -43,6 +43,7 @@ const SERVICE_TYPES = [
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
+import { formatDate } from '../utils/dateFormat';
 
 // Service Type Icons mapping
 const SERVICE_ICONS = {
@@ -107,11 +108,6 @@ const FPVendors = ({ user }) => {
   };
 
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
 
   // Derived data - based on current status filter for dynamic counts
   const getStatusFilteredVendors = () => {
@@ -979,7 +975,7 @@ const FPVendors = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Created At</p>
-                    <p className="text-gray-600">{viewVendor.created_at ? new Date(viewVendor.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</p>
+                    <p className="text-gray-600">{viewVendor.created_at ? formatDate(new Date(viewVendor.created_at)) : '-'}</p>
                   </div>
                 </div>
               </div>

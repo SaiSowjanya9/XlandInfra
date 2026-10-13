@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
+import { formatDateTime } from '../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -667,18 +668,9 @@ const ManagerWorkOrders = ({ user }) => {
     return priorityOptions.find(p => p.value === priority)?.color || 'bg-gray-100 text-gray-700';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Asia/Kolkata'
-    });
-  };
+  // The shared dd/mm/yyyy formatter (utils/dateFormat.js); this screen's own
+  // fallback for an empty value is kept.
+  const formatDate = (dateString) => formatDateTime(dateString, '-');
 
   // Excel export function
   const handleExportExcel = () => {

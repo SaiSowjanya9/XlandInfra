@@ -1,6 +1,8 @@
 // Schedule Module Components Index
 // Export all schedule-related components for easy imports
 
+import { formatDate } from '../../utils/dateFormat';
+
 export { default as AllSchedulesPage } from './AllSchedulesPage';
 export { default as ScheduleCalendarView } from './ScheduleCalendarView';
 export { default as RescheduleServicePage } from './RescheduleServicePage';
@@ -84,11 +86,7 @@ export const getStatusBadgeClasses = (status) => {
 // Helper function to format schedule date
 export const formatScheduleDate = (date) => {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  return formatDate(new Date(date));
 };
 
 // Helper function to format schedule time
