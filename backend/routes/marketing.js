@@ -29,6 +29,7 @@ const {
   COMPLAINT_TABLE, complaintSelect, ensureMarketingComplaintsTable, parseComplaintBody
 } = require('../utils/marketingComplaints');
 const { partnerNameExpression } = require('../utils/franchisePartnerName');
+const { ROLE_NAMES } = require('../config/roles');
 
 // ============================================
 // TRACKER COLUMNS
@@ -62,7 +63,14 @@ const MARKETING_TRACKER_COLUMNS = [
   { name: 'last_contact_method', def: 'VARCHAR(60) NULL' },
   { name: 'customer_response', def: 'VARCHAR(60) NULL' },
   { name: 'next_follow_up_date', def: 'DATE NULL' },
-  { name: 'next_action', def: 'VARCHAR(60) NULL' }
+  { name: 'next_action', def: 'VARCHAR(60) NULL' },
+  // Who last touched this row, and when (schema_v49_marketing_tracker_actor.sql). The tracker is
+  // edited inline by several people across three portals, so a row that changed under somebody
+  // could not be traced to anyone. `updated_at` is the estimate's own column and moves for reasons
+  // that have nothing to do with the tracker, which is why this keeps its own timestamp.
+  { name: 'tracker_updated_by', def: 'VARCHAR(150) NULL' },
+  { name: 'tracker_updated_by_role', def: 'VARCHAR(60) NULL' },
+  { name: 'tracker_updated_at', def: 'TIMESTAMP NULL' }
 ];
 
 const ensureMarketingTrackerColumns = async (table = 'fp_estimates') => {
@@ -129,8 +137,29 @@ const TRACKER_COLUMNS = [
   'tracker_status', 'coordinator_reviewed', 'follow_up_stage', 'coordinator_name',
   'lead_status', 'last_contact_date', 'last_contact_method', 'customer_response',
   'next_follow_up_date', 'next_action',
-  'tracked_at', 'tracker_archived_at'
+  'tracked_at', 'tracker_archived_at',
+  'tracker_updated_by', 'tracker_updated_by_role', 'tracker_updated_at'
 ];
+
+// Who is making this change, as the tracker's Last Updated By column will name them.
+//
+// The three portals' tokens do not agree on what they carry: the FP's holds firstName/lastName,
+// an admin's is built from a users row and holds the same, but the manager login signs only
+// { id, username, email, role, managerId, ... } -- so a name is not always there and the username
+// is the next best identity. Never blank: a row that changed under somebody has to name someone.
+const ACTOR_FALLBACK = 'Unknown user';
+
+const trackerActor = (req) => {
+  const user = req.user || {};
+  const parts = [user.firstName || user.first_name, user.lastName || user.last_name]
+    .filter(Boolean).join(' ').trim();
+  const name = parts || user.companyName || user.username || user.email || ACTOR_FALLBACK;
+  return {
+    // The columns are VARCHAR(150)/(60); MySQL would otherwise refuse or truncate the write.
+    name: String(name).slice(0, 150),
+    role: String(user.role || '').slice(0, 60) || null
+  };
+};
 
 const trackerSelect = (alias = 'e') => TRACKER_COLUMNS.map((col) => `${alias}.${col}`).join(', ');
 
@@ -159,7 +188,13 @@ const presentTrackerRow = (row) => {
     last_contact_date,
     next_follow_up_date,
     customer_response: effectiveCustomerResponse(row.status, row.customer_response),
-    due_status: dueStatus(next_follow_up_date, lead_status)
+    due_status: dueStatus(next_follow_up_date, lead_status),
+    // The role is stored as its code; the label it reads as belongs to config/roles.js, which is
+    // CommonJS and so cannot be imported by the browser. Sending the resolved label keeps the
+    // portal from carrying a fourth copy of the role names that has to be kept in step.
+    tracker_updated_by_role_label: row.tracker_updated_by_role
+      ? (ROLE_NAMES[row.tracker_updated_by_role] || row.tracker_updated_by_role)
+      : ''
   };
 };
 
@@ -402,6 +437,9 @@ const createMarketingRouter = ({ resolveScope }) => {
 
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope);
+      // Who changed it is recorded by the server from the token, never taken from the body: a
+      // field the caller could set would be worth nothing as a record of who did what.
+      const actor = trackerActor(req);
       const [result] = await pool.execute(
         `UPDATE fp_estimates SET
            lead_source = ?, priority = ?,
@@ -411,6 +449,7 @@ const createMarketingRouter = ({ resolveScope }) => {
            tracker_status = ?, coordinator_reviewed = ?, follow_up_stage = ?, coordinator_name = ?,
            lead_status = ?, last_contact_date = ?, last_contact_method = ?,
            customer_response = ?, next_follow_up_date = ?, next_action = ?,
+           tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW(),
            tracked_at = NOW(), updated_at = NOW()
          WHERE id = ? AND estimate_type = 'direct'${fp.sql}${zone.sql}`,
         [
@@ -421,6 +460,7 @@ const createMarketingRouter = ({ resolveScope }) => {
           updates.tracker_status, updates.coordinator_reviewed, updates.follow_up_stage, updates.coordinator_name,
           updates.lead_status, updates.last_contact_date, updates.last_contact_method,
           updates.customer_response, updates.next_follow_up_date, updates.next_action,
+          actor.name, actor.role,
           id, ...fp.params, ...zone.params
         ]
       );
@@ -455,11 +495,14 @@ const createMarketingRouter = ({ resolveScope }) => {
       }
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope);
+      // Archiving is a change to the row like any other, so it names whoever did it.
+      const actor = trackerActor(req);
       const [result] = await pool.execute(
-        `UPDATE fp_estimates SET tracker_archived_at = NOW()
+        `UPDATE fp_estimates SET tracker_archived_at = NOW(),
+           tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW()
          WHERE id = ? AND estimate_type = 'direct'
            AND tracked_at IS NOT NULL${fp.sql}${zone.sql}`,
-        [id, ...fp.params, ...zone.params]
+        [actor.name, actor.role, id, ...fp.params, ...zone.params]
       );
       if (result.affectedRows === 0) {
         return res.status(404).json({ success: false, message: 'Tracked estimate not found' });
@@ -480,11 +523,13 @@ const createMarketingRouter = ({ resolveScope }) => {
       }
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope);
+      const actor = trackerActor(req);
       const [result] = await pool.execute(
-        `UPDATE fp_estimates SET tracker_archived_at = NULL
+        `UPDATE fp_estimates SET tracker_archived_at = NULL,
+           tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW()
          WHERE id = ? AND estimate_type = 'direct'
            AND tracker_archived_at IS NOT NULL${fp.sql}${zone.sql}`,
-        [id, ...fp.params, ...zone.params]
+        [actor.name, actor.role, id, ...fp.params, ...zone.params]
       );
       if (result.affectedRows === 0) {
         return res.status(404).json({ success: false, message: 'Archived tracker entry not found' });
