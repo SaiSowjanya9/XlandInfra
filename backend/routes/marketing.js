@@ -28,6 +28,7 @@ const {
 const {
   COMPLAINT_TABLE, complaintSelect, ensureMarketingComplaintsTable, parseComplaintBody
 } = require('../utils/marketingComplaints');
+const { partnerNameExpression } = require('../utils/franchisePartnerName');
 
 // ============================================
 // TRACKER COLUMNS
@@ -200,43 +201,14 @@ const zoneFilter = (scope, prefix = '') => {
   };
 };
 
-// The partner's display name has drifted between deployments: company_name and owner_name exist
-// everywhere, contact_person only on some. Naming a column the database does not have fails the
-// whole statement with "Unknown column ... in 'field list'", which is why the admin Complaints
-// inbox answered 500 on a database without contact_person -- the list simply reported an error
-// where it should have reported complaints. So the COALESCE is built from the columns that are
-// actually there, resolved once and cached.
-const PARTNER_NAME_CANDIDATES = ['company_name', 'owner_name', 'contact_person'];
-let partnerNameExpression = null;
-
-const resolvePartnerNameExpression = async () => {
-  if (partnerNameExpression) return partnerNameExpression;
-  try {
-    const [rows] = await pool.execute(
-      `SELECT column_name FROM information_schema.columns
-       WHERE table_schema = DATABASE() AND table_name = 'franchise_partners'
-         AND column_name IN (?, ?, ?)`,
-      PARTNER_NAME_CANDIDATES
-    );
-    // mysql2 cases this key differently across versions, so read the value rather than the name.
-    const present = rows.map((row) => String(Object.values(row)[0]));
-    const usable = PARTNER_NAME_CANDIDATES.filter((column) => present.includes(column));
-    partnerNameExpression = usable.length
-      ? `COALESCE(${usable.map((column) => `fpx.${column}`).join(', ')})`
-      : 'NULL';
-  } catch (error) {
-    // company_name is the one column every deployment of this table has had.
-    partnerNameExpression = 'fpx.company_name';
-  }
-  return partnerNameExpression;
-};
-
 // The partner-name column and the join that feeds it, or nothing at all for a scope that is
-// already one partner's.
+// already one partner's. Which columns are safe to name is decided by
+// utils/franchisePartnerName.js -- `contact_person` does not exist on every deployment, and
+// naming it failed the whole statement, so this list used to answer 500 instead of complaints.
 const partnerNameParts = async (scope, prefix) => {
   if (!scope.withPartnerName) return { column: '', join: '' };
   return {
-    column: `, ${await resolvePartnerNameExpression()} AS franchise_partner_name`,
+    column: `, ${await partnerNameExpression(pool, 'fpx')} AS franchise_partner_name`,
     join: ` LEFT JOIN franchise_partners fpx ON ${prefix}franchise_partner_id = fpx.id`
   };
 };

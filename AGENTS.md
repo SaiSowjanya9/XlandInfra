@@ -311,14 +311,28 @@ nothing here may be applied globally.
 
 - **`franchise_partners` has `company_name` and `owner_name` everywhere, but `contact_person` only
   on some deployments.** A hardcoded `COALESCE(fp.company_name, fp.owner_name, fp.contact_person)`
-  fails the entire statement with "Unknown column 'fp.contact_person' in 'field list'" — which is
-  how the admin Complaints inbox came to answer 500 on a database without it, reporting an error
-  where it should have reported complaints. Build the expression from the columns
-  `information_schema` actually reports (see `resolvePartnerNameExpression` in
-  `routes/marketing.js`), or stick to `company_name`.
+  fails the entire statement with "Unknown column 'fp.contact_person' in 'field list'". Always go
+  through **`backend/utils/franchisePartnerName.js`**: `partnerNameExpression(pool, alias)` for a
+  query that joins the table, `fetchPartnerName(pool, fpId)` for code that just needs the string.
+  It reads `information_schema` once, caches, falls back to `company_name`, and `fetchPartnerName`
+  never throws — it is usually filling a field on a record the user is trying to save.
+  Regression test: `node --test backend/utils/franchisePartnerName.test.js`.
+- This cost two live features before it was found, both silently: the admin Complaints inbox
+  answered 500 instead of listing complaints, and **every** customer complaint filed from the
+  customer portal's Contact page failed, because the lookup that fills `responsible_person` threw
+  and the route's catch reported the generic "Failed to submit complaint". Nothing was stored, so
+  nothing appeared in any portal and the feature looked merely empty rather than broken.
 - A list that joins `franchise_partners` must **qualify its own columns**: both tables carry `id`,
   `status` and `created_at`, so an unqualified select is ambiguous, not merely untidy. That is why
   `trackerSelect(alias)` and `complaintSelect(prefix)` take a prefix.
+- **`properties` and `onboarded_properties` are not interchangeable either.** `properties` keeps
+  the division as **`division_id`** — a `VARCHAR` holding the *name*, exactly as `zone_id` holds a
+  zone name — while only `onboarded_properties` has a `division` column. `p.division` in the
+  customer complaint route was the second reason that form answered "Failed to submit complaint".
+  When a query joins both tables, check each column against the right one.
+- **A generic catch turns a schema error into a feature that looks empty.** Both bugs above were a
+  500 behind a friendly message. Where a route derives fields from several tables, test it by
+  actually calling it: `node --check` and a build will never find a missing column.
 
 ## A Blank Option Must Clear Its Own Free-Text Column
 

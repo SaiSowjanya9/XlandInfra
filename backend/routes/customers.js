@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
 const { issueActivation } = require('../utils/customerActivation');
+const { fetchPartnerName } = require('../utils/franchisePartnerName');
 // Rate limiting for login and password reset endpoints
 const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../middleware/security');
 const {
@@ -2828,7 +2829,11 @@ router.post('/complaints', authenticateCustomer, async (req, res) => {
     const [accounts] = await pool.execute(
       `SELECT ca.first_name, ca.last_name, ca.phone, ca.property_code,
               op.property_id AS op_code, op.zone AS op_zone, op.franchise_partner_id AS op_fp,
-              p.property_id AS p_code, p.division AS p_division, p.franchise_partner_id AS p_fp,
+              -- properties keeps this as division_id, a VARCHAR holding the name, the same way
+              -- zone_id holds a zone name; only onboarded_properties has a division column.
+              -- Naming p.division failed the whole statement, so the catch below answered
+              -- "Failed to submit complaint" for every customer.
+              p.property_id AS p_code, p.division_id AS p_division, p.franchise_partner_id AS p_fp,
               COALESCE(z.name, zn.name, p.zone_id) AS p_zone
        FROM customer_accounts ca
        LEFT JOIN onboarded_properties op ON ca.property_id = op.id
@@ -2853,12 +2858,11 @@ router.post('/complaints', authenticateCustomer, async (req, res) => {
       });
     }
 
-    const [fps] = await pool.execute(
-      `SELECT owner_name, contact_person, company_name FROM franchise_partners WHERE id = ?`,
-      [fpId]
-    );
-    const fp = fps[0] || {};
-    const responsible = fp.owner_name || fp.contact_person || fp.company_name || 'Franchise Partner';
+    // This named contact_person directly, which does not exist on every deployment of
+    // franchise_partners: the statement threw, the catch below answered "Failed to submit
+    // complaint", and no customer complaint was ever stored. utils/franchisePartnerName.js reads
+    // only the columns the database has, and never throws.
+    const responsible = await fetchPartnerName(pool, fpId);
 
     const contactName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || req.customer.email;
     const phoneDigits = (account.phone || '').replace(/\D/g, '');
