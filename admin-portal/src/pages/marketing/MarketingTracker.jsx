@@ -65,7 +65,8 @@ const emptyTrackerForm = {
   tracker_status: '',
   coordinator_reviewed: '',
   follow_up_stage: '',
-  coordinator_name: '',
+  // coordinator_name is not here on purpose: the server sets it to whoever marks Reviewed as
+  // Yes, so it is neither edited nor sent back. TRACKER_FIELDS is built from these keys.
   // Follow-up columns from the workbook. Due Status is derived from the next date and the lead
   // status, so it is never part of the form.
   lead_status: '',
@@ -154,7 +155,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
       tracker_status: estimate.tracker_status || '',
       coordinator_reviewed: estimate.coordinator_reviewed || '',
       follow_up_stage: estimate.follow_up_stage || '',
-      coordinator_name: decodeEntities(estimate.coordinator_name || ''),
       lead_status: decodeEntities(estimate.lead_status || ''),
       last_contact_date: toDateOnly(estimate.last_contact_date),
       last_contact_method: decodeEntities(estimate.last_contact_method || ''),
@@ -232,7 +232,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   // w-auto lets a native select size itself to its widest option, so long stages like
   // "Pending Coordinator Review" never get clipped; max-w-full is the safety cap.
   const cellSelectCls = 'w-auto max-w-full px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
-  const cellInputCls = 'w-full min-w-[90px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent';
   // A date input needs its own width: left to w-full it collapses under the native calendar icon.
   const cellDateCls = 'w-[130px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
 
@@ -539,19 +538,13 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           <option value="">Reviewed?</option>
                           {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
-                        <input
-                          type="text"
-                          key={est.tracked_at || est.id}
-                          defaultValue={decodeEntities(est.coordinator_name) || ''}
-                          maxLength={255}
-                          placeholder="Coordinator name"
-                          disabled={savingRowId === est.id}
-                          onBlur={(e) => {
-                            const v = e.target.value.trim();
-                            if (v !== (decodeEntities(est.coordinator_name) || '')) saveRowField(est, { coordinator_name: v });
-                          }}
-                          className={`${cellInputCls} !min-w-0 mt-1`}
-                        />
+                        {/* Not typed in: setting Reviewed to Yes records whoever did it, which is
+                            the point of the column. The first reviewer keeps the credit, and
+                            clearing the flag clears the name. */}
+                        <div className="text-[11px] text-warm-muted mt-1 truncate max-w-[130px]"
+                             title={decodeEntities(est.coordinator_name) || ''}>
+                          {decodeEntities(est.coordinator_name) || '—'}
+                        </div>
                       </td>
                       {/* Picking a stage records a contact: today (IST) in Last Contact and the
                           next follow-up four days out, both still editable afterwards. */}

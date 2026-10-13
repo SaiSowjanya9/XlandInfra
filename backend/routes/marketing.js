@@ -411,8 +411,9 @@ const createMarketingRouter = ({ resolveScope }) => {
           updates[otherField] = decoded === 'Other' ? otherText : null;
         }
       }
-      // Free-text coordinator name: optional, just capped.
-      updates.coordinator_name = (req.body.coordinator_name || '').toString().trim().slice(0, 255) || null;
+      // coordinator_name is deliberately not read from the body. It is the person who set
+      // Reviewed to Yes, resolved in the UPDATE below from the token, so the column records who
+      // actually reviewed the estimate rather than whatever anybody chose to type.
 
       // The two dates. The portal fills them in -- picking a follow-up stage stamps today in IST and
       // schedules four days out -- but they stay editable, so anything that is not a calendar date
@@ -446,7 +447,14 @@ const createMarketingRouter = ({ resolveScope }) => {
            maintenance_system = ?, maintenance_system_other = ?,
            proposal_given = ?, proposal_given_other = ?,
            customer_decision = ?, customer_decision_other = ?,
-           tracker_status = ?, coordinator_reviewed = ?, follow_up_stage = ?, coordinator_name = ?,
+           tracker_status = ?, coordinator_reviewed = ?, follow_up_stage = ?,
+           -- Who reviewed it is not typed in, it is whoever set Reviewed to Yes. Resolved in SQL
+           -- against the stored row so the first reviewer keeps the credit: the table re-sends the
+           -- whole payload on every inline edit, so recomputing it from the caller would hand the
+           -- review to the next person who touched an unrelated cell. Clearing the flag clears
+           -- the name with it, rather than leaving a review nobody stands behind.
+           coordinator_name = CASE WHEN ? = 'Yes'
+             THEN COALESCE(NULLIF(coordinator_name, ''), ?) ELSE NULL END,
            lead_status = ?, last_contact_date = ?, last_contact_method = ?,
            customer_response = ?, next_follow_up_date = ?, next_action = ?,
            tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW(),
@@ -457,7 +465,8 @@ const createMarketingRouter = ({ resolveScope }) => {
           updates.maintenance_system, updates.maintenance_system_other,
           updates.proposal_given, updates.proposal_given_other,
           updates.customer_decision, updates.customer_decision_other,
-          updates.tracker_status, updates.coordinator_reviewed, updates.follow_up_stage, updates.coordinator_name,
+          updates.tracker_status, updates.coordinator_reviewed, updates.follow_up_stage,
+          updates.coordinator_reviewed, actor.name,
           updates.lead_status, updates.last_contact_date, updates.last_contact_method,
           updates.customer_response, updates.next_follow_up_date, updates.next_action,
           actor.name, actor.role,

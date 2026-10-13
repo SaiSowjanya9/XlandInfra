@@ -406,3 +406,36 @@ test('the row carries a readable role label, so the portal needs no copy of the 
   assert.equal(presentTrackerRow({ ...trackerRow, tracker_updated_by_role: 'new_role' }).tracker_updated_by_role_label, 'new_role');
   assert.equal(presentTrackerRow(trackerRow).tracker_updated_by_role_label, '');
 });
+
+test('the coordinator name is whoever marked the review, not whatever was typed', async (t) => {
+  const request = await startServer(t);
+  const coordinator = { id: 9, role: 'coordinator', firstName: 'Priya', lastName: 'N' };
+
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', {
+    ...validTracker,
+    coordinator_reviewed: 'Yes',
+    coordinator_name: 'Someone Made Up'
+  }, coordinator);
+
+  const update = lastCall('UPDATE fp_estimates SET');
+  // Resolved in SQL against the stored row, so the first reviewer keeps the credit: the table
+  // re-sends the whole payload on every inline edit, and recomputing it from the caller would
+  // hand the review to the next person who touched an unrelated cell.
+  assert.match(update.sql, /coordinator_name = CASE WHEN \? = 'Yes'\s*THEN COALESCE\(NULLIF\(coordinator_name, ''\), \?\) ELSE NULL END/);
+  assert.ok(update.params.includes('Priya N'), 'the reviewer comes from the token');
+  assert.ok(!update.params.includes('Someone Made Up'), 'a typed name is ignored');
+});
+
+test('clearing the review clears the name with it', async (t) => {
+  const request = await startServer(t);
+
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, coordinator_reviewed: 'No' },
+    { id: 9, role: 'coordinator', firstName: 'Priya', lastName: 'N' });
+  const update = lastCall('UPDATE fp_estimates SET');
+  // The CASE answers NULL for anything that is not Yes, so a review nobody stands behind cannot
+  // be left with a name against it.
+  const caseArg = update.params[update.params.indexOf('Priya N') - 1];
+  assert.equal(caseArg, 'No', 'the flag drives the CASE');
+});
