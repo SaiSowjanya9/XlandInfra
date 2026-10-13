@@ -61,9 +61,18 @@ const COMPLAINT_TEXT_FIELDS = [
   ['comments', 'Comments', 4000]
 ];
 
-const COMPLAINT_SELECT = `id, property_id, zone, responsible_person,
-  concern_with, concern_with_other, contact_person_name, phone_number, comments,
-  archived_at, created_at, updated_at`;
+const COMPLAINT_COLUMNS = [
+  'id', 'property_id', 'zone', 'responsible_person',
+  'concern_with', 'concern_with_other', 'contact_person_name', 'phone_number', 'comments',
+  'archived_at', 'created_at', 'updated_at'
+];
+
+// The same columns, optionally qualified ('c.'). A staff list joins franchise_partners for the
+// owning partner's name, and both tables carry id and created_at, so an unqualified list would
+// make that join ambiguous rather than merely untidy.
+const complaintSelect = (prefix = '') => COMPLAINT_COLUMNS.map((col) => `${prefix}${col}`).join(', ');
+
+const COMPLAINT_SELECT = complaintSelect();
 
 // The customer form only asks for the concern and comments; the concern validation is shared by
 // both parsers. Request text arrives HTML-escaped (middleware/security.js); it is stored exactly
@@ -115,7 +124,9 @@ const parseCustomerComplaintBody = (body) => {
 
 module.exports = {
   COMPLAINT_TABLE,
+  COMPLAINT_COLUMNS,
   COMPLAINT_SELECT,
+  complaintSelect,
   CONCERN_OPTIONS,
   ensureMarketingComplaintsTable,
   parseComplaintBody,

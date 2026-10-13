@@ -351,9 +351,18 @@ const CreateCustomer = ({ admin }) => {
 
   const token = getAuthToken();
 
+  // This screen belongs to the admin portal, so its zones are the company's: /api/admin/zones.
+  //
+  // It used to call /api/fp/zones, which requires a franchise scope an admin does not have. The
+  // GET quietly returned only the global zones (the FP route drops its other three sources into
+  // empty catch blocks), and the POST answered 400 "Zone creation requires FP scope" -- so the
+  // workaround here was to skip saving for admins altogether. A zone typed into the box therefore
+  // looked saved and was gone on the next reload. The admin endpoints below really do save it.
+  const ZONES_URL = `${API_BASE}/api/admin/zones`;
+
   const fetchZones = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/fp/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(ZONES_URL, { headers: { 'Authorization': `Bearer ${token}` } });
       const json = await res.json();
       if (json.success) setZoneSuggestions(json.data || []);
     } catch {
@@ -362,18 +371,37 @@ const CreateCustomer = ({ admin }) => {
   };
 
   const autoSaveZone = async (zoneName) => {
-    // Skip zone auto-save for admin users (they don't have FP scope)
-    if (currentUser?.role === 'super_admin' || currentUser?.role === 'admin') return;
     if (!zoneName?.trim()) return;
     const exists = zoneSuggestions.some(z => z.name?.toLowerCase() === zoneName.toLowerCase());
-    if (!exists) {
-      try { await fetch(`${API_BASE}/api/fp/zones`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: zoneName.trim() }) }); } catch (e) {}
+    if (exists) return;
+    try {
+      const res = await fetch(ZONES_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: zoneName.trim() })
+      });
+      const json = await res.json();
+      // A failure has to be visible: silently swallowing it is what hid the bug above.
+      if (!json.success) {
+        console.error('Could not save the zone:', json.message);
+        return;
+      }
+      fetchZones();
+    } catch (e) {
+      console.error('Could not save the zone:', e.message);
     }
   };
 
   const handleDeleteZone = async (zoneId, e) => {
     e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
-    try { const res = await fetch(`${API_BASE}/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+    try {
+      const res = await fetch(`${ZONES_URL}/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) fetchZones();
+      else window.alert(json.message || 'Could not remove the zone.');
+    } catch (e) {
+      window.alert('Could not remove the zone. Please try again.');
+    }
   };
 
   useEffect(() => {

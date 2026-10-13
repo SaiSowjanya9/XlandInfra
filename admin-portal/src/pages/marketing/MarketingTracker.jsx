@@ -3,15 +3,17 @@ import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
   ClipboardList, FileText, Building2, Pencil, Trash2
 } from 'lucide-react';
-import { getAuthToken } from '../utils/safeStorage';
-import { decodeEntities } from '../utils/text';
-import { getPropertyTypeLabel } from '../utils/estimatePackageUtils';
-import EmptyState from '../components/common/EmptyState';
+import { getAuthToken } from '../../utils/safeStorage';
+import { decodeEntities } from '../../utils/text';
+import { getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import EmptyState from '../../components/common/EmptyState';
+import { useFP } from '../../contexts/FPContext';
+import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
 import {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
   DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly,
   isCustomerResponseLocked, effectiveCustomerResponse
-} from '../utils/followUpDates';
+} from '../../utils/followUpDates';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -90,9 +92,20 @@ const PRIORITY_STYLES = {
   Urgent: 'bg-red-50 text-red-700 border-red-200',
 };
 
-const FPMarketingTracker = ({ user }) => {
+// Shared by the FP, admin and Ops Manager portals; `portalType` picks the API prefix and, for the
+// admin, the partner the leads are narrowed to. See utils/marketingApi.js.
+const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
-  const isFPManager = user?.role === 'manager';
+  const apiPath = getMarketingApiPath(portalType);
+  const { selectedFp } = useFP();
+  const fpId = marketingFpId(portalType, selectedFp);
+  // The admin sees several franchises in one list, so each row has to say which one it belongs to.
+  const showPartner = getMarketingApiPath(portalType) === 'admin';
+  // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
+  // manager is refused there. These same screens are the Ops Manager portal's own Marketing
+  // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
+  // not the role on its own.
+  const unavailable = portalType === 'franchise' && user?.role === 'manager';
 
   const [view, setView] = useState('tracker'); // 'tracker' list | 'pick' a direct estimate
   const [estimates, setEstimates] = useState([]);
@@ -111,7 +124,7 @@ const FPMarketingTracker = ({ user }) => {
     setLoading(true);
     setLoadError('');
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/tracker`, fpId), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
@@ -125,9 +138,9 @@ const FPMarketingTracker = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, apiPath, fpId]);
 
-  useEffect(() => { if (!isFPManager) loadEstimates(); }, [isFPManager, loadEstimates]);
+  useEffect(() => { if (!unavailable) loadEstimates(); }, [unavailable, loadEstimates]);
 
   const trackedEstimates = estimates.filter(e => e.tracked_at);
   const untrackedEstimates = estimates.filter(e => !e.tracked_at);
@@ -190,7 +203,7 @@ const FPMarketingTracker = ({ user }) => {
     }
     setSavingRowId(est.id);
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/tracker/${est.id}`, fpId), {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -220,7 +233,7 @@ const FPMarketingTracker = ({ user }) => {
   const archiveRow = async (est) => {
     setArchiveTarget(null);
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${est.id}/archive`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/tracker/${est.id}/archive`, fpId), {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -256,7 +269,7 @@ const FPMarketingTracker = ({ user }) => {
     setSaving(true);
     setFormError('');
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/tracker/${editing.id}`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/tracker/${editing.id}`, fpId), {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -311,7 +324,7 @@ const FPMarketingTracker = ({ user }) => {
     </div>
   );
 
-  if (isFPManager) {
+  if (unavailable) {
     return (
       <div className="p-6">
         <div className="bg-white rounded-xl border border-warm-border shadow-warm p-10 text-center">
@@ -391,6 +404,9 @@ const FPMarketingTracker = ({ user }) => {
                   <thead>
                     <tr className="border-b border-warm-border bg-warm-section">
                       <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
+                      {/* On the admin portal the list carries several franchises at once, so the
+                          row has to say which one it belongs to. */}
+                      {showPartner && <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                       <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Customer</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
@@ -405,6 +421,7 @@ const FPMarketingTracker = ({ user }) => {
                         className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
                       >
                         <td className="py-3 px-3 font-medium text-warm-text">{est.estimate_id}</td>
+                        {showPartner && <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}
                         <td className="py-3 px-3">
                           <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                           <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
@@ -458,6 +475,7 @@ const FPMarketingTracker = ({ user }) => {
                 <thead>
                   <tr className="border-b border-warm-border bg-warm-section">
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
+                    {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit / Executive</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Amount</th>
@@ -484,6 +502,7 @@ const FPMarketingTracker = ({ user }) => {
                       title="Click to edit"
                     >
                       <td className="py-2 px-2 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
+                      {showPartner && <td className="py-2 px-2 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}
                       <td className="py-2 px-2">
                         <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                         <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
@@ -959,4 +978,4 @@ const FPMarketingTracker = ({ user }) => {
   );
 };
 
-export default FPMarketingTracker;
+export default MarketingTracker;

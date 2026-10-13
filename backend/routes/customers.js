@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
+const { issueActivation } = require('../utils/customerActivation');
 // Rate limiting for login and password reset endpoints
 const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../middleware/security');
 const {
@@ -1207,37 +1208,15 @@ router.post('/resend-activation', async (req, res) => {
       });
     }
 
-    // Generate new credentials
-    const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
-    const activationToken = generateActivationToken();
-    const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-
-    await pool.execute(
-      `UPDATE customer_accounts 
-       SET temp_password_hash = ?, 
-           activation_token = ?, 
-           activation_expires = ?,
-           updated_at = NOW()
-       WHERE id = ?`,
-      [tempPasswordHash, activationToken, activationExpires, customer.id]
-    );
-
-    // Send activation email
-    const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-    const emailResult = await sendCustomerActivationEmail({
-      email: customer.email,
-      firstName: customer.first_name,
-      tempPassword,
-      activationLink,
-      propertyName: customer.property_name
-    });
+    // One implementation of "issue a token, hash the temporary password, email the link", shared
+    // with the admin portal's Customers list -- utils/customerActivation.js.
+    const { emailSent } = await issueActivation(pool, customer);
 
     res.json({
       success: true,
       message: 'Activation email has been resent',
       data: {
-        emailSent: emailResult.success
+        emailSent
       }
     });
 

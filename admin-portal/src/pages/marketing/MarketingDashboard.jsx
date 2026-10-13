@@ -6,13 +6,15 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, AreaChart, Area, Line, LabelList
 } from 'recharts';
-import { getAuthToken } from '../utils/safeStorage';
-import EmptyState from '../components/common/EmptyState';
+import { getAuthToken } from '../../utils/safeStorage';
+import EmptyState from '../../components/common/EmptyState';
+import { useFP } from '../../contexts/FPContext';
+import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
 import {
   MARKETING_PHASE_COLORS, MARKETING_PRIORITY_COLORS,
   MARKETING_LEAD_STATUS_COLORS, MARKETING_OWNER_COLORS,
   MARKETING_CATEGORICAL
-} from '../utils/chartColors';
+} from '../../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -149,9 +151,18 @@ const NoData = ({ height = 240, note = 'Nothing tracked yet' }) => (
   </div>
 );
 
-const FPMarketingDashboard = ({ user }) => {
+// Shared by the FP, admin and Ops Manager portals; `portalType` picks the API prefix and, for the
+// admin, the partner the figures are narrowed to. See utils/marketingApi.js.
+const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
-  const isFPManager = user?.role === 'manager';
+  const apiPath = getMarketingApiPath(portalType);
+  const { selectedFp } = useFP();
+  const fpId = marketingFpId(portalType, selectedFp);
+  // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
+  // manager is refused there. These same screens are the Ops Manager portal's own Marketing
+  // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
+  // not the role on its own.
+  const unavailable = portalType === 'franchise' && user?.role === 'manager';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -162,7 +173,7 @@ const FPMarketingDashboard = ({ user }) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     setLoadError('');
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/dashboard`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/dashboard`, fpId), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
@@ -174,9 +185,9 @@ const FPMarketingDashboard = ({ user }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, apiPath, fpId]);
 
-  useEffect(() => { if (!isFPManager) loadDashboard(false); }, [isFPManager, loadDashboard]);
+  useEffect(() => { if (!unavailable) loadDashboard(false); }, [unavailable, loadDashboard]);
 
   // Charts want colours and labels attached; the API deliberately returns raw names and codes.
   const charts = useMemo(() => {
@@ -211,7 +222,7 @@ const FPMarketingDashboard = ({ user }) => {
     };
   }, [data]);
 
-  if (isFPManager) {
+  if (unavailable) {
     return (
       <div className="p-6">
         <div className="bg-white rounded-xl border border-warm-border shadow-warm p-10 text-center">
@@ -449,4 +460,4 @@ const FPMarketingDashboard = ({ user }) => {
   );
 };
 
-export default FPMarketingDashboard;
+export default MarketingDashboard;

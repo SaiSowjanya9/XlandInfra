@@ -296,15 +296,15 @@ test('an escaped lead status still counts', () => {
 });
 
 test('the route and the dashboard share one set of tracker options', () => {
-  // franchisePartner.js composes TRACKER_OPTIONS from these exports; if a stage is added to the
+  // routes/marketing.js composes TRACKER_OPTIONS from these exports; if a stage is added to the
   // route by hand instead, the dashboard stops charting it. Read the file rather than requiring
   // it, which would pull in the database pool.
   const fs = require('node:fs');
   const path = require('node:path');
-  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'franchisePartner.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'marketing.js'), 'utf8');
 
   assert.match(source, /require\('\.\.\/utils\/marketingDashboard'\)/,
-    'franchisePartner.js must import the shared option lists');
+    'routes/marketing.js must import the shared option lists');
   for (const [name, list] of Object.entries({
     LEAD_SOURCES, PRIORITIES, CUSTOMER_DECISIONS, TRACKER_STATUSES, FOLLOW_UP_STAGES
   })) {

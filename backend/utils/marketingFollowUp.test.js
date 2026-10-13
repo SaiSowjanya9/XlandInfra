@@ -171,7 +171,7 @@ test('the tracker list derives the response rather than storing it', () => {
   // to resolve it on every read, the same way it resolves the tracker status.
   const fs = require('node:fs');
   const path = require('node:path');
-  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'franchisePartner.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'marketing.js'), 'utf8');
   assert.match(source, /customer_response: effectiveCustomerResponse\(row\.status, row\.customer_response\)/,
     'presentTrackerRow must derive customer_response from the estimate status');
 });
@@ -182,7 +182,7 @@ test('the tracker PUT validates options on the decoded value', () => {
   // silently stops saving. The route must decode before it compares, and store the escaped form.
   const fs = require('node:fs');
   const path = require('node:path');
-  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'franchisePartner.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'routes', 'marketing.js'), 'utf8');
 
   assert.match(source, /const decoded = decodeEntities\(String\(value\)\)\.trim\(\);/,
     'the option loop must decode the submitted value');

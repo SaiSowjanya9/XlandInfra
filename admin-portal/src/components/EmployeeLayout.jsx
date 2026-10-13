@@ -41,6 +41,8 @@ import {
   RefreshCcw,
   Ban,
   FileWarning,
+  Megaphone,
+  Target,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
@@ -101,6 +103,9 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
+    // The FP portal reaches its customer list only from inside the Add Customer screen, which is
+    // how it stayed unnoticed there; here it gets its own entry.
+    { path: '/employee/customers', icon: Users, label: 'Customers' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
@@ -137,6 +142,10 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
   const [schedulesOpen, setSchedulesOpen] = useState(
     location.pathname.startsWith('/employee/schedules')
+  );
+
+  const [marketingOpen, setMarketingOpen] = useState(
+    location.pathname.startsWith('/employee/marketing')
   );
 
   // Estimates sub-items - Create Estimate hidden for Ops Manager
@@ -193,15 +202,25 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     { path: '/employee/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
+  // Marketing sub-items - the same four screens the FP portal has, over every partner's leads.
+  // The Operations Manager reads them; the shared router refuses its writes.
+  const marketingSubItems = [
+    { path: '/employee/marketing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/employee/marketing/tracker', icon: Target, label: 'Tracker' },
+    { path: '/employee/marketing/complaint-form', icon: FileWarning, label: 'Complaint Form' },
+    { path: '/employee/marketing/archived', icon: Archive, label: 'Archived' },
+  ];
+
   const isBillingPaymentsSectionActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/billing');
   const isSchedulesSectionActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/schedules');
+  const isMarketingSectionActive = marketingSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/employee/marketing');
   
   // Accordion toggle functions - close other sections when opening one
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       const opening = !workOrdersOpen;
       setWorkOrdersOpen(opening);
-      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -209,7 +228,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !vendorOpen;
       setVendorOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -217,7 +236,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !employeeOpen;
       setEmployeeOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -225,7 +244,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !estimatesOpen;
       setEstimatesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -233,7 +252,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !billingPaymentsOpen;
       setBillingPaymentsOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setSchedulesOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setSchedulesOpen(false); setMarketingOpen(false); }
     }
   };
 
@@ -241,7 +260,15 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     if (!sidebarCollapsed) {
       const opening = !schedulesOpen;
       setSchedulesOpen(opening);
-      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); }
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setMarketingOpen(false); }
+    }
+  };
+
+  const toggleMarketing = () => {
+    if (!sidebarCollapsed) {
+      const opening = !marketingOpen;
+      setMarketingOpen(opening);
+      if (opening) { setWorkOrdersOpen(false); setVendorOpen(false); setEmployeeOpen(false); setEstimatesOpen(false); setBillingPaymentsOpen(false); setSchedulesOpen(false); }
     }
   };
 
@@ -261,7 +288,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen || schedulesOpen;
+  const isAnyDropdownOpen = workOrdersOpen || vendorOpen || employeeOpen || estimatesOpen || billingPaymentsOpen || schedulesOpen || marketingOpen;
 
   const NavLink = ({ item, mobile = false, isSubItem = false }) => {
     const Icon = item.icon;
@@ -278,6 +305,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
         setEstimatesOpen(false);
         setBillingPaymentsOpen(false);
         setSchedulesOpen(false);
+        setMarketingOpen(false);
       }
 
       if (safeStorage.getItem('formDirty') === 'true') {
@@ -368,6 +396,8 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {/* Dashboard only */}
             <NavLink item={{ path: '/employee', icon: LayoutDashboard, label: 'Dashboard' }} mobile />
+
+            <NavLink item={{ path: '/employee/customers', icon: Users, label: 'Customers' }} mobile />
 
             <NavLink item={{ path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' }} mobile />
 
@@ -596,8 +626,48 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
               )}
             </div>
 
-            {/* Admin extras outside the shared order (User Management, QR Management) */}
-            {navItems.filter(item => item.path !== '/employee' && item.path !== '/employee/create-customer').map((item) => (
+            {/* Marketing Section - last, as in the FP portal */}
+            <div className="mt-1">
+              <button
+                onClick={toggleMarketing}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!marketingOpen && !(isMarketingSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!marketingOpen && !(isMarketingSectionActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Marketing' : ''}
+              >
+                <div className={`flex items-center flex-1 min-w-0 ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Megaphone className="w-5 h-5 flex-shrink-0" style={{ color: (marketingOpen || (isMarketingSectionActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm truncate">Marketing</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ml-2 ${
+                    marketingOpen ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        marketingOpen ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: marketingOpen ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {marketingOpen && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3" >
+                  {marketingSubItems.map((item) => (
+                    <NavLink key={item.path} item={item} mobile isSubItem />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Admin extras outside the shared order (User Management, QR Management). The items
+                rendered in their own place above are excluded, or they would appear twice. */}
+            {navItems.filter(item => !['/employee', '/employee/customers', '/employee/create-customer'].includes(item.path)).map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
 
