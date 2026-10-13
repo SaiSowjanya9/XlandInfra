@@ -485,6 +485,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Updated By</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -664,6 +665,22 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             </span>
                           );
                         })()}
+                      </td>
+                      {/* Written by the server from the caller's token on every tracker write,
+                          so it names whoever actually made the last change -- including an
+                          archive -- rather than whoever the row was created by. */}
+                      <td className="py-2 px-2 whitespace-nowrap">
+                        {est.tracker_updated_by ? (
+                          <>
+                            <div className="text-warm-text">{decodeEntities(est.tracker_updated_by)}</div>
+                            <div className="text-[11px] text-warm-muted">
+                              {[est.tracker_updated_by_role_label, formatDate(est.tracker_updated_at, '')]
+                                .filter(Boolean).join(' · ')}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-warm-muted">-</span>
+                        )}
                       </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>

@@ -84,16 +84,25 @@ const validComplaint = {
 const startServer = async (t) => {
   const app = express();
   app.use(express.json());
+  // Stands in for the authenticate middleware each real mount sits behind, so a test can say who
+  // is making the request -- the tracker records the caller from req.user, never from the body.
+  app.use((req, res, next) => {
+    if (req.headers['x-test-user']) req.user = JSON.parse(req.headers['x-test-user']);
+    next();
+  });
   for (const [name, resolveScope] of Object.entries(scopes)) {
     app.use(`/${name}/marketing`, createMarketingRouter({ resolveScope }));
   }
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
-  return async (path, method = 'GET', body) => {
+  return async (path, method = 'GET', body, user) => {
     const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(user ? { 'x-test-user': JSON.stringify(user) } : {})
+      },
       ...(body ? { body: JSON.stringify(body) } : {})
     });
     return { status: response.status, ...(await response.json()) };
@@ -332,4 +341,68 @@ test('no marketing query binds LIMIT', async (t) => {
   // to mysqld_stmt_execute" -- which surfaces as a 500 or, where the error is swallowed, as a
   // permanently empty list.
   for (const call of calls) assert.doesNotMatch(call.sql, /LIMIT \?/);
+});
+
+test('every tracker write records who made it, from the token and not the body', async (t) => {
+  const request = await startServer(t);
+  const admin = { id: 3, role: 'admin', firstName: 'Bhavani', lastName: 'Rao', username: 'bhavani' };
+
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', {
+    ...validTracker,
+    // A caller naming somebody else must be ignored: a field the client can set is worth nothing
+    // as a record of who changed the row.
+    tracker_updated_by: 'Somebody Else',
+    tracker_updated_by_role: 'super_admin',
+    tracker_updated_at: '2020-01-01'
+  }, admin);
+
+  const update = lastCall('UPDATE fp_estimates SET');
+  assert.match(update.sql, /tracker_updated_by = \?, tracker_updated_by_role = \?, tracker_updated_at = NOW\(\)/);
+  assert.ok(update.params.includes('Bhavani Rao'), 'the name comes from the token');
+  assert.ok(update.params.includes('admin'), 'and so does the role');
+  assert.ok(!update.params.includes('Somebody Else'), 'the body cannot name the editor');
+  assert.ok(!update.params.includes('super_admin'), 'nor their role');
+  // The timestamp is the server's NOW(), so it is never a bound parameter.
+  assert.ok(!update.params.includes('2020-01-01'));
+});
+
+test('a caller with no name is still identified', async (t) => {
+  const request = await startServer(t);
+
+  // The manager login signs { id, username, email, role, managerId } -- no first or last name --
+  // so the username is the identity, and a row must never be left claiming nobody edited it.
+  calls.length = 0;
+  await request('/manager/marketing/tracker/31', 'PUT', validTracker,
+    { id: 5, role: 'manager', username: 'north.manager', email: 'north@example.com' });
+  assert.ok(lastCall('UPDATE fp_estimates SET').params.includes('north.manager'));
+
+  calls.length = 0;
+  await request('/fp/marketing/tracker/31', 'PUT', validTracker, { id: 8, role: 'franchise_partner' });
+  assert.ok(lastCall('UPDATE fp_estimates SET').params.includes('Unknown user'));
+});
+
+test('archiving and restoring a row are changes too, and name their editor', async (t) => {
+  const request = await startServer(t);
+  const user = { id: 3, role: 'operations_manager', firstName: 'Asha', lastName: 'K' };
+
+  for (const action of ['archive', 'unarchive']) {
+    calls.length = 0;
+    await request(`/admin/marketing/tracker/31/${action}`, 'PUT', undefined, user);
+    const update = lastCall('UPDATE fp_estimates SET tracker_archived_at');
+    assert.match(update.sql, /tracker_updated_by = \?/, action);
+    assert.deepEqual(update.params.slice(0, 2), ['Asha K', 'operations_manager'], action);
+  }
+});
+
+test('the row carries a readable role label, so the portal needs no copy of the role names', async (t) => {
+  const { presentTrackerRow } = require('./marketing');
+  assert.equal(
+    presentTrackerRow({ ...trackerRow, tracker_updated_by: 'Asha K', tracker_updated_by_role: 'operations_manager' })
+      .tracker_updated_by_role_label,
+    'Operations Manager'
+  );
+  // An unknown code is shown as it is rather than hidden, and no role at all reads as nothing.
+  assert.equal(presentTrackerRow({ ...trackerRow, tracker_updated_by_role: 'new_role' }).tracker_updated_by_role_label, 'new_role');
+  assert.equal(presentTrackerRow(trackerRow).tracker_updated_by_role_label, '');
 });

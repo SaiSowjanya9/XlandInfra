@@ -302,8 +302,25 @@ nothing here may be applied globally.
   `portalType === 'franchise' && role === 'manager'` — the portal, not the role alone.
 - **The read-only Complaints inbox asks for `?includeArchived=true`.** It is one list with no
   Archived tab beside it, so filtering archived rows out would simply lose them.
+- **The tracker's Last Updated By column is written by the server, never by the client.** Every
+  tracker write — the inline field edit and both archive actions — stamps
+  `tracker_updated_by` / `tracker_updated_by_role` / `tracker_updated_at` from `req.user`
+  (`schema_v49_marketing_tracker_actor.sql`). A `tracker_updated_by` in the request body is
+  ignored: a field the caller can set is worth nothing as a record of who changed the row.
+  `fp_estimates.updated_at` is *not* this — it is the estimate's own column and moves for reasons
+  unrelated to the tracker, which is why the tracker keeps its own timestamp.
+- **The three portals' tokens disagree about names.** The FP's and an admin's carry
+  `firstName`/`lastName`, but the manager login signs only `{ id, username, email, role,
+  managerId, ... }`, so `trackerActor` falls back username → email → `Unknown user`. It never
+  returns blank: a row that changed under somebody has to name someone. The **name** is stored
+  rather than a user id because the portals authenticate against different tables
+  (`users`, `franchise_partners`, `fp_employees`), so there is no single id to point at.
+- The role is stored as its code and the readable label is resolved server-side into
+  `tracker_updated_by_role_label`, because `config/roles.js` is CommonJS and the browser cannot
+  import it — otherwise the portal would carry a fourth copy of the role names to keep in step.
 - Regression test: `node --test backend/routes/marketing.test.js` (scope isolation per portal,
-  refused writes, no bound `LIMIT`) and `node --test admin-portal/src/utils/marketingApi.test.js`.
+  refused writes, the recorded editor, no bound `LIMIT`) and
+  `node --test admin-portal/src/utils/marketingApi.test.js`.
 - The guard tests in `utils/marketingDashboard.test.js` and `utils/marketingFollowUp.test.js` read
   **`routes/marketing.js`** now. If the marketing code moves again, repoint them.
 
