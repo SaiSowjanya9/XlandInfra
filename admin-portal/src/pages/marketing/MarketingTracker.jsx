@@ -473,7 +473,10 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit / Executive</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Amount</th>
+                    {/* The estimate amount is not a column: the table is already wide enough to
+                        scroll sideways, and the figure is not something the tracker is read for.
+                        It is on the row's own view -- clicking the row opens it as Estimate
+                        Amount, beside the rest of the estimate's details. */}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead / Priority</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Proposal / Decision</th>
@@ -507,7 +510,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         <div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div>
                         <div className="text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</div>
                       </td>
-                      <td className="py-2 px-2 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
                       {/* Estimate Status is inline-editable, except at the ends of the pipeline where
                           the estimate's own status (sent/approved/rejected) drives it. */}
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
