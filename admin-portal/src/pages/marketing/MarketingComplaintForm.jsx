@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2 } from 'lucide-react';
-import { getAuthToken } from '../utils/safeStorage';
-import { decodeEntities } from '../utils/text';
-import EmptyState from '../components/common/EmptyState';
+import { getAuthToken } from '../../utils/safeStorage';
+import { decodeEntities } from '../../utils/text';
+import EmptyState from '../../components/common/EmptyState';
+import { useFP } from '../../contexts/FPContext';
+import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint } from '../../utils/marketingApi';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -37,9 +39,23 @@ const emptyComplaintForm = {
   comments: '',
 };
 
-const FPMarketingComplaintForm = ({ user }) => {
+// Shared by the FP, admin and Ops Manager portals; `portalType` picks the API prefix and, for the
+// admin, the partner a complaint is filed against. See utils/marketingApi.js.
+const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   const token = getAuthToken();
-  const isFPManager = user?.role === 'manager';
+  const apiPath = getMarketingApiPath(portalType);
+  const { selectedFp } = useFP();
+  const fpId = marketingFpId(portalType, selectedFp);
+  const showPartner = apiPath === 'admin';
+  // A complaint is owned by exactly one partner, so an admin looking at every partner has to pick
+  // one before the form can be saved -- the server answers 400 without it, and a Save that cannot
+  // succeed is worse than a button that says why.
+  const canCreate = canLogComplaint(portalType, selectedFp);
+  // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
+  // manager is refused there. These same screens are the Ops Manager portal's own Marketing
+  // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
+  // not the role on its own.
+  const unavailable = portalType === 'franchise' && user?.role === 'manager';
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +78,7 @@ const FPMarketingComplaintForm = ({ user }) => {
     setLoading(true);
     setLoadError('');
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/complaints`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/complaints`, fpId), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
@@ -76,21 +92,22 @@ const FPMarketingComplaintForm = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, apiPath, fpId]);
 
-  // The Property ID box matches against the FP's onboarded properties (same list FPEstimates uses).
+  // The Property ID box matches against the onboarded properties this portal can see (the same
+  // list its estimate screens use), so the suggestions follow the caller's own scope.
   const loadProperties = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/fp/properties`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/properties`, fpId), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
       if (result.success) setProperties(Array.isArray(result.data) ? result.data : []);
     } catch (e) { /* suggestions just stay empty */ }
-  }, [token]);
+  }, [token, apiPath, fpId]);
 
-  useEffect(() => { if (!isFPManager) loadComplaints(); }, [isFPManager, loadComplaints]);
-  useEffect(() => { if (!isFPManager) loadProperties(); }, [isFPManager, loadProperties]);
+  useEffect(() => { if (!unavailable) loadComplaints(); }, [unavailable, loadComplaints]);
+  useEffect(() => { if (!unavailable) loadProperties(); }, [unavailable, loadProperties]);
 
   // A property's zone rides under three names depending on how the record was saved.
   const zoneOf = (p) => decodeEntities(p?.zone_name || p?.zoneName || p?.zone || '');
@@ -171,9 +188,9 @@ const FPMarketingComplaintForm = ({ user }) => {
     setFormError('');
     try {
       const editing = modal.mode === 'edit';
-      const res = await fetch(editing
-        ? `${API_BASE}/api/fp/marketing/complaints/${modal.row.id}`
-        : `${API_BASE}/api/fp/marketing/complaints`, {
+      const res = await fetch(withMarketingFp(editing
+        ? `${API_BASE}/api/${apiPath}/marketing/complaints/${modal.row.id}`
+        : `${API_BASE}/api/${apiPath}/marketing/complaints`, fpId), {
         method: editing ? 'PUT' : 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -197,7 +214,7 @@ const FPMarketingComplaintForm = ({ user }) => {
   const archiveRow = async (row) => {
     setArchiveTarget(null);
     try {
-      const res = await fetch(`${API_BASE}/api/fp/marketing/complaints/${row.id}/archive`, {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/complaints/${row.id}/archive`, fpId), {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -217,7 +234,7 @@ const FPMarketingComplaintForm = ({ user }) => {
   const labelCls = 'block text-xs font-medium text-warm-muted mb-1.5';
   const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-warm-border rounded-[10px] text-sm leading-6 text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
 
-  if (isFPManager) {
+  if (unavailable) {
     return (
       <div className="p-6">
         <div className="bg-white rounded-xl border border-warm-border shadow-warm p-10 text-center">
@@ -243,7 +260,9 @@ const FPMarketingComplaintForm = ({ user }) => {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0"
+          disabled={!canCreate}
+          title={canCreate ? undefined : 'Select a franchise partner to log a complaint against'}
+          className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#B5812A]"
         >
           <Plus className="w-4 h-4" /> New Complaint
         </button>
@@ -284,6 +303,9 @@ const FPMarketingComplaintForm = ({ user }) => {
               <thead>
                 <tr className="border-b border-warm-border bg-warm-section">
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Property ID</th>
+                  {/* On the admin portal the list carries several franchises at once, so the row
+                      has to say which one the complaint belongs to. */}
+                  {showPartner && <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Zone</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Responsible Person</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Concern</th>
@@ -302,6 +324,7 @@ const FPMarketingComplaintForm = ({ user }) => {
                     title="Click to view"
                   >
                     <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
+                    {showPartner && <td className="py-3 px-4 text-warm-muted">{decodeEntities(row.franchise_partner_name) || '-'}</td>}
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
@@ -549,4 +572,4 @@ const FPMarketingComplaintForm = ({ user }) => {
   );
 };
 
-export default FPMarketingComplaintForm;
+export default MarketingComplaintForm;

@@ -12,6 +12,7 @@ import FPLayout from './components/FPLayout';
 import Dashboard from './pages/Dashboard';
 import CustomerSubmissions from './pages/CustomerSubmissions';
 import CreateCustomer from './pages/CreateCustomer';
+import AdminCustomers from './pages/AdminCustomers';
 
 import WorkOrders from './pages/WorkOrders';
 import EmployeeWorkOrders from './pages/EmployeeWorkOrders';
@@ -33,11 +34,15 @@ import FPEditEmployee from './pages/FPEditEmployee';
 import FPEmployeeZones from './pages/FPEmployeeZones';
 import FPEstimates from './pages/FPEstimates';
 import FPCustomers from './pages/FPCustomers';
-import FPMarketingDashboard from './pages/FPMarketingDashboard';
-import FPMarketingTracker from './pages/FPMarketingTracker';
-import FPMarketingComplaintForm from './pages/FPMarketingComplaintForm';
 import ComplaintsInbox from './pages/ComplaintsInbox';
-import FPMarketingArchived from './pages/FPMarketingArchived';
+
+// Marketing is one set of screens for three portals -- the FP portal, the admin portal and the
+// Ops Manager portal all render these, with `portalType` choosing the API prefix and, for the
+// admin, the franchise partner the rows are narrowed to (src/utils/marketingApi.js).
+import MarketingDashboard from './pages/marketing/MarketingDashboard';
+import MarketingTracker from './pages/marketing/MarketingTracker';
+import MarketingComplaintForm from './pages/marketing/MarketingComplaintForm';
+import MarketingArchived from './pages/marketing/MarketingArchived';
 
 import ManagerLogin from './pages/ManagerLogin';
 import ManagerLayout from './components/ManagerLayout';
@@ -363,7 +368,9 @@ function App() {
                 <EmployeeLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="customer-submissions" element={<CustomerSubmissions />} />
-                    <Route path="complaints" element={<ComplaintsInbox endpoint="/api/admin/marketing/complaints" showPartner />} />
+                    {/* The inbox is one list with no Archived tab beside it, so it asks for the
+                        archived complaints too and shows them last. */}
+                    <Route path="complaints" element={<ComplaintsInbox endpoint="/api/admin/marketing/complaints?includeArchived=true" showPartner />} />
                     <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="employee" />} />
                     <Route path="work-orders" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/pending" element={<EmployeeWorkOrders admin={user} />} />
@@ -372,6 +379,9 @@ function App() {
                     <Route path="work-orders/completed" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/closed" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/cancelled" element={<EmployeeWorkOrders admin={user} />} />
+                    {/* The FP portal's Customers section, over every partner. Add Customer is the
+                        existing screen, so the list links to it rather than carrying a copy. */}
+                    <Route path="customers" element={<AdminCustomers />} />
                     <Route path="create-customer" element={<CreateCustomer admin={user} />} />
                     <Route path="add-vendor" element={<AddVendor admin={user} />} />
                     <Route path="vendor-details" element={<VendorDetails />} />
@@ -407,6 +417,14 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/employee/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="admin" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="admin" />} />
+                    {/* Marketing: the FP screens over every partner's leads at once, narrowed by
+                        the FP picker. The Operations Manager reads them but cannot write -- the
+                        shared router refuses its writes, not just the hidden buttons. */}
+                    <Route path="marketing/dashboard" element={<MarketingDashboard user={user} portalType="admin" />} />
+                    <Route path="marketing/tracker" element={<MarketingTracker user={user} portalType="admin" />} />
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="admin" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="admin" />} />
+                    <Route path="marketing" element={<Navigate to="/employee/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/employee" replace />} />
                   </Routes>
                 </EmployeeLayout>
@@ -500,12 +518,13 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/fp/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="franchise" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="franchise" />} />
-                    {/* Marketing: FP account only -- the sidebar hides it for FP Manager and the
-                        tracker API answers 403 to a manager token */}
-                    <Route path="marketing/dashboard" element={<FPMarketingDashboard user={user} />} />
-                    <Route path="marketing/tracker" element={<FPMarketingTracker user={user} />} />
-                    <Route path="marketing/complaint-form" element={<FPMarketingComplaintForm user={user} />} />
-                    <Route path="marketing/archived" element={<FPMarketingArchived user={user} />} />
+                    {/* Marketing: FP account only in this portal -- the sidebar hides it for FP
+                        Manager and the tracker API answers 403 to a manager token. The Ops
+                        Manager portal mounts the same screens for its own partner. */}
+                    <Route path="marketing/dashboard" element={<MarketingDashboard user={user} portalType="franchise" />} />
+                    <Route path="marketing/tracker" element={<MarketingTracker user={user} portalType="franchise" />} />
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="franchise" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="franchise" />} />
                     <Route path="marketing" element={<Navigate to="/fp/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/fp" replace />} />
                   </Routes>
@@ -568,6 +587,14 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/manager/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="manager" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="manager" />} />
+                    {/* Marketing: the same screens as the FP portal, over this manager's own
+                        partner and only within its assigned zones. A standalone manager has no
+                        partner behind the tracker, so the sidebar hides the section from it. */}
+                    <Route path="marketing/dashboard" element={<MarketingDashboard user={user} portalType="manager" />} />
+                    <Route path="marketing/tracker" element={<MarketingTracker user={user} portalType="manager" />} />
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="manager" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="manager" />} />
+                    <Route path="marketing" element={<Navigate to="/manager/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/manager" replace />} />
                   </Routes>
                 </ManagerLayout>

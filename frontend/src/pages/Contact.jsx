@@ -204,6 +204,12 @@ const Contact = () => {
                       className="w-4 h-4 border-gray-300 text-gold-600 focus:ring-gold-500/30 flex-shrink-0"
                     />
                     <span className="text-sm text-gray-900">{option === 'Other' ? 'Other:' : option}</span>
+                    {/* text-gray-900 and bg-white are not decoration on the box below: this
+                        portal's body text is #f1f5f9 on a near-black background (index.css), so a
+                        white field that does not set its own colour renders near-white text on
+                        white and what the customer types is invisible. Every other field on this
+                        form takes those from inputCls; this one is sized differently and so
+                        carries its own class list, which is how it was missed. */}
                     {option === 'Other' && concernWith === 'Other' && (
                       <input
                         type="text"
@@ -211,7 +217,7 @@ const Contact = () => {
                         onChange={(e) => setConcernOther(e.target.value)}
                         maxLength={255}
                         placeholder="Please specify"
-                        className="flex-1 h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20"
+                        className="flex-1 h-9 px-3 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20"
                       />
                     )}
                   </label>

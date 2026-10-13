@@ -269,6 +269,103 @@ nothing here may be applied globally.
 - Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
   are how a state is read at a glance, and the warm palette has a single accent.
 
+## Marketing Is One Router and One Set of Screens, Mounted Three Times
+
+- **`backend/routes/marketing.js` serves the FP, Admin and Ops Manager portals.** It used to live
+  inline in `franchisePartner.js`; the admin and manager portals had nothing but a read-only
+  complaints inbox. The file exports `createMarketingRouter({ resolveScope })` and each portal
+  mounts it: `/api/fp/marketing` (its own partner, FP account only), `/api/admin/marketing` (every
+  partner, narrowed with `?fpId=`) and `/api/manager/marketing` (its partner, within its assigned
+  zones). A change to a tracker field or a complaint rule therefore cannot reach one portal and
+  miss another.
+- **The mount decides what is visible; the router never asks the role.** `resolveScope(req)`
+  returns `fpIds` (`null` = every partner, `[]` = nothing), `writeFpId` (the partner a new
+  complaint belongs to), `zones` (`null` = unrestricted), `canWrite` and `withPartnerName`. It may
+  throw `{ status, message }` to refuse outright — that is how the FP mount keeps answering 403 to
+  an FP's own staff, and how a standalone manager (no partner behind the tracker) is refused.
+- **An empty `fpIds` or `zones` list must become `AND 1 = 0`, never an omitted filter.** `IN ()` is
+  not SQL, so the tempting shortcut is to skip the condition — which would show a zone manager
+  every lead its partner has.
+- **Writes are filtered by scope too.** The id in the URL is never trusted on its own: the `UPDATE`
+  carries the partner (and zone) filter, so a 404 is what a caller gets for someone else's row.
+- **`canWrite: false` is enforced here, not only in the sidebar.** That is what keeps the
+  Operations Manager read-only on the admin mount even if a screen forgets to hide its buttons.
+- **The four screens are shared too**: `admin-portal/src/pages/marketing/` with a `portalType`
+  prop (default `franchise`), resolved through `src/utils/marketingApi.js` —
+  `getMarketingApiPath`, `marketingFpId`, `withMarketingFp`, `canLogComplaint`. An unknown portal
+  falls back to the **FP** prefix, which is scoped by the caller's own token, never to `admin`.
+- **A complaint belongs to exactly one partner and the column is `NOT NULL`**, so the admin has to
+  pick one before the form can save; the server answers 400 rather than letting MySQL raise a 500,
+  and the New Complaint button stays disabled until a partner is selected.
+- **Marketing is hidden from an FP's own manager inside the FP portal, but the `/manager` portal
+  *is* that section for its own partner.** The guard is therefore
+  `portalType === 'franchise' && role === 'manager'` — the portal, not the role alone.
+- **The read-only Complaints inbox asks for `?includeArchived=true`.** It is one list with no
+  Archived tab beside it, so filtering archived rows out would simply lose them.
+- Regression test: `node --test backend/routes/marketing.test.js` (scope isolation per portal,
+  refused writes, no bound `LIMIT`) and `node --test admin-portal/src/utils/marketingApi.test.js`.
+- The guard tests in `utils/marketingDashboard.test.js` and `utils/marketingFollowUp.test.js` read
+  **`routes/marketing.js`** now. If the marketing code moves again, repoint them.
+
+## Franchise Partner Display Name Is Column-Drifted
+
+- **`franchise_partners` has `company_name` and `owner_name` everywhere, but `contact_person` only
+  on some deployments.** A hardcoded `COALESCE(fp.company_name, fp.owner_name, fp.contact_person)`
+  fails the entire statement with "Unknown column 'fp.contact_person' in 'field list'" — which is
+  how the admin Complaints inbox came to answer 500 on a database without it, reporting an error
+  where it should have reported complaints. Build the expression from the columns
+  `information_schema` actually reports (see `resolvePartnerNameExpression` in
+  `routes/marketing.js`), or stick to `company_name`.
+- A list that joins `franchise_partners` must **qualify its own columns**: both tables carry `id`,
+  `status` and `created_at`, so an unqualified select is ambiguous, not merely untidy. That is why
+  `trackerSelect(alias)` and `complaintSelect(prefix)` take a prefix.
+
+## A Blank Option Must Clear Its Own Free-Text Column
+
+- The tracker's `maintenance_system`, `proposal_given` and `customer_decision` each pair with a
+  `*_other` column. When the parent option arrives blank the loop sets the parent to `null` and
+  `continue`s — and used to leave the `*_other` key **undefined**. mysql2 refuses an undefined
+  bind ("Bind parameters must not contain undefined"), so saving a tracker row with no Current
+  Maintenance System answered 500 with nothing in the portal to explain it. Only the required pair
+  (`proposal_given`, `customer_decision`) failing validation first kept this rare.
+- Clear the paired column in the same branch. Regression test: *an option left blank clears its own
+  free-text column* in `backend/routes/marketing.test.js` asserts no bind parameter is `undefined`.
+
+## Admin Portal Zones, Customers and Schedules
+
+- **The admin portal's zones are `/api/admin/zones`, never `/api/fp/zones`.** `CreateCustomer.jsx`
+  called the FP route, which requires a franchise scope an admin has not got: the GET quietly
+  returned only the global zones (the FP route drops its other three sources into empty `catch`
+  blocks) and the POST answered 400 "Zone creation requires FP scope". The page's response was to
+  *skip saving for admins altogether*, so a zone typed into the box looked saved and was gone on
+  reload. `POST /api/admin/zones` and `DELETE /api/admin/zones/:id` write the global `zones` table;
+  a derived id (`fp-3`, `onboarded-North Zone`) is refused with a reason rather than silently
+  doing nothing.
+- **`is_active` and `is_activated` on `customer_accounts` are different things and the customer
+  login reads both**: `is_active = 0` is refused as "invalid email or password", while
+  `is_activated = 0` is told to use the activation link. So Disable/Enable controls access, and
+  Resend activation issues the link — never conflate them. The FP portal's own
+  `/customer-accounts/:id/activate` predates this: it writes a plaintext `temp_password` and a
+  `password_hash` directly and sends no email (its "TODO: Send activation email" is still there).
+- **`backend/utils/customerActivation.js` is the one implementation of "issue a token, hash the
+  temporary password, email the link"**, shared by the customer portal's own resend and the admin
+  Customers list. The temporary password is returned to the caller but never stored in clear text.
+- **`GET /api/admin/customers` reads `customer_accounts` once and coalesces both property tables.**
+  Selecting it once per property table — as the FP list does — lists a customer twice whenever ids
+  collide across `properties` and `onboarded_properties`.
+- **The admin schedule screens call `/api/admin/schedules/*`** via `getApiPath('admin')`. Five of
+  those endpoints did not exist, so the notification bell read no count and no list, the vendor
+  assignment modal 404ed on both its list and its save, and Rescheduled Requests could not restore
+  a visit. They are implemented in `admin.js` now, unscoped by design. `SchedulingCalendar.jsx` is
+  imported nowhere, so the bare `GET /api/admin/schedules` it would need was deliberately not added.
+- **`adminOnly` admits the Operations Manager**, which is right for reading. Writes added to
+  `admin.js` go through `adminWriteRoles` as well, because that role is view-only by policy — the
+  same rule the estimates and service-catalog routers already apply.
+- **A missing table is an empty list; every other failure is reported.** The manager's AMC package
+  and add-on lists turned *any* error into `{ success: true, data: [] }`, so a broken query read as
+  "no packages" with no way for the screen to say otherwise. Only `ER_NO_SUCH_TABLE` returns an
+  empty list now.
+
 ## Marketing Tracker Follow-Up Fields
 
 - **`backend/utils/marketingFollowUp.js` owns the workbook's follow-up columns**, and
@@ -312,7 +409,7 @@ nothing here may be applied globally.
 
 - **The tracker's option lists live in `backend/utils/marketingDashboard.js`, not in the route.**
   `LEAD_SOURCES`, `PRIORITIES`, `CUSTOMER_DECISIONS`, `TRACKER_STATUSES` and `FOLLOW_UP_STAGES` are
-  imported by `franchisePartner.js` to compose its `TRACKER_OPTIONS`, so a stage added once is
+  imported by `routes/marketing.js` to compose its `TRACKER_OPTIONS`, so a stage added once is
   accepted by `PUT /marketing/tracker/:id` *and* charted by the dashboard. They were declared in
   both files before, which is the same "keep in step" drift that bites elsewhere in this file.
   `node --test backend/utils/marketingDashboard.test.js` fails if the route re-declares them.

@@ -1,0 +1,335 @@
+/**
+ * The marketing router is mounted by three portals, so the thing worth testing is the scope: an
+ * FP must never see another partner's leads, a zone manager must never see a zone it was not
+ * assigned, and the view-only Operations Manager must be refused on the server and not merely in
+ * the sidebar. The assertions below read the SQL the router builds, because that is where a lost
+ * filter actually shows up -- a mock that silently returns the same rows for every caller would
+ * pass a test written against the response alone.
+ *
+ * Run: node --test backend/routes/marketing.test.js
+ */
+
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const express = require('express');
+
+const trackerRow = {
+  id: 31, estimate_id: 'EST-1', client_name: 'Client', status: 'draft',
+  lead_status: 'Estimate Sent', last_contact_date: '2026-01-05', next_follow_up_date: '2026-01-09',
+  tracker_status: null, tracked_at: '2026-01-05 10:00:00', tracker_archived_at: null
+};
+const complaintRow = { id: 7, property_id: 'PROP-1', zone: 'North Zone', comments: 'Late visit' };
+
+const calls = [];
+const pool = {
+  execute: async (sql, params = []) => {
+    calls.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+    // The partner-name lookup asks which of the candidate columns this database actually has.
+    // This one is modelled on the real schema, which has company_name and owner_name but no
+    // contact_person -- naming that third column is what made the admin list answer 500.
+    if (sql.includes("table_name = 'franchise_partners'")) {
+      return [[{ column_name: 'company_name' }, { column_name: 'owner_name' }]];
+    }
+    // Both runtime backfills report the column/table as already present.
+    if (sql.includes('information_schema.columns')) return [[{ n: 1 }]];
+    if (sql.includes('information_schema.tables')) return [[{ n: 1 }]];
+    if (sql.includes('FROM fp_estimates')) return [[trackerRow]];
+    if (sql.startsWith('UPDATE fp_estimates')) return [{ affectedRows: 1 }];
+    if (sql.includes(`FROM ${COMPLAINT_TABLE}`)) return [[complaintRow]];
+    if (sql.startsWith(`INSERT INTO ${COMPLAINT_TABLE}`)) return [{ insertId: 7 }];
+    if (sql.startsWith(`UPDATE ${COMPLAINT_TABLE}`)) return [{ affectedRows: 1 }];
+    throw new Error(`Unexpected SQL: ${sql}`);
+  }
+};
+// Installed before anything that reaches for a connection: utils/marketingComplaints.js requires
+// config/database itself, so requiring it first would hand the real pool to the table backfill and
+// point this test at the local database.
+require.cache[require.resolve('../config/database')] = { exports: { pool } };
+
+const { COMPLAINT_TABLE } = require('../utils/marketingComplaints');
+const { createMarketingRouter } = require('./marketing');
+
+// The three real mounts, plus the view-only variant the Operations Manager gets.
+const scopes = {
+  fp: () => ({ fpIds: [8], writeFpId: 8, zones: null, canWrite: true, withPartnerName: false }),
+  admin: (req) => ({
+    fpIds: req.query.fpId ? [Number(req.query.fpId)] : null,
+    writeFpId: req.query.fpId ? Number(req.query.fpId) : (Number(req.body?.franchise_partner_id) || null),
+    zones: null,
+    canWrite: true,
+    withPartnerName: true
+  }),
+  manager: () => ({ fpIds: [8], writeFpId: 8, zones: ['North Zone', 'South Zone'], canWrite: true, withPartnerName: false }),
+  opsManager: () => ({ fpIds: null, writeFpId: null, zones: null, canWrite: false, withPartnerName: true }),
+  noZones: () => ({ fpIds: [8], writeFpId: 8, zones: [], canWrite: true, withPartnerName: false }),
+  refused: () => {
+    throw Object.assign(new Error('Marketing is available to the franchise partner account only.'), { status: 403 });
+  }
+};
+
+const validTracker = {
+  proposal_given: 'Yes',
+  customer_decision: 'Interested',
+  // middleware/security.js escapes every request string, so an option carrying a slash arrives
+  // like this. It must still be recognised, and stored exactly as it came.
+  last_contact_method: 'SMS&#x2F;Text'
+};
+
+const validComplaint = {
+  property_id: 'PROP-1', zone: 'North Zone', responsible_person: 'Ravi',
+  concern_with: 'Service Delay', contact_person_name: 'Asha',
+  phone_number: '9876543210', comments: 'The visit was late.'
+};
+
+const startServer = async (t) => {
+  const app = express();
+  app.use(express.json());
+  for (const [name, resolveScope] of Object.entries(scopes)) {
+    app.use(`/${name}/marketing`, createMarketingRouter({ resolveScope }));
+  }
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  return async (path, method = 'GET', body) => {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {})
+    });
+    return { status: response.status, ...(await response.json()) };
+  };
+};
+
+const lastCall = (fragment) => [...calls].reverse().find((call) => call.sql.includes(fragment));
+
+test('each portal reads only the rows its scope allows', async (t) => {
+  const request = await startServer(t);
+
+  // One partner's rows, bound -- never interpolated.
+  calls.length = 0;
+  assert.equal((await request('/fp/marketing/tracker')).status, 200);
+  let call = lastCall('FROM fp_estimates');
+  assert.match(call.sql, /franchise_partner_id IN \(\?\)/);
+  assert.deepEqual(call.params, [8]);
+  assert.doesNotMatch(call.sql, /franchise_partner_name/);
+
+  // Admin sees every partner, so there is no partner condition at all -- and the owning partner's
+  // name is joined in, which is what lets one list carry rows from several franchises.
+  calls.length = 0;
+  assert.equal((await request('/admin/marketing/tracker')).status, 200);
+  call = lastCall('FROM fp_estimates');
+  assert.doesNotMatch(call.sql, /franchise_partner_id IN/);
+  assert.match(call.sql, /franchise_partner_name/);
+  assert.match(call.sql, /LEFT JOIN franchise_partners/);
+  assert.deepEqual(call.params, []);
+  // Only the columns this database has are named. contact_person is absent here, and selecting it
+  // anyway is what failed the whole statement.
+  assert.match(call.sql, /COALESCE\(fpx\.company_name, fpx\.owner_name\)/);
+  assert.doesNotMatch(call.sql, /contact_person/);
+
+  // ?fpId= narrows the admin to one partner.
+  calls.length = 0;
+  await request('/admin/marketing/tracker?fpId=9');
+  assert.deepEqual(lastCall('FROM fp_estimates').params, [9]);
+
+  // A zone manager is held to its assigned zones as well as its partner.
+  calls.length = 0;
+  await request('/manager/marketing/tracker');
+  call = lastCall('FROM fp_estimates');
+  assert.match(call.sql, /franchise_partner_id IN \(\?\)/);
+  assert.match(call.sql, /zone IN \(\?,\?\)/);
+  assert.deepEqual(call.params, [8, 'North Zone', 'South Zone']);
+
+  // A manager with no zone assigned sees nothing. `IN ()` is not SQL, so an empty list has to be
+  // spelled as a condition that matches no row -- never as an omitted filter, which would show
+  // that manager every lead the partner has.
+  calls.length = 0;
+  await request('/noZones/marketing/tracker');
+  assert.match(lastCall('FROM fp_estimates').sql, /AND 1 = 0/);
+
+  // A scope may refuse the request outright; that is how the FP mount keeps answering 403 to an
+  // FP's own staff.
+  const refused = await request('/refused/marketing/tracker');
+  assert.equal(refused.status, 403);
+  assert.equal(refused.message, 'Marketing is available to the franchise partner account only.');
+});
+
+test('the dashboard, archived list and complaints carry the same scope', async (t) => {
+  const request = await startServer(t);
+
+  for (const path of ['/tracker/archived', '/dashboard']) {
+    calls.length = 0;
+    assert.equal((await request(`/manager/marketing${path}`)).status, 200, path);
+    const call = lastCall('FROM fp_estimates');
+    assert.match(call.sql, /franchise_partner_id IN \(\?\)/, path);
+    assert.match(call.sql, /zone IN \(\?,\?\)/, path);
+  }
+
+  for (const path of ['/complaints', '/complaints/archived']) {
+    calls.length = 0;
+    assert.equal((await request(`/manager/marketing${path}`)).status, 200, path);
+    const call = lastCall(`FROM ${COMPLAINT_TABLE}`);
+    assert.match(call.sql, /c\.franchise_partner_id IN \(\?\)/, path);
+    assert.match(call.sql, /c\.zone IN \(\?,\?\)/, path);
+  }
+
+  // The archived tab is the one place a row is read by its archive stamp rather than its id.
+  calls.length = 0;
+  await request('/fp/marketing/tracker/archived');
+  assert.match(lastCall('FROM fp_estimates').sql, /tracker_archived_at IS NOT NULL/);
+
+  // The Complaints inbox is one list with no Archived tab beside it, so it asks for the archived
+  // rows too and shows them last. Filtering them out would simply lose them.
+  calls.length = 0;
+  await request('/admin/marketing/complaints?includeArchived=true');
+  let call = lastCall(`FROM ${COMPLAINT_TABLE}`);
+  assert.doesNotMatch(call.sql, /archived_at IS NULL/);
+  assert.match(call.sql, /ORDER BY \(c\.archived_at IS NOT NULL\), c\.created_at DESC/);
+
+  // Marketing > Complaint Form pairs with /complaints/archived instead, so it leaves the flag off.
+  calls.length = 0;
+  await request('/admin/marketing/complaints');
+  call = lastCall(`FROM ${COMPLAINT_TABLE}`);
+  assert.match(call.sql, /c\.archived_at IS NULL/);
+});
+
+test('a write is filtered by scope too -- the id in the URL is never trusted alone', async (t) => {
+  const request = await startServer(t);
+
+  // The reply feeds the row straight back into the admin's list, so it has to carry the partner
+  // name as well -- without it the Franchise Partner cell blanked on every inline save.
+  calls.length = 0;
+  assert.equal((await request('/admin/marketing/tracker/31', 'PUT', validTracker)).status, 200);
+  assert.match(lastCall('FROM fp_estimates e LEFT JOIN').sql, /franchise_partner_name/);
+
+  calls.length = 0;
+  assert.equal((await request('/manager/marketing/tracker/31', 'PUT', validTracker)).status, 200);
+  const update = lastCall('UPDATE fp_estimates');
+  assert.match(update.sql, /franchise_partner_id IN \(\?\)/);
+  assert.match(update.sql, /zone IN \(\?,\?\)/);
+  // id first, then the scope's own parameters
+  assert.deepEqual(update.params.slice(-3), [8, 'North Zone', 'South Zone']);
+
+  for (const path of ['/tracker/31/archive', '/tracker/31/unarchive']) {
+    calls.length = 0;
+    assert.equal((await request(`/fp/marketing${path}`, 'PUT')).status, 200, path);
+    assert.match(lastCall('UPDATE fp_estimates').sql, /franchise_partner_id IN \(\?\)/, path);
+  }
+
+  for (const path of ['/complaints/7', '/complaints/7/archive', '/complaints/7/unarchive']) {
+    calls.length = 0;
+    const body = path === '/complaints/7' ? validComplaint : undefined;
+    assert.equal((await request(`/fp/marketing${path}`, 'PUT', body)).status, 200, path);
+    assert.match(lastCall(`UPDATE ${COMPLAINT_TABLE}`).sql, /franchise_partner_id IN \(\?\)/, path);
+  }
+
+  // A non-numeric id is refused before it reaches the database.
+  assert.equal((await request('/fp/marketing/tracker/abc', 'PUT', validTracker)).status, 400);
+  assert.equal((await request('/fp/marketing/complaints/abc', 'PUT', validComplaint)).status, 400);
+});
+
+test('the view-only Operations Manager may read but never write', async (t) => {
+  const request = await startServer(t);
+
+  assert.equal((await request('/opsManager/marketing/tracker')).status, 200);
+  assert.equal((await request('/opsManager/marketing/dashboard')).status, 200);
+  assert.equal((await request('/opsManager/marketing/complaints')).status, 200);
+
+  for (const [path, method, body] of [
+    ['/tracker/31', 'PUT', validTracker],
+    ['/tracker/31/archive', 'PUT'],
+    ['/tracker/31/unarchive', 'PUT'],
+    ['/complaints', 'POST', validComplaint],
+    ['/complaints/7', 'PUT', validComplaint],
+    ['/complaints/7/archive', 'PUT'],
+    ['/complaints/7/unarchive', 'PUT']
+  ]) {
+    const response = await request(`/opsManager/marketing${path}`, method, body);
+    assert.equal(response.status, 403, `${method} ${path}`);
+  }
+});
+
+test('a complaint is created against exactly one partner', async (t) => {
+  const request = await startServer(t);
+
+  calls.length = 0;
+  assert.equal((await request('/fp/marketing/complaints', 'POST', validComplaint)).status, 200);
+  assert.equal(lastCall(`INSERT INTO ${COMPLAINT_TABLE}`).params[0], 8);
+
+  // The column is NOT NULL, so an admin looking at every partner has to say which one owns the
+  // complaint. Left to MySQL this was an unexplained 500.
+  const missing = await request('/admin/marketing/complaints', 'POST', validComplaint);
+  assert.equal(missing.status, 400);
+  assert.equal(missing.message, 'Select the franchise partner this complaint belongs to.');
+
+  calls.length = 0;
+  assert.equal((await request('/admin/marketing/complaints?fpId=9', 'POST', validComplaint)).status, 200);
+  assert.equal(lastCall(`INSERT INTO ${COMPLAINT_TABLE}`).params[0], 9);
+
+  // Every field the form marks required is required here too.
+  const incomplete = await request('/fp/marketing/complaints', 'POST', { ...validComplaint, comments: '' });
+  assert.equal(incomplete.status, 400);
+  assert.match(incomplete.message, /Comments is required/);
+});
+
+test('tracker validation judges the decoded text, not the escaped request string', async (t) => {
+  const request = await startServer(t);
+
+  // 'SMS&#x2F;Text' is how 'SMS/Text' arrives; rejecting it would turn every option carrying a
+  // slash, apostrophe or ampersand into a 400 the portal cannot explain.
+  calls.length = 0;
+  assert.equal((await request('/fp/marketing/tracker/31', 'PUT', validTracker)).status, 200);
+  // Stored exactly as it came, so it is escaped once rather than twice.
+  assert.ok(lastCall('UPDATE fp_estimates').params.includes('SMS&#x2F;Text'));
+
+  const required = await request('/fp/marketing/tracker/31', 'PUT', {});
+  assert.equal(required.status, 400);
+  assert.match(required.message, /proposal_given is required/);
+  assert.match(required.message, /customer_decision is required/);
+
+  const badOption = await request('/fp/marketing/tracker/31', 'PUT', { ...validTracker, priority: 'Whenever' });
+  assert.equal(badOption.status, 400);
+  assert.match(badOption.message, /priority must be one of/);
+
+  // 'Other' has to carry its free text, or the option would hold typed input.
+  const other = await request('/fp/marketing/tracker/31', 'PUT', { ...validTracker, proposal_given: 'Other' });
+  assert.equal(other.status, 400);
+  assert.match(other.message, /proposal_given_other is required/);
+
+  // The dates stay editable, so anything that is not a calendar day is refused rather than stored
+  // as NULL and read back as "No Date".
+  const badDate = await request('/fp/marketing/tracker/31', 'PUT', { ...validTracker, next_follow_up_date: 'soon' });
+  assert.equal(badDate.status, 400);
+  assert.match(badDate.message, /next_follow_up_date must be a date/);
+});
+
+test('an option left blank clears its own free-text column', async (t) => {
+  const request = await startServer(t);
+
+  // Only the required pair is answered here, so Current Maintenance System is blank. Its
+  // maintenance_system_other used to be left undefined, and mysql2 refuses an undefined bind, so
+  // the save came back 500 with nothing in the portal to explain it.
+  calls.length = 0;
+  const saved = await request('/fp/marketing/tracker/31', 'PUT', validTracker);
+  assert.equal(saved.status, 200);
+  const update = lastCall('UPDATE fp_estimates');
+  for (const [index, value] of update.params.entries()) {
+    assert.notEqual(value, undefined, `bind parameter ${index} is undefined`);
+  }
+  // Blank parent, blank free text -- not a stale value left behind either.
+  assert.equal(update.params[2], null, 'maintenance_system');
+  assert.equal(update.params[3], null, 'maintenance_system_other');
+});
+
+test('no marketing query binds LIMIT', async (t) => {
+  const request = await startServer(t);
+
+  calls.length = 0;
+  for (const path of ['/tracker', '/tracker/archived', '/dashboard', '/complaints', '/complaints/archived']) {
+    await request(`/admin/marketing${path}`);
+  }
+  // pool.execute prepares its statement, and a prepared LIMIT ? fails with "Incorrect arguments
+  // to mysqld_stmt_execute" -- which surfaces as a 500 or, where the error is swallowed, as a
+  // permanently empty list.
+  for (const call of calls) assert.doesNotMatch(call.sql, /LIMIT \?/);
+});

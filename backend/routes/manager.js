@@ -61,9 +61,6 @@ const {
   getEmployeeIdForZoneLookup,
   getCreatorIdentifier
 } = require('../middleware/zoneHelper');
-const {
-  COMPLAINT_TABLE, COMPLAINT_SELECT, ensureMarketingComplaintsTable
-} = require('../utils/marketingComplaints');
 
 // ============================================
 // MANAGER AUTHENTICATION (Public - No Auth Required)
@@ -2832,8 +2829,15 @@ router.get('/amc-packages', requireManagerScope, async (req, res) => {
       );
       res.json({ success: true, data: packages.map(transformPackage) });
   } catch (error) {
-    // Silently return empty array for missing tables (standalone manager tables may not exist)
-    res.json({ success: true, data: [] });
+    // A standalone manager's own table may genuinely not exist yet, and an empty list is the
+    // right answer for that. Anything else is reported: turning every failure into
+    // `{ success: true, data: [] }` meant a broken query read as "no packages", and the screen
+    // had no way to say otherwise.
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ success: true, data: [] });
+    }
+    console.error('Get AMC packages error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch AMC packages', error: error.message });
   }
 });
 
@@ -2900,8 +2904,13 @@ router.get('/addons', requireManagerScope, async (req, res) => {
     );
     res.json({ success: true, data: addons.map(transformAddon) });
   } catch (error) {
-    // Silently return empty array for missing tables (standalone manager tables may not exist)
-    res.json({ success: true, data: [] });
+    // Same rule as the packages list above: a missing standalone table is an empty list, every
+    // other failure is reported rather than disguised as "none".
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ success: true, data: [] });
+    }
+    console.error('Get add-ons error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch add-ons', error: error.message });
   }
 });
 
@@ -3625,34 +3634,38 @@ router.put('/schedules/notifications/:notificationId/read', requireManagerScope,
   }
 });
 
-// Marketing complaints for this manager's FP, filtered to their assigned zones -- the same list
-// the FP sees under Marketing > Complaint Form, so a complaint a customer files from their portal
-// reaches the zone manager too. Read-only; the FP account owns edits and archiving.
-router.get('/marketing/complaints', requireManagerScope, async (req, res) => {
-  try {
-    await ensureMarketingComplaintsTable();
-    const employeeId = await getEmployeeIdForZoneLookup(req);
-    const creatorEmail = getCreatorIdentifier(req);
-    const rawZones = await getAssignedZones(employeeId, creatorEmail);
-    const unrestricted = rawZones.includes('__ALL__');
-    const zones = unrestricted ? [] : rawZones;
-    if (!unrestricted && zones.length === 0) {
-      return res.json({ success: true, data: [] });
-    }
-    let sql = `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE}
-               WHERE franchise_partner_id = ? AND archived_at IS NULL`;
-    const params = [req.franchisePartnerId];
-    if (!unrestricted) {
-      sql += ` AND zone IN (${zones.map(() => '?').join(',')})`;
-      params.push(...zones);
-    }
-    sql += ' ORDER BY created_at DESC';
-    const [rows] = await pool.execute(sql, params);
-    res.json({ success: true, data: rows });
-  } catch (error) {
-    console.error('Manager marketing complaints error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
+// ============================================
+// MARKETING (Dashboard, Tracker, Complaint Form, Archived)
+// ============================================
+//
+// The same router the FP and admin portals mount (routes/marketing.js). A manager works on its
+// own partner's rows, and only within the zones it was assigned -- the filter the complaints
+// inbox already applied, now covering the tracker and its writes as well, so Marketing cannot
+// become the one section that shows a zone manager a zone it does not hold.
+//
+// Only a manager created by a franchise partner gets the section: a standalone manager has no
+// partner behind the tracker, and the sidebar hides Marketing from it for the same reason.
+const { createMarketingRouter } = require('./marketing');
+
+const managerMarketingScope = async (req) => {
+  if (!req.isFPManager || !req.franchisePartnerId) {
+    throw Object.assign(new Error('Marketing is only available to managers under a franchise partner.'), { status: 403 });
   }
-});
+  const employeeId = await getEmployeeIdForZoneLookup(req);
+  const creatorEmail = getCreatorIdentifier(req);
+  const rawZones = await getAssignedZones(employeeId, creatorEmail);
+  // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty
+  // list means no zone was assigned, which the router turns into "no rows" rather than "no filter".
+  const unrestricted = rawZones.includes('__ALL__');
+  return {
+    fpIds: [req.franchisePartnerId],
+    writeFpId: req.franchisePartnerId,
+    zones: unrestricted ? null : rawZones,
+    canWrite: true,
+    withPartnerName: false
+  };
+};
+
+router.use('/marketing', requireManagerScope, createMarketingRouter({ resolveScope: managerMarketingScope }));
 
 module.exports = router;

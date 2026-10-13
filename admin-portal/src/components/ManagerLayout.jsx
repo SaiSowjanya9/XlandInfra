@@ -40,6 +40,8 @@ import {
   RefreshCcw,
   Ban,
   FileWarning,
+  Megaphone,
+  Target,
 } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 
@@ -217,11 +219,22 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/schedules/cancelled', icon: Ban, label: 'Cancelled Schedules' },
   ];
 
+  // Marketing sub-items - the same four screens the FP portal has, over this manager's own
+  // partner and its assigned zones. A standalone manager has no partner behind the tracker, so
+  // the section is not rendered for one at all.
+  const marketingSubItems = [
+    { path: '/manager/marketing/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/manager/marketing/tracker', icon: Target, label: 'Tracker' },
+    { path: '/manager/marketing/complaint-form', icon: FileWarning, label: 'Complaint Form' },
+    { path: '/manager/marketing/archived', icon: Archive, label: 'Archived' },
+  ];
+
   const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/work-orders');
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/manager/estimates';
   const isBillingPaymentsActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/billing');
   const isSchedulesActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/schedules');
+  const isMarketingActive = marketingSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/manager/marketing');
   
   // Color constants for sidebar
   const colors = {
@@ -244,46 +257,54 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
     if (isBillingPaymentsActive) setExpandedMenus(prev => ({ ...prev, billingPayments: true }));
     if (isSchedulesActive) setExpandedMenus(prev => ({ ...prev, schedules: true }));
+    if (isMarketingActive) setExpandedMenus(prev => ({ ...prev, marketing: true }));
   }, [location.pathname]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleWorkOrders = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.workOrders;
-      setExpandedMenus({ workOrders: opening, vendors: false, estimates: false, billingPayments: false, schedules: false });
+      setExpandedMenus({ workOrders: opening, vendors: false, estimates: false, billingPayments: false, schedules: false, marketing: false });
     }
   };
 
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ workOrders: false, vendors: opening, estimates: false, billingPayments: false, schedules: false });
+      setExpandedMenus({ workOrders: false, vendors: opening, estimates: false, billingPayments: false, schedules: false, marketing: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ workOrders: false, vendors: false, estimates: opening, billingPayments: false, schedules: false });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: opening, billingPayments: false, schedules: false, marketing: false });
     }
   };
 
   const toggleBillingPayments = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.billingPayments;
-      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: opening, schedules: false });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: opening, schedules: false, marketing: false });
     }
   };
 
   const toggleSchedules = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.schedules;
-      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: false, schedules: opening });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: false, schedules: opening, marketing: false });
+    }
+  };
+
+  const toggleMarketing = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.marketing;
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: false, schedules: false, marketing: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.workOrders || expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments || expandedMenus.schedules;
+  const isAnyDropdownOpen = expandedMenus.workOrders || expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments || expandedMenus.schedules || expandedMenus.marketing;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -292,7 +313,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: false, schedules: false });
+      setExpandedMenus({ workOrders: false, vendors: false, estimates: false, billingPayments: false, schedules: false, marketing: false });
     };
     return (
       <Link
@@ -810,6 +831,67 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
 
             {/* Employee Zone Management stands alone, last in the sidebar order */}
             <NavLink item={employeeZoneItem} mobile />
+
+            {/* Marketing Section - last, as in the FP portal. Only a manager created by a
+                franchise partner gets it: a standalone manager has no partner behind the tracker
+                and the API answers 403, which would be a section of empty screens. */}
+            {isFPManager && (
+            <div className="mt-1">
+              <button
+                onClick={toggleMarketing}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!expandedMenus.marketing && !(isMarketingActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.marketing && !(isMarketingActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Marketing' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Megaphone className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Marketing</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.marketing ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.marketing ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.marketing ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {expandedMenus.marketing && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {marketingSubItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                        style={{
+                          background: isActive ? colors.activeBg : 'transparent',
+                          color: isActive ? colors.activeText : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            )}
 
           </nav>
 

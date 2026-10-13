@@ -1,7 +1,7 @@
 const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
-const { COMPLAINT_TABLE, ensureMarketingComplaintsTable } = require('../utils/marketingComplaints');
+const { issueActivation } = require('../utils/customerActivation');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
 const { pool } = require('../config/database');
@@ -26,6 +26,17 @@ const {
   canSeeReports,
   ROLES 
 } = require('../middleware/rbac');
+
+// `adminOnly` admits the Operations Manager, which is right for reading: that role oversees every
+// portal. Writing is a different matter -- it is a view-only role by policy, enforced in the
+// estimates and service-catalog routers too -- so master-data and account changes added here go
+// through this instead.
+const adminWriteRoles = (req, res, next) => {
+  if (![ROLES.ADMIN, 'super_admin'].includes(req.user?.role)) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to make this change.' });
+  }
+  next();
+};
 
 // ============================================
 // ADMIN AUTH
@@ -4705,6 +4716,67 @@ router.get('/zones', authenticate, async (req, res) => {
   }
 });
 
+// A zone typed into the Zone box on Add Customer and saved with the tick.
+//
+// The admin screens used to post this to /api/fp/zones, which requires an FP scope an admin does
+// not have: the request came back 400 "Zone creation requires FP scope", the page swallowed it,
+// and the zone looked saved until the next reload. An admin's zone is a company-wide one, so it
+// goes in the global `zones` table that GET above already reads.
+router.post('/zones', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const name = (req.body?.name || '').toString().trim().slice(0, 100);
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Zone name is required' });
+    }
+
+    const [existing] = await pool.execute(
+      'SELECT id, is_active FROM zones WHERE name = ? LIMIT 1',
+      [name]
+    );
+    if (existing.length > 0) {
+      // A zone that was removed earlier is brought back rather than duplicated -- `code` is
+      // UNIQUE, so a second row with the same name is not always even possible.
+      if (!existing[0].is_active) {
+        await pool.execute('UPDATE zones SET is_active = 1 WHERE id = ?', [existing[0].id]);
+        return res.json({ success: true, message: 'Zone restored', data: { id: existing[0].id, name } });
+      }
+      return res.status(400).json({ success: false, message: 'Zone already exists' });
+    }
+
+    const [result] = await pool.execute(
+      'INSERT INTO zones (name, is_active) VALUES (?, 1)',
+      [name]
+    );
+    res.json({ success: true, message: 'Zone created', data: { id: result.insertId, name } });
+  } catch (error) {
+    console.error('Create admin zone error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create the zone', error: error.message });
+  }
+});
+
+// Remove a company-wide zone. The list GET above also reports zones that exist only because a
+// franchise or a property uses them ('fp-3', 'onboarded-North Zone'); those are not rows anyone
+// can delete here, so a non-numeric id is refused with a reason instead of silently doing nothing.
+router.delete('/zones/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const zoneId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(zoneId) || String(zoneId) !== String(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This zone comes from a franchise or a property and cannot be removed here.'
+      });
+    }
+    const [result] = await pool.execute('UPDATE zones SET is_active = 0 WHERE id = ?', [zoneId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+    res.json({ success: true, message: 'Zone removed' });
+  } catch (error) {
+    console.error('Delete admin zone error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove the zone', error: error.message });
+  }
+});
+
 // ============================================
 // SERVICES - Get unique services for filter dropdowns (Admin view - all FPs)
 // ============================================
@@ -4971,29 +5043,397 @@ router.get('/schedules/all', authenticate, async (req, res) => {
 });
 
 // ============================================
-// MARKETING COMPLAINTS (read-only for Admin / Operations Manager)
+// SCHEDULING (the endpoints the admin's own schedule screens call)
 // ============================================
-// A complaint is owned by one franchise partner -- the FP portal edits and archives it. Admin and
-// the Operations Manager read every complaint here, with the owning partner's name joined on, so a
-// customer filing from their portal reaches all three parties (FP, admin, ops manager) and the
-// zone manager reads the same table through /api/manager/marketing/complaints.
-router.get('/marketing/complaints', authenticate, adminOnly, async (req, res) => {
+//
+// These five were missing, so the admin portal's Schedules section was calling /api/admin paths
+// that answered "Route not found": the notification bell read no count and no list, Pending
+// Property Schedules could not assign a vendor (the modal's vendor list and its save both 404ed),
+// and Rescheduled Requests could not restore a visit. The screens are portal-aware --
+// getApiPath('admin') in pages/schedules -- so the fix belongs here rather than in the pages.
+//
+// Admin is unscoped by design: every partner at once, narrowed with ?fpId= where it helps.
+const schedulingService = require('../services/schedulingService');
+
+const adminFpIdFromQuery = (req) => {
+  const raw = req.query.fpId;
+  if (raw === undefined || raw === '' || raw === 'all') return null;
+  const fpId = Number.parseInt(raw, 10);
+  return Number.isInteger(fpId) && fpId > 0 ? fpId : null;
+};
+
+// The count behind the notification bell.
+router.get('/schedules/pending-count', authenticate, adminOnly, async (req, res) => {
   try {
-    await ensureMarketingComplaintsTable();
-    const [rows] = await pool.execute(
-      `SELECT c.id, c.property_id, c.zone, c.responsible_person,
-              c.concern_with, c.concern_with_other, c.contact_person_name, c.phone_number, c.comments,
-              c.archived_at, c.created_at, c.updated_at,
-              COALESCE(fp.company_name, fp.owner_name, fp.contact_person) AS franchise_partner_name
-       FROM ${COMPLAINT_TABLE} c
-       LEFT JOIN franchise_partners fp ON c.franchise_partner_id = fp.id
-       ORDER BY (c.archived_at IS NOT NULL), c.created_at DESC`
-    );
-    res.json({ success: true, data: rows });
+    const count = await schedulingService.getPendingSchedulesCount(adminFpIdFromQuery(req));
+    res.json({ success: true, data: { count } });
   } catch (error) {
-    console.error('Admin marketing complaints error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
+    console.error('Error fetching pending count:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending schedules count', error: error.message });
   }
 });
+
+// Every portal's unread scheduling notifications. Passing no partner and no role leaves those
+// filters off, which is what "admin sees all FPs" means here.
+router.get('/schedules/notifications', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const notifications = await schedulingService.getUnreadNotifications(
+      adminFpIdFromQuery(req),
+      null,
+      null,
+      parseInt(limit, 10)
+    );
+    res.json({
+      success: true,
+      data: notifications.map(n => ({
+        id: n.id,
+        notificationId: n.notification_id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        referenceType: n.reference_type,
+        referenceId: n.reference_id,
+        referenceData: n.reference_data ? JSON.parse(n.reference_data) : null,
+        actionUrl: n.action_url,
+        actionLabel: n.action_label,
+        priority: n.priority,
+        isRead: n.is_read,
+        createdAt: n.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ success: false, message: 'Error fetching notifications', error: error.message });
+  }
+});
+
+// The vendors the assignment modal offers for one service.
+router.get('/schedules/eligible-vendors', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { serviceCategory, zone, propertyId } = req.query;
+    const vendors = await schedulingService.getEligibleVendors({ serviceCategory, zone, propertyId });
+
+    if (vendors.length === 0) {
+      return res.json({ success: true, data: [], message: 'No Vendor Available' });
+    }
+
+    res.json({
+      success: true,
+      data: vendors.map(v => ({
+        id: v.id,
+        vendorId: v.vendor_id,
+        vendorName: v.vendor_name,
+        ownerName: v.owner_name,
+        ownerMobile: v.owner_mobile,
+        ownerEmail: v.owner_email,
+        serviceType: v.service_type,
+        zone: v.zone,
+        areaName: v.area_name,
+        ratePerVisit: v.rate_per_visit,
+        rating: v.rating,
+        totalJobsCompleted: v.total_jobs_completed,
+        status: v.status
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching eligible vendors:', error);
+    res.status(500).json({ success: false, message: 'Error fetching eligible vendors', error: error.message });
+  }
+});
+
+// Assign a vendor to a property's service. The partner is taken from the property rather than the
+// caller -- an admin has none of its own, and the assignment still has to be filed under the
+// franchise that owns the property.
+router.post('/schedules/assign-vendor', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { propertyId, vendorId, serviceType, serviceName, frequency, frequencyCount, totalVisits, estimateId } = req.body;
+
+    if (!propertyId || !vendorId || !serviceName) {
+      return res.status(400).json({ success: false, message: 'Property ID, Vendor ID, and Service Name are required' });
+    }
+
+    const [[property]] = await pool.execute(
+      'SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?',
+      [propertyId]
+    );
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    const result = await schedulingService.assignVendorToService({
+      propertyId,
+      vendorId,
+      serviceType: serviceType || serviceName,
+      serviceName,
+      frequency,
+      frequencyCount,
+      totalVisits,
+      estimateId,
+      assignedBy: req.user.id,
+      franchisePartnerId: property.franchise_partner_id
+    });
+
+    res.json({ success: true, message: `Vendor ${result.vendorName} assigned to ${serviceName}`, data: result });
+  } catch (error) {
+    console.error('Error assigning vendor:', error);
+    res.status(500).json({ success: false, message: 'Error assigning vendor to service', error: error.message });
+  }
+});
+
+// Put a rescheduled visit back on its original date. No ownership check: an admin's scope is
+// every franchise, which is the whole point of this portal.
+router.post('/schedules/:visitId/restore', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { originalDate, originalTime } = req.body;
+
+    const [visits] = await pool.execute(
+      `SELECT sv.* FROM scheduled_visits sv WHERE (sv.id = ? OR sv.visit_id = ?)`,
+      [visitId, visitId]
+    );
+    if (visits.length === 0) {
+      return res.status(404).json({ success: false, message: 'Visit not found' });
+    }
+
+    const visit = visits[0];
+    const restoreDate = originalDate || visit.original_date;
+    const restoreTime = originalTime || visit.scheduled_time_start;
+
+    if (!restoreDate) {
+      return res.status(400).json({ success: false, message: 'Original date not available for restoration' });
+    }
+
+    await pool.execute(
+      `UPDATE scheduled_visits
+       SET scheduled_date = ?,
+           scheduled_time_start = ?,
+           original_date = NULL,
+           status = 'scheduled',
+           updated_at = NOW()
+       WHERE id = ?`,
+      [restoreDate, restoreTime, visit.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Schedule restored to original date successfully',
+      data: { visitId: visit.id, restoredDate: restoreDate, restoredTime: restoreTime }
+    });
+  } catch (error) {
+    console.error('Error restoring visit:', error);
+    res.status(500).json({ success: false, message: 'Error restoring visit', error: error.message });
+  }
+});
+
+// ============================================
+// CUSTOMERS (list + account activation)
+// ============================================
+//
+// The same section the FP portal has under Customers, across every franchise partner. Two record
+// shapes answer to "customer" here, exactly as they do in the FP list: a `customer_accounts` row
+// (the portal login created with the property) and a legacy `clients` row. They are read as two
+// branches of one UNION so each appears once -- a `customer_accounts` row is joined to both
+// property tables and coalesced rather than selected once per table, which would list a customer
+// twice whenever ids happened to collide across the two.
+const CUSTOMER_PARTNER_NAME = `COALESCE(fp.company_name, fp.owner_name)`;
+
+router.get('/customers', authenticate, adminOnly, async (req, res) => {
+  try {
+    const { fpId } = req.query;
+    const partner = fpId ? Number.parseInt(fpId, 10) : null;
+    if (fpId && (!Number.isInteger(partner) || partner <= 0)) {
+      return res.status(400).json({ success: false, message: 'Invalid franchise partner id' });
+    }
+
+    // One parameter per branch of the UNION, each either the chosen partner or NULL for "all".
+    const accountFilter = partner ? ' AND COALESCE(ca.franchise_partner_id, p.franchise_partner_id, op.franchise_partner_id) = ?' : '';
+    const clientFilter = partner ? ' AND c.franchise_partner_id = ?' : '';
+    const params = partner ? [partner, partner] : [];
+
+    const [customers] = await pool.execute(
+      `SELECT ca.id, ca.customer_id AS client_id,
+              COALESCE(NULLIF(ca.name, ''), CONCAT(COALESCE(ca.first_name, ''), ' ', COALESCE(ca.last_name, ''))) AS name,
+              ca.email, ca.phone, ca.country_code,
+              COALESCE(p.name, op.community_name, ca.property_name) AS property_name,
+              COALESCE(p.property_id, op.property_id, ca.property_code) AS property_code,
+              COALESCE(p.property_type, op.property_type) AS property_type,
+              COALESCE(p.address, op.address) AS address,
+              COALESCE(p.city, op.city) AS city,
+              COALESCE(p.state, op.state) AS state,
+              COALESCE(p.zip_code, op.postal_code) AS postalCode,
+              ca.is_activated, ca.is_active, ca.created_at, ca.updated_at,
+              'customer_account' AS source_type,
+              COALESCE(ca.franchise_partner_id, p.franchise_partner_id, op.franchise_partner_id) AS franchise_partner_id,
+              ${CUSTOMER_PARTNER_NAME} AS franchise_partner_name
+       FROM customer_accounts ca
+       LEFT JOIN properties p ON ca.property_id = p.id
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN franchise_partners fp
+              ON COALESCE(ca.franchise_partner_id, p.franchise_partner_id, op.franchise_partner_id) = fp.id
+       WHERE 1 = 1${accountFilter}
+       UNION ALL
+       SELECT c.id, c.client_id,
+              c.name, c.email, c.phone, NULL AS country_code,
+              p2.name AS property_name, p2.property_id AS property_code,
+              p2.property_type, c.address, c.city, c.state, c.zip_code AS postalCode,
+              NULL AS is_activated, c.is_active, c.created_at, c.updated_at,
+              'client' AS source_type,
+              c.franchise_partner_id,
+              ${CUSTOMER_PARTNER_NAME} AS franchise_partner_name
+       FROM clients c
+       LEFT JOIN properties p2 ON c.property_id = p2.id
+       LEFT JOIN franchise_partners fp ON c.franchise_partner_id = fp.id
+       WHERE 1 = 1${clientFilter}
+       ORDER BY created_at DESC`,
+      params
+    );
+
+    res.json({ success: true, data: customers });
+  } catch (error) {
+    console.error('Admin customers list error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch customers', error: error.message });
+  }
+});
+
+// The portal logins behind those customers, with their activation state.
+router.get('/customer-accounts', authenticate, adminOnly, async (req, res) => {
+  try {
+    const [accounts] = await pool.execute(
+      `SELECT ca.id, ca.customer_id, ca.email, ca.first_name, ca.last_name,
+              ca.phone, ca.country_code,
+              COALESCE(p.name, op.community_name, ca.property_name) AS property_name,
+              COALESCE(p.property_id, op.property_id, ca.property_code) AS property_code,
+              ca.is_activated, ca.is_active, ca.activated_at, ca.activation_expires,
+              ca.last_login, ca.created_at, ca.updated_at,
+              COALESCE(ca.franchise_partner_id, p.franchise_partner_id, op.franchise_partner_id) AS franchise_partner_id,
+              ${CUSTOMER_PARTNER_NAME} AS franchise_partner_name
+       FROM customer_accounts ca
+       LEFT JOIN properties p ON ca.property_id = p.id
+       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
+       LEFT JOIN franchise_partners fp
+              ON COALESCE(ca.franchise_partner_id, p.franchise_partner_id, op.franchise_partner_id) = fp.id
+       ORDER BY ca.created_at DESC`
+    );
+    res.json({ success: true, data: accounts });
+  } catch (error) {
+    console.error('Admin customer accounts error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch customer accounts', error: error.message });
+  }
+});
+
+const loadCustomerAccount = async (id) => {
+  const accountId = Number.parseInt(id, 10);
+  if (!Number.isInteger(accountId)) return null;
+  const [[account]] = await pool.execute(
+    `SELECT id, email, first_name, property_name, property_code, is_active, is_activated
+     FROM customer_accounts WHERE id = ?`,
+    [accountId]
+  );
+  return account || null;
+};
+
+// is_active and is_activated are different things and the customer login reads both: is_active = 0
+// is refused as "invalid email or password", while is_activated = 0 is told to go and use the
+// activation link. So enabling an account restores access; it does not pretend the customer has
+// set a password. (The FP portal's own route conflates the two and writes a plaintext temporary
+// password -- see utils/customerActivation.js.)
+router.post('/customer-accounts/:id/activate', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const account = await loadCustomerAccount(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Customer account not found' });
+
+    await pool.execute('UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE id = ?', [account.id]);
+
+    // Never activated: the customer still needs the link, so issue it in the same action rather
+    // than leaving an enabled account nobody can sign in to.
+    if (!account.is_activated) {
+      const { emailSent } = await issueActivation(pool, account);
+      return res.json({
+        success: true,
+        message: emailSent
+          ? 'Account enabled and the activation email has been sent'
+          : 'Account enabled, but the activation email could not be sent -- use Resend activation',
+        data: { emailSent, activationIssued: true }
+      });
+    }
+
+    res.json({ success: true, message: 'Customer account enabled', data: { activationIssued: false } });
+  } catch (error) {
+    console.error('Admin activate customer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to enable the account', error: error.message });
+  }
+});
+
+router.post('/customer-accounts/:id/deactivate', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const account = await loadCustomerAccount(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Customer account not found' });
+
+    await pool.execute('UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE id = ?', [account.id]);
+    res.json({ success: true, message: 'Customer account disabled' });
+  } catch (error) {
+    console.error('Admin deactivate customer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to disable the account', error: error.message });
+  }
+});
+
+// A fresh link and temporary password, emailed to the customer. The credentials are only stored
+// hashed; the reply says whether the mail went out, never what the password was.
+router.post('/customer-accounts/:id/resend-activation', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const account = await loadCustomerAccount(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Customer account not found' });
+    if (account.is_activated) {
+      return res.status(400).json({ success: false, message: 'This account is already activated.' });
+    }
+
+    const { emailSent } = await issueActivation(pool, account);
+    res.json({
+      success: emailSent,
+      message: emailSent
+        ? 'Activation email has been resent'
+        : 'The activation link was reissued but the email could not be sent. Please try again.',
+      data: { emailSent }
+    });
+  } catch (error) {
+    console.error('Admin resend activation error:', error);
+    res.status(500).json({ success: false, message: 'Failed to resend the activation email', error: error.message });
+  }
+});
+
+// ============================================
+// MARKETING (Dashboard, Tracker, Complaint Form, Archived)
+// ============================================
+//
+// The same router the FP and Manager portals mount (routes/marketing.js), so the admin screens
+// are the FP screens rather than a second implementation of them. What differs is the scope:
+// every partner's rows at once, narrowed to one with ?fpId=, and the owning partner's name joined
+// into each list so a single table can carry rows from several franchises.
+//
+// A complaint is still owned by exactly one partner, which is why a create has to name it; the
+// read-only Complaints inbox reads this same list with ?includeArchived=true.
+const { createMarketingRouter } = require('./marketing');
+
+const adminMarketingScope = (req) => {
+  const requested = req.query.fpId ?? req.body?.franchise_partner_id;
+  const blank = requested === undefined || requested === null || requested === '' || requested === 'all';
+  const fpId = blank ? null : Number.parseInt(requested, 10);
+  if (fpId !== null && (!Number.isInteger(fpId) || fpId <= 0)) {
+    throw Object.assign(new Error('Invalid franchise partner id.'), { status: 400 });
+  }
+  return {
+    fpIds: fpId === null ? null : [fpId],
+    writeFpId: fpId,
+    zones: null,
+    // The Operations Manager reads every portal and changes nothing -- the same policy the admin
+    // sidebar, the service catalog and the estimates routers already apply to that role. Keeping
+    // it here means the rule holds even if a screen forgets to hide its buttons.
+    canWrite: [ROLES.ADMIN, 'super_admin'].includes(req.user?.role),
+    withPartnerName: true
+  };
+};
+
+router.use('/marketing', authenticate, adminOnly, createMarketingRouter({ resolveScope: adminMarketingScope }));
 
 module.exports = router;
