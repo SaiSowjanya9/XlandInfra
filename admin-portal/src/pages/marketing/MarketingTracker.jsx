@@ -167,22 +167,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
-  // Picking a follow-up stage *is* the record of a contact, so it stamps today (IST) and schedules
-  // the next one four days out. Changing the contact date by hand re-schedules from that date --
-  // the next date stays editable afterwards, so a deliberate choice is never overwritten.
-  const setFormStage = (stage) => setForm(prev => ({
-    ...prev,
-    follow_up_stage: stage,
-    ...(stage ? contactStamp() : {})
-  }));
-
-  const setFormContactDate = (date) => setForm(prev => ({
-    ...prev,
-    last_contact_date: date,
-    next_follow_up_date: date ? nextFollowUpFrom(date) : ''
-  }));
-
-  // Inline row edits (phase 2): one field changes in the table and the whole saved payload goes
+  // Inline row edits: one field changes in the table and the whole saved payload goes
   // back -- proposal_given/customer_decision are required by the PUT, so they ride along.
   const [savingRowId, setSavingRowId] = useState(null);
   const saveRowField = async (est, patch) => {
@@ -843,87 +828,11 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               {radioField('Proposal Sent', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
 
-              {/* Follow-up block. Choosing a stage stamps the contact date and schedules the next
-                  one; both dates stay editable, and Due Status is derived from them. */}
-              <div className="pt-4 border-t border-warm-border">
-                <h4 className="text-sm font-semibold text-warm-text mb-3">Follow-Up</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className={labelCls}>Follow-Up Stage</label>
-                    <select value={form.follow_up_stage} onChange={(e) => setFormStage(e.target.value)}
-                            className={`${inputCls} ${form.follow_up_stage ? 'text-warm-text' : 'text-warm-muted'}`}>
-                      <option value="">Select stage</option>
-                      {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                    </select>
-                    <p className="text-[11px] text-warm-muted mt-1">Stamps today as the last contact</p>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Lead Status</label>
-                    <select value={form.lead_status} onChange={(e) => setField('lead_status', e.target.value)}
-                            className={`${inputCls} ${form.lead_status ? 'text-warm-text' : 'text-warm-muted'}`}>
-                      <option value="">Select lead status</option>
-                      {LEAD_STATUSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Due Status</label>
-                    <div className="h-[42px] flex items-center">
-                      {(() => {
-                        const due = dueStatus(form.next_follow_up_date, form.lead_status);
-                        return (
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${DUE_STATUS_STYLES[due]}`}>
-                            {due}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Last Contact Date</label>
-                    <DateField value={form.last_contact_date}
-                               onChange={(e) => setFormContactDate(e.target.value)} className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Last Contact Method</label>
-                    <select value={form.last_contact_method} onChange={(e) => setField('last_contact_method', e.target.value)}
-                            className={`${inputCls} ${form.last_contact_method ? 'text-warm-text' : 'text-warm-muted'}`}>
-                      <option value="">Select method</option>
-                      {CONTACT_METHODS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Customer Response</label>
-                    {isCustomerResponseLocked(editing.status) ? (
-                      <>
-                        <div className={`${readOnlyCls} flex items-center`}>
-                          {effectiveCustomerResponse(editing.status, form.customer_response)}
-                        </div>
-                        <p className="text-[11px] text-warm-muted mt-1">Set by the estimate's status</p>
-                      </>
-                    ) : (
-                      <select value={form.customer_response} onChange={(e) => setField('customer_response', e.target.value)}
-                              className={`${inputCls} ${form.customer_response ? 'text-warm-text' : 'text-warm-muted'}`}>
-                        <option value="">Select response</option>
-                        {CUSTOMER_RESPONSES.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                      </select>
-                    )}
-                  </div>
-                  <div>
-                    <label className={labelCls}>Next Follow-Up Date</label>
-                    <DateField value={form.next_follow_up_date}
-                               onChange={(e) => setField('next_follow_up_date', e.target.value)} className={inputCls} />
-                    <p className="text-[11px] text-warm-muted mt-1">Four days after the last contact</p>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Next Action</label>
-                    <select value={form.next_action} onChange={(e) => setField('next_action', e.target.value)}
-                            className={`${inputCls} ${form.next_action ? 'text-warm-text' : 'text-warm-muted'}`}>
-                      <option value="">Select next action</option>
-                      {NEXT_ACTIONS.map(o => <option key={o} value={o} className="text-warm-text">{o}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
+              {/* The follow-up columns are edited in the table, a row at a time, not here: this
+                  view is the estimate and the answers taken on the visit. They are still carried
+                  in the payload below -- the form holds what openEditor loaded, so saving from
+                  here leaves a row's follow-up exactly as the table left it rather than clearing
+                  it. */}
 
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
