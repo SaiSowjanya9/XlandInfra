@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import DismissPanel from '../components/common/DismissPanel';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List,
@@ -666,8 +667,7 @@ const SupervisorWorkOrders = ({ user }) => {
                     </button>
                   )}
                 </div>
-                {showPropertyDropdown && propertySearchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <DismissPanel open={showPropertyDropdown && propertySearchResults.length > 0} onDismiss={() => setShowPropertyDropdown(false)} className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {propertySearchResults.map(p => (
                       <button
                         key={p.id}
@@ -679,8 +679,7 @@ const SupervisorWorkOrders = ({ user }) => {
                         <span className="text-gray-500 ml-2">{p.address}</span>
                       </button>
                     ))}
-                  </div>
-                )}
+                  </DismissPanel>
               </div>
 
               {/* Property Details - Show after selection */}

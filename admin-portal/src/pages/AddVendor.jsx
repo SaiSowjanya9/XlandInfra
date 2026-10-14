@@ -25,6 +25,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import SelectWithAdd from '../components/SelectWithAdd';
+import DismissPanel from '../components/common/DismissPanel';
 
 // Zone options
 const ZONES = [
@@ -359,8 +360,7 @@ const AddVendor = ({ admin }) => {
                       errors.serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
                   />
-                  {showServiceDropdown && filteredServices.length > 0 && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <DismissPanel open={showServiceDropdown && filteredServices.length > 0} onDismiss={() => setShowServiceDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredServices.map(s => (
                         <div
                           key={s.id || s.name}
@@ -389,8 +389,7 @@ const AddVendor = ({ admin }) => {
                           )}
                         </div>
                       ))}
-                    </div>
-                  )}
+                    </DismissPanel>
                 </div>
                 <button
                   type="button"
@@ -437,8 +436,7 @@ const AddVendor = ({ admin }) => {
                   errors.zone ? 'border-red-300 bg-red-50' : 'border-gray-300'
                 }`}
               />
-              {showZoneDropdown && filteredZones.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <DismissPanel open={showZoneDropdown && filteredZones.length > 0} onDismiss={() => setShowZoneDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredZones.map(z => (
                     <button
                       key={z}
@@ -454,8 +452,7 @@ const AddVendor = ({ admin }) => {
                       {z}
                     </button>
                   ))}
-                </div>
-              )}
+                </DismissPanel>
               {errors.zone && <p className="text-xs text-red-500 mt-1">{errors.zone}</p>}
             </div>
 
@@ -478,8 +475,7 @@ const AddVendor = ({ admin }) => {
                   errors.areaName ? 'border-red-300 bg-red-50' : 'border-gray-300'
                 }`}
               />
-              {showAreaDropdown && filteredAreas.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <DismissPanel open={showAreaDropdown && filteredAreas.length > 0} onDismiss={() => setShowAreaDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredAreas.map(a => (
                     <button
                       key={a}
@@ -495,8 +491,7 @@ const AddVendor = ({ admin }) => {
                       {a}
                     </button>
                   ))}
-                </div>
-              )}
+                </DismissPanel>
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
             </div>
 

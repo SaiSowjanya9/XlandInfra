@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import DismissPanel from '../components/common/DismissPanel';
 import {
   ClipboardList,
   ChevronDown,
@@ -431,8 +432,7 @@ const CustomerWorkOrder = ({ user }) => {
                     formErrors.propertyId ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'
                   }`}
                 />
-                {showPropertyDropdown && propertySearch.trim() && (
-                  <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                <DismissPanel open={showPropertyDropdown && propertySearch.trim()} onDismiss={() => setShowPropertyDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
                     {filteredProperties.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
                     ) : (
@@ -453,8 +453,7 @@ const CustomerWorkOrder = ({ user }) => {
                         </button>
                       ))
                     )}
-                  </div>
-                )}
+                  </DismissPanel>
                 {formErrors.propertyId && (
                   <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.propertyId}</p>
                 )}
@@ -589,8 +588,7 @@ const CustomerWorkOrder = ({ user }) => {
                   <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
-                {showCategoryDropdown && (
-                  <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                <DismissPanel open={showCategoryDropdown} onDismiss={() => setShowCategoryDropdown(false)} className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
                     {categories.map((category) => (
                       <button
                         key={category.id}
@@ -608,8 +606,7 @@ const CustomerWorkOrder = ({ user }) => {
                         )}
                       </button>
                     ))}
-                  </div>
-                )}
+                  </DismissPanel>
 
                 {formErrors.categoryId && (
                   <p className="mt-2 text-sm text-red-500 flex items-center">
@@ -693,8 +690,7 @@ const CustomerWorkOrder = ({ user }) => {
                       <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showSubcategoryDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
-                    {showSubcategoryDropdown && subcategories.length > 0 && (
-                      <div className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                    <DismissPanel open={showSubcategoryDropdown && subcategories.length > 0} onDismiss={() => setShowSubcategoryDropdown(false)} className="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
                         {subcategories.map((sub) => (
                           <button
                             key={sub.id}
@@ -712,8 +708,7 @@ const CustomerWorkOrder = ({ user }) => {
                             )}
                           </button>
                         ))}
-                      </div>
-                    )}
+                      </DismissPanel>
 
                     {formErrors.subcategoryId && (
                       <p className="mt-2 text-sm text-red-500 flex items-center">

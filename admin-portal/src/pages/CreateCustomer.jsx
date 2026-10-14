@@ -38,6 +38,7 @@ import GPSLocationCapture from '../components/common/GPSLocationCapture';
 import { getDivisions, addDivision } from '../utils/fieldOptionsStore';
 import { getZoneNames, createZone } from '../utils/zoneStore';
 import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader';
+import DismissPanel from '../components/common/DismissPanel';
 
 // Property Type options
 const PROPERTY_TYPES = {
@@ -853,8 +854,7 @@ const CreateCustomer = ({ admin }) => {
                 <input type="text" value={formData.zone} onChange={(e) => { updateFormData('zone', e.target.value); setShowZoneDropdown(true); }}
                   onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 400)}
                   className={inputClass(hasError && !formData.zone.trim())} placeholder="Type or select zone..." />
-                {showZoneDropdown && filteredZoneSuggestions.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <DismissPanel open={showZoneDropdown && filteredZoneSuggestions.length > 0} onDismiss={() => setShowZoneDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredZoneSuggestions.map(z => (
                       <div key={z.id || z.name} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.zone === z.name ? 'bg-blue-50' : ''}`}>
                         <button type="button" onMouseDown={() => { updateFormData('zone', z.name); setShowZoneDropdown(false); }}
@@ -864,8 +864,7 @@ const CreateCustomer = ({ admin }) => {
                         )}
                       </div>
                     ))}
-                  </div>
-                )}
+                  </DismissPanel>
               </div>
               <FieldError show={hasError && !formData.zone.trim()} message="Zone is required" />
             </div>
@@ -888,8 +887,7 @@ const CreateCustomer = ({ admin }) => {
                   className={inputClass(hasError && !formData.areaName.trim())}
                   placeholder="Type or select area name..."
                 />
-                {showAreaDropdown && filteredAreaSuggestions.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <DismissPanel open={showAreaDropdown && filteredAreaSuggestions.length > 0} onDismiss={() => setShowAreaDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredAreaSuggestions.map(a => (
                       <button
                         key={a}
@@ -905,8 +903,7 @@ const CreateCustomer = ({ admin }) => {
                         {a}
                       </button>
                     ))}
-                  </div>
-                )}
+                  </DismissPanel>
               </div>
               <FieldError show={hasError && !formData.areaName.trim()} message="Area name is required" />
             </div>

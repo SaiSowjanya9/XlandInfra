@@ -37,6 +37,7 @@ import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHea
 import { statusLabel, paidPercent } from '../../utils/invoiceStatus';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
+import DismissPanel from '../../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -718,8 +719,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                     </span>
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
-                  {fpDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                  <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                       {/* Admin (All FPs) Option */}
                       <button
                         onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
@@ -751,8 +751,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </button>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    </DismissPanel>
                 </div>
               )}
               {/* Header Search */}

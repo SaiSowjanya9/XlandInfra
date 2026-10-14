@@ -18,6 +18,7 @@ import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader'
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
+import DismissPanel from '../components/common/DismissPanel';
 
 // Country codes with flag emojis
 const COUNTRY_CODES = [
@@ -328,15 +329,13 @@ const ManagerAddVendor = ({ user }) => {
                     placeholder="Select service type..."
                     className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-amber-200 focus:border-amber-500 focus:outline-none ${errors.serviceType ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                   />
-                  {showServiceDropdown && filteredServices.length > 0 && (
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <DismissPanel open={showServiceDropdown && filteredServices.length > 0} onDismiss={() => setShowServiceDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredServices.map(s => (
                         <div key={s.id || s.name} className={`flex items-center justify-between px-3 py-2 hover:bg-amber-50 transition-colors cursor-pointer ${formData.serviceType === s.name ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'}`}>
                           <span onMouseDown={() => { updateField('serviceType', s.name); setShowServiceDropdown(false); }} className="flex-1 text-sm">{s.name}</span>
                         </div>
                       ))}
-                    </div>
-                  )}
+                    </DismissPanel>
                 </div>
                 <button type="button" onClick={() => setShowAddServiceModal(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Add</button>
               </div>
@@ -365,16 +364,14 @@ const ManagerAddVendor = ({ user }) => {
                 onFocus={() => setShowZoneDropdown(true)} onBlur={() => setTimeout(() => setShowZoneDropdown(false), 400)}
                 placeholder="Type or select zone..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${errors.zone ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
-              {showZoneDropdown && filteredZones.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <DismissPanel open={showZoneDropdown && filteredZones.length > 0} onDismiss={() => setShowZoneDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredZones.map(z => (
                     <div key={z.id || z.name} className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${formData.zone === z.name ? 'bg-blue-50' : ''}`}
                       onMouseDown={() => { updateField('zone', z.name); setShowZoneDropdown(false); }}>
                       <span className={`text-sm ${formData.zone === z.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{z.name}</span>
                     </div>
                   ))}
-                </div>
-              )}
+                </DismissPanel>
               {errors.zone && <p className="text-xs text-red-500 mt-1">{errors.zone}</p>}
             </div>
 
@@ -385,16 +382,14 @@ const ManagerAddVendor = ({ user }) => {
                 onFocus={() => setShowAreaDropdown(true)} onBlur={() => setTimeout(() => setShowAreaDropdown(false), 400)}
                 placeholder="Type or select area name..."
                 className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:outline-none ${errors.areaName ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
-              {showAreaDropdown && filteredAreas.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <DismissPanel open={showAreaDropdown && filteredAreas.length > 0} onDismiss={() => setShowAreaDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredAreas.map(a => (
                     <button key={a} type="button" onMouseDown={() => { updateField('areaName', a); setShowAreaDropdown(false); }}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${formData.areaName === a ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}`}>
                       {a}
                     </button>
                   ))}
-                </div>
-              )}
+                </DismissPanel>
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, Chev
 import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 import { formatDate } from '../utils/dateFormat';
+import DismissPanel from '../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -609,8 +610,7 @@ const WorkOrders = ({ admin }) => {
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {fpDropdownOpen && (
-            <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+          <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
               <button
                 onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
                 className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
@@ -637,8 +637,7 @@ const WorkOrders = ({ admin }) => {
                   <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                 </button>
               ))}
-            </div>
-          )}
+            </DismissPanel>
         </div>
         </div>
       </div>
@@ -871,8 +870,7 @@ const WorkOrders = ({ admin }) => {
                       onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 400)}
                       placeholder="Select a category"
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" />
-                    {showCategoryDropdown && (
-                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <DismissPanel open={showCategoryDropdown} onDismiss={() => setShowCategoryDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {filteredCategories.map(cat => (
                           <div key={cat.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.categoryId === String(cat.id) ? 'bg-blue-50' : ''}`}>
                             <button type="button" onMouseDown={() => { handleCategoryChange(cat.id); setCategorySearch(cat.name); setShowCategoryDropdown(false); }}
@@ -882,8 +880,7 @@ const WorkOrders = ({ admin }) => {
                             )}
                           </div>
                         ))}
-                      </div>
-                    )}
+                      </DismissPanel>
                   </div>
                   <button type="button" onClick={() => setShowAddCategoryModal(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                     <Plus className="w-4 h-4" />
@@ -901,8 +898,7 @@ const WorkOrders = ({ admin }) => {
                     placeholder={formData.categoryId ? 'Select a subcategory' : 'Select a category first'}
                     disabled={!formData.categoryId}
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed" />
-                  {showSubcategoryDropdown && formData.categoryId && (
-                    <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <DismissPanel open={showSubcategoryDropdown && formData.categoryId} onDismiss={() => setShowSubcategoryDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {filteredSubcategories.map(sub => (
                         <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
                           <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
@@ -912,8 +908,7 @@ const WorkOrders = ({ admin }) => {
                           )}
                         </div>
                       ))}
-                    </div>
-                  )}
+                    </DismissPanel>
                 </div>
               </div>
             </div>
