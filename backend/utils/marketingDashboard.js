@@ -19,6 +19,11 @@ const LEAD_SOURCES = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Webs
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const CUSTOMER_DECISIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
 const TRACKER_STATUSES = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+// The only statuses anybody picks by hand. Every other entry in TRACKER_STATUSES is derived --
+// by the estimate's own status (sent/approved/rejected), by Coordinator Reviewed, or by the time
+// since the estimate was created -- so the tracker dropdown locks them and the PUT stores NULL
+// for them, which leaves the automatic progression in charge.
+const MANUAL_TRACKER_STATUSES = ['Revision Required', 'Revised Estimate Sent'];
 const FOLLOW_UP_STAGES = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
 
 // A lead counts as "estimate shared" once it reaches any of these -- the figure is cumulative, so
@@ -201,6 +206,7 @@ module.exports = {
   PRIORITIES,
   CUSTOMER_DECISIONS,
   TRACKER_STATUSES,
+  MANUAL_TRACKER_STATUSES,
   FOLLOW_UP_STAGES,
   SENT_STATUSES,
   CLOSED_STATUSES,
