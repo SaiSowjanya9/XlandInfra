@@ -335,6 +335,19 @@ nothing here may be applied globally.
 - The role is stored as its code and the readable label is resolved server-side into
   `tracker_updated_by_role_label`, because `config/roles.js` is CommonJS and the browser cannot
   import it — otherwise the portal would carry a fourth copy of the role names to keep in step.
+- **Estimate Status moves itself along, and is derived rather than stored.** With no status chosen
+  by hand a tracked lead reads `Created by Executive` for its first 24 hours, then
+  `Pending Coordinator Review`, and stays there until somebody marks Coordinator Reviewed as Yes,
+  which makes it `Reviewed by Coordinator` (`autoTrackerStatus`). A day is 24 hours from
+  `created_at`, not the next calendar date — "after 1 day" must not mean "in an hour" for a lead
+  entered at 11pm. Nothing is written, for the same reason Due Status is not: a stored
+  "Pending Coordinator Review" is wrong the moment it is reviewed and nothing would correct it.
+- **A status matching the automatic one is deliberately left unstored.** The table re-sends the
+  whole tracker payload on every inline edit, including the *resolved* status it was given, so
+  editing any other cell would have written `Created by Executive` into the column and frozen the
+  lead there with the progression silently dead. The PUT compares the submitted status against
+  `autoTrackerStatus` and stores `NULL` when they agree; a genuinely different choice is kept and
+  outranks the automation, so a lead is never dragged back from where somebody put it.
 - **`coordinator_name` is not typed in either**: setting Reviewed to Yes records whoever did it.
   It is resolved **in the UPDATE**, `CASE WHEN ? = 'Yes' THEN COALESCE(NULLIF(coordinator_name,
   ''), ?) ELSE NULL END`, rather than in JavaScript — the table re-sends the whole payload on
