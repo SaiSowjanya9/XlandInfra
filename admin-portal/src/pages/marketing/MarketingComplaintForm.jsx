@@ -6,6 +6,7 @@ import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint, marketingPermissions } from '../../utils/marketingApi';
 import { formatDate } from '../../utils/dateFormat';
+import DismissPanel from '../../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -418,8 +419,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                         placeholder="Enter property ID"
                       />
                       <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
-                      {showPropertySuggestions && propertySuggestions.length > 0 && (
-                        <div className="absolute z-20 w-full mt-1 bg-white border border-warm-border rounded-[10px] shadow-lg max-h-56 overflow-y-auto">
+                      <DismissPanel open={showPropertySuggestions && propertySuggestions.length > 0} onDismiss={() => setShowPropertySuggestions(false)} className="absolute z-20 w-full mt-1 bg-white border border-warm-border rounded-[10px] shadow-lg max-h-56 overflow-y-auto">
                           {propertySuggestions.map(p => (
                             <button
                               key={p.id || p.property_id}
@@ -434,8 +434,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                               </div>
                             </button>
                           ))}
-                        </div>
-                      )}
+                        </DismissPanel>
                     </div>
                   </div>
                   <div className="min-w-0">

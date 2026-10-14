@@ -434,6 +434,29 @@ nothing here may be applied globally.
   "no packages" with no way for the screen to say otherwise. Only `ER_NO_SUCH_TABLE` returns an
   empty list now.
 
+## A Dropdown Closes When You Click Away
+
+- **Use `components/common/DismissPanel.jsx`, not another hand-rolled listener.** Every floating
+  panel — an FP picker, a zone or area suggestion list, a category dropdown, the customer portal's
+  account menu — closes on an outside click and on Escape. 57 of them were written as
+  `{open && <div className="absolute …">}` with nothing listening, so an open one stayed open while
+  you worked elsewhere on the page and several could be open at once; a dozen screens had each
+  grown their own `useRef` + `useEffect` + `mousedown` listener for the same thing.
+- It is a drop-in, and the condition comes with it:
+  `{open && rows.length > 0 && (<div className="absolute …">…</div>)}` becomes
+  `<DismissPanel open={open && rows.length > 0} onDismiss={() => setOpen(false)} className="absolute …">…</DismissPanel>`.
+- **No ref at the call site, deliberately.** The trigger is always a sibling inside the same
+  positioned wrapper, so the panel's own `parentElement` is the anchor. That is what makes a click
+  on the trigger count as *inside*: closing on its `mousedown` would let its `click` reopen the
+  panel, and it would never shut. The decision lives in `utils/dismiss.js` so it can be tested
+  without a browser — `node --test admin-portal/src/utils/dismiss.test.js`.
+- `frontend` has its own copy of both files, as it does of `halfPayment.js`: the two apps are
+  separate bundles with no shared source.
+- **Not everything that opens is a dropdown.** A mobile sidebar (`sidebarOpen`) has its own
+  backdrop, and a dialog passed `open={...}` is a modal — neither belongs here. The public
+  marketing header's services menu toggles opacity rather than rendering conditionally, so it needs
+  a different treatment and was left alone.
+
 ## A Fixed Overlay Must Not Inherit a Page's Spacing
 
 - **`space-y-*` moves modals.** Almost every page is `<div className="p-6 space-y-6">` with its

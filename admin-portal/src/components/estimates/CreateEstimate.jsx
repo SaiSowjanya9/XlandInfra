@@ -26,6 +26,7 @@ import { getProperties, getPropertyById, extractBlockNames, extractTotalUnits, e
 import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePrice, getPackagePropertyType, packageMatchesPropertyType, getAddonName, getServiceInput } from '../../utils/estimatePackageUtils';
 import EstimateDraftServicesTable from './EstimateDraftServicesTable';
 import { formatDate } from '../../utils/dateFormat';
+import DismissPanel from '../../components/common/DismissPanel';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -1710,8 +1711,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     
-                    {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
-                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <DismissPanel open={showPropertySuggestions && propertyIdInput && filteredProperties.length > 0} onDismiss={() => setShowPropertySuggestions(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {filteredProperties.slice(0, 8).map((prop) => {
                           const Icon = PROPERTY_ICONS[prop.entryType] || Building2;
                           return (
@@ -1728,8 +1728,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                             </button>
                           );
                         })}
-                      </div>
-                    )}
+                      </DismissPanel>
                   </div>
                 </div>
                 
@@ -1880,8 +1879,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500"
                 />
                 
-                {showPropertySuggestions && propertyIdInput && filteredProperties.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <DismissPanel open={showPropertySuggestions && propertyIdInput && filteredProperties.length > 0} onDismiss={() => setShowPropertySuggestions(false)} className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {filteredProperties.slice(0, 8).map((prop) => {
                       const Icon = PROPERTY_ICONS[prop.entryType] || Building2;
                       return (
@@ -1898,8 +1896,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         </button>
                       );
                     })}
-                  </div>
-                )}
+                  </DismissPanel>
               </div>
             </div>
 

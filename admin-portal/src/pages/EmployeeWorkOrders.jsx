@@ -40,6 +40,7 @@ import { extractBlockNames, extractTotalUnits, extractUnitNumber } from '../util
 import { useFP } from '../contexts/FPContext';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import DismissPanel from '../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -843,8 +844,7 @@ const EmployeeWorkOrders = ({ admin }) => {
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {fpDropdownOpen && (
-            <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+          <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
               <button
                 onClick={() => handleFpSelect({ id: 'all', fpId: 'ADMIN', companyName: 'All FPs' })}
                 className={`w-full text-left px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-gray-100 ${
@@ -871,8 +871,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   <div className="text-sm text-gray-600 mt-0.5">{fp.companyName}</div>
                 </button>
               ))}
-            </div>
-          )}
+            </DismissPanel>
         </div>
       </WorkOrdersHeader>
 
@@ -1212,8 +1211,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                     formErrors.propertyId ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-indigo-200 focus:border-indigo-400'
                   }`}
                 />
-                {showPropertyDropdown && propertySearch.trim() && (
-                  <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                <DismissPanel open={showPropertyDropdown && propertySearch.trim()} onDismiss={() => setShowPropertyDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
                     {filteredProperties.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
                     ) : (
@@ -1234,8 +1232,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                         </button>
                       ))
                     )}
-                  </div>
-                )}
+                  </DismissPanel>
                 {formErrors.propertyId && (
                   <p className="mt-1 text-sm text-red-500 flex items-center"><AlertCircle className="w-4 h-4 mr-1" />{formErrors.propertyId}</p>
                 )}

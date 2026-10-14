@@ -28,6 +28,7 @@ import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PRIORITY_COLORS, PROPERTY_TYPE_COLORS, PAYMENT_STATUS_COLORS } from '../utils/chartColors';
+import DismissPanel from '../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -519,8 +520,7 @@ const Dashboard = () => {
             <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {fpDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
+          <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto">
               {/* Admin option */}
               <button
                 onClick={() => {
@@ -560,8 +560,7 @@ const Dashboard = () => {
                   </button>
                 ))
               )}
-            </div>
-          )}
+            </DismissPanel>
         </div>
         
         {/* Refresh button */}
@@ -647,8 +646,7 @@ const Dashboard = () => {
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {fpDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
                   {/* Admin option */}
                   <button
                     onClick={() => {
@@ -690,8 +688,7 @@ const Dashboard = () => {
                       </button>
                     ))
                   )}
-                </div>
-              )}
+                </DismissPanel>
             </div>
             
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-200">

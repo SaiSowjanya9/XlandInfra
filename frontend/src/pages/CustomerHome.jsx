@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import HeroVideo from '../assets/Sample_Video.mp4';
+import DismissPanel from '../components/common/DismissPanel';
 
 const navigationModules = [
   { id: 'payments', label: 'Payments', icon: CreditCard, path: '/dashboard/payment' },
@@ -281,8 +282,7 @@ function CustomerHome() {
                   </button>
 
                   {/* Account Dropdown Menu */}
-                  {showAccountMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gold-600/20 rounded-xl shadow-2xl overflow-hidden z-50">
+                  <DismissPanel open={showAccountMenu} onDismiss={() => setShowAccountMenu(false)} className="absolute right-0 mt-2 w-56 bg-white border border-gold-600/20 rounded-xl shadow-2xl overflow-hidden z-50">
                       <div className="p-4 border-b border-gray-200">
                         <p className="text-gray-900 font-medium">{user.firstName} {user.lastName}</p>
                         <p className="text-sm text-gray-500">{user.email}</p>
@@ -312,8 +312,7 @@ function CustomerHome() {
                           </button>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    </DismissPanel>
                 </div>
               ) : (
                 <button

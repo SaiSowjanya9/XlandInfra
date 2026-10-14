@@ -37,6 +37,7 @@ const ITEMS_PER_PAGE = 10;
 import * as XLSX from 'xlsx';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import DismissPanel from '../components/common/DismissPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1095,8 +1096,7 @@ const FPWorkOrders = ({ user }) => {
                       placeholder="Select a category"
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
                     />
-                    {showCategoryDropdown && (
-                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <DismissPanel open={showCategoryDropdown} onDismiss={() => setShowCategoryDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {filteredCategories.map(cat => (
                           <div key={cat.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.categoryId === String(cat.id) ? 'bg-blue-50' : ''}`}>
                             <button type="button" onMouseDown={() => { handleCategoryChange(cat.id); setCategorySearch(cat.name); setShowCategoryDropdown(false); }}
@@ -1106,8 +1106,7 @@ const FPWorkOrders = ({ user }) => {
                             )}
                           </div>
                         ))}
-                      </div>
-                    )}
+                      </DismissPanel>
                   </div>
                   <button type="button" onClick={() => setShowAddCategoryModal(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                     <span>Add</span>
@@ -1138,8 +1137,7 @@ const FPWorkOrders = ({ user }) => {
                       disabled={!formData.categoryId}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
-                    {showSubcategoryDropdown && formData.categoryId && (
-                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <DismissPanel open={showSubcategoryDropdown && formData.categoryId} onDismiss={() => setShowSubcategoryDropdown(false)} className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                         {filteredSubcategories.map(sub => (
                           <div key={sub.id} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.subcategoryId === String(sub.id) ? 'bg-blue-50' : ''}`}>
                             <button type="button" onMouseDown={() => { setFormData({ ...formData, subcategoryId: String(sub.id) }); setSubcategorySearch(sub.name); setShowSubcategoryDropdown(false); }}
@@ -1149,8 +1147,7 @@ const FPWorkOrders = ({ user }) => {
                             )}
                           </div>
                         ))}
-                      </div>
-                    )}
+                      </DismissPanel>
                   </div>
                 )}
               </div>

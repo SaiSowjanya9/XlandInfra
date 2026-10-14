@@ -42,6 +42,7 @@ import { EstimateThemeProvider } from '../utils/estimateTheme';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 import { shortDivision } from '../utils/fieldOptionsStore';
 import EstimateStatCards from '../components/estimates/EstimateStatCards';
+import DismissPanel from '../components/common/DismissPanel';
 
 const FP_CATALOG_API = '/api/fp/service-catalog';
 
@@ -1656,8 +1657,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       className="block w-full min-h-[42px] resize-none overflow-hidden pl-3 pr-9 py-2 border border-warm-border rounded-[10px] focus:ring-2 focus:ring-warm-accent/20 focus:border-warm-accent text-sm leading-6 [overflow-wrap:anywhere]"
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
-                    {showPropertySuggestions && !selectedProperty && propertySuggestions.length > 0 && (
-                      <div className="absolute z-20 w-full mt-1 bg-white border border-warm-border rounded-[10px] shadow-lg max-h-56 overflow-y-auto">
+                    <DismissPanel open={showPropertySuggestions && !selectedProperty && propertySuggestions.length > 0} onDismiss={() => setShowPropertySuggestions(false)} className="absolute z-20 w-full mt-1 bg-white border border-warm-border rounded-[10px] shadow-lg max-h-56 overflow-y-auto">
                         {propertySuggestions.map(p => (
                           <button
                             key={p.id || p.property_id}
@@ -1672,8 +1672,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                             </div>
                           </button>
                         ))}
-                      </div>
-                    )}
+                      </DismissPanel>
                   </div>
                 </div>
                 <div>
