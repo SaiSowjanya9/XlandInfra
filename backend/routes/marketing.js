@@ -227,12 +227,35 @@ const fpFilter = (scope, prefix = '') => {
 // A zone-restricted caller (the Manager portal) sees only rows in its assigned zones. This is the
 // filter the manager's own estimates list and complaints inbox already applied; it is here so the
 // tracker and its writes cannot become the one screen that ignores it.
-const zoneFilter = (scope, prefix = '') => {
+// `withCreator` is for fp_estimates only. A coordinator or an executive is also allowed the leads
+// they entered themselves, wherever the property sits -- the same "my zones or my own records"
+// rule their other screens use, and without it an executive would open the tracker on their own
+// visits and find it empty, since an estimate's zone is the property's and not theirs. The
+// complaints table has a zone but no created_by_id, so asking for the clause there fails the whole
+// statement with "Unknown column 'c.created_by_id'", which is a 500 where a list should be.
+const zoneFilter = (scope, prefix = '', { withCreator = false } = {}) => {
   if (!scope.zones) return { sql: '', params: [] };
-  if (!scope.zones.length) return { sql: ' AND 1 = 0', params: [] };
+
+  const creator = withCreator && scope.creator && [
+    { column: 'created_by_id', value: scope.creator.id },
+    { column: 'created_by_name', value: scope.creator.email },
+    { column: 'created_by_name', value: scope.creator.username }
+  ].filter((match) => match.value !== undefined && match.value !== null && match.value !== '');
+
+  const creatorSql = creator && creator.length
+    ? creator.map((match) => ` OR ${prefix}${match.column} = ?`).join('')
+    : '';
+  const creatorParams = creator ? creator.map((match) => match.value) : [];
+
+  // No zone assigned at all: own records only, rather than everything or nothing.
+  if (!scope.zones.length) {
+    return creatorSql
+      ? { sql: ` AND (1 = 0${creatorSql})`, params: creatorParams }
+      : { sql: ' AND 1 = 0', params: [] };
+  }
   return {
-    sql: ` AND ${prefix}zone IN (${scope.zones.map(() => '?').join(',')})`,
-    params: [...scope.zones]
+    sql: ` AND (${prefix}zone IN (${scope.zones.map(() => '?').join(',')})${creatorSql})`,
+    params: [...scope.zones, ...creatorParams]
   };
 };
 
@@ -290,6 +313,18 @@ const createMarketingRouter = ({ resolveScope }) => {
     return handler(req, res, scope);
   });
 
+  // The tracker PUT is the one write a reviewer-only caller may make. A coordinator reads the
+  // pipeline and marks Coordinator Reviewed -- which is the whole point of that column, since
+  // setting it to Yes records their name -- but changes nothing else, so `canReview` admits them
+  // here and the handler below writes only that column. `canWrite: false, canReview: false` (the
+  // executive, the Operations Manager) is refused as before.
+  const scopedTrackerWrite = (handler) => scoped(async (req, res, scope) => {
+    if (!scope.canWrite && !scope.canReview) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to change marketing records.' });
+    }
+    return handler(req, res, scope);
+  });
+
   // ============================================
   // MARKETING TRACKER
   // ============================================
@@ -299,7 +334,7 @@ const createMarketingRouter = ({ resolveScope }) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
-      const zone = zoneFilter(scope, 'e.');
+      const zone = zoneFilter(scope, 'e.', { withCreator: true });
       const partner = await partnerNameParts(scope, 'e.');
       const [rows] = await pool.execute(
         `SELECT ${trackerSelect('e')}${partner.column}
@@ -321,7 +356,7 @@ const createMarketingRouter = ({ resolveScope }) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
-      const zone = zoneFilter(scope, 'e.');
+      const zone = zoneFilter(scope, 'e.', { withCreator: true });
       const partner = await partnerNameParts(scope, 'e.');
       const [rows] = await pool.execute(
         `SELECT ${trackerSelect('e')}${partner.column}
@@ -344,7 +379,7 @@ const createMarketingRouter = ({ resolveScope }) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
-      const zone = zoneFilter(scope, 'e.');
+      const zone = zoneFilter(scope, 'e.', { withCreator: true });
       const [rows] = await pool.execute(
         `SELECT ${trackerSelect('e')}
          FROM fp_estimates e
@@ -364,12 +399,51 @@ const createMarketingRouter = ({ resolveScope }) => {
     }
   }));
 
-  router.put('/tracker/:id', scopedWrite(async (req, res, scope) => {
+  router.put('/tracker/:id', scopedTrackerWrite(async (req, res, scope) => {
     try {
       await ensureMarketingTrackerColumns();
       const id = parseRowId(req.params.id);
       if (id === null) {
         return res.status(400).json({ success: false, message: 'Invalid estimate id' });
+      }
+
+      // A reviewer-only caller writes one column. The restriction is applied by building a
+      // different statement rather than by checking the body against the stored row: the table
+      // re-sends the whole tracker payload on every inline edit, so anything short of naming the
+      // columns explicitly would let one of those payloads through as a full edit.
+      if (!scope.canWrite) {
+        const reviewed = decodeEntities(String(req.body.coordinator_reviewed ?? '')).trim();
+        if (!TRACKER_OPTIONS.coordinator_reviewed.includes(reviewed)) {
+          return res.status(400).json({
+            success: false,
+            message: `coordinator_reviewed must be one of: ${TRACKER_OPTIONS.coordinator_reviewed.join(', ')}`
+          });
+        }
+        const fp = fpFilter(scope);
+        const zone = zoneFilter(scope, '', { withCreator: true });
+        const actor = trackerActor(req);
+        const [result] = await pool.execute(
+          `UPDATE fp_estimates SET
+             coordinator_reviewed = ?,
+             coordinator_name = CASE WHEN ? = 'Yes'
+               THEN COALESCE(NULLIF(coordinator_name, ''), ?) ELSE NULL END,
+             tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW(),
+             updated_at = NOW()
+           WHERE id = ? AND estimate_type = 'direct'
+             AND tracked_at IS NOT NULL${fp.sql}${zone.sql}`,
+          [reviewed, reviewed, actor.name, actor.name, actor.role, id, ...fp.params, ...zone.params]
+        );
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ success: false, message: 'Tracked estimate not found' });
+        }
+        const partner = await partnerNameParts(scope, 'e.');
+        const [rows] = await pool.execute(
+          `SELECT ${trackerSelect('e')}${partner.column}
+           FROM fp_estimates e${partner.join}
+           WHERE e.id = ?`,
+          [id]
+        );
+        return res.json({ success: true, message: 'Review recorded', data: presentTrackerRow(rows[0]) });
       }
 
       const updates = {};
@@ -437,7 +511,7 @@ const createMarketingRouter = ({ resolveScope }) => {
       }
 
       const fp = fpFilter(scope);
-      const zone = zoneFilter(scope);
+      const zone = zoneFilter(scope, '', { withCreator: true });
       // Who changed it is recorded by the server from the token, never taken from the body: a
       // field the caller could set would be worth nothing as a record of who did what.
       const actor = trackerActor(req);
@@ -503,7 +577,7 @@ const createMarketingRouter = ({ resolveScope }) => {
         return res.status(400).json({ success: false, message: 'Invalid estimate id' });
       }
       const fp = fpFilter(scope);
-      const zone = zoneFilter(scope);
+      const zone = zoneFilter(scope, '', { withCreator: true });
       // Archiving is a change to the row like any other, so it names whoever did it.
       const actor = trackerActor(req);
       const [result] = await pool.execute(
@@ -531,7 +605,7 @@ const createMarketingRouter = ({ resolveScope }) => {
         return res.status(400).json({ success: false, message: 'Invalid estimate id' });
       }
       const fp = fpFilter(scope);
-      const zone = zoneFilter(scope);
+      const zone = zoneFilter(scope, '', { withCreator: true });
       const actor = trackerActor(req);
       const [result] = await pool.execute(
         `UPDATE fp_estimates SET tracker_archived_at = NULL,

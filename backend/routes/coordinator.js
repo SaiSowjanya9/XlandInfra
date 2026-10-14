@@ -3146,4 +3146,51 @@ router.get('/schedules/all', requireCoordinatorScope, async (req, res) => {
   }
 });
 
+const { createMarketingRouter } = require('./marketing');
+
+// ============================================
+// MARKETING (shared with the FP, admin and Ops Manager portals)
+// ============================================
+//
+// routes/marketing.js serves every portal; this mount decides what a coordinator sees and may change.
+// Only a coordinator created under a franchise partner has a pipeline to look at, so a standalone one
+// is refused outright rather than shown an empty tracker.
+//
+// Rows: the partner's direct estimates within this person's assigned zones, **or** ones they
+// entered themselves -- the same "my zones or my own records" rule their Estimates screen uses
+// (see the zone+creator clause around coordinator.js's estimates list). An estimate's zone is the
+// property's, not the author's, so zone-only would hide an executive's own visits from them.
+//
+// Writes: read-only except Coordinator Reviewed. Marking it Yes records their name in
+// coordinator_name, which is the one thing that column is for; everything else is refused.
+const coordinatorMarketingScope = async (req) => {
+  if (!req.franchisePartnerId) {
+    throw Object.assign(
+      new Error('Marketing is only available to a coordinator under a franchise partner.'),
+      { status: 403 }
+    );
+  }
+  const employeeId = await getEmployeeIdForZoneLookup(req);
+  const creatorEmail = getCreatorIdentifier(req);
+  const rawZones = await getAssignedZones(employeeId, creatorEmail);
+  // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
+  // falls back to this person's own records rather than to nothing.
+  const unrestricted = rawZones.includes('__ALL__');
+  return {
+    fpIds: [req.franchisePartnerId],
+    writeFpId: req.franchisePartnerId,
+    zones: unrestricted ? null : rawZones,
+    creator: {
+      id: req.coordinatorId || req.user?.id,
+      email: req.user?.email,
+      username: req.user?.username
+    },
+    canWrite: false,
+    canReview: true,
+    withPartnerName: false
+  };
+};
+
+router.use('/marketing', requireCoordinatorScope, createMarketingRouter({ resolveScope: coordinatorMarketingScope }));
+
 module.exports = router;

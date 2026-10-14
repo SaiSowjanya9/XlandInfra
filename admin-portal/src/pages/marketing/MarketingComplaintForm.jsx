@@ -4,7 +4,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
-import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint } from '../../utils/marketingApi';
+import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint, marketingPermissions } from '../../utils/marketingApi';
 import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -45,7 +45,10 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   // A complaint is owned by exactly one partner, so an admin looking at every partner has to pick
   // one before the form can be saved -- the server answers 400 without it, and a Save that cannot
   // succeed is worse than a button that says why.
-  const canCreate = canLogComplaint(portalType, selectedFp);
+  // The coordinator and executive portals read this list; only the portals that own the records
+  // may add to or change it. The server refuses the rest regardless.
+  const { canEdit } = marketingPermissions(portalType);
+  const canCreate = canEdit && canLogComplaint(portalType, selectedFp);
   // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
   // manager is refused there. These same screens are the Ops Manager portal's own Marketing
   // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
@@ -328,20 +331,20 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.created_at)}</td>
                     <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-0.5">
-                        <button
+                        {canEdit && <button
                           onClick={() => openEdit(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
                           title="Edit complaint"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
+                        </button>}
+                        {canEdit && <button
                           onClick={() => setArchiveTarget(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
                           title="Move to Archived"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

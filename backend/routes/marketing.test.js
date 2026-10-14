@@ -60,6 +60,18 @@ const scopes = {
     withPartnerName: true
   }),
   manager: () => ({ fpIds: [8], writeFpId: 8, zones: ['North Zone', 'South Zone'], canWrite: true, withPartnerName: false }),
+  // The coordinator reads the pipeline and marks the review; the executive only reads. Both are
+  // also allowed the leads they entered themselves, wherever the property sits.
+  coordinator: () => ({
+    fpIds: [8], writeFpId: 8, zones: ['North Zone'],
+    creator: { id: 42, email: 'priya@example.com', username: 'priya' },
+    canWrite: false, canReview: true, withPartnerName: false
+  }),
+  executive: () => ({
+    fpIds: [8], writeFpId: 8, zones: ['North Zone'],
+    creator: { id: 42, email: 'priya@example.com', username: 'priya' },
+    canWrite: false, canReview: false, withPartnerName: false
+  }),
   opsManager: () => ({ fpIds: null, writeFpId: null, zones: null, canWrite: false, withPartnerName: true }),
   noZones: () => ({ fpIds: [8], writeFpId: 8, zones: [], canWrite: true, withPartnerName: false }),
   refused: () => {
@@ -438,4 +450,59 @@ test('clearing the review clears the name with it', async (t) => {
   // be left with a name against it.
   const caseArg = update.params[update.params.indexOf('Priya N') - 1];
   assert.equal(caseArg, 'No', 'the flag drives the CASE');
+});
+
+test('a reviewer-only portal sees its zones and its own leads, and writes one column', async (t) => {
+  const request = await startServer(t);
+  const priya = { id: 42, role: 'coordinator', firstName: 'Priya', lastName: 'N', username: 'priya' };
+
+  calls.length = 0;
+  await request('/coordinator/marketing/tracker');
+  const list = lastCall('FROM fp_estimates');
+  // An estimate's zone is the property's, not the author's, so zone-only would hide an
+  // executive's own visits from them.
+  assert.match(list.sql, /AND \(e\.zone IN \(\?\) OR e\.created_by_id = \? OR e\.created_by_name = \? OR e\.created_by_name = \?\)/);
+  assert.deepEqual(list.params.slice(-4), ['North Zone', 42, 'priya@example.com', 'priya']);
+
+  calls.length = 0;
+  const saved = await request('/coordinator/marketing/tracker/31', 'PUT', {
+    ...validTracker,
+    coordinator_reviewed: 'Yes',
+    // Everything below must be ignored: the table re-sends the whole payload on every edit, so a
+    // reviewer-only caller must not be able to ride one in.
+    lead_status: 'Closed', next_action: 'Close Lead', tracker_status: 'Rejected'
+  }, priya);
+  assert.equal(saved.status, 200);
+  const update = lastCall('UPDATE fp_estimates SET');
+  assert.doesNotMatch(update.sql, /lead_status|next_action|tracker_status|proposal_given/);
+  assert.match(update.sql, /coordinator_reviewed = \?/);
+  assert.ok(update.params.includes('Priya N'));
+});
+
+test('a read-only portal is refused every write, including the review', async (t) => {
+  const request = await startServer(t);
+  const user = { id: 42, role: 'executive', firstName: 'Bhavani', lastName: 'K' };
+
+  for (const [path, method, body] of [
+    ['/executive/marketing/tracker/31', 'PUT', { ...validTracker, coordinator_reviewed: 'Yes' }],
+    ['/executive/marketing/tracker/31/archive', 'PUT', undefined],
+    ['/executive/marketing/complaints', 'POST', validComplaint]
+  ]) {
+    const response = await request(path, method, body, user);
+    assert.equal(response.status, 403, `${method} ${path}`);
+  }
+});
+
+test('the creator clause is for fp_estimates only -- complaints have no created_by_id', async (t) => {
+  const request = await startServer(t);
+
+  // Asking for it against fp_marketing_complaints fails the whole statement with "Unknown column
+  // 'c.created_by_id'", which answered 500 where the list should have been.
+  for (const path of ['/complaints', '/complaints/archived']) {
+    calls.length = 0;
+    await request(`/coordinator/marketing${path}`);
+    const query = lastCall(COMPLAINT_TABLE);
+    assert.doesNotMatch(query.sql, /created_by_id/, path);
+    assert.match(query.sql, /c\.zone IN/, path);
+  }
 });
