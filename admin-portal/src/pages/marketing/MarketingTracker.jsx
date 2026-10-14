@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText, Building2, Pencil, Trash2
+  ClipboardList, FileText, Building2, Pencil, Trash2, Eye
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
@@ -10,7 +10,7 @@ import EmptyState from '../../components/common/EmptyState';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import { useFP } from '../../contexts/FPContext';
-import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
+import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
 import {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
   DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly,
@@ -97,6 +97,9 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const fpId = marketingFpId(portalType, selectedFp);
   // The admin sees several franchises in one list, so each row has to say which one it belongs to.
   const showPartner = getMarketingApiPath(portalType) === 'admin';
+  // What this portal may change. The server refuses the rest with a 403 whatever is rendered;
+  // this is so a read-only portal shows the pipeline instead of controls that all fail.
+  const { canEdit, canReview } = marketingPermissions(portalType);
   // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
   // manager is refused there. These same screens are the Ops Manager portal's own Marketing
   // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
@@ -284,7 +287,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               name={`tracker-${field}`}
               checked={form[field] === option}
               onChange={() => setField(field, option)}
-              className="w-4 h-4 border-warm-border text-warm-accent focus:ring-warm-accent/30"
+              disabled={!canEdit}
+              className="w-4 h-4 border-warm-border text-warm-accent focus:ring-warm-accent/30 disabled:opacity-60"
             />
             <span className="text-sm text-warm-text">{option === 'Other' && otherField ? 'Other:' : option}</span>
             {option === 'Other' && otherField && form[field] === 'Other' && (
@@ -292,6 +296,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                 type="text"
                 value={form[otherField]}
                 onChange={(e) => setField(otherField, e.target.value)}
+                disabled={!canEdit}
                 maxLength={255}
                 placeholder="Please specify"
                 className="flex-1 h-9 px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
@@ -328,7 +333,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
             <p className="text-xs text-warm-muted">Track direct estimates from first visit to customer decision</p>
           </div>
         </div>
-        {view === 'tracker' && (
+        {view === 'tracker' && canEdit && (
           <button
             onClick={() => setView('pick')}
             className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0"
@@ -438,8 +443,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
             <EmptyState
               icon={Target}
               title="No tracked estimates yet"
-              description={untrackedEstimates.length > 0 ? 'Click New to track a direct estimate' : 'Create a direct estimate first, then track it here'}
-              action={untrackedEstimates.length > 0 ? (
+              description={!canEdit ? 'Nothing has been tracked for your zones yet' : untrackedEstimates.length > 0 ? 'Click New to track a direct estimate' : 'Create a direct estimate first, then track it here'}
+              action={untrackedEstimates.length > 0 && canEdit ? (
                 <button
                   onClick={() => setView('pick')}
                   className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
@@ -505,7 +510,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         ) : (
                           <select
                             value={est.tracker_status || 'Not Started'}
-                            disabled={savingRowId === est.id}
+                            disabled={savingRowId === est.id || !canEdit}
                             onChange={(e) => saveRowField(est, { tracker_status: e.target.value })}
                             className={cellSelectCls}
                           >
@@ -530,7 +535,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.coordinator_reviewed || ''}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !(canEdit || canReview)}
                           onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
                           className={cellSelectCls}
                           title="Coordinator Reviewed?"
@@ -551,7 +556,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.follow_up_stage || ''}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowStage(est, e.target.value)}
                           className={cellSelectCls}
                           title="Picking a stage stamps today as the last contact"
@@ -563,7 +568,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={decodeEntities(est.lead_status || '')}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowField(est, { lead_status: e.target.value })}
                           className={cellSelectCls}
                         >
@@ -574,14 +579,14 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <DateField
                           value={toDateOnly(est.last_contact_date)}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowContactDate(est, e.target.value)}
                           className={cellDateCls}
                           title="Changing this re-schedules the next follow-up four days later"
                         />
                         <select
                           value={decodeEntities(est.last_contact_method || '')}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowField(est, { last_contact_method: e.target.value })}
                           className={`${cellSelectCls} mt-1`}
                           title="Last Contact Method"
@@ -605,7 +610,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         ) : (
                           <select
                             value={decodeEntities(est.customer_response || '')}
-                            disabled={savingRowId === est.id}
+                            disabled={savingRowId === est.id || !canEdit}
                             onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
                             className={cellSelectCls}
                           >
@@ -617,7 +622,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <DateField
                           value={toDateOnly(est.next_follow_up_date)}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowField(est, { next_follow_up_date: e.target.value })}
                           className={cellDateCls}
                         />
@@ -625,7 +630,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={decodeEntities(est.next_action || '')}
-                          disabled={savingRowId === est.id}
+                          disabled={savingRowId === est.id || !canEdit}
                           onChange={(e) => saveRowField(est, { next_action: e.target.value })}
                           className={cellSelectCls}
                         >
@@ -667,17 +672,19 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           <button
                             onClick={() => openEditor(est)}
                             className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
-                            title="Edit tracker"
+                            title={canEdit ? 'Edit tracker' : 'View estimate'}
                           >
-                            <Pencil className="w-4 h-4" />
+                            {canEdit ? <Pencil className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
-                          <button
-                            onClick={() => setArchiveTarget(est)}
-                            className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
-                            title="Move to Archived"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => setArchiveTarget(est)}
+                              className="p-1.5 rounded-lg text-warm-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                              title="Move to Archived"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -840,16 +847,16 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   onClick={() => setEditing(null)}
                   className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-muted border border-warm-border hover:bg-warm-section transition-colors"
                 >
-                  Cancel
+                  {canEdit ? 'Cancel' : 'Close'}
                 </button>
-                <button
+                {canEdit && <button
                   onClick={saveTracker}
                   disabled={saving}
                   className="inline-flex items-center gap-2 px-5 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors disabled:opacity-60"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Saving...' : 'Save'}
-                </button>
+                </button>}
               </div>
             </div>
           </div>

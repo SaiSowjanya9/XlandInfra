@@ -278,11 +278,28 @@ nothing here may be applied globally.
   partner, narrowed with `?fpId=`) and `/api/manager/marketing` (its partner, within its assigned
   zones). A change to a tracker field or a complaint rule therefore cannot reach one portal and
   miss another.
+- **Five portals, not three.** FP, admin and Ops Manager edit; the **coordinator** reads and may
+  set Coordinator Reviewed (nothing else); the **executive** reads only. The **supervisor portal
+  has no Marketing at all** — no mount in the backend, no nav entry, by design. Each portal's
+  permissions are mirrored for the UI by `marketingPermissions` in `src/utils/marketingApi.js`;
+  the server is the authority and refuses the rest regardless of what a screen renders.
 - **The mount decides what is visible; the router never asks the role.** `resolveScope(req)`
   returns `fpIds` (`null` = every partner, `[]` = nothing), `writeFpId` (the partner a new
-  complaint belongs to), `zones` (`null` = unrestricted), `canWrite` and `withPartnerName`. It may
-  throw `{ status, message }` to refuse outright — that is how the FP mount keeps answering 403 to
-  an FP's own staff, and how a standalone manager (no partner behind the tracker) is refused.
+  complaint belongs to), `zones` (`null` = unrestricted), `creator` (see below), `canWrite`,
+  `canReview` and `withPartnerName`. It may throw `{ status, message }` to refuse outright — that
+  is how the FP mount keeps answering 403 to an FP's own staff, and how a standalone manager,
+  coordinator or executive (no partner behind the tracker) is refused.
+- **`canWrite: false, canReview: true` writes exactly one column.** The tracker PUT branches into
+  a statement that names `coordinator_reviewed` and nothing else, rather than comparing the body
+  against the stored row: the table re-sends the whole tracker payload on every inline edit, so
+  anything less would let one of those through as a full edit. Verified — a coordinator posting
+  `lead_status`, `next_action` and `tracker_status` changed none of them.
+- **`scope.creator` is for `fp_estimates` only.** A coordinator or executive also sees the leads
+  they entered, wherever the property sits, because an estimate's zone is the *property's* and not
+  the author's — zone-only showed an executive an empty tracker for their own visits.
+  `zoneFilter(scope, prefix, { withCreator: true })` is therefore opt-in: `fp_marketing_complaints`
+  has a `zone` but no `created_by_id`, and asking for the clause there failed the whole statement
+  with "Unknown column 'c.created_by_id'" — a 500 where the complaints list should have been.
 - **An empty `fpIds` or `zones` list must become `AND 1 = 0`, never an omitted filter.** `IN ()` is
   not SQL, so the tempting shortcut is to skip the condition — which would show a zone manager
   every lead its partner has.

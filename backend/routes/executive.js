@@ -2675,4 +2675,51 @@ router.get('/fp-portal-links', requireExecutiveScope, async (req, res) => {
   }
 });
 
+const { createMarketingRouter } = require('./marketing');
+
+// ============================================
+// MARKETING (shared with the FP, admin and Ops Manager portals)
+// ============================================
+//
+// routes/marketing.js serves every portal; this mount decides what an executive sees and may change.
+// Only an executive created under a franchise partner has a pipeline to look at, so a standalone one
+// is refused outright rather than shown an empty tracker.
+//
+// Rows: the partner's direct estimates within this person's assigned zones, **or** ones they
+// entered themselves -- the same "my zones or my own records" rule their Estimates screen uses
+// (see the zone+creator clause around coordinator.js's estimates list). An estimate's zone is the
+// property's, not the author's, so zone-only would hide an executive's own visits from them.
+//
+// Writes: none. The executive reads the pipeline their visits feed; the review is the
+// coordinator's to make and the follow-up columns belong to the FP, admin and manager portals.
+const executiveMarketingScope = async (req) => {
+  if (!req.franchisePartnerId) {
+    throw Object.assign(
+      new Error('Marketing is only available to an executive under a franchise partner.'),
+      { status: 403 }
+    );
+  }
+  const employeeId = await getEmployeeIdForZoneLookup(req);
+  const creatorEmail = getCreatorIdentifier(req);
+  const rawZones = await getAssignedZones(employeeId, creatorEmail);
+  // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
+  // falls back to this person's own records rather than to nothing.
+  const unrestricted = rawZones.includes('__ALL__');
+  return {
+    fpIds: [req.franchisePartnerId],
+    writeFpId: req.franchisePartnerId,
+    zones: unrestricted ? null : rawZones,
+    creator: {
+      id: req.executiveId || req.user?.id,
+      email: req.user?.email,
+      username: req.user?.username
+    },
+    canWrite: false,
+    canReview: false,
+    withPartnerName: false
+  };
+};
+
+router.use('/marketing', requireExecutiveScope, createMarketingRouter({ resolveScope: executiveMarketingScope }));
+
 module.exports = router;

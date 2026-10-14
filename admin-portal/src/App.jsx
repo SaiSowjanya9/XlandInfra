@@ -647,6 +647,14 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/coordinator/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="coordinator" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="coordinator" />} />
+                    {/* Marketing -- read-only here: a coordinator reads the pipeline their zones and
+                        their own visits feed. The supervisor portal has no Marketing section at
+                        all, by design. */}
+                    <Route path="marketing/dashboard" element={<MarketingDashboard user={user} portalType="coordinator" />} />
+                    <Route path="marketing/tracker" element={<MarketingTracker user={user} portalType="coordinator" />} />
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="coordinator" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="coordinator" />} />
+                    <Route path="marketing" element={<Navigate to="/coordinator/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/coordinator" replace />} />
                   </Routes>
                 </CoordinatorLayout>
@@ -740,6 +748,14 @@ function App() {
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
                     <Route path="billing/payment-history" element={<Payments user={user} portalType="executive" />} />
+                    {/* Marketing -- read-only here: a executive reads the pipeline their zones and
+                        their own visits feed. The supervisor portal has no Marketing section at
+                        all, by design. */}
+                    <Route path="marketing/dashboard" element={<MarketingDashboard user={user} portalType="executive" />} />
+                    <Route path="marketing/tracker" element={<MarketingTracker user={user} portalType="executive" />} />
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="executive" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="executive" />} />
+                    <Route path="marketing" element={<Navigate to="/executive/marketing/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/executive" replace />} />
                   </Routes>
                 </ExecutiveLayout>

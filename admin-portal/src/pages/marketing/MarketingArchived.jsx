@@ -4,7 +4,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
-import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
+import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
 import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -62,6 +62,8 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
   // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,
   // not the role on its own.
   const unavailable = portalType === 'franchise' && user?.role === 'manager';
+  // Restoring a row is a write, so the read-only portals see the archive without the button.
+  const { canEdit } = marketingPermissions(portalType);
 
   const [activeTab, setActiveTab] = useState('tracker'); // 'tracker' | 'complaints'
   const [rows, setRows] = useState([]);
@@ -258,7 +260,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                       <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
                       <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.archived_at)}</td>
                       <td className="py-3 px-4">
-                        <button
+                        {canEdit && <button
                           onClick={() => restoreComplaint(row)}
                           disabled={restoringComplaintId === row.id}
                           className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors disabled:opacity-60 whitespace-nowrap"
@@ -266,7 +268,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                         >
                           {restoringComplaintId === row.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
                           Restore
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   ))}
@@ -356,7 +358,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(est.coordinator_name) || '-'}</td>
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(est.tracker_archived_at)}</td>
                     <td className="py-3 px-4">
-                      <button
+                      {canEdit && <button
                         onClick={() => restoreRow(est)}
                         disabled={restoringId === est.id}
                         className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors disabled:opacity-60 whitespace-nowrap"
@@ -364,7 +366,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                       >
                         {restoringId === est.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
                         Restore
-                      </button>
+                      </button>}
                     </td>
                   </tr>
                 ))}

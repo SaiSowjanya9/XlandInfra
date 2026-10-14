@@ -1,11 +1,15 @@
 /**
- * Marketing is one set of screens served to three portals: the FP portal, the admin portal
- * (/employee) and the Ops Manager portal (/manager). The pages are shared, so the only thing that
- * differs is the API prefix and -- for the admin, who sees every franchise partner at once -- the
- * partner the request is narrowed to.
+ * Marketing is one set of screens served to five portals: the FP portal, the admin portal
+ * (/employee), the Ops Manager portal (/manager), and -- read-only -- the coordinator and
+ * executive portals. The pages are shared, so what differs per portal is the API prefix, the
+ * partner a request is narrowed to (the admin sees every franchise partner at once) and how much
+ * of a row the caller may change.
  *
- * The backend mounts the same router at all three prefixes (backend/routes/marketing.js), so a
- * path that works for one portal works for the others.
+ * The supervisor portal has no Marketing section, deliberately: there is no mount for it in the
+ * backend and no nav entry for it here.
+ *
+ * The backend mounts the same router at every prefix (backend/routes/marketing.js), so a path that
+ * works for one portal works for the others, and each mount's own scope decides what it answers.
  *
  * Regression test: node --test admin-portal/src/utils/marketingApi.test.js
  */
@@ -17,16 +21,39 @@ const PORTAL_API_PATHS = {
   // split the schedules and work-order screens already make.
   employee: 'admin',
   admin: 'admin',
-  manager: 'manager'
+  manager: 'manager',
+  coordinator: 'coordinator',
+  executive: 'executive'
 };
 
 export const getMarketingApiPath = (portalType) => PORTAL_API_PATHS[portalType] || 'fp';
 
-export const getMarketingBasePath = (portalType) => {
-  if (portalType === 'manager') return '/manager';
-  if (portalType === 'employee' || portalType === 'admin') return '/employee';
-  return '/fp';
+const PORTAL_BASE_PATHS = {
+  manager: '/manager',
+  employee: '/employee',
+  admin: '/employee',
+  coordinator: '/coordinator',
+  executive: '/executive'
 };
+
+export const getMarketingBasePath = (portalType) => PORTAL_BASE_PATHS[portalType] || '/fp';
+
+/**
+ * What this portal may change, mirroring each backend mount's scope. The server is the authority --
+ * it refuses the rest with a 403 whatever the page renders -- but a screen full of controls that
+ * all fail is worse than one that shows the row as read-only.
+ *
+ *   canEdit    the tracker's fields, complaints, archiving and restoring
+ *   canReview  Coordinator Reviewed only; setting it to Yes records the reviewer's name
+ */
+const PORTAL_PERMISSIONS = {
+  coordinator: { canEdit: false, canReview: true },
+  executive: { canEdit: false, canReview: false }
+};
+
+export const marketingPermissions = (portalType) => (
+  PORTAL_PERMISSIONS[portalType] || { canEdit: true, canReview: true }
+);
 
 /**
  * The franchise partner an admin request is scoped to, or null for "every partner".
