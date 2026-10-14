@@ -238,9 +238,16 @@ fetch('/api/manager/dashboard', { ... });
 
 ## Warm Beige UI System
 
-The FP portal is being moved onto a warm beige skin, one page at a time (All Estimates and
-Create Estimate are converted). Every other portal still uses the original slate/blue look, so
-nothing here may be applied globally.
+The portals are being moved onto the warm beige skin. Page surfaces still vary (pages convert
+one at a time, and `EstimateThemeProvider` keeps shared components byte-identical when no warm
+theme is in play), but **one element is deliberately global: dialogs.** Every modal in every
+portal — staff and customer — renders through `components/common/Modal.jsx` (copied to
+`frontend/src/components/common/Modal.jsx`): the `bg-black/50` backdrop, the white `rounded-xl`
+card with `border-warm-border shadow-warm`, Escape-to-close and backdrop-click close. Never
+write a `fixed inset-0` shell by hand; pass `onClose`, `align`, `zIndex`, `padding`,
+`overlayClassName` (e.g. `lg:pl-72` beside an expanded sidebar), `className` for the card's
+size/scroll only, and `ariaLabelledBy`. What stays outside it: image lightboxes, full-screen
+page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
 
 - The palette lives in `admin-portal/tailwind.config.js` as the `warm` colors — `page #FAF7F2`,
   `section #FFF9EE`, `border #EADFCF`, `accent #D4A574`, `accent-hover #C69250`,
@@ -342,12 +349,16 @@ nothing here may be applied globally.
   `created_at`, not the next calendar date — "after 1 day" must not mean "in an hour" for a lead
   entered at 11pm. Nothing is written, for the same reason Due Status is not: a stored
   "Pending Coordinator Review" is wrong the moment it is reviewed and nothing would correct it.
-- **A status matching the automatic one is deliberately left unstored.** The table re-sends the
-  whole tracker payload on every inline edit, including the *resolved* status it was given, so
-  editing any other cell would have written `Created by Executive` into the column and frozen the
-  lead there with the progression silently dead. The PUT compares the submitted status against
-  `autoTrackerStatus` and stores `NULL` when they agree; a genuinely different choice is kept and
-  outranks the automation, so a lead is never dragged back from where somebody put it.
+- **Only the two revision statuses are ever stored — everything else is locked to the
+  automation.** `MANUAL_TRACKER_STATUSES` (`Revision Required`, `Revised Estimate Sent`) is the
+  manual set; the dropdown lists the derived ones disabled so the current status still shows,
+  and the PUT writes `NULL` for any submitted status outside the manual set. That matters twice
+  over: the table re-sends the whole payload on every inline edit, including the *resolved*
+  status it was given, so storing `Pending Coordinator Review` would freeze the lead there with
+  the progression silently dead — and it also heals a row frozen by an older version, since the
+  next edit clears the stale value. A hand-picked manual status still outranks the automation,
+  so a lead is never dragged back from where somebody put it; the dropdown's `Auto` option
+  (`''` → `NULL`) is the way back.
 - **`coordinator_name` is not typed in either**: setting Reviewed to Yes records whoever did it.
   It is resolved **in the UPDATE**, `CASE WHEN ? = 'Yes' THEN COALESCE(NULLIF(coordinator_name,
   ''), ?) ELSE NULL END`, rather than in JavaScript — the table re-sends the whole payload on
@@ -532,6 +543,12 @@ nothing here may be applied globally.
   follow-up `FOLLOW_UP_INTERVAL_DAYS` (4) later. Editing Last Contact Date re-schedules from it;
   Next Follow-Up Date then stays editable, so a deliberate date is never overwritten. The table
   and the modal both go through `contactStamp` / `nextFollowUpFrom` so they cannot disagree.
+- **A Follow-Up Stage only moves forward.** The dropdown disables the steps behind the current
+  one — and the blank option once a stage is set — and the PUT enforces the same rule against the
+  stored row: a submission behind (or blank) keeps the stored stage rather than refusing, because
+  the table re-sends the whole payload on every inline edit and the other cells are still worth
+  saving. Regression test: `node --test backend/routes/marketing.test.js` ("a follow-up stage
+  only moves forward").
 - **An approved or rejected estimate answers Customer Response itself.** `effectiveCustomerResponse`
   resolves it on read — approving in All Estimates must move the tracker with it, and a stored copy
   would be right only until the estimate next changed. It overrules whatever the FP had chosen, so
