@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -1142,8 +1143,7 @@ const WorkOrders = ({ admin }) => {
       )}
 
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setSelectedOrder(null)} className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -1369,14 +1369,12 @@ const WorkOrders = ({ admin }) => {
                 <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Work Order Modal */}
       {showEditModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowEditModal(false)}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setShowEditModal(false)} className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 sticky top-0 bg-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -1517,14 +1515,12 @@ const WorkOrders = ({ admin }) => {
               <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
               <button onClick={handleSaveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Changes</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Add Category Modal */}
       {showAddCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }}>
-          <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        <Modal align="top" onClose={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
               <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -1543,8 +1539,7 @@ const WorkOrders = ({ admin }) => {
               <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleAddCategory} disabled={!newCategoryName.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Add Category</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
       {/* Image Viewer Modal */}
       {viewingImage && (

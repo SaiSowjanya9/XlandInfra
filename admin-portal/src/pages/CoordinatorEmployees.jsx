@@ -23,6 +23,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -543,8 +544,7 @@ const CoordinatorEmployees = ({ user }) => {
 
       {/* Add/Edit Employee Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -645,14 +645,12 @@ const CoordinatorEmployees = ({ user }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Employee Details Modal */}
       {showDetailsModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
@@ -732,8 +730,7 @@ const CoordinatorEmployees = ({ user }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

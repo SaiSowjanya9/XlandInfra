@@ -41,6 +41,7 @@ import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -861,8 +862,7 @@ const SupervisorProperties = ({ user }) => {
 
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -1307,14 +1307,12 @@ const SupervisorProperties = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Modal */}
       {showAssignModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -1372,14 +1370,12 @@ const SupervisorProperties = ({ user }) => {
                 );
               })()}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Property Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
               <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -1455,8 +1451,7 @@ const SupervisorProperties = ({ user }) => {
               <button onClick={() => { setShowEditModal(false); setEditFormData({}); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleSaveEdit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -191,8 +192,7 @@ const Units = ({ admin }) => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <Modal className="w-full max-w-lg">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold">{editingUnit ? 'Edit Unit' : 'Add New Unit'}</h2>
               <button onClick={() => { setShowModal(false); resetForm(); }} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
@@ -235,8 +235,7 @@ const Units = ({ admin }) => {
                 <button type="submit" className="btn-primary">{editingUnit ? 'Update' : 'Create'} Unit</button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

@@ -35,6 +35,7 @@ import * as XLSX from 'xlsx';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 import { shortDivision } from '../utils/fieldOptionsStore';
 import EstimateStatCards from '../components/estimates/EstimateStatCards';
+import Modal from '../components/common/Modal';
 
 // Decode HTML entities (e.g., &amp;amp; -> &)
 const decodeHtml = (html) => {
@@ -1962,7 +1963,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const renderArchived = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="list-table w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <tr key={e.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(e)} title="View details"><td className="px-4 py-3"><button type="button" onClick={() => setViewEstimate(e)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (shortDivision(e.division) || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name}</div>{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(e)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody></table>}</div>
-      {deleteConfirm && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-xl p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
+      {deleteConfirm && <Modal padding="" className="p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></Modal>}
     </div>
   );
 
@@ -2265,8 +2266,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* View Service Modal */}
       {viewAddon && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[95vh] overflow-y-auto">
+        <Modal padding="p-2 sm:p-4" className="w-full max-w-md max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Service Details</h3>
               <button onClick={() => setViewAddon(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -2301,13 +2301,11 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
       {/* Edit Estimate Modal - Direct Estimates Only */}
       {editEstimate && editEstimateForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <Modal zIndex="z-[9999]" onClose={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
               <div><h3 className="text-lg font-semibold text-gray-800">Edit Direct Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id}</p></div>
               <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
@@ -2320,8 +2318,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
               <div><label className="block text-xs font-medium text-gray-600 mb-1">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
               <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

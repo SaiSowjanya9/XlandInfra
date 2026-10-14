@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -565,8 +566,7 @@ const CoordinatorVendors = ({ user }) => {
 
       {/* Add/Edit Vendor Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <Modal className="max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Fixed Header */}
             <div className="p-6 border-b border-gray-100 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -686,14 +686,12 @@ const CoordinatorVendors = ({ user }) => {
                 <span>{editingVendor ? 'Update' : 'Add'} Vendor</span>
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Vendor Modal */}
       {showViewModal && selectedVendor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
@@ -778,8 +776,7 @@ const CoordinatorVendors = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

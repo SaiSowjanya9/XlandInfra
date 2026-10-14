@@ -51,6 +51,7 @@ import * as XLSX from 'xlsx';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
@@ -1501,8 +1502,7 @@ const FPProperties = ({ user }) => {
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
         <EstimateThemeProvider value="warm">
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal align="top" className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-warm-section rounded-t-xl">
               <div>
@@ -1984,15 +1984,13 @@ const FPProperties = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
         </EstimateThemeProvider>
       )}
 
       {/* Assign Modal - Table Layout for Vendor Assignment */}
       {showAssignModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-600 to-slate-500">
               <div className="flex items-center justify-between">
@@ -2176,14 +2174,12 @@ const FPProperties = ({ user }) => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }} className="w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
             {/* Header - Soft teal/emerald gradient */}
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
               <div className="flex items-center justify-between">
@@ -2279,14 +2275,12 @@ const FPProperties = ({ user }) => {
                 Employee zone assignments are managed in the Employee Zone Management section
               </p>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Property Modal - Comprehensive */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal align="top" className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
@@ -2622,14 +2616,12 @@ const FPProperties = ({ user }) => {
               <button onClick={closeEditModal} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
               <button onClick={handleSaveEdit} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Save className="w-4 h-4" />Save Changes</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal (Move to Inactive) */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-orange-500" />
             </div>
@@ -2651,14 +2643,12 @@ const FPProperties = ({ user }) => {
                 Move to Inactive
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Permanent Delete Confirmation Modal */}
       {permanentDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setPermanentDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setPermanentDeleteConfirm(null)} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-600" />
             </div>
@@ -2680,14 +2670,12 @@ const FPProperties = ({ user }) => {
                 Delete Permanently
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Success Popup */}
       {showSuccessPopup && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl p-8 shadow-2xl transform animate-bounce-in max-w-sm mx-4">
+        <Modal padding="" zIndex="z-[60]" className="p-8 transform animate-bounce-in max-w-sm mx-4">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="w-10 h-10 text-green-500" />
@@ -2701,8 +2689,7 @@ const FPProperties = ({ user }) => {
                 OK
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

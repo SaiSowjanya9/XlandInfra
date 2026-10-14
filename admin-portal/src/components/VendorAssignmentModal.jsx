@@ -9,6 +9,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { getVendors } from '../utils/vendorStore';
 import { getEstimatesByPropertyId, seedTestEstimateForProperty } from '../utils/estimateStore';
+import Modal from '../components/common/Modal';
 import { 
   saveServiceVendorAssignmentsWithSync, 
   getServiceVendorAssignmentsByEstimate 
@@ -778,11 +779,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
   const assignedCount = serviceAssignments.filter(s => s.vendorId).length;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div 
-        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
+    <Modal onClose={onClose} className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header - Soft Purple */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-600 to-slate-500">
           <div className="flex items-center justify-between">
@@ -1031,8 +1028,7 @@ const VendorAssignmentModal = ({ property, onClose, onSuccess, portalType }) => 
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 

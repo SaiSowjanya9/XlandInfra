@@ -9,6 +9,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -915,8 +916,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <Modal align="top" className="w-full max-w-lg overflow-hidden">
             {/* Modal Header */}
             <div className={`px-6 py-4 border-b ${
               selectedSchedule.status === 'completed' ? 'bg-green-50' :
@@ -1034,8 +1034,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 View Work Order
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

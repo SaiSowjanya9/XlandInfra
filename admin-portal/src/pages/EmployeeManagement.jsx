@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
+import Modal from '../components/common/Modal';
 import { 
   Users, Search, Briefcase, UserCog, ClipboardList, FileSpreadsheet,
   Edit2, Trash2, ToggleLeft, ToggleRight, X, Eye, EyeOff,
@@ -585,8 +586,7 @@ const EmployeeManagement = () => {
 
       {/* Add/Edit Employee Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <Modal className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingEmployee ? 'Edit Employee' : 'Add Employee'}
@@ -724,14 +724,12 @@ const EmployeeManagement = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Employee Modal */}
       {viewingEmployee && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md shadow-xl">
+        <Modal className="w-full max-w-md">
             <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Employee Details</h3>
               <button
@@ -780,14 +778,12 @@ const EmployeeManagement = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-sm shadow-xl p-6">
+        <Modal className="w-full max-w-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Employee</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to delete <strong>{showDeleteConfirm.name}</strong>? This action cannot be undone.
@@ -806,8 +802,7 @@ const EmployeeManagement = () => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

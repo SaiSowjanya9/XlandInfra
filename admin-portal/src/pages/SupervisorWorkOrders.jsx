@@ -3,6 +3,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List,
@@ -1230,8 +1231,7 @@ const SupervisorWorkOrders = ({ user }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
               <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -1407,14 +1407,12 @@ const SupervisorWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Cancel Modal - for entering cancellation note */}
       {showCancelModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Cancel Work Order</h2>
               <p className="text-sm text-gray-500 mt-1">Please provide a reason for cancellation</p>
@@ -1468,14 +1466,12 @@ const SupervisorWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Completion Modal with Closing Notes */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1503,14 +1499,12 @@ const SupervisorWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Vendor/Employee Modal */}
       {showAssignModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -1562,14 +1556,12 @@ const SupervisorWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Work Order Modal */}
       {showEditModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -1769,8 +1761,7 @@ const SupervisorWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
       {/* Image Viewer Modal */}
       {viewingImage && (

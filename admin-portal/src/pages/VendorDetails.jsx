@@ -12,6 +12,7 @@ import * as XLSX from 'xlsx';
 import { useFP } from '../contexts/FPContext';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Service Types - shared with Add Vendor section
@@ -872,8 +873,7 @@ const VendorDetails = () => {
 
       {/* View Vendor Modal */}
       {viewVendor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewVendor(null)} className="max-w-2xl max-h-[90vh] flex flex-col">
             <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name || viewVendor.company_name}</h2>
@@ -962,14 +962,12 @@ const VendorDetails = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Soft Delete Confirmation Modal */}
       {softDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <Modal className="max-w-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
             <p className="text-gray-600 text-sm mb-6">
               Are you sure you want to delete <strong>{softDeleteConfirm.ownerName || softDeleteConfirm.owner_name}</strong> ({softDeleteConfirm.vendorId || softDeleteConfirm.vendor_id})? 
@@ -990,14 +988,12 @@ const VendorDetails = () => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Permanent Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <Modal className="max-w-md p-6">
             <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Permanently Delete Vendor</h3>
             <p className="text-gray-600 text-sm mb-6">
               Are you sure you want to <strong className="text-red-600">permanently delete</strong> <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong> ({deleteConfirm.vendorId || deleteConfirm.vendor_id})? 
@@ -1018,14 +1014,12 @@ const VendorDetails = () => {
                 Delete Forever
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Vendor Modal */}
       {editVendor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setEditVendor(null)} className="max-w-3xl max-h-[90vh] flex flex-col">
             {/* Fixed Header */}
             <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 flex-shrink-0 rounded-t-xl">
               <div>
@@ -1328,8 +1322,7 @@ const VendorDetails = () => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

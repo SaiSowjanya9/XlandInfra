@@ -44,6 +44,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 // Service Type Icons mapping
 const SERVICE_ICONS = {
@@ -560,8 +561,7 @@ const FPVendors = ({ user }) => {
 
       {/* Permanent Delete Confirmation Modal */}
       {permanentDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermanentDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setPermanentDeleteConfirm(null)} className="max-w-md p-6">
             <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Permanently Delete Vendor</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to <strong className="text-red-600">permanently delete</strong> <strong>{permanentDeleteConfirm.ownerName || permanentDeleteConfirm.owner_name}</strong>?
@@ -599,14 +599,12 @@ const FPVendors = ({ user }) => {
                 Delete Forever
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="max-w-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Vendor</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to delete <strong>{deleteConfirm.ownerName || deleteConfirm.owner_name}</strong>? The vendor will be moved to inactive.
@@ -642,14 +640,12 @@ const FPVendors = ({ user }) => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Vendor Modal */}
       {editVendor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditVendor(null)}>
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setEditVendor(null)} className="max-w-3xl max-h-[90vh] flex flex-col">
             {/* Fixed Header */}
             <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between flex-shrink-0 border-b border-gray-200">
               <div>
@@ -832,14 +828,12 @@ const FPVendors = ({ user }) => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Vendor Modal */}
       {viewVendor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewVendor(null)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewVendor(null)} className="max-w-2xl max-h-[90vh] flex flex-col">
             <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name}</h2>
@@ -980,8 +974,7 @@ const FPVendors = ({ user }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

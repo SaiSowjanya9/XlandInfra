@@ -49,6 +49,7 @@ import {
 import { filterOptions } from '../utils/filterOptions';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const EmployeeDetails = () => {
   const navigate = useNavigate();
@@ -546,8 +547,7 @@ const EmployeeDetails = () => {
 
       {/* View Employee Modal */}
       {viewEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewEmployee(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewEmployee(null)} className="w-full max-w-lg">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -637,14 +637,12 @@ const EmployeeDetails = () => {
                 </span>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm">
             <div className="p-6 text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -668,14 +666,12 @@ const EmployeeDetails = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Employee Modal */}
       {editEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditEmployee(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setEditEmployee(null)} className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -802,8 +798,7 @@ const EmployeeDetails = () => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

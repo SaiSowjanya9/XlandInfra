@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Users, MapPin, Eye, X, RefreshCw, Search } from 'lucide-react';
+import Modal from '../components/common/Modal';
 
 const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) => {
   const [employees, setEmployees] = useState([]);
@@ -162,8 +163,7 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
 
       {/* View Modal */}
       {showModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full">
+        <Modal className="max-w-lg w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
@@ -225,8 +225,7 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

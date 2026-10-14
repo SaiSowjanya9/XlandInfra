@@ -27,6 +27,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
 import DateField from '../components/common/DateField';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -425,8 +426,7 @@ const FPPaymentHistory = ({ user }) => {
 
       {/* Payment Details Modal */}
       {viewPayment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -549,8 +549,7 @@ const FPPaymentHistory = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

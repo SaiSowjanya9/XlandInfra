@@ -23,6 +23,7 @@ import { billToParty } from '../utils/estimateStore';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -611,8 +612,7 @@ const FPInvoiceView = ({ user }) => {
 
       {/* Payment Link Modal */}
       {showPaymentLinkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Send Payment Link</h2>
@@ -764,8 +764,7 @@ const FPInvoiceView = ({ user }) => {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

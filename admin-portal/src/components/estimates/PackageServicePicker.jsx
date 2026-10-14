@@ -6,6 +6,7 @@ import { FREQUENCY_COUNT_MAP } from '../../utils/estimateStore';
 import { methodLabel, propertyTypeLabel } from './AddServicePage';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 import useScrollLock from '../../hooks/useScrollLock';
+import Modal from '../common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -70,8 +71,7 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
   if (!open) return null;
   const typeLabels = propertyTypes.map(propertyTypeLabel).filter(Boolean).join(', ');
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="package-service-picker-title">
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+    <Modal overlayClassName="overflow-y-auto overscroll-contain" ariaLabelledBy="package-service-picker-title" className="flex max-h-[85vh] max-w-2xl flex-col overflow-hidden">
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div className="min-w-0">
             <h3 id="package-service-picker-title" className={`text-base font-semibold ${skin.strong}`}>Add Service</h3>
@@ -129,7 +129,6 @@ export default function PackageServicePicker({ open, onClose, onAdd, propertyTyp
             <Check className="h-4 w-4" />{picked.length > 1 ? `Add ${picked.length} Services` : 'Add Service'}
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

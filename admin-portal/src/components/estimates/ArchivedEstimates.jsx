@@ -9,6 +9,7 @@ import { exportEstimateToPDF, printEstimatePDF } from '../../utils/pdfExport';
 import { useEstimatePrint } from '../../utils/useEstimatePrint';
 import EstimateDetailPanel from './EstimateDetailPanel';
 import { shortDivision } from '../../utils/fieldOptionsStore';
+import Modal from '../../components/common/Modal';
 
 // Decode HTML entities (e.g., &amp; -> &)
 const decodeHtml = (html) => {
@@ -348,8 +349,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md m-4">
+        <Modal padding="" className="p-6 max-w-md m-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimateId}</strong>? 
@@ -369,14 +369,12 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 Delete Permanently
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAllConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md m-4">
+        <Modal padding="" className="p-6 max-w-md m-4">
             <h3 className="text-lg font-semibold text-red-600 mb-2">⚠️ Delete All Archived Estimates?</h3>
             <p className="text-gray-600 mb-4">
               Are you sure you want to permanently delete <strong>all {archivedEstimates.length} archived estimates</strong>? 
@@ -396,8 +394,7 @@ const ArchivedEstimates = ({ admin, onRefresh, showToast, selectedFp }) => {
                 Delete All Permanently
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

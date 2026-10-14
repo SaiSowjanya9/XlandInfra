@@ -9,6 +9,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1462,8 +1463,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <Modal align="top" className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Schedule Details</h2>
               <button
@@ -1558,14 +1558,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Cancel Schedule Modal */}
       {showCancelModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <Modal align="top" className="w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Cancel Schedule</h2>
               <button
@@ -1607,14 +1605,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 {cancelling ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Reschedule Modal with Table View */}
       {showRescheduleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className={`bg-white rounded-2xl shadow-xl w-full ${isSingleReschedule ? 'max-w-xl' : 'max-w-5xl'} max-h-[90vh] overflow-hidden flex flex-col`}>
+        <Modal align="top" className="`bg-white w-full ${isSingleReschedule ? 'max-w-xl' : 'max-w-5xl'} max-h-[90vh] overflow-hidden flex flex-col`">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b bg-orange-50">
               <div>
@@ -1844,14 +1840,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Schedule Details PDF Modal */}
       {showScheduleDetailsModal && scheduleDetailsData && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-gray-200">
+        <Modal align="top" top="pt-8" className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
               <div className="flex items-center gap-3">
@@ -2065,14 +2059,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Bulk Cancel Modal */}
       {showBulkCancelModal && bulkCancelProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <Modal padding="" className="w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Cancel All Schedules</h3>
               <p className="text-sm text-gray-500 mt-1">
@@ -2106,14 +2098,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 {cancelling ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Service-Level Cancel Modal */}
       {showServiceCancelModal && serviceToCancel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <Modal className="w-full max-w-md">
             <div className="flex items-center justify-between px-5 py-4 border-b bg-red-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Cancel Service Schedules</h2>
@@ -2189,14 +2179,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Service-Level Reschedule Modal */}
       {showServiceRescheduleModal && serviceToReschedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <Modal className="w-full max-w-lg">
             <div className="flex items-center justify-between px-5 py-4 border-b bg-orange-50">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Reschedule {serviceToReschedule.serviceName}</h2>
@@ -2340,14 +2328,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Services Modal */}
       {servicesModal.show && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setServicesModal({ show: false, services: [], propertyName: '' })}>
-          <div className="bg-white rounded-xl shadow-xl mx-4" onClick={(e) => e.stopPropagation()}>
+        <Modal padding="" onClose={() => setServicesModal({ show: false, services: [], propertyName: '' })} className="mx-4">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">Services</h3>
@@ -2370,14 +2356,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Print Preview Modal with Filters */}
       {showPrintPreviewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+        <Modal className="w-full max-w-6xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
               <div className="flex items-center gap-3">
@@ -2558,8 +2542,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast Notification */}

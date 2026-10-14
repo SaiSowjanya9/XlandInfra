@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
 import DateField from '../components/common/DateField';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -246,8 +247,7 @@ const Residents = ({ admin }) => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <Modal className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold">
                 {editingResident ? 'Edit Resident' : 'Add New Resident'}
@@ -357,8 +357,7 @@ const Residents = ({ admin }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

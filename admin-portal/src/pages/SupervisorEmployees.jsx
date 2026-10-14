@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Users, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, Eye, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -235,8 +236,7 @@ const SupervisorEmployees = ({ user }) => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">{editingEmployee ? 'Edit Employee' : 'Add New Employee'}</h2>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -267,13 +267,11 @@ const SupervisorEmployees = ({ user }) => {
                 <button type="submit" className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"><Save className="w-4 h-4" /><span>{editingEmployee ? 'Update' : 'Add'} Employee</span></button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {showDetailModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
               <button onClick={() => { setShowDetailModal(false); setSelectedEmployee(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -289,8 +287,7 @@ const SupervisorEmployees = ({ user }) => {
                 <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-gray-400 mt-0.5" /><div><p className="text-sm font-medium text-gray-700">Assigned Zones</p><p className="text-gray-600">{selectedEmployee.zone_names || 'No zones assigned'}</p></div></div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

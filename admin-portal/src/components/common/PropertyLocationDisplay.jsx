@@ -13,6 +13,7 @@ import {
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useSkinClasses } from '../../utils/estimateTheme';
+import Modal from './Modal';
 
 // Custom marker icon
 const customIcon = new L.Icon({
@@ -141,8 +142,7 @@ const PropertyLocationDisplay = ({
 
       {/* Map Modal */}
       {showMapModal && (
-        <div className={sk("fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4")}>
-          <div className={sk("bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl")}>
+        <Modal className={sk("max-w-2xl overflow-hidden")}>
             {/* Modal Header */}
             <div className={sk("flex items-center justify-between px-6 py-4 border-b border-gray-200")}>
               <div className={sk("flex items-center gap-3")}>
@@ -188,8 +188,7 @@ const PropertyLocationDisplay = ({
                 Open in Google Maps
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

@@ -23,6 +23,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -505,11 +506,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {showEventModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowEventModal(false)}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal align="top" onClose={() => setShowEventModal(false)} className="w-full max-w-lg overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Schedule Details</h2>
               <button onClick={() => setShowEventModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -592,17 +589,12 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
                 View Details
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Day Detail Modal */}
       {showEventModal && selectedDate && !selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowEventModal(false); setSelectedDate(null); }}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal align="top" onClose={() => { setShowEventModal(false); setSelectedDate(null); }} className="w-full max-w-lg overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
                 Schedules for {formatDate(selectedDate)}
@@ -655,8 +647,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

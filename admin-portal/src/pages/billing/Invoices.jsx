@@ -38,6 +38,7 @@ import { statusLabel, paidPercent } from '../../utils/invoiceStatus';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1375,8 +1376,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
       {/* PDF Preview Modal - Shows invoice exactly as customer sees it */}
       {showPdfPreview && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closePdfPreview}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={closePdfPreview} className="w-full max-w-4xl h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
@@ -1420,8 +1420,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Invoice Detail Modal/Lightbox */}
@@ -1443,8 +1442,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 bg-red-100 rounded-full">
                 <Trash2 className="w-5 h-5 text-red-600" />
@@ -1468,14 +1466,12 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 Delete Permanently
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAllConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteAllConfirm(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setShowDeleteAllConfirm(false)} className="w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 bg-red-100 rounded-full">
                 <Trash2 className="w-5 h-5 text-red-600" />
@@ -1499,8 +1495,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                 Delete All
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Record Payment Modal */}
@@ -1548,11 +1543,7 @@ const InvoiceDetailPanel = ({
   const lineItems = invoice.lineItems ? (typeof invoice.lineItems === 'string' ? JSON.parse(invoice.lineItems) : invoice.lineItems) : [];
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div 
-        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* ===== HEADER - Compact black with centered branding ===== */}
         <div className="flex-shrink-0 relative">
           <div className="bg-[#1a1a1a] px-6 py-3">
@@ -2029,8 +2020,7 @@ const InvoiceDetailPanel = ({
             Record Payment
           </button>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 
@@ -2101,8 +2091,7 @@ const RecordPaymentModal = ({ invoice, onClose, onSuccess, formatCurrency }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <Modal zIndex="z-[60]" onClose={onClose} className="w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Record Payment</h2>
@@ -2241,8 +2230,7 @@ const RecordPaymentModal = ({ invoice, onClose, onSuccess, formatCurrency }) => 
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 };
 

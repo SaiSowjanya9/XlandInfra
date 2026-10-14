@@ -27,6 +27,7 @@ import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1354,8 +1355,7 @@ const CustomerSubmissions = () => {
 
       {/* View Property Modal */}
       {viewProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setViewProperty(null); setPropertyVendorAssignments([]); }}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => { setViewProperty(null); setPropertyVendorAssignments([]); }} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -1852,14 +1852,12 @@ const CustomerSubmissions = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Property Modal */}
       {editProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
@@ -1961,14 +1959,12 @@ const CustomerSubmissions = () => {
               <button onClick={closeEditModal} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
               <button onClick={handleSaveEdit} disabled={savingEdit} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"><Save className="w-4 h-4" />{savingEdit ? 'Saving...' : 'Save Changes'}</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-orange-500" />
             </div>
@@ -1990,14 +1986,12 @@ const CustomerSubmissions = () => {
                 Move to Inactive
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Permanent Delete Confirmation Modal */}
       {permanentDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setPermanentDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setPermanentDeleteConfirm(null)} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-600" />
             </div>
@@ -2019,8 +2013,7 @@ const CustomerSubmissions = () => {
                 Delete Permanently
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Vendor Assignment Modal - Estimate-Based Table Layout */}
@@ -2037,8 +2030,7 @@ const CustomerSubmissions = () => {
 
       {/* Assign Employee Modal */}
       {assignEmployeeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAssignEmployeeModal(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setAssignEmployeeModal(null)} className="w-full max-w-lg max-h-[80vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Assign Employee</h2>
@@ -2121,14 +2113,12 @@ const CustomerSubmissions = () => {
                 Assign Employee
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* AMC Details Modal */}
       {viewAMCDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <Modal className="w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
               <div className="flex items-center justify-between">
@@ -2304,8 +2294,7 @@ const CustomerSubmissions = () => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

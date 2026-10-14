@@ -21,6 +21,7 @@ import PropertyLocationDisplay from '../components/common/PropertyLocationDispla
 import { useFP } from '../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 // Category options for Properties (same as Onboarding)
 const PROPERTY_CATEGORIES = [
@@ -1046,8 +1047,7 @@ const Properties = () => {
 
       {/* View Property Modal - Clean Single View (FP Style) */}
       {viewProperty && !selectedEstimate && !showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={handleClosePropertyView}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={handleClosePropertyView} className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -1545,14 +1545,12 @@ const Properties = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Estimate Detail View Modal (Read-Only) */}
       {selectedEstimate && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setSelectedEstimate(null)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setSelectedEstimate(null)} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Estimate Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
               <div className="flex items-center justify-between">
@@ -1715,14 +1713,12 @@ const Properties = () => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-500" />
             </div>
@@ -1744,14 +1740,12 @@ const Properties = () => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Property Modal - Comprehensive like FP Portal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal zIndex="z-[60]" className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Edit Property</h2>
@@ -2017,8 +2011,7 @@ const Properties = () => {
                 <Save className="w-4 h-4" /> Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Vendor Assignment Modal */}
@@ -2035,8 +2028,7 @@ const Properties = () => {
 
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }} className="w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2113,8 +2105,7 @@ const Properties = () => {
             <div className="px-6 py-3 bg-white border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">Employee zone assignments are managed in the Employee Zone Management section</p>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

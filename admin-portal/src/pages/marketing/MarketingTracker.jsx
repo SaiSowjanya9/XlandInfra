@@ -11,6 +11,7 @@ import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
+import Modal from '../../components/common/Modal';
 import {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
   DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly,
@@ -699,8 +700,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
       {/* Edit modal. Backdrop covers the viewport, but the card centers in the content
           area -- the expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
       {editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72">
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        <Modal overlayClassName="lg:pl-72" className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
               <div>
@@ -859,14 +859,12 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                 </button>}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Archive confirmation */}
       {archiveTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72" onClick={() => setArchiveTarget(null)}>
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <Modal overlayClassName="lg:pl-72" onClose={() => setArchiveTarget(null)} className="w-full max-w-md p-6">
             <h3 className="text-base font-semibold text-warm-text mb-2">Move to Archived?</h3>
             <p className="text-sm text-warm-muted mb-5">
               <span className="font-medium text-warm-text">{archiveTarget.estimate_id}</span> will leave the tracker. You can restore it from Marketing &gt; Archived.
@@ -885,8 +883,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                 Move to Archived
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast */}

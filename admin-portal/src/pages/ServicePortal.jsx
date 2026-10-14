@@ -33,6 +33,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { saveProperty } from '../utils/propertyStore';
 import StateSelect from '../components/common/StateSelect';
+import Modal from '../components/common/Modal';
 
 // Fix Leaflet default marker icon (broken in bundlers like Vite)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -1417,8 +1418,7 @@ const Onboarding = ({ admin }) => {
     <>
       {/* Navigation Confirmation Modal */}
       {showNavigationModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <Modal className="max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-amber-600" />
@@ -1445,8 +1445,7 @@ const Onboarding = ({ admin }) => {
                 Leave Page
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       <div className="space-y-6">

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipboardList, Calendar, CreditCard, HelpCircle, ArrowRight, Building2, Home, Lock, Clock, CheckCircle, AlertCircle, Loader2, Eye, ChevronRight, Wrench, User, Phone, Mail, MapPin, Paperclip, Image, FileText, X, Truck, RefreshCw, Bell, BellRing, CheckCheck, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import Modal from '../components/common/Modal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
@@ -606,16 +607,15 @@ const Dashboard = ({ user }) => {
       {/* Work Order Detail Modal — portalled so fixed positioning always
           resolves against the viewport, not a transformed ancestor */}
       {selectedWorkOrder && createPortal(
-        <div 
-          ref={overlayRef}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
-          onClick={() => setSelectedWorkOrder(null)}
+        <Modal
+          overlayRef={overlayRef}
+          cardRef={modalRef}
+          align="top"
+          top=""
+          padding="py-8 px-4"
+          onClose={() => setSelectedWorkOrder(null)}
+          className="max-w-2xl overflow-hidden my-auto"
         >
-          <div 
-            ref={modalRef}
-            className="bg-white border border-gray-200 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto"
-            onClick={e => e.stopPropagation()}
-          >
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-gold-600/20 to-gold-600/20 border-b border-gray-200 p-4 sm:p-6">
               <div className="flex items-start justify-between">
@@ -734,8 +734,7 @@ const Dashboard = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>,
+        </Modal>,
         document.body
       )}
     </div>

@@ -17,6 +17,7 @@ import {
   Layers,
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -499,8 +500,7 @@ const ManagerEmployeeZones = ({ user }) => {
 
       {/* Zone Assignment Modal */}
       {selectedEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeModal}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal onClose={closeModal} className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center justify-between">
@@ -663,14 +663,12 @@ const ManagerEmployeeZones = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View All Zones Popup */}
       {viewZonesEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewZonesEmployee(null)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewZonesEmployee(null)} className="w-full max-w-md overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-green-50">
               <div className="flex items-center justify-between">
                 <div>
@@ -715,8 +713,7 @@ const ManagerEmployeeZones = ({ user }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

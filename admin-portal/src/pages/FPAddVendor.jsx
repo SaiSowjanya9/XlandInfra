@@ -18,6 +18,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 // Country codes with flag emojis
 const COUNTRY_CODES = [
@@ -793,8 +794,7 @@ const FPAddVendor = ({ user }) => {
 
       {/* Add Service Type Modal */}
       {showAddServiceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Add New Service Type</h2>
@@ -834,8 +834,7 @@ const FPAddVendor = ({ user }) => {
                 Add Service Type
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
     </div>

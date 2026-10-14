@@ -25,6 +25,7 @@ import {
 import * as XLSX from 'xlsx';
 import AMCPackageDetailView from '../components/estimates/AMCPackageDetailView';
 import { shortDivision } from '../utils/fieldOptionsStore';
+import Modal from '../components/common/Modal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -1860,8 +1861,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* Edit Estimate Modal - Direct Estimates Only */}
       {editEstimate && editEstimateForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <Modal zIndex="z-[9999]" onClose={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
               <div><h3 className="text-lg font-semibold text-gray-800">Edit Direct Estimate</h3><p className="text-sm text-gray-500">{editEstimate.estimate_id}</p></div>
               <button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
@@ -1874,8 +1874,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <div><label className="block text-xs font-medium text-gray-600 mb-1">Notes</label><textarea value={editEstimateForm.description} onChange={(e) => setEditEstimateForm({ ...editEstimateForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
               <div className="flex justify-end gap-3 pt-4 border-t"><button onClick={() => { setEditEstimate(null); setEditEstimateForm(null); }} className="px-5 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button><button onClick={handleUpdateEstimate} disabled={savingEstimate} className="px-6 py-2.5 text-sm text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2">{savingEstimate ? (<><RefreshCw className="w-4 h-4 animate-spin" />Saving...</>) : (<><Save className="w-4 h-4" />Save</>)}</button></div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

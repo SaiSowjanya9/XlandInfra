@@ -42,6 +42,7 @@ import AmountExceedsCaution from '../../components/common/AmountExceedsCaution';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -295,8 +296,7 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
   const daysInfo = getDaysInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -703,8 +703,7 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 
@@ -878,8 +877,7 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   const daysInfo = getDaysInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -1360,8 +1358,7 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 
@@ -1628,8 +1625,7 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
   const daysInfo = getDaysInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto my-auto" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} className="w-full max-w-5xl max-h-[90vh] overflow-y-auto my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -2195,8 +2191,7 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 
@@ -2262,8 +2257,7 @@ const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
   const dateTime = formatDateTime(payment.paymentDate);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Modal align="top" onClose={onClose} className="w-full max-w-lg max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-orange-50 to-amber-50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg">
@@ -2404,8 +2398,7 @@ const VerifyPaymentModal = ({ isOpen, onClose, onSuccess, payment }) => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 };
 
@@ -2427,8 +2420,7 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
     : '-';
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} className="w-full max-w-lg max-h-[90vh] overflow-hidden">
         {/* Action Buttons - Top Right */}
         <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
           {payment.status === 'paid' && onSend && (
@@ -2551,8 +2543,7 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
             <p className="text-gray-900 font-semibold">XLAND INFRA PM SERVICES PVT LTD</p>
           </div>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 

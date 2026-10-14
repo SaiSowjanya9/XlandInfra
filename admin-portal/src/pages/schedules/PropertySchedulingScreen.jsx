@@ -10,6 +10,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader from '../../components/common/PageHeader';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 import { 
   generateScheduleDates, 
   formatSchedulesForDisplay, 
@@ -2248,8 +2249,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Confirmation Modal - Responsive */}
       {showConfirmation && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+        <Modal align="top" top="pt-4 sm:pt-20" padding="p-2 sm:p-4" className="sm:rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between">
@@ -2394,14 +2394,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Reschedule Modal - Responsive */}
       {showRescheduleModal && rescheduleVisit && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <Modal align="top" top="pt-4 sm:pt-20" padding="p-2 sm:p-4" className="w-full max-w-md">
             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Reschedule Visit {rescheduleVisit.visitNumber}</h3>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
@@ -2514,14 +2512,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 Reschedule
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Recurrence Modal - Responsive */}
       {showRecurrenceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <Modal align="top" top="pt-4 sm:pt-20" padding="p-2 sm:p-4" className="w-full max-w-md">
             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Edit Recurrence</h3>
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
@@ -2613,14 +2609,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 Apply
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* All Visits Modal - Responsive */}
       {showAllVisitsModal && selectedService && plannedVisits.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 pt-4 sm:pt-10 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+        <Modal align="top" top="pt-4 sm:pt-10" padding="p-2 sm:p-4" className="w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between">
@@ -2692,14 +2686,12 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* ===== FINAL REVIEW MODAL - Review All Planned Services - Responsive ===== */}
       {showFinalReview && (
-        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-2 sm:p-4 pt-2 sm:pt-8 overflow-y-auto">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
+        <Modal align="top" top="pt-2 sm:pt-8" padding="p-2 sm:p-4" className="sm:rounded-2xl w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-4 sm:px-6 py-3 sm:py-5">
               <div className="flex items-center justify-between">
@@ -2982,8 +2974,7 @@ const PropertySchedulingScreen = ({ user, portalType = 'admin' }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );
