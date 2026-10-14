@@ -506,3 +506,51 @@ test('the creator clause is for fp_estimates only -- complaints have no created_
     assert.match(query.sql, /c\.zone IN/, path);
   }
 });
+
+test('a tracked lead moves itself along until the coordinator reviews it', async () => {
+  const { autoTrackerStatus, effectiveTrackerStatus, COORDINATOR_REVIEW_AFTER_MS } = require('./marketing');
+  const now = Date.UTC(2026, 9, 14, 12, 0, 0);
+  const tracked = { tracked_at: '2026-10-13 12:00:00' };
+  const at = (msAgo, rest = {}) => ({ ...tracked, created_at: new Date(now - msAgo), ...rest });
+
+  // The first day belongs to the executive who entered it.
+  assert.equal(autoTrackerStatus(at(0), now), 'Created by Executive');
+  assert.equal(autoTrackerStatus(at(COORDINATOR_REVIEW_AFTER_MS - 1000), now), 'Created by Executive');
+  // A day old, and it is the coordinator's to look at.
+  assert.equal(autoTrackerStatus(at(COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Coordinator Review');
+  assert.equal(autoTrackerStatus(at(10 * COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Coordinator Review',
+    'it waits there however long it takes');
+  // Until somebody reviews it -- which is the one thing a coordinator may record.
+  assert.equal(autoTrackerStatus(at(10 * COORDINATOR_REVIEW_AFTER_MS, { coordinator_reviewed: 'Yes' }), now),
+    'Reviewed by Coordinator');
+  assert.equal(autoTrackerStatus(at(0, { coordinator_reviewed: 'No' }), now), 'Created by Executive');
+
+  // "after 1 day" is 24 hours, not the next calendar date: a lead entered at 11pm must not be
+  // the coordinator's an hour later.
+  const lateEvening = { ...tracked, created_at: new Date(Date.UTC(2026, 9, 13, 23, 0, 0)) };
+  assert.equal(autoTrackerStatus(lateEvening, Date.UTC(2026, 9, 14, 0, 30, 0)), 'Created by Executive');
+
+  // An estimate that has not been tracked yet has not started, and a hand-picked status outranks
+  // the automatic one so the progression never drags a lead back.
+  assert.equal(autoTrackerStatus({ created_at: new Date(now) }, now), 'Not Started');
+  assert.equal(effectiveTrackerStatus({ ...at(0), tracker_status: 'Estimate Sent' }), 'Estimate Sent');
+  assert.equal(effectiveTrackerStatus({ ...at(0), status: 'approved' }), 'Approved');
+});
+
+test('saving a row does not freeze its automatic status', async (t) => {
+  const request = await startServer(t);
+
+  // The table re-sends the resolved status with every inline edit, so storing it would stop the
+  // lead ever reaching Pending Coordinator Review.
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: 'Created by Executive' });
+  let update = lastCall('UPDATE fp_estimates SET');
+  const statusParam = update.params[8];
+  assert.equal(statusParam, null, 'a status matching the automatic one is left unstored');
+
+  // A different status is a real choice and is kept.
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: 'Estimate Sent' });
+  update = lastCall('UPDATE fp_estimates SET');
+  assert.equal(update.params[8], 'Estimate Sent');
+});

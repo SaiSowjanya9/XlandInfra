@@ -163,15 +163,45 @@ const trackerActor = (req) => {
 
 const trackerSelect = (alias = 'e') => TRACKER_COLUMNS.map((col) => `${alias}.${col}`).join(', ');
 
+// How long a new lead sits with the executive before it is the coordinator's to review.
+const COORDINATOR_REVIEW_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Where a tracked lead has got to on its own, with nobody having set a status by hand:
+ *
+ *   Created by Executive       the first day after the estimate was written
+ *   Pending Coordinator Review from a day old, and it stays there...
+ *   Reviewed by Coordinator    ...until a coordinator marks Coordinator Reviewed as Yes
+ *
+ * Derived on read rather than stored, like Due Status: a stored "Pending Coordinator Review" is
+ * wrong the moment somebody reviews it, and nothing would be running to correct it. It also means
+ * the rule applies to rows that were tracked before it existed.
+ *
+ * A day is 24 hours from created_at, not the next calendar date -- "after 1 day" should not mean
+ * "in an hour" for a lead entered at 11pm.
+ */
+const autoTrackerStatus = (est, now = Date.now()) => {
+  if (!est.tracked_at) return 'Not Started';
+  if (decodeEntities(String(est.coordinator_reviewed || '')).trim() === 'Yes') {
+    return 'Reviewed by Coordinator';
+  }
+  const created = est.created_at ? new Date(est.created_at).getTime() : NaN;
+  if (Number.isNaN(created)) return 'Created by Executive';
+  return now - created >= COORDINATOR_REVIEW_AFTER_MS
+    ? 'Pending Coordinator Review'
+    : 'Created by Executive';
+};
+
 // The tracker status the row should show. The estimate's own status is the authority at the ends
 // of the pipeline -- approved/rejected always win, and a sent estimate defaults to Estimate Sent
-// until it is moved further along by hand.
+// until it is moved further along by hand. A status chosen by hand outranks the automatic one,
+// so the progression never drags a lead back from where somebody deliberately put it.
 const effectiveTrackerStatus = (est) => {
   if (est.status === 'approved') return 'Approved';
   if (est.status === 'rejected') return 'Rejected';
   if (est.tracker_status) return est.tracker_status;
   if (est.status === 'sent') return 'Estimate Sent';
-  return 'Not Started';
+  return autoTrackerStatus(est);
 };
 
 // What a tracker row looks like to the portal: the resolved status the list shows, the two dates
@@ -512,6 +542,28 @@ const createMarketingRouter = ({ resolveScope }) => {
 
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope, '', { withCreator: true });
+
+      // A status that only matches the automatic one is not a choice, so it is not stored.
+      //
+      // The table re-sends the whole tracker payload on every inline edit, and the status it
+      // sends back is the resolved one it was given -- so editing any other cell would have
+      // written "Created by Executive" into the column and frozen the lead there, with the
+      // progression to Pending Coordinator Review silently dead for that row. Leaving the column
+      // NULL keeps it automatic until somebody picks something genuinely different.
+      const [[current]] = await pool.execute(
+        `SELECT created_at, tracked_at FROM fp_estimates
+         WHERE id = ? AND estimate_type = 'direct'${fp.sql}${zone.sql}`,
+        [id, ...fp.params, ...zone.params]
+      );
+      if (!current) {
+        return res.status(404).json({ success: false, message: 'Direct estimate not found' });
+      }
+      if (updates.tracker_status && updates.tracker_status === autoTrackerStatus({
+        ...current, coordinator_reviewed: updates.coordinator_reviewed
+      })) {
+        updates.tracker_status = null;
+      }
+
       // Who changed it is recorded by the server from the token, never taken from the body: a
       // field the caller could set would be worth nothing as a record of who did what.
       const actor = trackerActor(req);
@@ -816,5 +868,7 @@ module.exports = {
   TRACKER_OPTIONS,
   trackerSelect,
   presentTrackerRow,
-  effectiveTrackerStatus
+  effectiveTrackerStatus,
+  autoTrackerStatus,
+  COORDINATOR_REVIEW_AFTER_MS
 };
