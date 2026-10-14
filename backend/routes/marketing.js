@@ -18,8 +18,8 @@ const express = require('express');
 const { pool } = require('../config/database');
 const { decodeEntities } = require('../utils/htmlEntities');
 const {
-  LEAD_SOURCES, PRIORITIES, CUSTOMER_DECISIONS, TRACKER_STATUSES, FOLLOW_UP_STAGES,
-  buildMarketingDashboard
+  LEAD_SOURCES, PRIORITIES, CUSTOMER_DECISIONS, TRACKER_STATUSES, MANUAL_TRACKER_STATUSES,
+  FOLLOW_UP_STAGES, buildMarketingDashboard
 } = require('../utils/marketingDashboard');
 const {
   LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
@@ -543,25 +543,36 @@ const createMarketingRouter = ({ resolveScope }) => {
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope, '', { withCreator: true });
 
-      // A status that only matches the automatic one is not a choice, so it is not stored.
+      // Only the two revision statuses are stored; everything else is derived and stays derived.
       //
-      // The table re-sends the whole tracker payload on every inline edit, and the status it
-      // sends back is the resolved one it was given -- so editing any other cell would have
-      // written "Created by Executive" into the column and frozen the lead there, with the
-      // progression to Pending Coordinator Review silently dead for that row. Leaving the column
-      // NULL keeps it automatic until somebody picks something genuinely different.
+      // The dropdown locks the automated options, and the table re-sends the whole tracker
+      // payload on every inline edit anyway -- including the *resolved* status it was given, so
+      // a row sitting at "Pending Coordinator Review" submits that same text while somebody is
+      // editing an unrelated cell. Storing it would freeze the lead there, the progression dead
+      // for that row. Any submitted status that is not a manual choice is written as NULL, which
+      // keeps the automatic one in charge -- and heals a row frozen by an older version, since
+      // its next edit clears the stale value rather than keeping it.
       const [[current]] = await pool.execute(
-        `SELECT created_at, tracked_at FROM fp_estimates
+        `SELECT id, follow_up_stage FROM fp_estimates
          WHERE id = ? AND estimate_type = 'direct'${fp.sql}${zone.sql}`,
         [id, ...fp.params, ...zone.params]
       );
       if (!current) {
         return res.status(404).json({ success: false, message: 'Direct estimate not found' });
       }
-      if (updates.tracker_status && updates.tracker_status === autoTrackerStatus({
-        ...current, coordinator_reviewed: updates.coordinator_reviewed
-      })) {
+      if (updates.tracker_status && !MANUAL_TRACKER_STATUSES.includes(updates.tracker_status)) {
         updates.tracker_status = null;
+      }
+
+      // Follow-Up Stage moves forward only -- the dropdown locks the steps behind the current
+      // one, and the same holds here so a stale tab or a direct call cannot walk the pipeline
+      // back. A submission behind the stored step, or a blank one, keeps what is stored rather
+      // than refusing: the table re-sends the whole payload on every inline edit, and the other
+      // cells in it are still worth saving.
+      const storedStageIdx = FOLLOW_UP_STAGES.indexOf(decodeEntities(String(current.follow_up_stage || '')).trim());
+      const submittedStageIdx = FOLLOW_UP_STAGES.indexOf(decodeEntities(String(req.body.follow_up_stage ?? '')).trim());
+      if (storedStageIdx >= 0 && submittedStageIdx < storedStageIdx) {
+        updates.follow_up_stage = current.follow_up_stage;
       }
 
       // Who changed it is recorded by the server from the token, never taken from the body: a

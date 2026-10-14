@@ -28,6 +28,11 @@ const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Man
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
 const DECISION_OPTIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
 const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+// The only statuses anybody picks by hand; the rest are derived -- by the estimate's own status,
+// by Coordinator Reviewed, or by the time since the estimate was created -- so the dropdown keeps
+// them listed (the current one has to be shown) but locked. The PUT enforces the same rule.
+// Keep this in step with MANUAL_TRACKER_STATUSES in backend/utils/marketingDashboard.js.
+const MANUAL_TRACKER_STATUSES = ['Revision Required', 'Revised Estimate Sent'];
 const COORDINATOR_REVIEWED_OPTIONS = ['Yes', 'No'];
 const FOLLOW_UP_OPTIONS = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
 
@@ -514,8 +519,14 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             disabled={savingRowId === est.id || !canEdit}
                             onChange={(e) => saveRowField(est, { tracker_status: e.target.value })}
                             className={cellSelectCls}
+                            title="Only the revision statuses are chosen by hand -- the rest follow the estimate and the review on their own"
                           >
-                            {TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected').map(o => <option key={o} value={o}>{o}</option>)}
+                            {/* Auto clears a hand-picked status, returning the row to the
+                                pipeline's own progression. */}
+                            <option value="">Auto</option>
+                            {TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected').map(o => (
+                              <option key={o} value={o} disabled={!MANUAL_TRACKER_STATUSES.includes(o)}>{o}</option>
+                            ))}
                           </select>
                         )}
                       </td>
@@ -553,18 +564,25 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         </div>
                       </td>
                       {/* Picking a stage records a contact: today (IST) in Last Contact and the
-                          next follow-up four days out, both still editable afterwards. */}
+                          next follow-up four days out, both still editable afterwards. The stage
+                          only moves forward -- once a step is set, the ones before it are locked
+                          and so is clearing it, because the pipeline does not walk backwards. */}
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={est.follow_up_stage || ''}
-                          disabled={savingRowId === est.id || !canEdit}
-                          onChange={(e) => saveRowStage(est, e.target.value)}
-                          className={cellSelectCls}
-                          title="Picking a stage stamps today as the last contact"
-                        >
-                          <option value="">-</option>
-                          {FOLLOW_UP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                        {(() => {
+                          const currentStage = FOLLOW_UP_OPTIONS.indexOf(est.follow_up_stage);
+                          return (
+                            <select
+                              value={est.follow_up_stage || ''}
+                              disabled={savingRowId === est.id || !canEdit}
+                              onChange={(e) => saveRowStage(est, e.target.value)}
+                              className={cellSelectCls}
+                              title="Picking a stage stamps today as the last contact; steps already passed stay locked"
+                            >
+                              <option value="" disabled={currentStage >= 0}>-</option>
+                              {FOLLOW_UP_OPTIONS.map((o, i) => <option key={o} value={o} disabled={i < currentStage}>{o}</option>)}
+                            </select>
+                          );
+                        })()}
                       </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select

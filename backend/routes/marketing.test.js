@@ -33,6 +33,11 @@ const pool = {
     // Both runtime backfills report the column/table as already present.
     if (sql.includes('information_schema.columns')) return [[{ n: 1 }]];
     if (sql.includes('information_schema.tables')) return [[{ n: 1 }]];
+    // The PUT's current-row read carries the stored follow-up stage, so the forward-only rule
+    // has something to judge submissions against: this lead sits at Step 3.
+    if (sql.startsWith('SELECT id, follow_up_stage FROM fp_estimates')) {
+      return [[{ id: 31, follow_up_stage: 'Step 3 - Follow-Up 1' }]];
+    }
     if (sql.includes('FROM fp_estimates')) return [[trackerRow]];
     if (sql.startsWith('UPDATE fp_estimates')) return [{ affectedRows: 1 }];
     if (sql.includes(`FROM ${COMPLAINT_TABLE}`)) return [[complaintRow]];
@@ -540,17 +545,43 @@ test('a tracked lead moves itself along until the coordinator reviews it', async
 test('saving a row does not freeze its automatic status', async (t) => {
   const request = await startServer(t);
 
-  // The table re-sends the resolved status with every inline edit, so storing it would stop the
-  // lead ever reaching Pending Coordinator Review.
-  calls.length = 0;
-  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: 'Created by Executive' });
-  let update = lastCall('UPDATE fp_estimates SET');
-  const statusParam = update.params[8];
-  assert.equal(statusParam, null, 'a status matching the automatic one is left unstored');
+  // The table re-sends the resolved status with every inline edit, so storing an automated
+  // status would stop the lead ever reaching Pending Coordinator Review -- the dropdown locks
+  // them, and the PUT writes NULL for anything that is not a manual choice.
+  for (const automated of ['Created by Executive', 'Pending Coordinator Review', 'Estimate Sent']) {
+    calls.length = 0;
+    await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: automated });
+    const update = lastCall('UPDATE fp_estimates SET');
+    assert.equal(update.params[8], null, `${automated} is derived, never stored`);
+  }
 
-  // A different status is a real choice and is kept.
-  calls.length = 0;
-  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: 'Estimate Sent' });
-  update = lastCall('UPDATE fp_estimates SET');
-  assert.equal(update.params[8], 'Estimate Sent');
+  // A revision status is a real choice and is kept.
+  for (const manual of ['Revision Required', 'Revised Estimate Sent']) {
+    calls.length = 0;
+    await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: manual });
+    const update = lastCall('UPDATE fp_estimates SET');
+    assert.equal(update.params[8], manual);
+  }
+});
+
+test('a follow-up stage only moves forward', async (t) => {
+  const request = await startServer(t);
+
+  // The mocked row sits at Step 3, so an earlier step -- or a blank one, which a stale tab
+  // re-sending the payload it loaded can produce on any unrelated edit -- keeps the stored
+  // stage rather than walking the pipeline back.
+  for (const backward of ['Step 1 - Thank You', undefined]) {
+    calls.length = 0;
+    const response = await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, follow_up_stage: backward });
+    assert.equal(response.status, 200);
+    assert.equal(lastCall('UPDATE fp_estimates SET').params[10], 'Step 3 - Follow-Up 1');
+  }
+
+  // The step it is already on, and every step ahead of it, are still real choices.
+  for (const onward of ['Step 3 - Follow-Up 1', 'Step 5A - Executive Call', 'Closed']) {
+    calls.length = 0;
+    const response = await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, follow_up_stage: onward });
+    assert.equal(response.status, 200);
+    assert.equal(lastCall('UPDATE fp_estimates SET').params[10], onward);
+  }
 });
