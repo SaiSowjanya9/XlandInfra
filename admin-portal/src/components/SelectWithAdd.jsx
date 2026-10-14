@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, X, Check, ChevronDown } from 'lucide-react';
+import Modal from './common/Modal';
 
 /**
  * Select dropdown with ability to add new options
@@ -123,18 +124,14 @@ const SelectWithAdd = ({
 
       {/* Add Option Modal */}
       {showAddModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => {
+        <Modal
+          onClose={() => {
             setShowAddModal(false);
             setNewOption('');
             setAddError('');
           }}
+          className="max-w-md overflow-hidden"
         >
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white">
               <div>
@@ -233,8 +230,7 @@ const SelectWithAdd = ({
                 Add {label || 'Option'}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

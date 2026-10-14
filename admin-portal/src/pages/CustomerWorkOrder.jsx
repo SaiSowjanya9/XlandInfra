@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 import {
   ClipboardList,
   ChevronDown,
@@ -1044,8 +1045,7 @@ const CustomerWorkOrder = ({ user }) => {
 
       {/* Work Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <Modal className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Work Order Details</h2>
@@ -1134,8 +1134,7 @@ const CustomerWorkOrder = ({ user }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Click outside to close dropdowns */}

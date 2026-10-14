@@ -4,6 +4,7 @@ import {
   Check, RefreshCw, ChevronRight, Search, AlertCircle
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -194,8 +195,7 @@ const CancelScheduleModal = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+    <Modal align="top" className="w-full max-w-3xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -397,8 +397,7 @@ const CancelScheduleModal = ({
 
               {/* Entire Property Cancellation Confirm */}
               {showEntirePropertyConfirm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4">
-                  <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                <Modal zIndex="z-60" className="w-full max-w-md p-6">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -448,8 +447,7 @@ const CancelScheduleModal = ({
                         Confirm Cancellation
                       </button>
                     </div>
-                  </div>
-                </div>
+                  </Modal>
               )}
             </>
           )}
@@ -492,8 +490,7 @@ const CancelScheduleModal = ({
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 };
 

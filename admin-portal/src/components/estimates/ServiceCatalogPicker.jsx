@@ -9,6 +9,7 @@ import { FREQUENCY_OPTIONS, getServiceSchedule, methodLabel, serviceOptionLabel 
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
 import { resolveVisits, sanitizeVisits } from '../../utils/visitsPerYear';
 import useScrollLock from '../../hooks/useScrollLock';
+import Modal from '../common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // The dropdown sits on the panel's own tint; the dialog's fields sit on white and follow the
@@ -329,8 +330,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
 
       {/* Selecting a service opens its details here rather than expanding the panel: the estimate
           gets its row only once OK is pressed, so a service being looked at is never half-added. */}
-      {service && <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-service-title">
-        <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+      {service && <Modal overlayClassName="overflow-y-auto overscroll-contain" ariaLabelledBy="catalog-service-title" className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
           <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
             <div className="min-w-0">
               <h3 id="catalog-service-title" className={`truncate text-base font-semibold ${skin.strong}`}>{service.service_name}</h3>
@@ -425,8 +425,7 @@ const ServiceCatalogPicker = ({ fpId, propertyType, selectedAddons, onAdd, apiPa
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{editing || rowFor(service) ? 'Save Changes' : 'OK'}
             </button>
           </div>
-        </div>
-      </div>}
+        </Modal>}
     </div>
   );
 };

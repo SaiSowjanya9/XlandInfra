@@ -36,6 +36,7 @@ import {
 import * as XLSX from 'xlsx';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -1434,8 +1435,7 @@ const ManagerWorkOrders = ({ user }) => {
 
       {/* View Work Order Modal */}
       {showViewModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
@@ -1673,14 +1673,12 @@ const ManagerWorkOrders = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Cancel Modal - Requires Note */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => { setShowCancelModal(null); setCancelNote(''); }}>
-          <div className="bg-white rounded-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+        <Modal align="top" onClose={() => { setShowCancelModal(null); setCancelNote(''); }} className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Cancel Work Order</h2>
               <button onClick={() => { setShowCancelModal(null); setCancelNote(''); }} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -1745,14 +1743,12 @@ const ManagerWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Add Category Modal */}
       {showAddCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
               <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -1772,14 +1768,12 @@ const ManagerWorkOrders = ({ user }) => {
               <button onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewSubcategoryName(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleAddCategory} disabled={!newCategoryName.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Add Category</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Completion Modal with Closing Notes */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1807,14 +1801,12 @@ const ManagerWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Vendor/Employee Modal */}
       {showAssignModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -1866,14 +1858,12 @@ const ManagerWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Work Order Modal */}
       {showEditModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -2069,8 +2059,7 @@ const ManagerWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Image Viewer Modal */}

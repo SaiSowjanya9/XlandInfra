@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Modal from '../components/common/Modal';
 import { 
   Plus, 
   Edit2, 
@@ -148,8 +149,7 @@ const Categories = ({ admin }) => {
 
       {/* Add Category Modal */}
       {showAddCategory && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+        <Modal padding="" className="p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Category</h3>
             <input
               type="text"
@@ -174,14 +174,12 @@ const Categories = ({ admin }) => {
                 Add Category
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+        <Modal padding="" className="p-6 w-full max-w-md mx-4">
             <div className="flex items-center space-x-3 text-red-600 mb-4">
               <AlertCircle className="w-6 h-6" />
               <h3 className="text-lg font-semibold">Delete Category</h3>
@@ -204,8 +202,7 @@ const Categories = ({ admin }) => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Stats */}

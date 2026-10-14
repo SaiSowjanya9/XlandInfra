@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { filterOptions } from '../utils/filterOptions';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const FPEmployees = ({ user }) => {
   const navigate = useNavigate();
@@ -439,8 +440,7 @@ const FPEmployees = ({ user }) => {
 
       {/* View Employee Modal */}
       {viewEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewEmployee(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewEmployee(null)} className="w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 bg-gray-50 rounded-t-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -523,14 +523,12 @@ const FPEmployees = ({ user }) => {
                 </span>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm">
             <div className="p-6 text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -554,8 +552,7 @@ const FPEmployees = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

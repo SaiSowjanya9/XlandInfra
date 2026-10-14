@@ -27,6 +27,7 @@ import { getPackageId, getPackageName, getPackagePrice as getNormalizedPackagePr
 import EstimateDraftServicesTable from './EstimateDraftServicesTable';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
+import Modal from '../../components/common/Modal';
 
 // Subcategory options for services
 const SUBCATEGORIES = ['Maintenance', 'Cleaning', 'Security', 'Landscaping', 'Utilities', 'Other'];
@@ -4028,8 +4029,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
 
       {/* Preview Modal */}
       {showPreview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <Modal className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-800">Estimate Preview</h2>
               <button
@@ -4165,14 +4165,12 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 Send Estimate
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Email Confirmation Modal */}
       {showEmailConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+        <Modal padding="" className="w-full max-w-md p-6">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Send className="w-8 h-8 text-indigo-600" />
@@ -4213,8 +4211,7 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                 {sendingEmail ? 'Sending...' : 'Send Email'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

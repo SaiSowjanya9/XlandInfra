@@ -43,6 +43,7 @@ import { Link } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -1427,8 +1428,7 @@ const CoordinatorWorkOrders = ({ user }) => {
 
       {/* Create Work Order Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Create Work Order</h2>
@@ -1595,14 +1595,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Vendor Modal */}
       {showAssignModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Assign Vendor</h2>
@@ -1638,14 +1636,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Employee Modal */}
       {showAssignEmployeeModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Assign Employee</h2>
@@ -1681,14 +1677,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Details Modal */}
       {showViewModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
@@ -1895,14 +1889,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Cancelled Note Modal */}
       {showCancelledNoteModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1955,14 +1947,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 Confirm Cancellation
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Completion Modal with Closing Notes */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1990,14 +1980,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Vendor/Employee Modal */}
       {showAssignModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -2049,14 +2037,12 @@ const CoordinatorWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Work Order Modal */}
       {showEditModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -2255,8 +2241,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Image Viewer Modal */}

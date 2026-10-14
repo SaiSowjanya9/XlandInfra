@@ -5,6 +5,7 @@ import { primaryInputLabel } from '../../utils/estimatePackageUtils';
 import AddServicePage, { methodLabel, propertyTypeLabel, PROPERTY_TYPES } from './AddServicePage';
 import { useSkinClasses } from '../../utils/estimateTheme';
 import { decodeEntities } from '../../utils/text';
+import Modal from '../common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Paise only when there are paise, so a column of rates stays narrow enough to read at a glance
@@ -283,8 +284,7 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
       </div>}
 
     {/* Confirmation lives in the page, so deleting never hands over to a browser dialog */}
-    {confirmDelete && <div className={sk("fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4")} role="dialog" aria-modal="true" aria-labelledby="delete-service-title">
-      <div className={sk("w-full max-w-md rounded-xl bg-white p-6 shadow-xl")}>
+    {confirmDelete && <Modal ariaLabelledBy="delete-service-title" className={sk("max-w-md p-6")}>
         <div className={sk("flex items-start gap-3")}>
           <span className={sk("flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50")}><Trash2 className={sk("h-5 w-5 text-red-500")} /></span>
           <div className={sk("min-w-0")}>
@@ -300,7 +300,6 @@ export default function ServiceCatalogList({ fpId, admin, showToast, apiPath = '
             {deletingId === confirmDelete.id ? 'Deleting...' : 'Delete Service'}
           </button>
         </div>
-      </div>
-    </div>}
+    </Modal>}
   </section>;
 }

@@ -19,6 +19,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 // Country codes with flag emojis
 const COUNTRY_CODES = [
@@ -762,8 +763,7 @@ const ExecutiveAddVendor = ({ user }) => {
 
       {/* Add Service Type Modal */}
       {showAddServiceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Add New Service Type</h2>
               <button onClick={() => { setShowAddServiceModal(false); setNewServiceType(''); }} className="p-2 hover:bg-gray-100 rounded-lg"><span className="text-xl">&times;</span></button>
@@ -776,8 +776,7 @@ const ExecutiveAddVendor = ({ user }) => {
               <button onClick={() => { setShowAddServiceModal(false); setNewServiceType(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
               <button onClick={handleAddServiceType} disabled={!newServiceType.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Add Service Type</button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
     </div>

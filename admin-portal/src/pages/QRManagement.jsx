@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -918,9 +919,7 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+    <Modal onClose={onClose} className="max-w-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-800">{title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
@@ -1026,8 +1025,7 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -3,6 +3,7 @@ import { X, Loader2, AlertCircle, FileWarning } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -129,8 +130,7 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
 
       {/* Read-only detail modal */}
       {viewing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setViewing(null)}>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setViewing(null)} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Complaint Details</h3>
@@ -157,8 +157,7 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
               </div>
               <div className="min-w-0"><label className={labelCls}>Comments</label><div className={readOnlyCls}>{decodeEntities(viewing.comments) || '-'}</div></div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

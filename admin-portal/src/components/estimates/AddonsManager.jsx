@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ServiceCatalogList from './ServiceCatalogList';
 import { getAuthToken } from '../../utils/safeStorage';
 import { Trash2, PlusCircle, ChevronDown, Plus, Layers, Edit2, X } from 'lucide-react';
+import Modal from '../../components/common/Modal';
 import {
   getAddons, createAddon, deleteAddon, updateAddon, fetchAddons,
   getServices, FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle
@@ -757,8 +758,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
 
       {/* Edit Service Modal */}
       {showEditModal && editingAddon && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl animate-in zoom-in-95">
+        <Modal padding="" className="w-full max-w-lg p-6 animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Edit Service</h3>
               <button
@@ -883,8 +883,7 @@ const AddonsManager = ({ admin, showToast, selectedFp, onRefresh }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

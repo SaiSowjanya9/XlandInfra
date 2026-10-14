@@ -8,6 +8,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -806,8 +807,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
 
       {/* Restore Confirmation Modal */}
       {showRestoreModal && scheduleToRestore && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+        <Modal padding="" className="w-full max-w-md mx-4">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Restore Schedule</h3>
             </div>
@@ -833,8 +833,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                 {submitting ? 'Restoring...' : 'Restore'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast Notification */}

@@ -8,6 +8,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { formatDate, formatDateTime } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -469,8 +470,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
 
       {/* Details Modal */}
       {showDetailsModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-lg">
+        <Modal align="top" className="w-full max-w-lg">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Cancellation Details</h3>
               <button onClick={() => setShowDetailsModal(false)} className="p-1 hover:bg-gray-100 rounded">
@@ -564,14 +564,12 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
                 </button>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Restore Confirmation Modal */}
       {showRestoreModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-md">
+        <Modal align="top" className="w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Restore Schedule?</h3>
             </div>
@@ -602,8 +600,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
                 Confirm Restore
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

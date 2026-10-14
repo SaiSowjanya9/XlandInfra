@@ -38,6 +38,7 @@ import * as XLSX from 'xlsx';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1692,8 +1693,7 @@ const FPWorkOrders = ({ user }) => {
 
       {/* Work Order Detail Modal */}
       {showDetailModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -1923,14 +1923,12 @@ const FPWorkOrders = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Vendor/Employee Modal */}
       {showAssignModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -1982,14 +1980,12 @@ const FPWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Add Category Modal */}
       {showAddCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full">
+        <Modal align="top" className="max-w-md w-full">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Add New Category</h2>
@@ -2043,14 +2039,12 @@ const FPWorkOrders = ({ user }) => {
                 Add Category
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Work Order Modal */}
       {showEditModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -2235,14 +2229,12 @@ const FPWorkOrders = ({ user }) => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Completion Modal with Closing Notes */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2300,14 +2292,12 @@ const FPWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Cancellation Modal with Note */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2369,8 +2359,7 @@ const FPWorkOrders = ({ user }) => {
                 Confirm Cancellation
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Image Viewer Modal */}

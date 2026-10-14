@@ -7,6 +7,7 @@ import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint, marketingPermissions } from '../../utils/marketingApi';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -359,8 +360,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
       {/* Create / edit / view modal. Backdrop covers the viewport, but the card centers in the
           content area -- the expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72">
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <Modal overlayClassName="lg:pl-72" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
               <div>
@@ -528,15 +528,13 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Archive confirmation -- same backdrop offset as the form modal so the card
           centers in the content area beside the expanded sidebar. */}
       {archiveTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 lg:pl-72" onClick={() => setArchiveTarget(null)}>
-          <div className="bg-white rounded-xl border border-warm-border shadow-warm w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <Modal overlayClassName="lg:pl-72" onClose={() => setArchiveTarget(null)} className="w-full max-w-md p-6">
             <h3 className="text-base font-semibold text-warm-text mb-2">Move to Archived?</h3>
             <p className="text-sm text-warm-muted mb-5">
               The complaint for <span className="font-medium text-warm-text">{decodeEntities(archiveTarget.property_id) || 'this property'}</span> will leave this list. You can restore it from Marketing &gt; Archived.
@@ -555,8 +553,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 Move to Archived
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Toast */}

@@ -15,6 +15,7 @@ import {
 import { getZones, createZone, updateZone, deactivateZone, reactivateZone, deleteZone } from '../utils/zoneStore';
 import { getEmployees, updateEmployeeZones } from '../utils/employeeStore';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const ZoneManagement = () => {
   const [zones, setZones] = useState([]);
@@ -297,8 +298,7 @@ const ZoneManagement = () => {
 
       {/* Add Zone Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setShowAddModal(false)} className="w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Add New Zone</h2>
               <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -330,14 +330,12 @@ const ZoneManagement = () => {
                 Create Zone
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Zone Modal */}
       {editingZone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingZone(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setEditingZone(null)} className="w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Edit Zone</h2>
               <button onClick={() => setEditingZone(null)} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -369,14 +367,12 @@ const ZoneManagement = () => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setDeleteConfirm(null)} className="w-full max-w-sm">
             <div className="p-6 text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -400,14 +396,12 @@ const ZoneManagement = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Employees Modal */}
       {viewEmployeesZone && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }} className="w-full max-w-lg max-h-[80vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Employees in {viewEmployeesZone.name}</h2>
@@ -498,8 +492,7 @@ const ZoneManagement = () => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

@@ -28,6 +28,7 @@ import PageHeader from '../components/common/PageHeader';
 import { useFP } from '../contexts/FPContext';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -637,8 +638,7 @@ const AssignedVendors = ({ user }) => {
 
       {/* View Assignment Modal */}
       {viewAssignment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewAssignment(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setViewAssignment(null)} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-gray-50 rounded-t-xl flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">{viewAssignment.vendorName || viewAssignment.vendor_name || 'Vendor Details'}</h2>
@@ -815,14 +815,12 @@ const AssignedVendors = ({ user }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Remove Confirmation Modal */}
       {removeConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setRemoveConfirm(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setRemoveConfirm(null)} className="w-full max-w-sm">
             <div className="p-6 text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -852,14 +850,12 @@ const AssignedVendors = ({ user }) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Edit Assignment Modal - Individual Vendor Modification */}
       {editModalData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditModalData(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setEditModalData(null)} className="w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-amber-50 to-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -962,8 +958,7 @@ const AssignedVendors = ({ user }) => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

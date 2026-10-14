@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
   CheckCircle, Clock, Eye, Building2, User, Camera, Upload, FileText, Image, List,
@@ -899,8 +900,7 @@ const ExecutiveWorkOrders = ({ user }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedWorkOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
@@ -1081,14 +1081,12 @@ const ExecutiveWorkOrders = ({ user }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Completion Modal with Closing Notes */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <Modal align="top" className="w-full max-w-md">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1116,8 +1114,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                 {isSubmittingCompletion ? 'Completing...' : 'Mark as Completed'}
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
       {/* Image Viewer Modal */}
       {viewingImage && (

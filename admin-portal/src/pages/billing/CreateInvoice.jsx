@@ -21,6 +21,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1029,8 +1030,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
       {/* Estimate Selection Modal */}
       {showEstimateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        <Modal className="w-full max-w-2xl max-h-[80vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Select Estimate</h3>
               <button onClick={() => setShowEstimateModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -1058,14 +1058,12 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Work Order Selection Modal */}
       {showWorkOrderModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        <Modal className="w-full max-w-2xl max-h-[80vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Select Work Order</h3>
               <button onClick={() => setShowWorkOrderModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -1096,8 +1094,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

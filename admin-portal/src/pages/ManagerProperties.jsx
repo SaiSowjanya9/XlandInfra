@@ -42,6 +42,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
+import Modal from '../components/common/Modal';
 
 const ManagerProperties = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)
@@ -901,8 +902,7 @@ const ManagerProperties = ({ user }) => {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
@@ -1083,14 +1083,12 @@ const ManagerProperties = ({ user }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View Property Modal */}
       {showViewModal && viewingProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <Modal className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
               <div>
@@ -1553,14 +1551,12 @@ const ManagerProperties = ({ user }) => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assign Modal - Table Layout for Vendor Assignment */}
       {showAssignModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }}>
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => { setShowAssignModal(false); setSelectedProperty(null); setServiceAssignments([]); }} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-600 to-slate-500">
               <div className="flex items-center justify-between">
@@ -1739,14 +1735,12 @@ const ManagerProperties = ({ user }) => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Assigned Employees Modal - View Only */}
       {showAssignedEmployeesModal && assignedEmployeesProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }}>
-          <div className="bg-white rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => { setShowAssignedEmployeesModal(false); setAssignedEmployeesProperty(null); }} className="w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-emerald-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1823,8 +1817,7 @@ const ManagerProperties = ({ user }) => {
             <div className="px-6 py-3 bg-white border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">Employee zone assignments are managed in the Employee Zone Management section</p>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

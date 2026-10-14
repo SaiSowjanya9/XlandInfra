@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import { FREQUENCY_OPTIONS } from './AddServicePage';
 import { frequencyOptionStyle, isCustomFrequency } from '../../utils/estimateStore';
 import { estimateSkin, useEstimateTheme } from '../../utils/estimateTheme';
+import Modal from '../common/Modal';
 import { customServiceValues, customVisitsComplaint } from './CustomServicesTable';
 import { capitalizeFirst } from '../../utils/text';
 import AutocompleteInput from '../common/AutocompleteInput';
@@ -125,8 +126,7 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
   const readOnlyField = `${field} ${skin.readOnlyBg} cursor-not-allowed`;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="custom-service-title">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+    <Modal zIndex="z-[9999]" overlayClassName="overflow-y-auto overscroll-contain" ariaLabelledBy="custom-service-title" className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
         <div className={`flex items-start justify-between gap-4 border-b px-6 py-4 ${skin.border}`}>
           <div>
             <h3 id="custom-service-title" className={`text-base font-semibold ${skin.strong}`}>{title ?? (editing ? 'Edit Service' : 'Add Custom Service')}</h3>
@@ -252,7 +252,6 @@ export default function CustomServiceDialog({ open, onClose, onSubmit, editing =
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </Modal>
   );
 }

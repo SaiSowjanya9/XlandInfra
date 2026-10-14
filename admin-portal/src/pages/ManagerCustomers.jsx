@@ -95,6 +95,7 @@ const COUNTRY_CODES = [
 import { getDivisions, addDivision as addDivisionToStore } from '../utils/fieldOptionsStore';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import DismissPanel from '../components/common/DismissPanel';
+import Modal from '../components/common/Modal';
 
 // Indian States in alphabetical order
 const INDIAN_STATES = [
@@ -1509,8 +1510,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
 
         {/* Add Division Modal */}
         {showAddDivisionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-sm p-6 shadow-xl">
+        <Modal padding="" className="w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add New Division</h3>
               <button onClick={() => setShowAddDivisionModal(false)} className="p-1 hover:bg-gray-100 rounded">
@@ -1548,8 +1548,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
                 Add Division
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       </div>

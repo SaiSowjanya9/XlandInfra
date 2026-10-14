@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import Modal from '../components/common/Modal';
 import {
   AlertCircle, Calendar, CalendarCheck, CalendarDays, CheckCircle, ChevronLeft,
   ChevronRight, Clock, List, Loader2, RefreshCw, RotateCcw, Truck, Wrench, X
@@ -178,14 +179,7 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
   // an ancestor with transform/filter/backdrop-filter would otherwise capture
   // position:fixed and centre the modal on the whole page instead.
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white border border-gold-600/20 rounded-2xl w-full max-w-lg shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <Modal onClose={onClose} className="max-w-lg overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gold-600/20 flex items-center justify-center">
@@ -227,8 +221,7 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
             .
           </p>
         </div>
-      </div>
-    </div>,
+    </Modal>,
     document.body
   );
 };

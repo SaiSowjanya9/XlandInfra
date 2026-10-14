@@ -39,6 +39,7 @@ import { statusLabel } from '../../utils/invoiceStatus';
 import DateField from '../../components/common/DateField';
 import { formatDate, formatDateTime } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1204,11 +1205,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
       {/* Professional Invoice Detail Modal - Matching Image 1 & Image 3 design */}
       {showDetailPanel && selectedInvoice && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setShowDetailPanel(false); setSelectedInvoice(null); }}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal onClose={() => { setShowDetailPanel(false); setSelectedInvoice(null); }} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* ===== HEADER - Compact black with centered branding ===== */}
             <div className="flex-shrink-0 relative">
               <div className="bg-[#1a1a1a] px-6 py-3">
@@ -1607,8 +1604,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );

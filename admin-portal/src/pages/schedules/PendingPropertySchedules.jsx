@@ -40,6 +40,7 @@ import DateRangeFilter from '../../components/common/DateRangeFilter';
 import VendorAssignmentModal from '../../components/VendorAssignmentModal';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
 import { formatDate } from '../../utils/dateFormat';
+import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -875,11 +876,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Help Modal */}
       {showHelpModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto" onClick={() => setShowHelpModal(false)}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal align="top" onClose={() => setShowHelpModal(false)} className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">How Scheduling Works</h2>
               <button onClick={() => setShowHelpModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -926,17 +923,12 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Services Modal - Simple compact lightbox */}
       {showServicesModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowServicesModal(false)}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal onClose={() => setShowServicesModal(false)} className="w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">Services</h2>
@@ -980,8 +972,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Vendor Assignment Modal */}

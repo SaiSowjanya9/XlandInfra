@@ -11,6 +11,7 @@ import PageHeader, { HEADER_ACTION_CLASS } from '../components/common/PageHeader
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { USER_ROLES } from '../utils/userStore';
+import Modal from '../components/common/Modal';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -675,8 +676,7 @@ const UserManagement = () => {
 
       {/* Add/Edit User Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <Modal className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingUser ? 'Edit User' : 'Add New User'}
@@ -1010,14 +1010,12 @@ const UserManagement = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-sm p-6 shadow-xl">
+        <Modal className="w-full max-w-sm p-6">
             <div className="text-center mb-5">
               <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -1042,14 +1040,12 @@ const UserManagement = () => {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* View User Details Modal */}
       {viewingUser && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <Modal className="w-full max-w-xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">User Details</h3>
               <button
@@ -1283,8 +1279,7 @@ const UserManagement = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
     </div>
   );
