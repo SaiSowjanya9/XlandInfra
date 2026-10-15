@@ -468,9 +468,9 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
-                    {/* The reviewer is a column of its own; the Yes/No flag lives further right
-                        under Employee Reviewed, and picking Yes fills this in. */}
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator Name</th>
+                    {/* The reviewer's name; the Yes/No flag lives further right under
+                        Employee Reviewed, and picking Yes fills this in. */}
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Employee Name</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Phone</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
