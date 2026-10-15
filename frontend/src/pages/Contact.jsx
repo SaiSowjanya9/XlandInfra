@@ -96,6 +96,7 @@ const Contact = () => {
 
   const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white focus:outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20';
   const labelCls = 'block text-sm font-medium text-gray-700 mb-2';
+  const autoGrowField = (el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; } };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -204,25 +205,27 @@ const Contact = () => {
                       className="w-4 h-4 border-gray-300 text-gold-600 focus:ring-gold-500/30 flex-shrink-0"
                     />
                     <span className="text-sm text-gray-900">{option === 'Other' ? 'Other:' : option}</span>
-                    {/* text-gray-900 and bg-white are not decoration on the box below: this
-                        portal's body text is #f1f5f9 on a near-black background (index.css), so a
-                        white field that does not set its own colour renders near-white text on
-                        white and what the customer types is invisible. Every other field on this
-                        form takes those from inputCls; this one is sized differently and so
-                        carries its own class list, which is how it was missed. */}
-                    {option === 'Other' && concernWith === 'Other' && (
-                      <input
-                        type="text"
-                        value={concernOther}
-                        onChange={(e) => setConcernOther(e.target.value)}
-                        maxLength={255}
-                        placeholder="Please specify"
-                        className="flex-1 h-9 px-3 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20"
-                      />
-                    )}
                   </label>
                 ))}
               </div>
+              {/* text-gray-900 and bg-white are not decoration on the box below: this
+                  portal's body text is #f1f5f9 on a near-black background (index.css), so a
+                  white field that does not set its own colour renders near-white text on
+                  white and what the customer types is invisible. Every other field on this
+                  form takes those from inputCls; this one is sized differently and so
+                  carries its own class list, which is how it was missed. */}
+              {concernWith === 'Other' && (
+                <textarea
+                  ref={autoGrowField}
+                  onInput={(e) => autoGrowField(e.currentTarget)}
+                  value={concernOther}
+                  onChange={(e) => setConcernOther(e.target.value)}
+                  maxLength={255}
+                  rows={1}
+                  placeholder="Please specify"
+                  className="mt-2 w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900 bg-white placeholder:text-gray-400 resize-none overflow-hidden focus:outline-none focus:border-gold-500 focus:ring-2 focus:ring-gold-500/20"
+                />
+              )}
             </div>
 
             <div className="mb-5">

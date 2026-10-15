@@ -282,6 +282,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const labelCls = 'block text-xs font-medium text-warm-muted mb-1';
   const readOnlyCls = 'w-full min-w-0 px-2.5 py-1 border border-warm-border rounded-md text-sm text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
 
+  const autoGrowField = (el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; } };
+
   const radioField = (title, field, otherField, options, required) => (
     <div>
       <label className={labelCls}>{title} {required && <span className="text-red-500">*</span>}</label>
@@ -297,20 +299,22 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               className="w-4 h-4 border-warm-border text-warm-accent focus:ring-warm-accent/30 disabled:opacity-60"
             />
             <span className="text-sm text-warm-text">{option === 'Other' && otherField ? 'Other:' : option}</span>
-            {option === 'Other' && otherField && form[field] === 'Other' && (
-              <input
-                type="text"
-                value={form[otherField]}
-                onChange={(e) => setField(otherField, e.target.value)}
-                disabled={!canEdit}
-                maxLength={255}
-                placeholder="Please specify"
-                className="flex-1 h-9 px-3 border border-warm-border rounded-[10px] text-sm focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
-              />
-            )}
           </label>
         ))}
       </div>
+      {otherField && form[field] === 'Other' && (
+        <textarea
+          ref={autoGrowField}
+          onInput={(e) => autoGrowField(e.currentTarget)}
+          value={form[otherField]}
+          onChange={(e) => setField(otherField, e.target.value)}
+          disabled={!canEdit}
+          maxLength={255}
+          rows={1}
+          placeholder="Please specify"
+          className="mt-2 w-full px-2.5 py-1.5 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white resize-none overflow-hidden focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
+        />
+      )}
     </div>
   );
 
