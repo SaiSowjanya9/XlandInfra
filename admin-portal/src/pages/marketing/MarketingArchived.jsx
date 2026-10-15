@@ -303,40 +303,35 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-warm-border bg-warm-section">
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted">Estimate ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Customer</th>
+                                    <th className="text-left py-3 px-4 font-medium text-warm-muted">Estimate ID</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Executive</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Estimate Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Coordinator Name</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Lead Source</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Priority</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Proposal Sent</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Customer Decision</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Estimate Amount</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Lead Status</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Last Contact</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Coordinator</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Proposal Sent</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Customer Decision</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Archived On</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Actions</th>
-                </tr>
+</tr>
               </thead>
               <tbody>
                 {rows.map((est) => (
                   <tr key={est.id} className="border-b border-warm-border/70 hover:bg-warm-section transition-colors">
-                    <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
+                                        <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
+                    <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
+                    <td className="py-3 px-4 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-text">{decodeEntities(est.coordinator_name) || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                       <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
-                    </td>
-                    <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
-                    <td className="py-3 px-4 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
-                    <td className="py-3 px-4 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}>
-                        {est.tracker_status || 'Not Started'}
-                      </span>
                     </td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(est.lead_source) || '-'}</td>
                     <td className="py-3 px-4">
@@ -346,16 +341,21 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="py-3 px-4 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
-                    <td className="py-3 px-4 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
+                    <td className="py-3 px-4 text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[est.tracker_status] || DEFAULT_STATUS_STYLE}`}>
+                        {est.tracker_status || 'Not Started'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(est.next_action) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(est.lead_status) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text whitespace-nowrap">
                       <div>{formatDate(est.last_contact_date)}</div>
                       <div className="text-xs text-warm-muted">{decodeEntities(est.last_contact_method) || '-'}</div>
                     </td>
                     <td className="py-3 px-4 text-warm-text whitespace-nowrap">{formatDate(est.next_follow_up_date)}</td>
-                    <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(est.next_action) || '-'}</td>
-                    <td className="py-3 px-4 text-warm-text">{decodeEntities(est.coordinator_name) || '-'}</td>
+                    <td className="py-3 px-4 text-warm-text">{displayAnswer(est.proposal_given, est.proposal_given_other)}</td>
+                    <td className="py-3 px-4 text-warm-text">{displayAnswer(est.customer_decision, est.customer_decision_other)}</td>
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(est.tracker_archived_at)}</td>
                     <td className="py-3 px-4">
                       {canEdit && <button
