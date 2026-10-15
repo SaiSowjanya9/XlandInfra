@@ -532,14 +532,14 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Priority</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Employee Reviewed</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact Date</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact Method</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Response</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Updated By</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                   </tr>
@@ -611,30 +611,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         )}
                       </td>
 
-                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={decodeEntities(est.next_action || '')}
-                          disabled={savingRowId === est.id || !canEdit}
-                          onChange={(e) => saveRowField(est, { next_action: e.target.value })}
-                          className={cellSelectCls}
-                        >
-                          <option value="">-</option>
-                          {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </td>
-                      {/* Derived from the next date and the lead status, so it is never edited --
-                          the server sends it, and it is recomputed here in case the tab has been
-                          left open across midnight. */}
-                      <td className="py-2 px-2">
-                        {(() => {
-                          const due = dueStatus(est.next_follow_up_date, decodeEntities(est.lead_status || ''));
-                          return (
-                            <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${DUE_STATUS_STYLES[due]}`}>
-                              {due}
-                            </span>
-                          );
-                        })()}
-                      </td>
                       {/* Picking a stage records a contact: today (IST) in Last Contact and the
                           next follow-up four days out, both still editable afterwards. The stage
                           only moves forward -- once a step is set, the ones before it are locked
@@ -722,6 +698,31 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           className={cellDateCls}
                         />
                       </td>
+<td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={decodeEntities(est.next_action || '')}
+                          disabled={savingRowId === est.id || !canEdit}
+                          onChange={(e) => saveRowField(est, { next_action: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Derived from the next date and the lead status, so it is never edited --
+                          the server sends it, and it is recomputed here in case the tab has been
+                          left open across midnight. */}
+                      <td className="py-2 px-2">
+                        {(() => {
+                          const due = dueStatus(est.next_follow_up_date, decodeEntities(est.lead_status || ''));
+                          return (
+                            <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${DUE_STATUS_STYLES[due]}`}>
+                              {due}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      
                       {/* Written by the server from the caller's token on every tracker write,
                           so it names whoever actually made the last change -- including an
                           archive -- rather than whoever the row was created by. */}
