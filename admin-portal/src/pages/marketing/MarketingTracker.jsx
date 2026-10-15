@@ -629,6 +629,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                               className={cellSelectCls}
                               title="Picking a stage stamps today as the last contact; steps already passed stay locked"
                             >
+                              <option value="" disabled hidden></option>
                               {FOLLOW_UP_OPTIONS.map((o, i) => <option key={o} value={o} disabled={i < currentStage}>{o}</option>)}
                             </select>
                           );
@@ -642,6 +643,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => saveRowField(est, { lead_status: e.target.value })}
                           className={cellSelectCls}
                         >
+                          <option value="" disabled hidden></option>
                           {LEAD_STATUSES.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
@@ -686,6 +688,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
                             className={cellSelectCls}
                           >
+                            <option value="" disabled hidden></option>
                             {CUSTOMER_RESPONSES.map(o => <option key={o} value={o}>{o}</option>)}
                           </select>
                         )}
@@ -705,6 +708,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => saveRowField(est, { next_action: e.target.value })}
                           className={cellSelectCls}
                         >
+                          <option value="" disabled hidden></option>
                           {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
