@@ -553,15 +553,23 @@ const createMarketingRouter = ({ resolveScope }) => {
       // keeps the automatic one in charge -- and heals a row frozen by an older version, since
       // its next edit clears the stale value rather than keeping it.
       const [[current]] = await pool.execute(
-        `SELECT id, follow_up_stage FROM fp_estimates
+        `SELECT id, follow_up_stage, status, tracker_status, tracked_at, coordinator_reviewed, created_at
+         FROM fp_estimates
          WHERE id = ? AND estimate_type = 'direct'${fp.sql}${zone.sql}`,
         [id, ...fp.params, ...zone.params]
       );
       if (!current) {
         return res.status(404).json({ success: false, message: 'Direct estimate not found' });
       }
-      if (updates.tracker_status && !MANUAL_TRACKER_STATUSES.includes(updates.tracker_status)) {
-        updates.tracker_status = null;
+      // Store NULL when the submitted status is exactly what the row would show on its own --
+      // the table re-sends the resolved status on every inline edit, and writing it literally
+      // would freeze the automatic progression. Anything else is a deliberate manual pick.
+      if (updates.tracker_status) {
+        const automatic = effectiveTrackerStatus({ ...current, tracker_status: null });
+        updates.tracker_status =
+          MANUAL_TRACKER_STATUSES.includes(updates.tracker_status) && updates.tracker_status !== automatic
+            ? updates.tracker_status
+            : null;
       }
 
       // Follow-Up Stage moves forward only -- the dropdown locks the steps behind the current

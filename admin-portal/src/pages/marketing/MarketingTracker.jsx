@@ -29,11 +29,12 @@ const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Man
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
 const DECISION_OPTIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
 const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Employee Review', 'Reviewed by Employee', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
-// The only statuses anybody picks by hand; the rest are derived -- by the estimate's own status,
-// by Employee Reviewed, or by the time since the estimate was created -- so the dropdown keeps
-// them listed (the current one has to be shown) but locked. The PUT enforces the same rule.
-// Keep this in step with MANUAL_TRACKER_STATUSES in backend/utils/marketingDashboard.js.
-const MANUAL_TRACKER_STATUSES = ['Revision Required', 'Revised Estimate Sent'];
+// Every status may be picked by hand except Approved/Rejected -- those are set by the estimate's
+// own approval in All Estimates, and a tracker pick must never impersonate them. The backend
+// still stores NULL when the submitted value equals what the row would show automatically, so
+// the derivation keeps driving it. Keep in step with MANUAL_TRACKER_STATUSES in
+// backend/utils/marketingDashboard.js.
+const MANUAL_TRACKER_STATUSES = TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected');
 const COORDINATOR_REVIEWED_OPTIONS = ['Yes', 'No'];
 const FOLLOW_UP_OPTIONS = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
 
@@ -586,7 +587,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             disabled={savingRowId === est.id || !canEdit}
                             onChange={(e) => saveRowField(est, { tracker_status: e.target.value })}
                             className={cellSelectCls}
-                            title="Only the revision statuses are chosen by hand -- the rest follow the estimate and the review on their own"
+                            title="Approved and Rejected come from the estimate's own status in All Estimates -- the rest can be picked by hand"
                           >
                             {TRACKER_STATUS_OPTIONS.map(o => (
                               <option key={o} value={o} disabled={!MANUAL_TRACKER_STATUSES.includes(o)}>{o}</option>
