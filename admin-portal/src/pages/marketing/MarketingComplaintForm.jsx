@@ -231,8 +231,8 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   };
 
   const inputCls = 'w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20';
-  const labelCls = 'block text-xs font-medium text-warm-muted mb-1.5';
-  const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-warm-border rounded-[10px] text-sm leading-6 text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
+  const labelCls = 'block text-xs font-medium text-warm-muted mb-1';
+  const readOnlyCls = 'w-full min-w-0 px-2.5 py-1 border border-warm-border rounded-md text-sm text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
 
   if (unavailable) {
     return (
@@ -377,8 +377,8 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
             </div>
 
             {modal.mode === 'view' ? (
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="min-w-0"><label className={labelCls}>Property ID</label><div className={readOnlyCls}>{decodeEntities(modal.row.property_id) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Zone</label><div className={readOnlyCls}>{decodeEntities(modal.row.zone) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Responsible Person</label><div className={readOnlyCls}>{decodeEntities(modal.row.responsible_person) || '-'}</div></div>
