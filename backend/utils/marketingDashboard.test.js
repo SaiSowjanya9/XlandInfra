@@ -49,7 +49,7 @@ test('estimates sent is cumulative -- an approved lead still had its estimate sh
     row({ tracker_status: 'Revised Estimate Sent' }),
     row({ tracker_status: 'Rejected' }),
     row({ tracker_status: 'Not Started' }),
-    row({ tracker_status: 'Pending Coordinator Review' })
+    row({ tracker_status: 'Pending Employee Review' })
   ]);
   assert.strictEqual(d.totals.totalLeads, 5);
   assert.strictEqual(d.totals.estimatesSent, 3, 'Approved, Revised Estimate Sent and Rejected all count');
