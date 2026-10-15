@@ -16,6 +16,9 @@ export const LEAD_STATUSES = [
 
 export const CONTACT_METHODS = ['WhatsApp', 'SMS/Text', 'Email', 'Phone Call', 'Field Visit', 'Portal Message', 'Other'];
 
+// The tracker's Lead Source dropdown; the dashboard legend lists all of them even at zero.
+export const LEAD_SOURCES = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
+
 // The workbook's list, plus 'Rejected' -- the two ends of the estimate's own lifecycle drive this
 // column, and a rejection is not the same answer as "never interested".
 export const CUSTOMER_RESPONSES = [

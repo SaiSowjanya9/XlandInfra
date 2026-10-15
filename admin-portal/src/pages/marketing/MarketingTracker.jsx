@@ -14,7 +14,7 @@ import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
 import Modal from '../../components/common/Modal';
 import {
-  LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS,
+  LEAD_STATUSES, CONTACT_METHODS, CUSTOMER_RESPONSES, NEXT_ACTIONS, LEAD_SOURCES,
   DUE_STATUS_STYLES, contactStamp, dueStatus, nextFollowUpFrom, toDateOnly,
   isCustomerResponseLocked, effectiveCustomerResponse
 } from '../../utils/followUpDates';
@@ -23,7 +23,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // The answers the tracker collects on a direct estimate. Keep these option sets in step with
 // TRACKER_OPTIONS in backend/routes/franchisePartner.js -- the route refuses anything outside them.
-const LEAD_SOURCE_OPTIONS = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
+const LEAD_SOURCE_OPTIONS = LEAD_SOURCES;
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'];
 const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'];
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
