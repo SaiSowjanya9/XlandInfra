@@ -397,10 +397,10 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       {/* On the admin portal the list carries several franchises at once, so the
                           row has to say which one it belongs to. */}
                       {showPartner && <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Customer</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
                       <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
-                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Executive</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
+                      <th className="text-left py-3 px-3 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,13 +412,13 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       >
                         <td className="py-3 px-3 font-medium text-warm-text">{est.estimate_id}</td>
                         {showPartner && <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}
+                        <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
+                        <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{decodeEntities(est.created_by_name) || '-'}</td>
                         <td className="py-3 px-3">
                           <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                           <div className="text-xs text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
                         </td>
-                        <td className="py-3 px-3 text-warm-muted">{getPropertyTypeLabel(est.property_type)}</td>
-                        <td className="py-3 px-3 text-warm-muted">{formatDate(est.created_at)}</td>
-                        <td className="py-3 px-3 text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</td>
+                        <td className="py-3 px-3 text-warm-muted whitespace-nowrap">{getPropertyTypeLabel(est.property_type)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -466,23 +466,28 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   <tr className="border-b border-warm-border bg-warm-section">
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate ID</th>
                     {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit / Executive</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer</th>
-                    {/* The estimate amount is not a column: the table is already wide enough to
-                        scroll sideways, and the figure is not something the tracker is read for.
-                        It is on the row's own view -- clicking the row opens it as Estimate
-                        Amount, beside the rest of the estimate's details. */}
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
+                    {/* The reviewer is a column of its own; the Yes/No flag lives further right
+                        under Coordinator Reviewed, and picking Yes fills this in. */}
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator Name</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Phone</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">No. of Units</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Source</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Priority</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Amount</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead / Priority</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Proposal / Decision</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Status</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Response</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator Reviewed</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Status</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact Date</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Contact Method</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Response</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Follow-Up</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Last Updated By</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Actions</th>
                   </tr>
@@ -496,15 +501,24 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       title="Click to edit"
                     >
                       <td className="py-2 px-2 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
-                      {showPartner && <td className="py-2 px-2 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}
-                      <td className="py-2 px-2">
-                        <div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div>
-                        <div className="text-warm-muted">{decodeEntities(est.created_by_name) || '-'}</div>
-                      </td>
+                      {showPartner && <td className="py-2 px-2 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}                      <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div></td>
+                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.created_by_name) || '-'}</div></td>
+                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.coordinator_name) || '-'}</div></td>
+
                       <td className="py-2 px-2">
                         <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                         <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
-                      </td>
+                      </td>                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.client_phone) || '-'}</div></td>
+                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{getPropertyTypeLabel(est.property_type)}</div></td>
+                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{est.total_units ?? '-'}</div></td>
+                      <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{decodeEntities(est.lead_source) || '-'}</div></td>
+                      <td className="py-2 px-2">{est.priority ? (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                            {est.priority}
+                          </span>
+                        ) : <span className="text-warm-muted">-</span>}</td>
+                      <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</div></td>
+
                       {/* Estimate Status is inline-editable, except at the ends of the pipeline where
                           the estimate's own status (sent/approved/rejected) drives it. */}
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
@@ -530,20 +544,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           </select>
                         )}
                       </td>
-                      <td className="py-2 px-2">
-                        <div className="text-warm-text">{decodeEntities(est.lead_source) || '-'}</div>
-                        <div className="mt-1">
-                          {est.priority ? (
-                            <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                              {est.priority}
-                            </span>
-                          ) : <span className="text-warm-muted">-</span>}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2">
-                        <div className="text-warm-text"><span className="text-warm-muted">Proposal:</span> {displayAnswer(est.proposal_given, est.proposal_given_other)}</div>
-                        <div className="text-warm-muted mt-0.5 max-w-[140px]">{displayAnswer(est.customer_decision, est.customer_decision_other)}</div>
-                      </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={est.coordinator_reviewed || ''}
@@ -555,13 +555,31 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           <option value="">Reviewed?</option>
                           {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
-                        {/* Not typed in: setting Reviewed to Yes records whoever did it, which is
-                            the point of the column. The first reviewer keeps the credit, and
-                            clearing the flag clears the name. */}
-                        <div className="text-[11px] text-warm-muted mt-1 truncate max-w-[130px]"
-                             title={decodeEntities(est.coordinator_name) || ''}>
-                          {decodeEntities(est.coordinator_name) || '—'}
-                        </div>
+                      </td>
+
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={decodeEntities(est.next_action || '')}
+                          disabled={savingRowId === est.id || !canEdit}
+                          onChange={(e) => saveRowField(est, { next_action: e.target.value })}
+                          className={cellSelectCls}
+                        >
+                          <option value="">-</option>
+                          {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      {/* Derived from the next date and the lead status, so it is never edited --
+                          the server sends it, and it is recomputed here in case the tab has been
+                          left open across midnight. */}
+                      <td className="py-2 px-2">
+                        {(() => {
+                          const due = dueStatus(est.next_follow_up_date, decodeEntities(est.lead_status || ''));
+                          return (
+                            <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${DUE_STATUS_STYLES[due]}`}>
+                              {due}
+                            </span>
+                          );
+                        })()}
                       </td>
                       {/* Picking a stage records a contact: today (IST) in Last Contact and the
                           next follow-up four days out, both still editable afterwards. The stage
@@ -584,6 +602,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           );
                         })()}
                       </td>
+                      
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={decodeEntities(est.lead_status || '')}
@@ -603,6 +622,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           className={cellDateCls}
                           title="Changing this re-schedules the next follow-up four days later"
                         />
+                      </td>
+                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={decodeEntities(est.last_contact_method || '')}
                           disabled={savingRowId === est.id || !canEdit}
@@ -614,6 +635,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           {CONTACT_METHODS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
+
                       {/* Once the estimate is approved or rejected it answers this column itself,
                           so the select gives way to a badge -- the same rule Estimate Status
                           above follows. */}
@@ -645,30 +667,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => saveRowField(est, { next_follow_up_date: e.target.value })}
                           className={cellDateCls}
                         />
-                      </td>
-                      <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={decodeEntities(est.next_action || '')}
-                          disabled={savingRowId === est.id || !canEdit}
-                          onChange={(e) => saveRowField(est, { next_action: e.target.value })}
-                          className={cellSelectCls}
-                        >
-                          <option value="">-</option>
-                          {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </td>
-                      {/* Derived from the next date and the lead status, so it is never edited --
-                          the server sends it, and it is recomputed here in case the tab has been
-                          left open across midnight. */}
-                      <td className="py-2 px-2">
-                        {(() => {
-                          const due = dueStatus(est.next_follow_up_date, decodeEntities(est.lead_status || ''));
-                          return (
-                            <span className={`px-2 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${DUE_STATUS_STYLES[due]}`}>
-                              {due}
-                            </span>
-                          );
-                        })()}
                       </td>
                       {/* Written by the server from the caller's token on every tracker write,
                           so it names whoever actually made the last change -- including an
