@@ -588,7 +588,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             className={cellSelectCls}
                             title="Only the revision statuses are chosen by hand -- the rest follow the estimate and the review on their own"
                           >
-                            {TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected').map(o => (
+                            {TRACKER_STATUS_OPTIONS.map(o => (
                               <option key={o} value={o} disabled={!MANUAL_TRACKER_STATUSES.includes(o)}>{o}</option>
                             ))}
                           </select>
