@@ -627,7 +627,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                               className={cellSelectCls}
                               title="Picking a stage stamps today as the last contact; steps already passed stay locked"
                             >
-                              <option value="" disabled={currentStage >= 0}>-</option>
+                              <option value="" disabled={currentStage >= 0}></option>
                               {FOLLOW_UP_OPTIONS.map((o, i) => <option key={o} value={o} disabled={i < currentStage}>{o}</option>)}
                             </select>
                           );
@@ -641,7 +641,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => saveRowField(est, { lead_status: e.target.value })}
                           className={cellSelectCls}
                         >
-                          <option value="">-</option>
+                          <option value=""></option>
                           {LEAD_STATUSES.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
@@ -686,7 +686,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             onChange={(e) => saveRowField(est, { customer_response: e.target.value })}
                             className={cellSelectCls}
                           >
-                            <option value="">-</option>
+                            <option value=""></option>
                             {CUSTOMER_RESPONSES.map(o => <option key={o} value={o}>{o}</option>)}
                           </select>
                         )}
@@ -706,7 +706,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => saveRowField(est, { next_action: e.target.value })}
                           className={cellSelectCls}
                         >
-                          <option value="">-</option>
+                          <option value=""></option>
                           {NEXT_ACTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
