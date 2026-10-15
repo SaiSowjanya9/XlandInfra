@@ -472,13 +472,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     {showPartner && <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
-                    {/* The reviewer's name; the Yes/No flag lives further right under
-                        Employee Reviewed, and picking Yes fills this in. */}
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Employee Name</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Phone</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Property Type</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">No. of Units</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Source</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Priority</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
@@ -506,14 +501,10 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       <td className="py-2 px-2 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
                       {showPartner && <td className="py-2 px-2 text-warm-muted">{decodeEntities(est.franchise_partner_name) || '-'}</td>}                      <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{formatDate(est.created_at)}</div></td>
                       <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.created_by_name) || '-'}</div></td>
-                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.coordinator_name) || '-'}</div></td>
-
                       <td className="py-2 px-2">
                         <div className="font-medium text-warm-text">{decodeEntities(est.client_name) || '-'}</div>
                         <div className="text-warm-muted">{decodeEntities(est.property_name) || '-'}</div>
-                      </td>                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{decodeEntities(est.client_phone) || '-'}</div></td>
-                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{getPropertyTypeLabel(est.property_type)}</div></td>
-                      <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{est.total_units ?? '-'}</div></td>
+                      </td>                                            <td className="py-2 px-2"><div className="text-warm-muted whitespace-nowrap">{getPropertyTypeLabel(est.property_type)}</div></td>
                       <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{decodeEntities(est.lead_source) || '-'}</div></td>
                       <td className="py-2 px-2">{est.priority ? (
                           <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium border ${PRIORITY_STYLES[est.priority] || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
