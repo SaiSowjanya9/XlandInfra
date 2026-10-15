@@ -6,6 +6,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import { getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import { PROPERTY_TYPES } from '../../utils/estimateStore';
 import EmptyState from '../../components/common/EmptyState';
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
@@ -150,18 +151,18 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const trackedEstimates = estimates.filter(e => e.tracked_at);
   const untrackedEstimates = estimates.filter(e => !e.tracked_at);
 
-  // Row filters -- search covers estimate ID and customer name; the two dropdowns are built from
-  // the rows themselves so an option only exists when a row actually carries that value.
+  // Row filters -- search covers estimate ID and customer name; the property dropdown offers all
+  // five fixed types while the employee one is built from the rows, so an option only exists when
+  // a row actually carries that name.
   const [searchTerm, setSearchTerm] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState('');
-  const propertyTypeOptions = [...new Set(trackedEstimates.map(e => e.property_type).filter(Boolean))];
   const employeeOptions = [...new Set(trackedEstimates.map(e => decodeEntities(e.coordinator_name || '')).filter(Boolean))];
   const needle = searchTerm.trim().toLowerCase();
   const filteredTracked = trackedEstimates.filter(e =>
     (!needle || (e.estimate_id || '').toLowerCase().includes(needle)
              || decodeEntities(e.client_name || '').toLowerCase().includes(needle)) &&
-    (!propertyTypeFilter || e.property_type === propertyTypeFilter) &&
+    (!propertyTypeFilter || getPropertyTypeLabel(e.property_type) === propertyTypeFilter) &&
     (!employeeFilter || decodeEntities(e.coordinator_name || '') === employeeFilter)
   );
   const filtersActive = Boolean(needle || propertyTypeFilter || employeeFilter);
@@ -471,7 +472,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${propertyTypeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
                 >
                   <option value="">All Property Types</option>
-                  {propertyTypeOptions.map(t => <option key={t} value={t}>{getPropertyTypeLabel(t)}</option>)}
+                  {PROPERTY_TYPES.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
                 </select>
                 <select
                   value={employeeFilter}
