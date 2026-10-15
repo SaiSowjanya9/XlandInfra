@@ -446,7 +446,7 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
               ) : <NoData height={280} note="No next action set yet" />}
               <div className="flex items-center gap-4 mt-3 text-xs text-warm-muted">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm" style={{ background: MARKETING_OWNER_COLORS.Coordinator }} />Coordinator
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ background: MARKETING_OWNER_COLORS.Coordinator }} />Employee
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm" style={{ background: MARKETING_OWNER_COLORS.Executive }} />Executive

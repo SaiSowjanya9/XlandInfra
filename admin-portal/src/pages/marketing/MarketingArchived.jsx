@@ -306,7 +306,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                                     <th className="text-left py-3 px-4 font-medium text-warm-muted">Estimate ID</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Coordinator Name</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Employee Name</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Lead Source</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Priority</th>
