@@ -410,20 +410,44 @@ const createMarketingRouter = ({ resolveScope }) => {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
       const zone = zoneFilter(scope, 'e.', { withCreator: true });
+      // ?start=YYYY-MM-DD&end=YYYY-MM-DD bound when the lead was created, so the whole page can be
+      // read "this quarter" the way the Estimates dashboard can. `end` is inclusive -- the row's
+      // created_at carries a time, so the bound lands on the day after.
+      const dateSql = [];
+      const dateParams = [];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(req.query.start || ''))) {
+        dateSql.push('AND e.created_at >= ?');
+        dateParams.push(req.query.start);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(req.query.end || ''))) {
+        dateSql.push('AND e.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
+        dateParams.push(req.query.end);
+      }
       const [rows] = await pool.execute(
         `SELECT ${trackerSelect('e')}
          FROM fp_estimates e
          WHERE e.estimate_type = 'direct'
            AND (e.is_archived = 0 OR e.is_archived IS NULL)
            AND e.tracker_archived_at IS NULL
-           AND e.tracked_at IS NOT NULL${fp.sql}${zone.sql}
+           AND e.tracked_at IS NOT NULL${fp.sql}${zone.sql} ${dateSql.join(' ')}
          ORDER BY e.created_at DESC`,
-        [...fp.params, ...zone.params]
+        [...fp.params, ...zone.params, ...dateParams]
       );
       // The dashboard reports on the status the tracker shows, not the raw column -- an approved
       // estimate reads Approved there even when nobody set tracker_status by hand.
       const resolved = rows.map((row) => ({ ...row, tracker_status: effectiveTrackerStatus(row) }));
-      res.json({ success: true, data: buildMarketingDashboard(resolved) });
+      // The slim rows also ride along so each chart card can narrow itself to its own period
+      // (All Time / This Week / ...) without re-asking the server -- only the fields the charts
+      // count on are sent.
+      const chartRows = resolved.map((r) => ({
+        created_at: toDateOnly(r.created_at),
+        lead_status: r.lead_status,
+        lead_source: r.lead_source,
+        priority: r.priority,
+        next_action: r.next_action,
+        tracker_status: r.tracker_status
+      }));
+      res.json({ success: true, data: { ...buildMarketingDashboard(resolved), rows: chartRows } });
     } catch (error) {
       fail(res, error, 'Failed to fetch dashboard data');
     }
