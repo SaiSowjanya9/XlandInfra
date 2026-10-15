@@ -595,21 +595,23 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                         )}
                       </td>
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={est.coordinator_reviewed || ''}
-                          disabled={savingRowId === est.id || !(canEdit || canReview)}
-                          onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
-                          className={cellSelectCls}
-                          title="Employee Reviewed?"
-                        >
-                          <option value="">Reviewed?</option>
-                          {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                        {est.coordinator_reviewed === 'Yes' && est.coordinator_name && (
-                          <div className="mt-1 text-xs text-warm-muted whitespace-nowrap" title="Reviewed by">
-                            {decodeEntities(est.coordinator_name)}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={est.coordinator_reviewed || ''}
+                            disabled={savingRowId === est.id || !(canEdit || canReview)}
+                            onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
+                            className={cellSelectCls}
+                            title="Employee Reviewed?"
+                          >
+                            <option value="">Reviewed?</option>
+                            {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                          {est.coordinator_reviewed === 'Yes' && est.coordinator_name && (
+                            <span className="text-xs text-warm-muted whitespace-nowrap" title="Reviewed by">
+                              {decodeEntities(est.coordinator_name)}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Picking a stage records a contact: today (IST) in Last Contact and the
