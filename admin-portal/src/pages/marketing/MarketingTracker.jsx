@@ -477,7 +477,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">No. of Units</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Lead Source</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Priority</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Amount</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Employee Reviewed</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
@@ -517,7 +516,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             {est.priority}
                           </span>
                         ) : <span className="text-warm-muted">-</span>}</td>
-                      <td className="py-2 px-2"><div className="text-warm-text whitespace-nowrap">{formatAmount(est.total_amount)}</div></td>
 
                       {/* Estimate Status is inline-editable, except at the ends of the pipeline where
                           the estimate's own status (sent/approved/rejected) drives it. */}
