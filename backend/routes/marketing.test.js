@@ -522,12 +522,12 @@ test('a tracked lead moves itself along until the coordinator reviews it', async
   assert.equal(autoTrackerStatus(at(0), now), 'Created by Executive');
   assert.equal(autoTrackerStatus(at(COORDINATOR_REVIEW_AFTER_MS - 1000), now), 'Created by Executive');
   // A day old, and it is the coordinator's to look at.
-  assert.equal(autoTrackerStatus(at(COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Coordinator Review');
-  assert.equal(autoTrackerStatus(at(10 * COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Coordinator Review',
+  assert.equal(autoTrackerStatus(at(COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Employee Review');
+  assert.equal(autoTrackerStatus(at(10 * COORDINATOR_REVIEW_AFTER_MS), now), 'Pending Employee Review',
     'it waits there however long it takes');
   // Until somebody reviews it -- which is the one thing a coordinator may record.
   assert.equal(autoTrackerStatus(at(10 * COORDINATOR_REVIEW_AFTER_MS, { coordinator_reviewed: 'Yes' }), now),
-    'Reviewed by Coordinator');
+    'Reviewed by Employee');
   assert.equal(autoTrackerStatus(at(0, { coordinator_reviewed: 'No' }), now), 'Created by Executive');
 
   // "after 1 day" is 24 hours, not the next calendar date: a lead entered at 11pm must not be
@@ -546,9 +546,9 @@ test('saving a row does not freeze its automatic status', async (t) => {
   const request = await startServer(t);
 
   // The table re-sends the resolved status with every inline edit, so storing an automated
-  // status would stop the lead ever reaching Pending Coordinator Review -- the dropdown locks
+  // status would stop the lead ever reaching Pending Employee Review -- the dropdown locks
   // them, and the PUT writes NULL for anything that is not a manual choice.
-  for (const automated of ['Created by Executive', 'Pending Coordinator Review', 'Estimate Sent']) {
+  for (const automated of ['Created by Executive', 'Pending Employee Review', 'Estimate Sent']) {
     calls.length = 0;
     await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: automated });
     const update = lastCall('UPDATE fp_estimates SET');

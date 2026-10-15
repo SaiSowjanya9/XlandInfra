@@ -170,10 +170,10 @@ const COORDINATOR_REVIEW_AFTER_MS = 24 * 60 * 60 * 1000;
  * Where a tracked lead has got to on its own, with nobody having set a status by hand:
  *
  *   Created by Executive       the first day after the estimate was written
- *   Pending Coordinator Review from a day old, and it stays there...
- *   Reviewed by Coordinator    ...until a coordinator marks Coordinator Reviewed as Yes
+ *   Pending Employee Review from a day old, and it stays there...
+ *   Reviewed by Employee    ...until a coordinator marks Coordinator Reviewed as Yes
  *
- * Derived on read rather than stored, like Due Status: a stored "Pending Coordinator Review" is
+ * Derived on read rather than stored, like Due Status: a stored "Pending Employee Review" is
  * wrong the moment somebody reviews it, and nothing would be running to correct it. It also means
  * the rule applies to rows that were tracked before it existed.
  *
@@ -183,12 +183,12 @@ const COORDINATOR_REVIEW_AFTER_MS = 24 * 60 * 60 * 1000;
 const autoTrackerStatus = (est, now = Date.now()) => {
   if (!est.tracked_at) return 'Not Started';
   if (decodeEntities(String(est.coordinator_reviewed || '')).trim() === 'Yes') {
-    return 'Reviewed by Coordinator';
+    return 'Reviewed by Employee';
   }
   const created = est.created_at ? new Date(est.created_at).getTime() : NaN;
   if (Number.isNaN(created)) return 'Created by Executive';
   return now - created >= COORDINATOR_REVIEW_AFTER_MS
-    ? 'Pending Coordinator Review'
+    ? 'Pending Employee Review'
     : 'Created by Executive';
 };
 
@@ -547,7 +547,7 @@ const createMarketingRouter = ({ resolveScope }) => {
       //
       // The dropdown locks the automated options, and the table re-sends the whole tracker
       // payload on every inline edit anyway -- including the *resolved* status it was given, so
-      // a row sitting at "Pending Coordinator Review" submits that same text while somebody is
+      // a row sitting at "Pending Employee Review" submits that same text while somebody is
       // editing an unrelated cell. Storing it would freeze the lead there, the progression dead
       // for that row. Any submitted status that is not a manual choice is written as NULL, which
       // keeps the automatic one in charge -- and heals a row frozen by an older version, since

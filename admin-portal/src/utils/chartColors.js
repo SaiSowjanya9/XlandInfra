@@ -240,8 +240,8 @@ export const MARKETING_PRIORITY_COLORS = {
 export const MARKETING_STATUS_COLORS = {
   'Not Started': '#B3A99F',
   'Created by Executive': '#9B8AA6',
-  'Pending Coordinator Review': '#BD9D66',
-  'Reviewed by Coordinator': '#8E9BC4',
+  'Pending Employee Review': '#BD9D66',
+  'Reviewed by Employee': '#8E9BC4',
   'Estimate Sent': '#BFA56B',
   'Revision Required': '#BF9069',
   'Revised Estimate Sent': '#C1B06F',

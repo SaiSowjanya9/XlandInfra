@@ -27,9 +27,9 @@ const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'];
 const MAINTENANCE_OPTIONS = ['Self-managed', 'Existing Vendor', 'Association Managed', 'No System', 'Other'];
 const PROPOSAL_OPTIONS = ['Yes', 'No', 'Other'];
 const DECISION_OPTIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
-const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+const TRACKER_STATUS_OPTIONS = ['Not Started', 'Created by Executive', 'Pending Employee Review', 'Reviewed by Employee', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
 // The only statuses anybody picks by hand; the rest are derived -- by the estimate's own status,
-// by Coordinator Reviewed, or by the time since the estimate was created -- so the dropdown keeps
+// by Employee Reviewed, or by the time since the estimate was created -- so the dropdown keeps
 // them listed (the current one has to be shown) but locked. The PUT enforces the same rule.
 // Keep this in step with MANUAL_TRACKER_STATUSES in backend/utils/marketingDashboard.js.
 const MANUAL_TRACKER_STATUSES = ['Revision Required', 'Revised Estimate Sent'];
@@ -239,7 +239,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   };
 
   // w-auto lets a native select size itself to its widest option, so long stages like
-  // "Pending Coordinator Review" never get clipped; max-w-full is the safety cap.
+  // "Pending Employee Review" never get clipped; max-w-full is the safety cap.
   const cellSelectCls = 'w-auto max-w-full px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
   // A date input needs its own width: left to w-full it collapses under the native calendar icon.
   const cellDateCls = 'w-[130px] px-1.5 py-1 border border-warm-border rounded-lg text-xs bg-white text-warm-text focus:outline-none focus:border-warm-accent disabled:opacity-60 disabled:bg-warm-section';
@@ -469,7 +469,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Visit Date</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Executive Name</th>
                     {/* The reviewer is a column of its own; the Yes/No flag lives further right
-                        under Coordinator Reviewed, and picking Yes fills this in. */}
+                        under Employee Reviewed, and picking Yes fills this in. */}
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator Name</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Customer Name</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Phone</th>
@@ -479,7 +479,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Priority</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Amount</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Estimate Status</th>
-                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Coordinator Reviewed</th>
+                    <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Employee Reviewed</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Next Action</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Due Status</th>
                     <th className="text-left py-2.5 px-2 font-medium text-warm-muted whitespace-nowrap">Follow-Up Stage</th>
@@ -535,9 +535,6 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                             className={cellSelectCls}
                             title="Only the revision statuses are chosen by hand -- the rest follow the estimate and the review on their own"
                           >
-                            {/* Auto clears a hand-picked status, returning the row to the
-                                pipeline's own progression. */}
-                            <option value="">Auto</option>
                             {TRACKER_STATUS_OPTIONS.filter(o => o !== 'Approved' && o !== 'Rejected').map(o => (
                               <option key={o} value={o} disabled={!MANUAL_TRACKER_STATUSES.includes(o)}>{o}</option>
                             ))}
@@ -550,7 +547,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           disabled={savingRowId === est.id || !(canEdit || canReview)}
                           onChange={(e) => saveRowField(est, { coordinator_reviewed: e.target.value })}
                           className={cellSelectCls}
-                          title="Coordinator Reviewed?"
+                          title="Employee Reviewed?"
                         >
                           <option value="">Reviewed?</option>
                           {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}

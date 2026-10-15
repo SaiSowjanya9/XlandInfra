@@ -18,7 +18,7 @@ const {
 const LEAD_SOURCES = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Website', 'Social Media', 'Existing Customer', 'Walk-in', 'Office Visit', 'Other'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const CUSTOMER_DECISIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
-const TRACKER_STATUSES = ['Not Started', 'Created by Executive', 'Pending Coordinator Review', 'Reviewed by Coordinator', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+const TRACKER_STATUSES = ['Not Started', 'Created by Executive', 'Pending Employee Review', 'Reviewed by Employee', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
 // The only statuses anybody picks by hand. Every other entry in TRACKER_STATUSES is derived --
 // by the estimate's own status (sent/approved/rejected), by Coordinator Reviewed, or by the time
 // since the estimate was created -- so the tracker dropdown locks them and the PUT stores NULL
@@ -126,7 +126,7 @@ const buildMarketingDashboard = (rows, options = {}) => {
   const notInterested = list.filter(
     (row) => statusOf(row) === 'Rejected' || LOST_DECISIONS.includes(decisionOf(row))
   ).length;
-  // The Excel sheet's "Pending Coordinator Review": anything not positively marked reviewed.
+  // The Excel sheet's "Pending Employee Review": anything not positively marked reviewed.
   const pendingReview = list.filter((row) => clean(row.coordinator_reviewed) !== 'Yes').length;
   const referralLeads = list.filter((row) => clean(row.lead_source) === 'Referral').length;
   // Rows carrying no follow-up step at all -- they fall out of the pipeline silently otherwise.
