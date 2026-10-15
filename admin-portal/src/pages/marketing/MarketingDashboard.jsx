@@ -7,9 +7,12 @@ import {
   CartesianGrid, Tooltip, AreaChart, Area, Line, LabelList
 } from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
+import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
+import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
+import { LEAD_STATUSES } from '../../utils/followUpDates';
 import {
   MARKETING_PHASE_COLORS, MARKETING_PRIORITY_COLORS,
   MARKETING_LEAD_STATUS_COLORS, MARKETING_OWNER_COLORS,
@@ -57,6 +60,113 @@ const KPI_DEFS = [
 const PRIORITY_COLORS = MARKETING_PRIORITY_COLORS;
 const LEAD_STATUS_COLORS = MARKETING_LEAD_STATUS_COLORS;
 const SOURCE_PALETTE = MARKETING_CATEGORICAL;
+
+// ---- Date filters -----------------------------------------------------------
+// The same windows the Estimates dashboard offers: one range picker filters the whole page
+// server-side, and each chart card can narrow itself to a period without touching the rest --
+// the API sends the slim rows along with the aggregates so a card recounts them in the browser.
+const CHART_PERIODS = [
+  { id: 'all', label: 'All Time' },
+  { id: 'week', label: 'This Week' },
+  { id: 'month', label: 'This Month' },
+  { id: 'quarter', label: 'This Quarter' },
+  { id: 'half', label: 'Last 6 Months' },
+  { id: 'year', label: 'This Year' }
+];
+
+const ChartPeriodSelect = ({ value, onChange }) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className="text-xs border border-warm-border rounded-lg px-2 py-1 bg-white text-warm-text outline-none cursor-pointer focus:border-warm-accent"
+  >
+    {CHART_PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+  </select>
+);
+
+const periodStart = (period) => {
+  const now = new Date();
+  switch (period) {
+    case 'week': { const d = new Date(now); d.setDate(now.getDate() - now.getDay()); d.setHours(0, 0, 0, 0); return d; }
+    case 'month': return new Date(now.getFullYear(), now.getMonth(), 1);
+    case 'quarter': return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    case 'half': return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+    case 'year': return new Date(now.getFullYear(), 0, 1);
+    default: return null;
+  }
+};
+const inPeriod = (createdAt, period) => {
+  const start = periodStart(period);
+  return !start || Boolean(createdAt && new Date(createdAt) >= start);
+};
+
+// The client-side mirror of the server's counting in utils/marketingDashboard.js -- used only
+// when a card picks a window narrower than the page's, so the aggregate the server already
+// computed still answers the common case.
+const cleanVal = (v) => decodeEntities(String(v || '')).trim();
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const TREND_SENT = ['Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
+const PRIORITY_ORDER = ['Low', 'Medium', 'High', 'Urgent'];
+
+const buildTrendFrom = (rows, months = 6) => {
+  const now = new Date();
+  const buckets = [];
+  const index = new Map();
+  for (let offset = months - 1; offset >= 0; offset -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    const bucket = { month: MONTHS_SHORT[d.getMonth()], year: d.getFullYear(), leads: 0, estimates: 0, approved: 0 };
+    index.set(`${d.getFullYear()}-${d.getMonth()}`, bucket);
+    buckets.push(bucket);
+  }
+  rows.forEach(r => {
+    if (!r.created_at) return;
+    const c = new Date(r.created_at);
+    if (Number.isNaN(c.getTime())) return;
+    const b = index.get(`${c.getFullYear()}-${c.getMonth()}`);
+    if (!b) return;
+    const st = cleanVal(r.tracker_status);
+    b.leads += 1;
+    if (TREND_SENT.includes(st)) b.estimates += 1;
+    if (st === 'Approved') b.approved += 1;
+  });
+  return buckets;
+};
+
+// All six chart datasets from raw rows. `order` pins a fixed bucket order (the 18 lead stages);
+// any value outside it -- a legacy spelling -- still gets its own bucket at the end.
+const chartsFromRows = (rows) => {
+  const byField = (field, order) => {
+    const counts = new Map();
+    rows.forEach(r => { const k = cleanVal(r[field]); if (k) counts.set(k, (counts.get(k) || 0) + 1); });
+    const out = (order || [...counts.keys()]).map(name => ({ name, value: counts.get(name) || 0 }));
+    if (order) for (const [name, value] of counts) if (!order.includes(name)) out.push({ name, value });
+    return order ? out : out.filter(e => e.value > 0);
+  };
+  const leadStatuses = byField('lead_status', LEAD_STATUSES)
+    .map(s => ({ ...s, fill: LEAD_STATUS_COLORS[s.name] || '#94A3B8' }));
+  const phaseTotals = {};
+  leadStatuses.forEach(s => {
+    const phase = LEAD_STATUS_PHASES[s.name];
+    if (phase) phaseTotals[phase] = (phaseTotals[phase] || 0) + s.value;
+  });
+  const phases = Object.keys(MARKETING_PHASE_COLORS)
+    .map(p => ({ name: p, value: phaseTotals[p] || 0, fill: MARKETING_PHASE_COLORS[p] }))
+    .filter(p => p.value > 0);
+  return {
+    leadStatuses,
+    phases,
+    sources: byField('lead_source')
+      .sort((a, b) => b.value - a.value)
+      .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
+    priorities: byField('priority', PRIORITY_ORDER)
+      .filter(p => p.value > 0)
+      .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
+    trend: buildTrendFrom(rows),
+    nextActions: byField('next_action')
+      .sort((a, b) => b.value - a.value)
+      .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator }))
+  };
+};
 
 // Who the next action belongs to, so the queue says at a glance whose day it is.
 const EXECUTIVE_ACTIONS = ['Executive Call', 'Executive Visit', 'Onboard Property', 'Start Service'];
@@ -168,12 +278,21 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  // The page-wide window (server-side) and each card's own window (client-side).
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [chartPeriods, setChartPeriods] = useState({});
 
   const loadDashboard = useCallback(async (isRefresh) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     setLoadError('');
     try {
-      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/dashboard`, fpId), {
+      const params = new URLSearchParams();
+      if (startDate) params.set('start', startDate);
+      if (endDate) params.set('end', endDate);
+      const qs = params.toString();
+      const base = withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/dashboard`, fpId);
+      const res = await fetch(qs ? `${base}${base.includes('?') ? '&' : '?'}${qs}` : base, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await res.json();
@@ -185,13 +304,16 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, apiPath, fpId]);
+  }, [token, apiPath, fpId, startDate, endDate]);
 
   useEffect(() => { if (!unavailable) loadDashboard(false); }, [unavailable, loadDashboard]);
 
   // Charts want colours and labels attached; the API deliberately returns raw names and codes.
+  // When the API's slim rows are present they're the source for every chart, so one counting
+  // path serves both the whole-page view and a card's own narrower window.
   const charts = useMemo(() => {
     if (!data) return null;
+    if (Array.isArray(data.rows)) return chartsFromRows(data.rows);
     const leadStatuses = (data.byLeadStatus || [])
       .map(s => ({ ...s, fill: LEAD_STATUS_COLORS[s.name] || '#94A3B8' }));
     // Roll the 18 stages up into the six phases for the headline donut.
@@ -222,6 +344,16 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
     };
   }, [data]);
 
+  // A card's own period select narrows just that card; 'all' reuses the page-level set.
+  const chartFor = (key) => {
+    const period = chartPeriods[key] || 'all';
+    if (period === 'all' || !Array.isArray(data?.rows) || !charts) return charts;
+    return chartsFromRows(data.rows.filter(r => inPeriod(r.created_at, period)));
+  };
+  const periodSelect = (key) => Array.isArray(data?.rows) ? (
+    <ChartPeriodSelect value={chartPeriods[key] || 'all'} onChange={(v) => setChartPeriods(p => ({ ...p, [key]: v }))} />
+  ) : null;
+
   if (unavailable) {
     return (
       <div className="p-6">
@@ -245,15 +377,30 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
           <p className="text-xs text-warm-muted">Lead and conversion insights for direct estimates</p>
         </div>
       </div>
-      <button
-        onClick={() => loadDashboard(true)}
-        disabled={refreshing || loading}
-        className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0 disabled:opacity-60"
-      >
-        <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-      </button>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => { setStartDate(s); setEndDate(e); }}
+        />
+        <button
+          onClick={() => loadDashboard(true)}
+          disabled={refreshing || loading}
+          className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0 disabled:opacity-60"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+        </button>
+      </div>
     </div>
   );
+
+  // Each card's own window; they stay null until `charts` exists, matching the render guard below.
+  const cPhases = chartFor('phases');
+  const cSources = chartFor('sources');
+  const cPriorities = chartFor('priorities');
+  const cStatuses = chartFor('leadStatuses');
+  const cTrend = chartFor('trend');
+  const cActions = chartFor('nextActions');
 
   if (loading) {
     return (
@@ -321,56 +468,56 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
 
           {/* The mix at a glance: pipeline phase, where leads came from, how urgent they are */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card title="Leads by Phase" subtitle="18 tracker stages rolled into 6 phases">
-              {charts.phases.length ? (
+            <Card title="Leads by Phase" subtitle="18 tracker stages rolled into 6 phases" right={periodSelect('phases')}>
+              {cPhases.phases.length ? (
                 <>
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie data={charts.phases} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                      <Pie data={cPhases.phases} dataKey="value" nameKey="name" cx="50%" cy="50%"
                            innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
                            label={sliceLabel} labelLine={false}>
-                        {charts.phases.map((p, i) => <Cell key={i} fill={p.fill} />)}
+                        {cPhases.phases.map((p, i) => <Cell key={i} fill={p.fill} />)}
                       </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(charts.phases)} />} />
+                      <Tooltip content={<ChartTip total={sumOf(cPhases.phases)} />} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <DonutLegend rows={charts.phases} />
+                  <DonutLegend rows={cPhases.phases} />
                 </>
               ) : <NoData height={260} note="No lead status set yet" />}
             </Card>
 
-            <Card title="Lead Source Mix" subtitle="Where the leads came from">
-              {charts.sources.length ? (
+            <Card title="Lead Source Mix" subtitle="Where the leads came from" right={periodSelect('sources')}>
+              {cSources.sources.length ? (
                 <>
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie data={charts.sources} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                      <Pie data={cSources.sources} dataKey="value" nameKey="name" cx="50%" cy="50%"
                            innerRadius={52} outerRadius={90} paddingAngle={2} isAnimationActive={false}
                            label={sliceLabel} labelLine={false}>
-                        {charts.sources.map((s, i) => <Cell key={i} fill={s.fill} />)}
+                        {cSources.sources.map((s, i) => <Cell key={i} fill={s.fill} />)}
                       </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(charts.sources)} />} />
+                      <Tooltip content={<ChartTip total={sumOf(cSources.sources)} />} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <DonutLegend rows={charts.sources} columns={1} />
+                  <DonutLegend rows={cSources.sources} columns={1} />
                 </>
               ) : <NoData height={260} note="No lead source recorded" />}
             </Card>
 
-            <Card title="Priority Split" subtitle="Urgent work first">
-              {charts.priorities.length ? (
+            <Card title="Priority Split" subtitle="Urgent work first" right={periodSelect('priorities')}>
+              {cPriorities.priorities.length ? (
                 <>
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie data={charts.priorities} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                      <Pie data={cPriorities.priorities} dataKey="value" nameKey="name" cx="50%" cy="50%"
                            innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
                            label={sliceLabel} labelLine={false}>
-                        {charts.priorities.map((p, i) => <Cell key={i} fill={p.fill} />)}
+                        {cPriorities.priorities.map((p, i) => <Cell key={i} fill={p.fill} />)}
                       </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(charts.priorities)} />} />
+                      <Tooltip content={<ChartTip total={sumOf(cPriorities.priorities)} />} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <DonutLegend rows={charts.priorities} />
+                  <DonutLegend rows={cPriorities.priorities} />
                 </>
               ) : <NoData height={260} note="No priority set" />}
             </Card>
@@ -378,16 +525,19 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
 
           {/* Lead status: the workbook's own 18-stage breakdown */}
           <Card title="Lead Status Breakdown" subtitle="Every stage on the tracker, coloured by phase"
-                right={totals.missingNextDate > 0 ? `${totals.missingNextDate} open with no next date` : 'hover a bar for the count'}>
-            {charts.leadStatuses.some(s => s.value > 0) ? (
+                right={<span className="flex items-center gap-2">
+                  <span>{totals.missingNextDate > 0 ? `${totals.missingNextDate} open with no next date` : 'hover a bar for the count'}</span>
+                  {periodSelect('leadStatuses')}
+                </span>}>
+            {cStatuses.leadStatuses.some(s => s.value > 0) ? (
               <ResponsiveContainer width="100%" height={430}>
-                <BarChart data={charts.leadStatuses} layout="vertical" margin={{ left: 8, right: 30, top: 4, bottom: 4 }}>
+                <BarChart data={cStatuses.leadStatuses} layout="vertical" margin={{ left: 8, right: 30, top: 4, bottom: 4 }}>
                   <CartesianGrid horizontal={false} stroke="#F3EDE3" />
                   <XAxis type="number" allowDecimals={false} {...axisProps} />
                   <YAxis type="category" dataKey="name" width={152} {...axisProps} />
-                  <Tooltip content={<ChartTip total={sumOf(charts.leadStatuses)} />} cursor={{ fill: '#FFF9EE' }} />
+                  <Tooltip content={<ChartTip total={sumOf(cStatuses.leadStatuses)} />} cursor={{ fill: '#FFF9EE' }} />
                   <Bar dataKey="value" name="Leads" radius={[0, 4, 4, 0]} barSize={15} isAnimationActive={false}>
-                    {charts.leadStatuses.map((s, i) => <Cell key={i} fill={s.value > 0 ? s.fill : '#EADFCF'} />)}
+                    {cStatuses.leadStatuses.map((s, i) => <Cell key={i} fill={s.value > 0 ? s.fill : '#EADFCF'} />)}
                     <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: '#6B7280' }}
                                formatter={(v) => (v > 0 ? v : '')} />
                   </Bar>
@@ -398,9 +548,9 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
 
           {/* Trend and the day's workload */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card title="Lead Trend" subtitle="Leads, estimates and approvals by month">
+            <Card title="Lead Trend" subtitle="Leads, estimates and approvals by month" right={periodSelect('trend')}>
               <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={charts.trend} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+                <AreaChart data={cTrend.trend} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="fpMktLeads" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#9B8AA6" stopOpacity={0.35} />
@@ -430,16 +580,16 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
             </Card>
 
-            <Card title="Next Action Workload" subtitle="Who has to do what next">
-              {charts.nextActions.some(a => a.value > 0) ? (
+            <Card title="Next Action Workload" subtitle="Who has to do what next" right={periodSelect('nextActions')}>
+              {cActions.nextActions.some(a => a.value > 0) ? (
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={charts.nextActions.filter(a => a.value > 0)} margin={{ left: 0, right: 12, top: 8, bottom: 52 }}>
+                  <BarChart data={cActions.nextActions.filter(a => a.value > 0)} margin={{ left: 0, right: 12, top: 8, bottom: 52 }}>
                     <CartesianGrid vertical={false} stroke="#F3EDE3" />
                     <XAxis dataKey="name" {...axisProps} angle={-35} textAnchor="end" interval={0} height={70} />
                     <YAxis allowDecimals={false} {...axisProps} />
-                    <Tooltip content={<ChartTip total={sumOf(charts.nextActions)} />} cursor={{ fill: '#FFF9EE' }} />
+                    <Tooltip content={<ChartTip total={sumOf(cActions.nextActions)} />} cursor={{ fill: '#FFF9EE' }} />
                     <Bar dataKey="value" name="Pending" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                      {charts.nextActions.filter(a => a.value > 0).map((a, i) => <Cell key={i} fill={a.fill} />)}
+                      {cActions.nextActions.filter(a => a.value > 0).map((a, i) => <Cell key={i} fill={a.fill} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
