@@ -12,7 +12,6 @@ import FPLayout from './components/FPLayout';
 import Dashboard from './pages/Dashboard';
 import CustomerSubmissions from './pages/CustomerSubmissions';
 import CreateCustomer from './pages/CreateCustomer';
-import AdminCustomers from './pages/AdminCustomers';
 
 import WorkOrders from './pages/WorkOrders';
 import EmployeeWorkOrders from './pages/EmployeeWorkOrders';
@@ -379,9 +378,6 @@ function App() {
                     <Route path="work-orders/completed" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/closed" element={<EmployeeWorkOrders admin={user} />} />
                     <Route path="work-orders/cancelled" element={<EmployeeWorkOrders admin={user} />} />
-                    {/* The FP portal's Customers section, over every partner. Add Customer is the
-                        existing screen, so the list links to it rather than carrying a copy. */}
-                    <Route path="customers" element={<AdminCustomers />} />
                     <Route path="create-customer" element={<CreateCustomer admin={user} />} />
                     <Route path="add-vendor" element={<AddVendor admin={user} />} />
                     <Route path="vendor-details" element={<VendorDetails />} />

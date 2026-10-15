@@ -103,9 +103,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
   // Base nav items - filtered based on role
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
-    // The FP portal reaches its customer list only from inside the Add Customer screen, which is
-    // how it stayed unnoticed there; here it gets its own entry.
-    { path: '/employee/customers', icon: Users, label: 'Customers' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
     { path: '/employee/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
@@ -397,8 +394,6 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
             {/* Dashboard only */}
             <NavLink item={{ path: '/employee', icon: LayoutDashboard, label: 'Dashboard' }} mobile />
 
-            <NavLink item={{ path: '/employee/customers', icon: Users, label: 'Customers' }} mobile />
-
             <NavLink item={{ path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' }} mobile />
 
             {/* Property Management - Direct link, FP selection on page */}
@@ -667,7 +662,7 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
 
             {/* Admin extras outside the shared order (User Management, QR Management). The items
                 rendered in their own place above are excluded, or they would appear twice. */}
-            {navItems.filter(item => !['/employee', '/employee/customers', '/employee/create-customer'].includes(item.path)).map((item) => (
+            {navItems.filter(item => !['/employee', '/employee/create-customer'].includes(item.path)).map((item) => (
               <NavLink key={item.path} item={item} mobile />
             ))}
 
