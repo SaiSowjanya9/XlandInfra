@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Megaphone, Archive, ArchiveRestore, Loader2, AlertCircle, Target, FileWarning } from 'lucide-react';
+import { Megaphone, Archive, ArchiveRestore, Loader2, AlertCircle, Target, FileWarning, Search } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
+import { getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
+import { PROPERTY_TYPES } from '../../utils/estimateStore';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
@@ -75,6 +77,21 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
   const [complaintsError, setComplaintsError] = useState('');
   const [restoringComplaintId, setRestoringComplaintId] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Same row filters as the live tracker: search covers estimate ID and customer name, the
+  // property dropdown is the fixed five types, and employees come from the rows themselves.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const employeeOptions = [...new Set(rows.map(e => decodeEntities(e.coordinator_name || '')).filter(Boolean))];
+  const needle = searchTerm.trim().toLowerCase();
+  const filteredRows = rows.filter(e =>
+    (!needle || (e.estimate_id || '').toLowerCase().includes(needle)
+             || decodeEntities(e.client_name || '').toLowerCase().includes(needle)) &&
+    (!propertyTypeFilter || getPropertyTypeLabel(e.property_type) === propertyTypeFilter) &&
+    (!employeeFilter || decodeEntities(e.coordinator_name || '') === employeeFilter)
+  );
+  const filtersActive = Boolean(needle || propertyTypeFilter || employeeFilter);
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
 
@@ -280,6 +297,44 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
       ) : (
       <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
         <div className="p-6 pb-0">
+          {!loading && rows.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[220px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search estimate ID or customer"
+                  className="w-full h-[38px] pl-9 pr-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
+                />
+              </div>
+              <select
+                value={propertyTypeFilter}
+                onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${propertyTypeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
+              >
+                <option value="">All Property Types</option>
+                {PROPERTY_TYPES.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
+              </select>
+              <select
+                value={employeeFilter}
+                onChange={(e) => setEmployeeFilter(e.target.value)}
+                className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${employeeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
+              >
+                <option value="">All Employees</option>
+                {employeeOptions.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              {filtersActive && (
+                <button
+                  onClick={() => { setSearchTerm(''); setPropertyTypeFilter(''); setEmployeeFilter(''); }}
+                  className="h-[38px] px-3 text-sm font-medium text-warm-muted hover:text-warm-text hover:bg-warm-section rounded-[10px] transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
           {loadError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -323,7 +378,12 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
 </tr>
               </thead>
               <tbody>
-                {rows.map((est) => (
+                {filteredRows.length === 0 && (
+                  <tr>
+                    <td colSpan={18} className="py-10 text-center text-sm text-warm-muted">No entries match these filters</td>
+                  </tr>
+                )}
+                {filteredRows.map((est) => (
                   <tr key={est.id} className="border-b border-warm-border/70 hover:bg-warm-section transition-colors">
                                         <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{est.estimate_id}</td>
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(est.created_at)}</td>
