@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText, Building2, Pencil, Trash2, Eye
+  ClipboardList, FileText, Building2, Pencil, Trash2, Eye, Search
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
@@ -149,6 +149,22 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
 
   const trackedEstimates = estimates.filter(e => e.tracked_at);
   const untrackedEstimates = estimates.filter(e => !e.tracked_at);
+
+  // Row filters -- search covers estimate ID and customer name; the two dropdowns are built from
+  // the rows themselves so an option only exists when a row actually carries that value.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const propertyTypeOptions = [...new Set(trackedEstimates.map(e => e.property_type).filter(Boolean))];
+  const employeeOptions = [...new Set(trackedEstimates.map(e => decodeEntities(e.coordinator_name || '')).filter(Boolean))];
+  const needle = searchTerm.trim().toLowerCase();
+  const filteredTracked = trackedEstimates.filter(e =>
+    (!needle || (e.estimate_id || '').toLowerCase().includes(needle)
+             || decodeEntities(e.client_name || '').toLowerCase().includes(needle)) &&
+    (!propertyTypeFilter || e.property_type === propertyTypeFilter) &&
+    (!employeeFilter || decodeEntities(e.coordinator_name || '') === employeeFilter)
+  );
+  const filtersActive = Boolean(needle || propertyTypeFilter || employeeFilter);
 
   const openEditor = (estimate) => {
     setEditing(estimate);
@@ -437,6 +453,44 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
       {view === 'tracker' && (
         <div className="bg-white rounded-xl border border-warm-border shadow-warm overflow-hidden">
           <div className="p-6 pb-0">
+            {!loading && trackedEstimates.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[220px] max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search estimate ID or customer"
+                    className="w-full h-[38px] pl-9 pr-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
+                  />
+                </div>
+                <select
+                  value={propertyTypeFilter}
+                  onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                  className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${propertyTypeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
+                >
+                  <option value="">All Property Types</option>
+                  {propertyTypeOptions.map(t => <option key={t} value={t}>{getPropertyTypeLabel(t)}</option>)}
+                </select>
+                <select
+                  value={employeeFilter}
+                  onChange={(e) => setEmployeeFilter(e.target.value)}
+                  className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${employeeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
+                >
+                  <option value="">All Employees</option>
+                  {employeeOptions.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+                {filtersActive && (
+                  <button
+                    onClick={() => { setSearchTerm(''); setPropertyTypeFilter(''); setEmployeeFilter(''); }}
+                    className="h-[38px] px-3 text-sm font-medium text-warm-muted hover:text-warm-text hover:bg-warm-section rounded-[10px] transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
             {loadError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -491,7 +545,12 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {trackedEstimates.map((est) => (
+                  {filteredTracked.length === 0 && (
+                    <tr>
+                      <td colSpan={20} className="py-10 text-center text-sm text-warm-muted">No estimates match these filters</td>
+                    </tr>
+                  )}
+                  {filteredTracked.map((est) => (
                     <tr
                       key={est.id}
                       onClick={() => openEditor(est)}
