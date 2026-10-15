@@ -12,7 +12,7 @@ import EmptyState from '../../components/common/EmptyState';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils/marketingApi';
-import { LEAD_STATUSES } from '../../utils/followUpDates';
+import { LEAD_STATUSES, LEAD_SOURCES } from '../../utils/followUpDates';
 import {
   MARKETING_PHASE_COLORS, MARKETING_PRIORITY_COLORS,
   MARKETING_LEAD_STATUS_COLORS, MARKETING_OWNER_COLORS,
@@ -149,23 +149,35 @@ const chartsFromRows = (rows) => {
     const phase = LEAD_STATUS_PHASES[s.name];
     if (phase) phaseTotals[phase] = (phaseTotals[phase] || 0) + s.value;
   });
+  // Phases, sources and priorities keep every bucket -- the legend lists the whole vocabulary
+  // at zero, the way the Estimates dashboard's statusDataAll does; the pie filters to value > 0
+  // at render.
   const phases = Object.keys(MARKETING_PHASE_COLORS)
-    .map(p => ({ name: p, value: phaseTotals[p] || 0, fill: MARKETING_PHASE_COLORS[p] }))
-    .filter(p => p.value > 0);
+    .map(p => ({ name: p, value: phaseTotals[p] || 0, fill: MARKETING_PHASE_COLORS[p] }));
   return {
     leadStatuses,
     phases,
-    sources: byField('lead_source')
-      .sort((a, b) => b.value - a.value)
+    sources: byField('lead_source', LEAD_SOURCES)
       .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
     priorities: byField('priority', PRIORITY_ORDER)
-      .filter(p => p.value > 0)
       .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
     trend: buildTrendFrom(rows),
     nextActions: byField('next_action')
       .sort((a, b) => b.value - a.value)
       .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator }))
   };
+};
+
+// The donut draws only populated slices; the legend under it still lists every bucket.
+const nonZero = (rows) => (rows || []).filter(r => r.value > 0);
+
+// Merge a server aggregate onto a fixed bucket order -- zeros kept, values outside the list
+// (legacy spellings) appended after it.
+const orderMerge = (agg, order) => {
+  const counts = new Map((agg || []).map(e => [e.name, e.value]));
+  const out = order.map(name => ({ name, value: counts.get(name) || 0 }));
+  for (const e of agg || []) if (!order.includes(e.name)) out.push({ name: e.name, value: e.value });
+  return out;
 };
 
 // Who the next action belongs to, so the queue says at a glance whose day it is.
@@ -323,18 +335,14 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
       if (phase) phaseTotals[phase] = (phaseTotals[phase] || 0) + s.value;
     });
     const phases = Object.keys(MARKETING_PHASE_COLORS)
-      .map(p => ({ name: p, value: phaseTotals[p] || 0, fill: MARKETING_PHASE_COLORS[p] }))
-      .filter(p => p.value > 0);
+      .map(p => ({ name: p, value: phaseTotals[p] || 0, fill: MARKETING_PHASE_COLORS[p] }));
     return {
       leadStatuses,
       phases,
-      // Donuts and ranked bars only carry what exists; a zero slice is noise.
-      sources: (data.byLeadSource || [])
-        .filter(s => s.value > 0)
-        .sort((a, b) => b.value - a.value)
+      // Donuts draw only what exists, but their legends list the whole vocabulary at zero.
+      sources: orderMerge(data.byLeadSource, LEAD_SOURCES)
         .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
-      priorities: (data.byPriority || [])
-        .filter(p => p.value > 0)
+      priorities: orderMerge(data.byPriority, PRIORITY_ORDER)
         .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
       trend: data.trend || [],
       nextActions: (data.byNextAction || [])
@@ -469,57 +477,51 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
           {/* The mix at a glance: pipeline phase, where leads came from, how urgent they are */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card title="Leads by Phase" subtitle="18 tracker stages rolled into 6 phases" right={periodSelect('phases')}>
-              {cPhases.phases.length ? (
-                <>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie data={cPhases.phases} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                           innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
-                           label={sliceLabel} labelLine={false}>
-                        {cPhases.phases.map((p, i) => <Cell key={i} fill={p.fill} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(cPhases.phases)} />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <DonutLegend rows={cPhases.phases} />
-                </>
+              {nonZero(cPhases.phases).length ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={nonZero(cPhases.phases)} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                         innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
+                         label={sliceLabel} labelLine={false}>
+                      {nonZero(cPhases.phases).map((p, i) => <Cell key={i} fill={p.fill} />)}
+                    </Pie>
+                    <Tooltip content={<ChartTip total={sumOf(cPhases.phases)} />} />
+                  </PieChart>
+                </ResponsiveContainer>
               ) : <NoData height={260} note="No lead status set yet" />}
+              <DonutLegend rows={cPhases.phases} />
             </Card>
 
             <Card title="Lead Source Mix" subtitle="Where the leads came from" right={periodSelect('sources')}>
-              {cSources.sources.length ? (
-                <>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie data={cSources.sources} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                           innerRadius={52} outerRadius={90} paddingAngle={2} isAnimationActive={false}
-                           label={sliceLabel} labelLine={false}>
-                        {cSources.sources.map((s, i) => <Cell key={i} fill={s.fill} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(cSources.sources)} />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <DonutLegend rows={cSources.sources} columns={1} />
-                </>
+              {nonZero(cSources.sources).length ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={nonZero(cSources.sources)} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                         innerRadius={52} outerRadius={90} paddingAngle={2} isAnimationActive={false}
+                         label={sliceLabel} labelLine={false}>
+                      {nonZero(cSources.sources).map((s, i) => <Cell key={i} fill={s.fill} />)}
+                    </Pie>
+                    <Tooltip content={<ChartTip total={sumOf(cSources.sources)} />} />
+                  </PieChart>
+                </ResponsiveContainer>
               ) : <NoData height={260} note="No lead source recorded" />}
+              <DonutLegend rows={cSources.sources} columns={1} />
             </Card>
 
             <Card title="Priority Split" subtitle="Urgent work first" right={periodSelect('priorities')}>
-              {cPriorities.priorities.length ? (
-                <>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie data={cPriorities.priorities} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                           innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
-                           label={sliceLabel} labelLine={false}>
-                        {cPriorities.priorities.map((p, i) => <Cell key={i} fill={p.fill} />)}
-                      </Pie>
-                      <Tooltip content={<ChartTip total={sumOf(cPriorities.priorities)} />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <DonutLegend rows={cPriorities.priorities} />
-                </>
+              {nonZero(cPriorities.priorities).length ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={nonZero(cPriorities.priorities)} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                         innerRadius={58} outerRadius={92} paddingAngle={2} isAnimationActive={false}
+                         label={sliceLabel} labelLine={false}>
+                      {nonZero(cPriorities.priorities).map((p, i) => <Cell key={i} fill={p.fill} />)}
+                    </Pie>
+                    <Tooltip content={<ChartTip total={sumOf(cPriorities.priorities)} />} />
+                  </PieChart>
+                </ResponsiveContainer>
               ) : <NoData height={260} note="No priority set" />}
+              <DonutLegend rows={cPriorities.priorities} />
             </Card>
           </div>
 
