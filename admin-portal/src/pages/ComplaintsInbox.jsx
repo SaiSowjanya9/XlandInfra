@@ -48,8 +48,8 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
 
   useEffect(() => { loadComplaints(); }, [loadComplaints]);
 
-  const labelCls = 'block text-xs font-medium text-gray-500 mb-1.5';
-  const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-gray-200 rounded-[10px] text-sm leading-6 text-gray-900 whitespace-pre-wrap bg-gray-50 [overflow-wrap:anywhere]';
+  const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
+  const readOnlyCls = 'w-full min-w-0 px-2.5 py-1 border border-gray-200 rounded-md text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 [overflow-wrap:anywhere]';
 
   return (
     <div className="p-4 md:p-6">
@@ -143,8 +143,8 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="min-w-0"><label className={labelCls}>Property ID</label><div className={readOnlyCls}>{decodeEntities(viewing.property_id) || '-'}</div></div>
                 <div className="min-w-0"><label className={labelCls}>Zone</label><div className={readOnlyCls}>{decodeEntities(viewing.zone) || '-'}</div></div>
                 {showPartner && (
