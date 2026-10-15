@@ -19,11 +19,11 @@ const LEAD_SOURCES = ['Field Visit', 'Referral', 'WhatsApp', 'Phone Call', 'Webs
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const CUSTOMER_DECISIONS = ['Interested', 'Interested Need Follow-up', 'Not Interested', 'Need Follow-up', 'Competitor Selected', 'Other'];
 const TRACKER_STATUSES = ['Not Started', 'Created by Executive', 'Pending Employee Review', 'Reviewed by Employee', 'Estimate Sent', 'Revision Required', 'Revised Estimate Sent', 'Approved', 'Rejected'];
-// The only statuses anybody picks by hand. Every other entry in TRACKER_STATUSES is derived --
-// by the estimate's own status (sent/approved/rejected), by Coordinator Reviewed, or by the time
-// since the estimate was created -- so the tracker dropdown locks them and the PUT stores NULL
-// for them, which leaves the automatic progression in charge.
-const MANUAL_TRACKER_STATUSES = ['Revision Required', 'Revised Estimate Sent'];
+// The statuses that may be stored by hand. Approved/Rejected are excluded -- the estimate's own
+// status in All Estimates decides those, and a tracker pick must never impersonate them. Every
+// other status is pickable, though the PUT still stores NULL when the submitted value is exactly
+// what the row would show automatically, so the derivation keeps driving it.
+const MANUAL_TRACKER_STATUSES = TRACKER_STATUSES.filter(s => s !== 'Approved' && s !== 'Rejected');
 const FOLLOW_UP_STAGES = ['Step 1 - Thank You', 'Step 2 - Estimate Shared', 'Step 3 - Follow-Up 1', 'Step 4 - Follow-Up 2', 'Step 5A - Executive Call', 'Step 5B - Customer Visit', 'Closed'];
 
 // A lead counts as "estimate shared" once it reaches any of these -- the figure is cumulative, so

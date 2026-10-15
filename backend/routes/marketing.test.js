@@ -34,9 +34,16 @@ const pool = {
     if (sql.includes('information_schema.columns')) return [[{ n: 1 }]];
     if (sql.includes('information_schema.tables')) return [[{ n: 1 }]];
     // The PUT's current-row read carries the stored follow-up stage, so the forward-only rule
-    // has something to judge submissions against: this lead sits at Step 3.
-    if (sql.startsWith('SELECT id, follow_up_stage FROM fp_estimates')) {
-      return [[{ id: 31, follow_up_stage: 'Step 3 - Follow-Up 1' }]];
+    // has something to judge submissions against: this lead sits at Step 3. It is also tracked,
+    // days old and unreviewed, so its automatic tracker status is Pending Employee Review --
+    // which is what the store-NULL-on-match rule is judged against.
+    if (sql.startsWith('SELECT id, follow_up_stage')) {
+      return [[{
+        id: 31, follow_up_stage: 'Step 3 - Follow-Up 1',
+        status: 'draft', tracker_status: null,
+        tracked_at: '2026-01-05 10:00:00', coordinator_reviewed: 'No',
+        created_at: '2026-01-01 00:00:00'
+      }]];
     }
     if (sql.includes('FROM fp_estimates')) return [[trackerRow]];
     if (sql.startsWith('UPDATE fp_estimates')) return [{ affectedRows: 1 }];
@@ -545,14 +552,25 @@ test('a tracked lead moves itself along until the coordinator reviews it', async
 test('saving a row does not freeze its automatic status', async (t) => {
   const request = await startServer(t);
 
-  // The table re-sends the resolved status with every inline edit, so storing an automated
-  // status would stop the lead ever reaching Pending Employee Review -- the dropdown locks
-  // them, and the PUT writes NULL for anything that is not a manual choice.
-  for (const automated of ['Created by Executive', 'Pending Employee Review', 'Estimate Sent']) {
+  // The table re-sends the resolved status with every inline edit. The mocked lead's automatic
+  // status is Pending Employee Review, so re-submitting exactly that stores NULL and the
+  // derivation keeps driving the row.
+  calls.length = 0;
+  await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: 'Pending Employee Review' });
+  assert.equal(lastCall('UPDATE fp_estimates SET').params[8], null, 'the automatic status is never stored');
+
+  // Every other pickable status is a deliberate pin and is stored literally.
+  for (const pinned of ['Not Started', 'Created by Executive', 'Reviewed by Employee', 'Estimate Sent']) {
     calls.length = 0;
-    await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: automated });
-    const update = lastCall('UPDATE fp_estimates SET');
-    assert.equal(update.params[8], null, `${automated} is derived, never stored`);
+    await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: pinned });
+    assert.equal(lastCall('UPDATE fp_estimates SET').params[8], pinned, `${pinned} is a manual pick and is kept`);
+  }
+
+  // Approved/Rejected are never stored by hand -- the estimate's own status decides them.
+  for (const terminal of ['Approved', 'Rejected']) {
+    calls.length = 0;
+    await request('/admin/marketing/tracker/31', 'PUT', { ...validTracker, tracker_status: terminal });
+    assert.equal(lastCall('UPDATE fp_estimates SET').params[8], null, `${terminal} comes from the estimate, not the tracker`);
   }
 
   // A revision status is a real choice and is kept.
