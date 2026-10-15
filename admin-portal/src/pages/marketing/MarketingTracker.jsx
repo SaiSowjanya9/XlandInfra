@@ -554,6 +554,11 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                           <option value="">Reviewed?</option>
                           {COORDINATOR_REVIEWED_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
+                        {est.coordinator_reviewed === 'Yes' && est.coordinator_name && (
+                          <div className="mt-1 text-xs text-warm-muted whitespace-nowrap" title="Reviewed by">
+                            {decodeEntities(est.coordinator_name)}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
