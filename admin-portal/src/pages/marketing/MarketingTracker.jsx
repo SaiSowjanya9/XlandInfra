@@ -279,13 +279,13 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   };
 
   const inputCls = 'w-full h-[42px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20';
-  const labelCls = 'block text-xs font-medium text-warm-muted mb-1.5';
-  const readOnlyCls = 'min-h-[42px] w-full min-w-0 px-3 py-2 border border-warm-border rounded-[10px] text-sm leading-6 text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
+  const labelCls = 'block text-xs font-medium text-warm-muted mb-1';
+  const readOnlyCls = 'w-full min-w-0 px-2.5 py-1 border border-warm-border rounded-md text-sm text-warm-text whitespace-pre-wrap bg-warm-section [overflow-wrap:anywhere]';
 
   const radioField = (title, field, otherField, options, required) => (
     <div>
       <label className={labelCls}>{title} {required && <span className="text-red-500">*</span>}</label>
-      <div className="space-y-2.5 pt-1">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 pt-0.5">
         {options.map(option => (
           <label key={option} className="flex items-center gap-3 cursor-pointer">
             <input
@@ -723,10 +723,10 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-5 space-y-4">
               {/* Automated estimate details */}
-              <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2.5">
                   <div className="min-w-0"><label className={labelCls}>Estimate ID</label><div className={readOnlyCls}>{editing.estimate_id}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Customer Name</label><div className={readOnlyCls}>{decodeEntities(editing.client_name) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Visit Date</label><div className={readOnlyCls}>{formatDate(editing.created_at)}</div></div>
@@ -756,7 +756,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     if (!editing.villa_plot_number) return null;
                     const unitLabel = propType.startsWith('FLAT') || propType === 'FL' ? 'Flat Number' : propType.startsWith('VILLA') || propType === 'VL' ? 'Villa Number' : 'Plot Number';
                     return (
-                      <div className="mt-4 pt-4 border-t border-warm-border/70">
+                      <div className="mt-3 pt-3 border-t border-warm-border/70">
                         <div className="max-w-xs">
                           <label className={labelCls}>{unitLabel}</label>
                           <div className={`${readOnlyCls} bg-white`}>{decodeEntities(editing.villa_plot_number)}</div>
@@ -792,8 +792,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                     const aptTypes = blockUnitTypes?.['apt'] || blockUnitTypes?.[1] || blockUnitTypes?.['1'] || {};
                     const hasAptTypes = Object.values(aptTypes).some(v => v > 0);
                     return (
-                      <div className="mt-4 pt-4 border-t border-warm-border/70">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="mt-3 pt-3 border-t border-warm-border/70">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {editing.tower_name && (
                             <div className="min-w-0"><label className={labelCls}>Tower / Building Name</label><div className={`${readOnlyCls} bg-white`}>{decodeEntities(editing.tower_name)}</div></div>
                           )}
@@ -818,7 +818,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               </div>
 
               {/* Editable answers */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Lead Source</label>
                   <select value={form.lead_source} onChange={(e) => setField('lead_source', e.target.value)} className={`${inputCls} ${form.lead_source ? 'text-warm-text' : 'text-warm-muted'}`}>
