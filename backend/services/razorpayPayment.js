@@ -16,6 +16,7 @@ const { pool } = require('../config/database');
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 const { markPaymentCompleted } = require('./schedulingWorkflow');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
+const { ensurePaymentColumns } = require('../utils/paymentColumns');
 
 // The action every Razorpay payment writes to payment_history. The Razorpay tab filters on it.
 const RAZORPAY_HISTORY_ACTION = 'razorpay_payment';
@@ -119,6 +120,7 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
   const connection = await pool.getConnection();
   let paymentDbId;
   try {
+    await ensurePaymentColumns();
     await connection.beginTransaction();
 
     const [result] = await connection.execute(`

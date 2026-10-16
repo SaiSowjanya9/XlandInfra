@@ -32,6 +32,8 @@ const { generateInvoicePDF } = require('../services/pdfService');
 const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 // Shared with the Razorpay writer so online and manual payments draw the same sequence
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
+// Self-heals the schema_v31/v20/v25 payment columns and ENUMs on a database that skipped them
+const { ensurePaymentColumns } = require('../utils/paymentColumns');
 
 /**
  * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
@@ -2309,6 +2311,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
 router.post('/payments', authenticate, canEditPayments, upload.single('paymentProof'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await ensurePaymentColumns();
     await connection.beginTransaction();
 
     console.log('[Record Payment] Request body:', req.body);
@@ -2532,6 +2535,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
 router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, upload.single('paymentProof'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await ensurePaymentColumns();
     await connection.beginTransaction();
 
     const fpId = getFPScope(req);
@@ -2580,11 +2584,6 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
     const [maxPayment] = await connection.execute('SELECT MAX(id) as maxId FROM payments');
     const nextId = (maxPayment[0]?.maxId || 0) + 1;
     const paymentId = `PYMT-${String(nextId).padStart(4, '0')}`;
-
-    // Ensure bank_name column exists
-    try {
-      await connection.execute('ALTER TABLE payments ADD COLUMN bank_name VARCHAR(255)');
-    } catch (e) { /* Column might exist */ }
 
     const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
     const receivedByName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
@@ -2678,6 +2677,7 @@ router.put('/:id/archive', authenticate, canEditPayments, async (req, res) => {
 // Verify payment (update status and send receipt if paid)
 router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
   try {
+    await ensurePaymentColumns();
     const { id } = req.params;
     const fpId = getFPScope(req);
     const { 
@@ -3051,6 +3051,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
 
 router.put('/:id', authenticate, canEditPayments, async (req, res) => {
   try {
+    await ensurePaymentColumns();
     const { id } = req.params;
     const fpId = getFPScope(req);
     const { amount, transactionReference, remarks, bankName, status } = req.body;

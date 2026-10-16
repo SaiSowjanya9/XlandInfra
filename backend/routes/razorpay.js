@@ -25,6 +25,7 @@ const {
 } = require('../utils/paymentSecurity');
 const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+const { ensurePaymentColumns } = require('../utils/paymentColumns');
 
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
@@ -1240,6 +1241,14 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
 
     const invoice = invoices[0];
 
+    // A draft invoice has not been sent yet; it stays out of the public payment page
+    if (!invoice.status || String(invoice.status).toLowerCase() === 'draft') {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found or payment link has expired'
+      });
+    }
+
     // Check invoice status
     if (invoice.status === 'cancelled') {
       return res.status(400).json({
@@ -1610,6 +1619,7 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
         if (normalizedMethod === 'check') normalizedMethod = 'cheque';
 
         // Create payment record with verification_pending status
+        await ensurePaymentColumns();
         const [paymentResult] = await pool.execute(
           `INSERT INTO payments (
             invoice_id, property_id, amount, payment_method, payment_date,
