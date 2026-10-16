@@ -2430,6 +2430,9 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     // not trusted; the server derives the figure from the invoice's own balance.
     const balanceAmount = parseFloat(inv.balance_amount) ||
       (parseFloat(inv.total_amount) || 0) - (parseFloat(inv.amount_paid) || 0);
+    if (balanceAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
+    }
     const charge = resolvePaymentPortion(req.body.portion || 'full', balanceAmount);
     if (charge.error) {
       return res.status(400).json({ success: false, message: charge.error });

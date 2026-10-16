@@ -2370,6 +2370,15 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     const invoice = invoices[0];
     const paymentAmount = parseFloat(amount);
 
+    // A paid invoice takes no further payment — balance_amount of 0 falls back to
+    // total - amount_paid so a stale zero doesn't block a genuinely unpaid invoice
+    const invoiceBalance = parseFloat(invoice.balance_amount) ||
+      (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    if (invoiceBalance <= 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
+    }
+
     // Generate payment ID and receipt ID
     const paymentId = await generatePaymentId(fpId);
     const receiptId = await generateReceiptId(fpId);
@@ -2594,6 +2603,13 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
     const invoice = invoices[0];
     const paymentAmount = parseFloat(amount);
 
+    const invoiceBalance = parseFloat(invoice.balance_amount) ||
+      (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    if (invoiceBalance <= 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
+    }
+
     // Generate payment ID
     const [maxPayment] = await connection.execute('SELECT MAX(id) as maxId FROM payments');
     const nextId = (maxPayment[0]?.maxId || 0) + 1;
@@ -2739,6 +2755,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     let selectQuery = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             i.balance_amount as invoice_balance_amount, i.amount_paid as invoice_amount_paid,
              i.customer_email as invoice_email, i.customer_name as invoice_customer_name,
              i.property_id as invoice_property_id,
              prop.community_name as property_name, prop.property_id as property_code,
@@ -2761,6 +2778,19 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     }
 
     const p = payments[0];
+
+    // Verifying a second payment onto an already-settled invoice would over-pay it —
+    // the money should be rejected or refunded, not confirmed
+    if (status === 'paid' && p.invoice_id) {
+      const invoiceBalance = parseFloat(p.invoice_balance_amount) ||
+        (parseFloat(p.invoice_amount) || 0) - (parseFloat(p.invoice_amount_paid) || 0);
+      if (invoiceBalance <= 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'This invoice is already fully paid — mark this payment as failed or refund it instead.'
+        });
+      }
+    }
 
     // Update payment status with additional cash/cheque/bank transfer fields
     const remarks = status === 'paid' ? verificationNotes : rejectionReason;
@@ -2856,8 +2886,8 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         
         // Get total paid for this invoice
         const [paidPayments] = await pool.execute(
-          'SELECT SUM(amount) as total_paid FROM payments WHERE invoice_id = ? AND status = ?',
-          [p.invoice_id, 'paid']
+          "SELECT SUM(amount) as total_paid FROM payments WHERE invoice_id = ? AND status IN ('paid', 'completed')",
+          [p.invoice_id]
         );
         const totalPaid = parseFloat(paidPayments[0]?.total_paid || 0) + paymentAmount;
         newBalance = Math.max(0, invoiceAmount - totalPaid);

@@ -1608,7 +1608,11 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
 
       if (fullInvoice.length > 0) {
         const inv = fullInvoice[0];
-        const balance = parseFloat(inv.balance_amount) || parseFloat(inv.total_amount) || 0;
+        const balance = parseFloat(inv.balance_amount) ||
+          (parseFloat(inv.total_amount) || 0) - (parseFloat(inv.amount_paid) || 0);
+        if (balance <= 0) {
+          return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
+        }
         const { amount: paymentAmount, plan, error: portionError } = resolvePaymentPortion(portion, balance, customAmount);
         if (portionError) {
           return res.status(400).json({ success: false, message: portionError });
