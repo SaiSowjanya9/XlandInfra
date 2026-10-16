@@ -317,9 +317,9 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  const handleDeleteZone = async (zoneId, e) => {
+  const handleDeleteZone = async (zoneId, zoneName, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this zone?')) return;
+    if (!window.confirm(`Delete the zone "${zoneName}"? It is also removed from any properties using it.`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/manager/zones/${zoneId}`, {
         method: 'DELETE',
@@ -327,7 +327,10 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
       });
       const data = await res.json();
       if (data.success) fetchZones();
-    } catch (e) { console.error('Delete zone error:', e); }
+      else window.alert(data.message || 'Could not remove the zone.');
+    } catch (e) {
+      window.alert('Could not remove the zone. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -804,7 +807,7 @@ const ManagerCustomers = ({ user, defaultTab = 'list' }) => {
                             <button type="button" onMouseDown={() => { updateFormData('zone', z.name); setShowZoneDropdown(false); }}
                               className={`flex-1 text-left text-sm ${formData.zone === z.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{z.name}</button>
                             {z.id && !String(z.id).startsWith('custom-') && (
-                              <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
+                              <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, z.name, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
                             )}
                           </div>
                         ))}

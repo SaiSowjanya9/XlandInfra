@@ -9,6 +9,7 @@ const express = require('express');
 const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
+const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -2666,10 +2667,18 @@ router.post('/zones', requireCoordinatorScope, async (req, res) => {
 router.delete('/zones/:id', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.execute(
-      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
-      [id, req.franchisePartnerId || 0]
-    );
+    const franchisePartnerId = req.franchisePartnerId || null;
+
+    // A bare number is a company-wide `zones` row -- only an admin can remove those.
+    if (/^\d+$/.test(id)) {
+      return res.status(400).json({ success: false, message: 'This is a company-wide zone and can only be removed by an admin.' });
+    }
+
+    const zoneName = await resolveZoneName(id, { franchisePartnerId });
+    if (!zoneName) {
+      return res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+    await deleteZoneByName(zoneName, { franchisePartnerId });
     res.json({ success: true, message: 'Zone deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

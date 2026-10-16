@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
@@ -68,6 +68,11 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   const [archiveTarget, setArchiveTarget] = useState(null);
   const [properties, setProperties] = useState([]);
   const [showPropertySuggestions, setShowPropertySuggestions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [zoneFilter, setZoneFilter] = useState('');
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [employeeOptions, setEmployeeOptions] = useState([]);
   // True while the Zone text came from a property match rather than the keyboard, so a Property ID
   // that stops matching only clears what the page itself filled in -- never a hand-typed zone.
   const zoneAutoFilled = useRef(false);
@@ -106,8 +111,90 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
     } catch (e) { /* suggestions just stay empty */ }
   }, [token, apiPath, fpId]);
 
+  // The filter dropdowns list every zone and employee this portal can see, not only the
+  // ones complaints already name -- the zones route is the same merged list the customer
+  // forms use, and the employees route is each portal's own roster (the admin's spans all
+  // partners). Either may fail where the caller has no roster, and that is fine: names
+  // saved on complaints are merged in below, so the filters never lose a value in use.
+  const loadZones = useCallback(async () => {
+    try {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/zones`, fpId), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setZoneOptions((result.data || []).map(z => decodeEntities(z.name || '')).filter(Boolean));
+      }
+    } catch (e) { /* the saved zones still reach the dropdown via the merge below */ }
+  }, [token, apiPath, fpId]);
+
+  const loadEmployees = useCallback(async () => {
+    try {
+      const url = apiPath === 'admin'
+        ? `${API_BASE}/api/admin/all-employees`
+        : `${API_BASE}/api/${apiPath}/employees`;
+      const res = await fetch(withMarketingFp(url, fpId), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      const list = Array.isArray(result.data) ? result.data : (Array.isArray(result.employees) ? result.employees : []);
+      const names = list
+        .map(e => decodeEntities(e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim() || e.username || ''))
+        .filter(Boolean);
+      setEmployeeOptions([...new Set(names)]);
+    } catch (e) { /* same -- responsible persons on complaints still reach the dropdown */ }
+  }, [token, apiPath, fpId]);
+
   useEffect(() => { if (!unavailable) loadComplaints(); }, [unavailable, loadComplaints]);
   useEffect(() => { if (!unavailable) loadProperties(); }, [unavailable, loadProperties]);
+  useEffect(() => { if (!unavailable) loadZones(); }, [unavailable, loadZones]);
+  useEffect(() => { if (!unavailable) loadEmployees(); }, [unavailable, loadEmployees]);
+
+  // The dropdown options are the roster plus whatever the saved complaints already carry,
+  // so a zone or person that is no longer in the roster still filters its own rows.
+  const zoneNames = useMemo(() => {
+    const names = new Set(zoneOptions);
+    complaints.forEach(c => { const z = decodeEntities(c.zone || '').trim(); if (z) names.add(z); });
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [zoneOptions, complaints]);
+
+  const employeeNames = useMemo(() => {
+    const names = new Set(employeeOptions);
+    complaints.forEach(c => { const p = decodeEntities(c.responsible_person || '').trim(); if (p) names.add(p); });
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [employeeOptions, complaints]);
+
+  // Property ID -> display name, so the search also answers a customer typing the
+  // community's name rather than its GC-… code.
+  const propertyNameByCode = useMemo(() => {
+    const map = {};
+    properties.forEach(p => {
+      if (p.property_id) {
+        map[p.property_id.toLowerCase()] = decodeEntities(p.community_name || p.name || p.property_name || '');
+      }
+    });
+    return map;
+  }, [properties]);
+
+  const filteredComplaints = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return complaints.filter(c => {
+      if (zoneFilter && decodeEntities(c.zone || '').trim() !== zoneFilter) return false;
+      if (employeeFilter && decodeEntities(c.responsible_person || '').trim() !== employeeFilter) return false;
+      if (q) {
+        const haystack = [
+          c.property_id,
+          c.contact_person_name,
+          propertyNameByCode[decodeEntities(c.property_id || '').toLowerCase()]
+        ].map(v => decodeEntities(v || '').toLowerCase());
+        if (!haystack.some(v => v.includes(q))) return false;
+      }
+      return true;
+    });
+  }, [complaints, searchQuery, zoneFilter, employeeFilter, propertyNameByCode]);
+
+  const filtersActive = !!(searchQuery.trim() || zoneFilter || employeeFilter);
+  const clearFilters = () => { setSearchQuery(''); setZoneFilter(''); setEmployeeFilter(''); };
 
   // A property's zone rides under three names depending on how the record was saved.
   const zoneOf = (p) => decodeEntities(p?.zone_name || p?.zoneName || p?.zone || '');
@@ -280,6 +367,53 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
             </div>
           )}
         </div>
+
+        {/* Search + zone + employee filters */}
+        {!loading && complaints.length > 0 && (
+          <div className="px-6 pt-5 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-warm-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by Property ID or customer name..."
+                className={`${inputCls} pl-9`}
+              />
+            </div>
+            <select
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value)}
+              className={`${inputCls} md:w-52`}
+            >
+              <option value="">All Zones</option>
+              {zoneNames.map(z => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <select
+              value={employeeFilter}
+              onChange={(e) => setEmployeeFilter(e.target.value)}
+              className={`${inputCls} md:w-52`}
+            >
+              <option value="">All Employees</option>
+              {employeeNames.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-xs font-medium text-warm-muted hover:text-warm-accent whitespace-nowrap self-start md:self-auto"
+              >
+                Clear filters
+              </button>
+            )}
+            {filtersActive && (
+              <span className="text-xs text-warm-muted whitespace-nowrap">
+                {filteredComplaints.length} of {complaints.length}
+              </span>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-warm-accent" />
@@ -299,6 +433,18 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               </button>
             )}
           />
+        ) : filteredComplaints.length === 0 ? (
+          <div className="py-16 text-center">
+            <Search className="w-8 h-8 mx-auto mb-2 text-warm-muted" strokeWidth={1.5} />
+            <p className="text-sm text-warm-muted">No complaints match the current filters.</p>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-2 text-xs font-medium text-warm-accent hover:underline"
+            >
+              Clear filters
+            </button>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -318,7 +464,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </tr>
               </thead>
               <tbody>
-                {complaints.map((row) => (
+                {filteredComplaints.map((row) => (
                   <tr
                     key={row.id}
                     onClick={() => openView(row)}

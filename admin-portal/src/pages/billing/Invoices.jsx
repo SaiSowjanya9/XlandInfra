@@ -142,14 +142,14 @@ const INVOICE_TYPE_CONFIG = {
   work_order: { label: 'Work Order', color: 'text-orange-600' },
   amc: { label: 'AMC', color: 'text-blue-600' },
   manual: { label: 'Manual', color: 'text-gray-600' },
-  generic: { label: 'Generic', color: 'text-green-600' }
+  generic: { label: 'Sales', color: 'text-green-600' }
 };
 
 // Tab configuration for invoice types
 const INVOICE_TABS = [
   { id: 'generated', label: 'AMC Invoices', filter: 'estimate', icon: FileText },
   { id: 'work_order', label: 'Work Order Invoices', filter: 'work_order', icon: Receipt },
-  { id: 'generic', label: 'Generic Invoices', filter: 'generic', icon: Receipt },
+  { id: 'generic', label: 'Sales Invoices', filter: 'generic', icon: Receipt },
   { id: 'archived', label: 'Archived', filter: 'archived', icon: Archive }
 ];
 

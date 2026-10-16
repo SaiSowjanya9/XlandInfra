@@ -9,6 +9,7 @@ const { authenticate, generateToken } = require('../middleware/auth');
 const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
+const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices, fetchVendorlessServiceNames
 } = require('../utils/pendingProperties');
@@ -4753,22 +4754,17 @@ router.post('/zones', authenticate, adminOnly, adminWriteRoles, async (req, res)
   }
 });
 
-// Remove a company-wide zone. The list GET above also reports zones that exist only because a
-// franchise or a property uses them ('fp-3', 'onboarded-North Zone'); those are not rows anyone
-// can delete here, so a non-numeric id is refused with a reason instead of silently doing nothing.
+// Remove a zone wherever it lives. The list GET above merges three sources -- the global
+// `zones` table, `fp_zones` rows, and zone names stored on properties ('fp-3',
+// 'onboarded-North Zone') -- so a delete resolves the name behind the id and removes it
+// from all of them, or the zone resurfaces on the next fetch.
 router.delete('/zones/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
-    const zoneId = Number.parseInt(req.params.id, 10);
-    if (!Number.isInteger(zoneId) || String(zoneId) !== String(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'This zone comes from a franchise or a property and cannot be removed here.'
-      });
-    }
-    const [result] = await pool.execute('UPDATE zones SET is_active = 0 WHERE id = ?', [zoneId]);
-    if (result.affectedRows === 0) {
+    const zoneName = await resolveZoneName(req.params.id);
+    if (!zoneName) {
       return res.status(404).json({ success: false, message: 'Zone not found' });
     }
+    await deleteZoneByName(zoneName, { includeGlobal: true });
     res.json({ success: true, message: 'Zone removed' });
   } catch (error) {
     console.error('Delete admin zone error:', error);

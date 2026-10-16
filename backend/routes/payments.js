@@ -1416,7 +1416,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
   }
 });
 
-// Create generic invoice (for walk-in customers or ad-hoc services)
+// Create sales invoice (for walk-in customers or ad-hoc services)
 router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
@@ -1500,11 +1500,11 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
       totalAmount,
       0,
       totalAmount,
-      'sent', // Generic invoices are marked as sent since we email them
+      'sent', // Sales invoices are marked as sent since we email them
       'pending',
       req.user.id,
       req.user.role,
-      notes || 'Generic invoice'
+      notes || 'Sales invoice'
     ]);
 
     const insertedId = result.insertId;
@@ -1668,7 +1668,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
           [insertedId]
         );
 
-        console.log(`📧 Generic invoice ${invoiceIdGen} sent to ${customerDetails.email}`);
+        console.log(`📧 Sales invoice ${invoiceIdGen} sent to ${customerDetails.email}`);
       } catch (emailError) {
         console.error('Failed to send invoice email:', emailError);
         // Don't fail the request, just log the error
@@ -1688,7 +1688,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
       }
     });
   } catch (error) {
-    console.error('Error creating generic invoice:', error);
+    console.error('Error creating sales invoice:', error);
     res.status(500).json({ success: false, message: 'Error creating invoice', error: error.message });
   }
 });

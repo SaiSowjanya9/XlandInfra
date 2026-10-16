@@ -339,9 +339,17 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  const handleDeleteZone = async (zoneId, e) => {
-    e.stopPropagation(); if (!window.confirm('Delete this zone?')) return;
-    try { const res = await fetch(`${API_BASE}/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) fetchZones(); } catch (e) {}
+  const handleDeleteZone = async (zoneId, zoneName, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete the zone "${zoneName}"? It is also removed from any properties using it.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/fp/zones/${zoneId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.success) fetchZones();
+      else window.alert(json.message || 'Could not remove the zone.');
+    } catch (e) {
+      window.alert('Could not remove the zone. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -781,7 +789,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
                             <button type="button" onMouseDown={() => { updateFormData('zone', z.name); setShowZoneDropdown(false); }}
                               className={`flex-1 text-left text-sm ${formData.zone === z.name ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>{z.name}</button>
                             {z.id && !String(z.id).startsWith('custom-') && (
-                              <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
+                              <button type="button" onMouseDown={(e) => handleDeleteZone(z.id, z.name, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
                             )}
                           </div>
                         ))}
