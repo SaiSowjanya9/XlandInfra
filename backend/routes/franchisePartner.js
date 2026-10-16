@@ -9,6 +9,7 @@ const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
+const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
 const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -5870,12 +5871,20 @@ router.post('/zones', requireFPScope, async (req, res) => {
 router.delete('/zones/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    await pool.execute(
-      'UPDATE fp_zones SET is_active = 0 WHERE id = ? AND franchise_partner_id = ?',
-      [id, req.fpId]
-    );
-    
+
+    // A bare number is a company-wide `zones` row -- only an admin can remove those.
+    if (/^\d+$/.test(id)) {
+      return res.status(400).json({ success: false, message: 'This is a company-wide zone and can only be removed by an admin.' });
+    }
+
+    // 'fp-<id>' rows and the 'prop-'/'onboarded-' names a property carries all resolve
+    // to a zone name; the delete then removes it from every source scoped to this FP.
+    const zoneName = await resolveZoneName(id, { franchisePartnerId: req.fpId });
+    if (!zoneName) {
+      return res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+    await deleteZoneByName(zoneName, { franchisePartnerId: req.fpId });
+
     res.json({ success: true, message: 'Zone deleted' });
   } catch (error) {
     console.error('Delete zone error:', error);

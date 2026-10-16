@@ -3025,7 +3025,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 <option value="villa">Villa</option>
                 <option value="flat">Flat</option>
                 <option value="plot">Plot</option>
-                <option value="commercial">Commercial</option>
               </select>
               <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>

@@ -83,6 +83,15 @@ Mistakes that fail silently and have each already broken live endpoints:
 - A "Unknown column X in 'field list'" in the live log usually means the VPS is behind this repo,
   not that the code is wrong — the `assign_vendor` and `fp_amc_packages.price` errors were both
   fixed here well before they stopped appearing there. Check `git log` for the fix before chasing it.
+- **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
+  union the global `zones` table, `fp_zones`, and zone text stored on properties
+  (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id
+  (`fp-3`, `onboarded-North Zone`, `prop-…`). Deleting only one source made the zone resurface
+  on the next fetch, so `DELETE …/zones/:id` goes through `backend/utils/zoneDelete.js`:
+  `resolveZoneName` turns the prefixed id back into a name and `deleteZoneByName` removes it
+  from every source (scoped to `franchisePartnerId` on portal routes; `includeGlobal` on
+  admin's). A bare numeric id on a portal route is a company-wide zone and is refused.
+  `onboarded_properties.zone` is NOT NULL — detach with `''`, not `NULL`.
 
 ## Work Order IDs
 
