@@ -29,13 +29,16 @@ const COLUMNS = {
   receipt_id: 'VARCHAR(50) NULL',
   property_code: 'VARCHAR(50) NULL',
   invoice_number: 'VARCHAR(50) NULL',
-  estimate_number: 'VARCHAR(50) NULL'
+  estimate_number: 'VARCHAR(50) NULL',
+  // Read by GET /payments and the verify route; never added by any migration
+  customer_email: 'VARCHAR(255) NULL'
 };
 
 // Members each ENUM must carry for the values the routes write. Existing members are kept;
 // the ALTER only runs when one of these is absent.
 const ENUM_MEMBERS = {
-  payment_method: ['cheque'],
+  // 'cheque' is the canonical member; 'check'/'upi' are UI spellings some callers send
+  payment_method: ['cheque', 'check', 'upi'],
   status: ['verification_pending', 'paid', 'partially_paid']
 };
 

@@ -2435,6 +2435,38 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
       return res.status(400).json({ success: false, message: charge.error });
     }
 
+    // 'check'/'bank' are UI spellings of the ENUM members
+    let normalizedMethod = String(paymentMethod || '').toLowerCase();
+    if (normalizedMethod === 'check') normalizedMethod = 'cheque';
+    if (normalizedMethod === 'bank') normalizedMethod = 'bank_transfer';
+    if (!['cash', 'cheque', 'bank_transfer'].includes(normalizedMethod)) {
+      return res.status(400).json({ success: false, message: 'Unsupported offline payment method' });
+    }
+
+    // A pending intent already covers this invoice -- return it rather than stack another
+    // row staff could also verify (two verified intents would over-pay the invoice).
+    const [existingIntents] = await pool.execute(
+      `SELECT id, transaction_id, amount, payment_method FROM payments
+       WHERE invoice_id = ? AND status = 'verification_pending' ORDER BY id DESC LIMIT 1`,
+      [inv.id]
+    );
+    if (existingIntents.length > 0) {
+      const existing = existingIntents[0];
+      return res.json({
+        success: true,
+        message: 'A payment for this invoice is already awaiting verification',
+        data: {
+          referenceId: existing.transaction_id,
+          paymentId: existing.id,
+          amount: parseFloat(existing.amount),
+          invoiceId: inv.invoice_id,
+          paymentMethod: existing.payment_method,
+          plan: charge.plan,
+          alreadyPending: true
+        }
+      });
+    }
+
     // Generate reference ID
     const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
@@ -2453,11 +2485,11 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
         amount, payment_method, payment_type, payment_date,
         transaction_id, transaction_reference, status,
         received_by_name, received_by_role, remarks, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offline', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
       [paymentCode, inv.id, inv.invoice_id || null, inv.property_id, inv.property_code || null,
        inv.estimate_id || null, inv.customer_id || customerId, inv.customer_name || customerName,
        inv.customer_email || customerData.email || null, fpId,
-       charge.amount, paymentMethod, referenceId, referenceId,
+       charge.amount, normalizedMethod, referenceId, referenceId,
        customerName,
        `Offline payment intent from Customer Portal - Awaiting verification.${halfPaymentNote(charge.plan)}`]
     );
@@ -2468,7 +2500,7 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
       `INSERT INTO payment_history (invoice_id, payment_id, action, new_status, amount, description, performed_by_name, performed_by_role)
        VALUES (?, ?, ?, 'verification_pending', ?, ?, ?, 'customer')`,
       [inv.id, paymentResult.insertId, await paymentHistoryAction('created'), charge.amount,
-       `Offline payment intent recorded via Customer Portal (${paymentMethod}) - Ref: ${referenceId}`,
+       `Offline payment intent recorded via Customer Portal (${normalizedMethod}) - Ref: ${referenceId}`,
        customerName]
     );
 
@@ -2480,7 +2512,7 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
         paymentId: paymentResult.insertId,
         amount: charge.amount,
         invoiceId: inv.invoice_id,
-        paymentMethod: paymentMethod,
+        paymentMethod: normalizedMethod,
         plan: charge.plan
       }
     });
