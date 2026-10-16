@@ -7,6 +7,7 @@ import {
   Filter,
   Calendar,
   IndianRupee,
+  FileCheck,
   FileText,
   CheckCircle,
   AlertCircle,
@@ -42,6 +43,9 @@ const PAYMENT_METHOD_CONFIG = {
   debit_card: { label: 'Debit Card', icon: CreditCardIcon, color: 'bg-teal-100 text-teal-700' },
   net_banking: { label: 'Net Banking', icon: Building2, color: 'bg-cyan-100 text-cyan-700' },
   wallet: { label: 'Wallet', icon: Banknote, color: 'bg-pink-100 text-pink-700' },
+  // The verify flow stores 'cheque' while older rows say 'check' -- same method, two names
+  check: { label: 'Cheque', icon: FileCheck, color: 'bg-teal-100 text-teal-700' },
+  cheque: { label: 'Cheque', icon: FileCheck, color: 'bg-teal-100 text-teal-700' },
 };
 
 const STATUS_CONFIG = {
