@@ -370,21 +370,21 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
 
         {/* Search + zone + employee filters */}
         {!loading && complaints.length > 0 && (
-          <div className="px-6 pt-5 flex flex-col md:flex-row md:items-center gap-3">
-            <div className="relative flex-1 min-w-0">
+          <div className="px-6 pt-5 pb-4 flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[220px] max-w-sm">
               <Search className="w-4 h-4 text-warm-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Property ID or customer name..."
-                className={`${inputCls} pl-9`}
+                className="w-full h-[38px] pl-9 pr-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
               />
             </div>
             <select
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value)}
-              className={`${inputCls} md:w-52`}
+              className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${zoneFilter ? 'text-warm-text' : 'text-warm-muted'}`}
             >
               <option value="">All Zones</option>
               {zoneNames.map(z => <option key={z} value={z}>{z}</option>)}
@@ -392,7 +392,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
             <select
               value={employeeFilter}
               onChange={(e) => setEmployeeFilter(e.target.value)}
-              className={`${inputCls} md:w-52`}
+              className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${employeeFilter ? 'text-warm-text' : 'text-warm-muted'}`}
             >
               <option value="">All Employees</option>
               {employeeNames.map(n => <option key={n} value={n}>{n}</option>)}
@@ -401,9 +401,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-xs font-medium text-warm-muted hover:text-warm-accent whitespace-nowrap self-start md:self-auto"
+                className="h-[38px] px-3 text-sm font-medium text-warm-muted hover:text-warm-text hover:bg-warm-section rounded-[10px] transition-colors whitespace-nowrap"
               >
-                Clear filters
+                Clear
               </button>
             )}
             {filtersActive && (
