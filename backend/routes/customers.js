@@ -15,6 +15,7 @@ const {
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+const { ensurePaymentColumns } = require('../utils/paymentColumns');
 
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -1647,8 +1648,10 @@ router.get('/invoices', async (req, res) => {
       whereParams.push(customerEmail);
     }
     
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE (${whereConditions.join(' OR ')})` 
+    // Draft invoices still sit in Generated Invoices awaiting review; the customer only ever
+    // sees an invoice once it has been sent and moved into the Invoices section.
+    const whereClause = whereConditions.length > 0
+      ? `WHERE (${whereConditions.join(' OR ')}) AND i.status IS NOT NULL AND LOWER(i.status) <> 'draft'`
       : 'WHERE 1=0';
 
     console.log('[Customer Invoices] Query conditions:', { numericPropertyId, propertyCode, customerEmail, conditionsCount: whereConditions.length });
@@ -1806,6 +1809,11 @@ router.get('/invoices/:id', async (req, res) => {
 
     const inv = invoices[0];
 
+    // A draft invoice has not been sent yet, so to the customer it does not exist
+    if (!inv.status || String(inv.status).toLowerCase() === 'draft') {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
     // Simplified access check - allow if ANY of these match:
     // 1. Property ID matches (any form)
     // 2. Property code matches
@@ -1954,6 +1962,11 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
     }
 
     const inv = invoices[0];
+
+    // A draft invoice has not been sent yet, so to the customer it does not exist
+    if (!inv.status || String(inv.status).toLowerCase() === 'draft') {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
 
     // Verify the invoice belongs to this customer
     const invoicePropertyCode = inv.property_code;
@@ -2128,6 +2141,11 @@ router.post('/invoices/:id/create-order', async (req, res) => {
 
     const inv = invoices[0];
 
+    // A draft invoice has not been sent yet, so to the customer it does not exist
+    if (!inv.status || String(inv.status).toLowerCase() === 'draft') {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
     // Simplified access check
     const invoicePropertyId = String(inv.property_id || '');
     const invoicePropertyCode = String(inv.property_code || '');
@@ -2274,6 +2292,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     }
 
     // Record the payment
+    await ensurePaymentColumns();
     const [paymentResult] = await pool.execute(
       `INSERT INTO payments (
         invoice_id, property_id, amount, payment_method, payment_date,
@@ -2384,6 +2403,11 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
 
     const inv = invoices[0];
 
+    // A draft invoice has not been sent yet, so to the customer it does not exist
+    if (!inv.status || String(inv.status).toLowerCase() === 'draft') {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
     // Simplified access check
     const invoicePropertyId = String(inv.property_id || '');
     const invoicePropertyCode = String(inv.property_code || '');
@@ -2416,6 +2440,7 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     // Record the payment intent as verification_pending (for Cash, Cheque, Bank Transfer)
+    await ensurePaymentColumns();
     const [paymentResult] = await pool.execute(
       `INSERT INTO payments (
         invoice_id, property_id, amount, payment_method, payment_date,
