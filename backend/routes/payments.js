@@ -2244,8 +2244,13 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     }
 
     if (paymentMethod) {
-      query += ' AND p.payment_method = ?';
-      params.push(paymentMethod);
+      // The DB ENUM member is 'cheque' but the UI historically says 'check' — match either
+      if (paymentMethod === 'check' || paymentMethod === 'cheque') {
+        query += " AND p.payment_method IN ('check', 'cheque')";
+      } else {
+        query += ' AND p.payment_method = ?';
+        params.push(paymentMethod);
+      }
     }
 
     if (startDate) {
