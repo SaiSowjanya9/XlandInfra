@@ -34,6 +34,7 @@ const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 // Self-heals the schema_v31/v20/v25 payment columns and ENUMs on a database that skipped them
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 
 /**
  * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
@@ -485,7 +486,7 @@ router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
       SELECT COALESCE(SUM(p.amount), 0) as today_collections
       FROM payments p
       LEFT JOIN invoices i ON p.invoice_id = i.id
-      WHERE DATE(p.payment_date) = ? AND p.status = 'completed' ${fpId ? 'AND p.franchise_partner_id = ?' : ''}
+      WHERE DATE(p.payment_date) = ? AND p.status IN ('completed', 'paid') ${fpId ? 'AND p.franchise_partner_id = ?' : ''}
     `, fpId ? [today, fpId] : [today]);
 
     // Get recent payments
@@ -930,7 +931,7 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
           paymentType: p.payment_type,
           transactionReference: p.transaction_reference,
           paymentDate: p.payment_date,
-          status: p.status,
+          status: p.status === 'completed' ? 'paid' : p.status,
           receivedBy: p.received_by_name,
           remarks: p.remarks,
           createdAt: p.created_at
@@ -2232,8 +2233,14 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     }
 
     if (status) {
-      query += ' AND p.status = ?';
-      params.push(status);
+      // Razorpay writers store 'completed', the verify route stores 'paid' — one
+      // settled state under two names, so 'paid' must match both.
+      if (status === 'paid') {
+        query += " AND p.status IN ('paid', 'completed')";
+      } else {
+        query += ' AND p.status = ?';
+        params.push(status);
+      }
     }
 
     if (paymentMethod) {
@@ -2292,7 +2299,9 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
         paymentDate: p.payment_date,
         proofUrl: p.payment_proof_url,
         proofFilename: p.proof_filename,
-        status: p.status,
+        // 'completed' and 'paid' are the same settled state under two names; every
+        // portal renders the canonical one so it never falls back to "Pending".
+        status: p.status === 'completed' ? 'paid' : p.status,
         recordedBy: p.received_by_name,
         receivedByName: p.received_by_name,
         receivedByRole: p.received_by_role,
@@ -2629,6 +2638,14 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
       UPDATE invoices SET amount_paid = ?, balance_amount = ?, payment_status = ?, status = ? WHERE id = ?
     `, [newAmountPaid, Math.max(0, newBalance), newStatus, newStatus, invoiceId]);
 
+    // Audit row so the record shows in Payment History, same as POST /payments writes
+    await connection.execute(`
+      INSERT INTO payment_history (invoice_id, payment_id, action, new_status, amount, description, performed_by_name, performed_by_role)
+      VALUES (?, ?, ?, 'paid', ?, ?, ?, ?)
+    `, [invoiceId, result.insertId, await paymentHistoryAction('created'), paymentAmount,
+       `Payment of ₹${paymentAmount} recorded (${paymentMethod})`,
+       receivedByName || 'Admin', req.user.role || 'admin']);
+
     await connection.commit();
 
     res.status(201).json({
@@ -2809,7 +2826,18 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
       WHERE id = ?
     `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, transactionRef || null, fullRemarks || null,
       checkNumber || null, checkDate || null, bankName || null, branchName || null, payeeName || null, paymentLocation || null, id]);
-    
+
+    // Audit the verification so it appears in Payment History — offline intents recorded
+    // by the customer otherwise leave no trail of who verified them.
+    await pool.execute(
+      `INSERT INTO payment_history (invoice_id, payment_id, action, old_status, new_status, amount, description, performed_by_name, performed_by_role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.invoice_id || null, id, await paymentHistoryAction('status_changed'), p.status, status,
+       finalAmount,
+       status === 'paid' ? `Payment verified by ${verifierName || userName || 'staff'}` : `Payment rejected: ${rejectionReason || 'no reason given'}`,
+       verifierName || userName || 'Admin', req.user?.role || 'admin']
+    );
+
     console.log('[Payment Verify] Payment updated successfully');
 
     // If payment is marked as paid, update invoice and send receipt
@@ -2830,14 +2858,15 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         const invoiceStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
 
         await pool.execute(`
-          UPDATE invoices SET 
+          UPDATE invoices SET
             amount_paid = ?,
             balance_amount = ?,
             payment_status = ?,
             status = ?,
+            paid_at = IF(? = 'paid', IFNULL(paid_at, NOW()), paid_at),
             updated_at = NOW()
           WHERE id = ?
-        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, p.invoice_id]);
+        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, invoiceStatus, p.invoice_id]);
 
         // Update fp_estimates payment_status to enable scheduling
         // PROPERTY_ID is the PRIMARY link - all records are linked by property

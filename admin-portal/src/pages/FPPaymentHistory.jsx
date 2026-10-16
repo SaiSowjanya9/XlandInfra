@@ -45,7 +45,12 @@ const PAYMENT_METHOD_CONFIG = {
 };
 
 const STATUS_CONFIG = {
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
+  // 'paid' is what the API now returns for a settled payment; 'completed' stays for
+  // any row still carrying the old name.
+  paid: { label: 'Paid', color: 'bg-green-100 text-green-700' },
+  completed: { label: 'Paid', color: 'bg-green-100 text-green-700' },
+  partially_paid: { label: 'Partially Paid', color: 'bg-blue-100 text-blue-700' },
+  verification_pending: { label: 'Verification Pending', color: 'bg-orange-100 text-orange-700' },
   pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-700' },
   failed: { label: 'Failed', color: 'bg-red-100 text-red-700' },
   refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-700' },
@@ -161,7 +166,7 @@ const FPPaymentHistory = ({ user }) => {
   const stats = {
     total: payments.length,
     totalAmount: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
-    completed: payments.filter(p => p.status === 'completed').length,
+    completed: payments.filter(p => p.status === 'completed' || p.status === 'paid').length,
     pending: payments.filter(p => p.status === 'pending').length
   };
 
@@ -289,9 +294,11 @@ const FPPaymentHistory = ({ user }) => {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
               >
                 <option value="all">All Status</option>
-                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
+                {Object.entries(STATUS_CONFIG)
+                  .filter(([key]) => key !== 'completed')
+                  .map(([key, config]) => (
+                    <option key={key} value={key}>{config.label}</option>
+                  ))}
               </select>
             </div>
 
