@@ -70,7 +70,11 @@ const MARKETING_TRACKER_COLUMNS = [
   // that have nothing to do with the tracker, which is why this keeps its own timestamp.
   { name: 'tracker_updated_by', def: 'VARCHAR(150) NULL' },
   { name: 'tracker_updated_by_role', def: 'VARCHAR(60) NULL' },
-  { name: 'tracker_updated_at', def: 'TIMESTAMP NULL' }
+  { name: 'tracker_updated_at', def: 'TIMESTAMP NULL' },
+  // The remarks box behind the note bubble in the Actions column (schema_v50). TEXT, not
+  // VARCHAR(500): the stored form is HTML-escaped, so 500 typed characters can arrive longer --
+  // the limit is judged on the decoded text, like the *_other fields above.
+  { name: 'tracker_note', def: 'TEXT NULL' }
 ];
 
 const ensureMarketingTrackerColumns = async (table = 'fp_estimates') => {
@@ -138,7 +142,8 @@ const TRACKER_COLUMNS = [
   'lead_status', 'last_contact_date', 'last_contact_method', 'customer_response',
   'next_follow_up_date', 'next_action',
   'tracked_at', 'tracker_archived_at',
-  'tracker_updated_by', 'tracker_updated_by_role', 'tracker_updated_at'
+  'tracker_updated_by', 'tracker_updated_by_role', 'tracker_updated_at',
+  'tracker_note'
 ];
 
 // Who is making this change, as the tracker's Last Updated By column will name them.
@@ -659,6 +664,53 @@ const createMarketingRouter = ({ resolveScope }) => {
       res.json({ success: true, message: 'Tracker updated', data: presentTrackerRow(rows[0]) });
     } catch (error) {
       fail(res, error, 'Failed to save tracker data');
+    }
+  }));
+
+  // The note bubble in the Actions column: one free-text box per tracked estimate, capped at 500
+  // characters. Its own route rather than a field on the PUT above -- the PUT re-sends the whole
+  // tracker payload and requires the visit answers, so a note saved through it would fail on a
+  // row missing them, and a stale tab that lacks the field would wipe the note.
+  router.put('/tracker/:id/note', scopedWrite(async (req, res, scope) => {
+    try {
+      await ensureMarketingTrackerColumns();
+      const id = parseRowId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ success: false, message: 'Invalid estimate id' });
+      }
+      const raw = req.body.note;
+      const note = raw === undefined || raw === null ? '' : String(raw).trim();
+      // Judged on the decoded text, like every other tracker field: the stored form is escaped
+      // once by middleware/security.js, so the escaped length is not what the user typed.
+      if (decodeEntities(note).trim().length > 500) {
+        return res.status(400).json({ success: false, message: 'Note must be 500 characters or fewer.' });
+      }
+      const fp = fpFilter(scope);
+      const zone = zoneFilter(scope, '', { withCreator: true });
+      const actor = trackerActor(req);
+      const [result] = await pool.execute(
+        `UPDATE fp_estimates SET tracker_note = ?,
+           tracker_updated_by = ?, tracker_updated_by_role = ?, tracker_updated_at = NOW(),
+           updated_at = NOW()
+         WHERE id = ? AND estimate_type = 'direct'
+           AND tracked_at IS NOT NULL${fp.sql}${zone.sql}`,
+        [note || null, actor.name, actor.role, id, ...fp.params, ...zone.params]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Tracked estimate not found' });
+      }
+      // The full row goes back, partner name included, so the portal can drop it straight into
+      // its list -- the same reply the tracker PUT gives.
+      const partner = await partnerNameParts(scope, 'e.');
+      const [rows] = await pool.execute(
+        `SELECT ${trackerSelect('e')}${partner.column}
+         FROM fp_estimates e${partner.join}
+         WHERE e.id = ?`,
+        [id]
+      );
+      res.json({ success: true, message: 'Note saved', data: presentTrackerRow(rows[0]) });
+    } catch (error) {
+      fail(res, error, 'Failed to save note');
     }
   }));
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
-  ClipboardList, FileText, Building2, Pencil, Trash2, Eye, Search
+  ClipboardList, FileText, Building2, Pencil, Trash2, Eye, Search, MessageSquare
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
@@ -124,6 +124,13 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [archiveTarget, setArchiveTarget] = useState(null);
+  // The note bubble in the Actions column: noteTarget is the estimate whose lightbox is open,
+  // noteEditing flips that lightbox between reading the note and editing it.
+  const [noteTarget, setNoteTarget] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState('');
 
   const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
 
@@ -235,6 +242,60 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
 
   const saveRowContactDate = (est, date) =>
     saveRowField(est, { last_contact_date: date, next_follow_up_date: date ? nextFollowUpFrom(date) : '' });
+
+  // The note lightbox. An existing note opens read-only with an Edit button, so a click meant
+  // only to read never leaves a half-typed draft behind; an empty one goes straight to the box.
+  const openNote = (est) => {
+    setNoteTarget(est);
+    setNoteText(decodeEntities(est.tracker_note || ''));
+    setNoteEditing(canEdit && !est.tracker_note);
+    setNoteError('');
+  };
+
+  const closeNote = () => { setNoteTarget(null); setNoteError(''); };
+
+  // Cancel returns to the saved note when there is one; otherwise there was nothing to read and
+  // the lightbox simply closes.
+  const cancelNoteEdit = () => {
+    setNoteError('');
+    if (noteTarget?.tracker_note) {
+      setNoteText(decodeEntities(noteTarget.tracker_note));
+      setNoteEditing(false);
+    } else {
+      setNoteTarget(null);
+    }
+  };
+
+  const saveNote = async () => {
+    const text = noteText.trim();
+    if (text.length > 500) { setNoteError('Note must be 500 characters or fewer.'); return; }
+    setNoteSaving(true);
+    setNoteError('');
+    try {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/tracker/${noteTarget.id}/note`, fpId), {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: text })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setEstimates(prev => prev.map(e => e.id === noteTarget.id ? result.data : e));
+        // The Track Estimate modal shows the note too, so a save made from inside it has to
+        // refresh the row it is holding, not just the list behind it.
+        setEditing(prev => (prev && prev.id === noteTarget.id ? result.data : prev));
+        setNoteTarget(result.data);
+        setNoteText(decodeEntities(result.data.tracker_note || ''));
+        setNoteEditing(false);
+        showToast('Note saved');
+      } else {
+        setNoteError(result.message || 'Failed to save note.');
+      }
+    } catch (e) {
+      setNoteError('Failed to save note. Please try again.');
+    } finally {
+      setNoteSaving(false);
+    }
+  };
 
   // Soft delete: the row leaves the tracker and lands in Marketing > Archived.
   const archiveRow = async (est) => {
@@ -745,6 +806,15 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                       </td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                          {/* The note bubble. The accent tint marks a row that already carries a
+                              note, so a filled one is visible without opening it. */}
+                          <button
+                            onClick={() => openNote(est)}
+                            className={`p-1.5 rounded-lg transition-colors ${est.tracker_note ? 'text-warm-accent hover:bg-warm-accent-soft' : 'text-warm-muted hover:bg-warm-border/60 hover:text-warm-text'}`}
+                            title={est.tracker_note ? 'View note' : 'Add note'}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => openEditor(est)}
                             className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
@@ -903,6 +973,26 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
               {radioField('Proposal Sent', 'proposal_given', 'proposal_given_other', PROPOSAL_OPTIONS, true)}
               {radioField('Customer Decision', 'customer_decision', 'customer_decision_other', DECISION_OPTIONS, true)}
 
+              {/* The note saved from the Actions column's bubble, read back here. Editing goes
+                  through the same lightbox the bubble opens, so the text is never maintained in
+                  two places. */}
+              <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-3.5">
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <label className="block text-xs font-medium text-warm-muted">Tracker Note</label>
+                  {canEdit && (
+                    <button
+                      onClick={() => openNote(editing)}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-warm-accent hover:text-warm-accent-hover transition-colors flex-shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> {editing.tracker_note ? 'Edit' : 'Add note'}
+                    </button>
+                  )}
+                </div>
+                <div className={`${readOnlyCls} bg-white`}>
+                  {decodeEntities(editing.tracker_note || '') || '-'}
+                </div>
+              </div>
+
               {/* The follow-up columns are edited in the table, a row at a time, not here: this
                   view is the estimate and the answers taken on the visit. They are still carried
                   in the payload below -- the form holds what openEditor loaded, so saving from
@@ -932,6 +1022,87 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {saving ? 'Saving...' : 'Save'}
                 </button>}
+              </div>
+            </div>
+          </Modal>
+      )}
+
+      {/* The note lightbox. z-[60] lifts it over the Track Estimate modal, which is one of the
+          two places it can be opened from. */}
+      {noteTarget && (
+        <Modal overlayClassName="lg:pl-72" zIndex="z-[60]" onClose={closeNote} className="w-full max-w-lg">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-warm-text">Tracker Note</h3>
+                <p className="text-xs text-warm-muted">{noteTarget.estimate_id} · {decodeEntities(noteTarget.client_name) || '-'}</p>
+              </div>
+              <button onClick={closeNote} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
+                <X className="w-5 h-5 text-warm-muted" />
+              </button>
+            </div>
+            <div className="p-5">
+              {noteEditing ? (
+                <>
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
+                    maxLength={500}
+                    rows={5}
+                    autoFocus
+                    placeholder="Write a note about this lead..."
+                    className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white resize-y focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
+                  />
+                  <div className="mt-1 text-right text-[11px] text-warm-muted">{noteText.trim().length}/500</div>
+                </>
+              ) : (
+                <div className="px-3 py-2.5 border border-warm-border rounded-[10px] text-sm text-warm-text whitespace-pre-wrap bg-warm-section min-h-[80px] [overflow-wrap:anywhere]">
+                  {decodeEntities(noteTarget.tracker_note || '') || '-'}
+                </div>
+              )}
+
+              {noteError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600">{noteError}</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 mt-4">
+                {noteEditing ? (
+                  <>
+                    <button
+                      onClick={cancelNoteEdit}
+                      className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-muted border border-warm-border hover:bg-warm-section transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveNote}
+                      disabled={noteSaving}
+                      className="inline-flex items-center gap-2 px-5 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors disabled:opacity-60"
+                    >
+                      {noteSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {noteSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {canEdit && (
+                      <button
+                        onClick={() => setNoteEditing(true)}
+                        className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" /> Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={closeNote}
+                      className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
+                    >
+                      Close
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </Modal>

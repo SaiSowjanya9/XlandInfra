@@ -603,3 +603,44 @@ test('a follow-up stage only moves forward', async (t) => {
     assert.equal(lastCall('UPDATE fp_estimates SET').params[10], onward);
   }
 });
+
+test('the note bubble writes one capped field, scoped and credited like every write', async (t) => {
+  const request = await startServer(t);
+  const admin = { id: 3, role: 'admin', firstName: 'Bhavani', lastName: 'Rao', username: 'bhavani' };
+
+  calls.length = 0;
+  const saved = await request('/admin/marketing/tracker/31/note', 'PUT',
+    { note: 'Customer asked to call back after Diwali' }, admin);
+  assert.equal(saved.status, 200);
+  const update = lastCall('UPDATE fp_estimates SET tracker_note');
+  assert.match(update.sql, /tracker_note = \?/);
+  assert.match(update.sql, /tracked_at IS NOT NULL/);
+  // The text is bound, never interpolated, and the write names its editor like any other.
+  assert.ok(update.params.includes('Customer asked to call back after Diwali'));
+  assert.ok(update.params.includes('Bhavani Rao'));
+  // The reply feeds the row straight back into the list, so the partner name rides along on the
+  // admin mount exactly as it does on the tracker PUT.
+  assert.match(lastCall('FROM fp_estimates e LEFT JOIN').sql, /franchise_partner_name/);
+
+  // The id in the URL is never trusted alone: a zone manager's write is held to its zones.
+  calls.length = 0;
+  await request('/manager/marketing/tracker/31/note', 'PUT', { note: 'x' });
+  assert.match(lastCall('UPDATE fp_estimates').sql, /zone IN \(\?,\?\)/);
+
+  // The cap is 500 typed characters judged on the decoded text -- 'A &amp; B' arrives escaped,
+  // and its escaped length must not count against the caller.
+  const long = await request('/fp/marketing/tracker/31/note', 'PUT', { note: 'x'.repeat(501) });
+  assert.equal(long.status, 400);
+  assert.match(long.message, /500/);
+  const escaped = await request('/fp/marketing/tracker/31/note', 'PUT', { note: '&amp;'.repeat(150) });
+  assert.equal(escaped.status, 200, '750 escaped characters are 150 typed ones');
+
+  // Clearing the box stores NULL rather than an empty string the read views would show as blank.
+  calls.length = 0;
+  await request('/fp/marketing/tracker/31/note', 'PUT', { note: '   ' });
+  assert.equal(lastCall('UPDATE fp_estimates SET tracker_note').params[0], null);
+
+  // The note is an edit, not a review: the view-only portals are refused on the server.
+  assert.equal((await request('/opsManager/marketing/tracker/31/note', 'PUT', { note: 'x' })).status, 403);
+  assert.equal((await request('/executive/marketing/tracker/31/note', 'PUT', { note: 'x' })).status, 403);
+});
