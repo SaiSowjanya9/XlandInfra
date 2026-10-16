@@ -157,9 +157,10 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
         balance_amount = ?,
         payment_status = ?,
         status = ?,
+        paid_at = IF(? = 'paid', IFNULL(paid_at, NOW()), paid_at),
         payment_link_status = 'paid'
       WHERE id = ?
-    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newPaymentStatus, invoice.id]);
+    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newPaymentStatus, newPaymentStatus, invoice.id]);
 
     // Property ID is the primary link between an invoice and its estimate
     if (invoice.property_id) {

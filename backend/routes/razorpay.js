@@ -26,6 +26,7 @@ const {
 const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+const { generatePaymentId } = require('../utils/paymentIds');
 
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
@@ -1599,9 +1600,9 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
     let recordedPlan = null;
 
     if (isOfflinePayment) {
-      // Get full invoice details for property_id and amount
+      // Get full invoice details for the enriched payment row
       const [fullInvoice] = await pool.execute(
-        'SELECT id, property_id, total_amount, balance_amount FROM invoices WHERE id = ?',
+        'SELECT * FROM invoices WHERE id = ?',
         [invoice.id]
       );
 
@@ -1618,17 +1619,38 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
         if (normalizedMethod === 'bank') normalizedMethod = 'bank_transfer';
         if (normalizedMethod === 'check') normalizedMethod = 'cheque';
 
-        // Create payment record with verification_pending status
+        // Create payment record with verification_pending status. franchise_partner_id and
+        // the PAY- id are what the staff Payments screens scope and list on -- without them
+        // the intent was invisible to the FP portal meant to verify it.
         await ensurePaymentColumns();
+        const fpId = inv.franchise_partner_id || null;
+        const paymentCode = await generatePaymentId(fpId);
         const [paymentResult] = await pool.execute(
           `INSERT INTO payments (
-            invoice_id, property_id, amount, payment_method, payment_date,
-            transaction_id, status, remarks, created_at
-          ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', ?, NOW())`,
-          [inv.id, inv.property_id, paymentAmount, normalizedMethod, referenceId,
-            `Payment intent from Public Payment Link - Awaiting verification.${halfPaymentNote(plan)}`]
+            payment_id, invoice_id, invoice_number, property_id, property_code,
+            estimate_id, customer_id, customer_name, customer_email, franchise_partner_id,
+            amount, payment_method, payment_type, payment_date,
+            transaction_id, transaction_reference, status,
+            received_by_name, received_by_role, remarks, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offline', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
+          [paymentCode, inv.id, inv.invoice_id || null, inv.property_id, inv.property_code || null,
+           inv.estimate_id || null, inv.customer_id || null, inv.customer_name || null,
+           inv.customer_email || null, fpId,
+           paymentAmount, normalizedMethod, referenceId, referenceId,
+           inv.customer_name || 'Customer',
+           `Payment intent from Public Payment Link - Awaiting verification.${halfPaymentNote(plan)}`]
         );
         paymentRecordId = paymentResult.insertId;
+
+        // Same audit row the staff record route writes, so the intent shows in Payment
+        // History from the moment it is created.
+        await pool.execute(
+          `INSERT INTO payment_history (invoice_id, payment_id, action, new_status, amount, description, performed_by_name, performed_by_role)
+           VALUES (?, ?, ?, 'verification_pending', ?, ?, ?, 'customer')`,
+          [inv.id, paymentRecordId, await paymentHistoryAction('created'), paymentAmount,
+           `Offline payment intent recorded via Public Payment Link (${normalizedMethod}) - Ref: ${referenceId}`,
+           inv.customer_name || 'Customer']
+        );
         recordedAmount = paymentAmount;
         recordedPlan = plan;
         console.log(`[Payment Record Created] ID: ${paymentRecordId}, Invoice: ${invoiceId}, Method: ${normalizedMethod}, Amount: ${paymentAmount}, Status: verification_pending`);

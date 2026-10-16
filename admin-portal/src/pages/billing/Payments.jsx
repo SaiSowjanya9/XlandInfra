@@ -130,6 +130,8 @@ const PAYMENT_METHODS = {
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700' },
   paid: { label: 'Paid', color: 'bg-green-100 text-green-700' },
+  // Razorpay writes 'completed' where the verify route writes 'paid' — one state, two names
+  completed: { label: 'Paid', color: 'bg-green-100 text-green-700' },
   partially_paid: { label: 'Partially Paid', color: 'bg-blue-100 text-blue-700' },
   verification_pending: { label: 'Verification Pending', color: 'bg-orange-100 text-orange-700' },
   failed: { label: 'Failed', color: 'bg-red-100 text-red-600' },
@@ -2757,8 +2759,8 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const amountOf = rows => rows.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const stats = {
     total: summaryPayments.length,
-    paid: withStatus('paid').length,
-    paidAmount: amountOf(withStatus('paid')),
+    paid: withStatus('paid', 'completed').length,
+    paidAmount: amountOf(withStatus('paid', 'completed')),
     verificationPending: withStatus('verification_pending').length,
     verificationAmount: amountOf(withStatus('verification_pending')),
     partiallyPaid: withStatus('partially_paid').length,

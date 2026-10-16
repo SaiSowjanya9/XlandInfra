@@ -16,6 +16,9 @@ const {
 const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+const { recordRazorpayPayment } = require('../services/razorpayPayment');
+const { generatePaymentId } = require('../utils/paymentIds');
+const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -1660,7 +1663,7 @@ router.get('/invoices', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
                 0
               ) as amount_paid
        FROM invoices i
@@ -1795,7 +1798,7 @@ router.get('/invoices/:id', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
                 0
               ) as amount_paid
        FROM invoices i
@@ -1900,8 +1903,8 @@ router.get('/invoices/:id', async (req, res) => {
         workOrderDescription: inv.work_order_description,
         zone: inv.zone,
         city: inv.city,
-        // Payment history
-        payments: payments
+        // Payment history — 'completed' and 'paid' are the same settled state, shown as 'paid'
+        payments: payments.map(p => ({ ...p, status: p.status === 'completed' ? 'paid' : p.status }))
       }
     });
   } catch (error) {
@@ -1949,7 +1952,7 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2127,7 +2130,7 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2262,7 +2265,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status = 'completed'),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2291,26 +2294,22 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Could not confirm the paid amount' });
     }
 
-    // Record the payment
-    await ensurePaymentColumns();
-    const [paymentResult] = await pool.execute(
-      `INSERT INTO payments (
-        invoice_id, property_id, amount, payment_method, payment_date,
-        transaction_id, razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        status, remarks, created_at
-      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, 'completed', 'Payment via Customer Portal', NOW())`,
-      [inv.id, inv.property_id, paidAmount, 'razorpay', razorpay_payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]
-    );
+    // Record through the shared Razorpay writer so the row is identical to the one the
+    // webhook creates: FP scope, PAY-/RCP- ids, payment_status on the invoice, a
+    // payment_history row, and the work order / scheduling follow-through. The hand
+    // written insert it replaces left every one of those unset, so a portal payment
+    // showed "Pending" in the Payments screens and nothing in Payment History.
+    const recordResult = await recordRazorpayPayment({
+      invoiceId: inv.id,
+      amountPaid: paidAmount,
+      paymentEntity: rzpPayment,
+      paymentLinkId: inv.razorpay_payment_link_id || null,
+      source: 'customer-portal'
+    });
 
-    // Update invoice status
-    const newAmountPaid = round2(amountPaid + paidAmount);
-    const newStatus = newAmountPaid >= totalAmount ? 'paid' : 'partially_paid';
-
-    await pool.execute(
-      `UPDATE invoices
-       SET status = ?, amount_paid = ?, balance_amount = ?, paid_at = NOW(), updated_at = NOW()
-       WHERE id = ?`,
-      [newStatus, newAmountPaid, round2(totalAmount - newAmountPaid), inv.id]
+    const [[updatedInvoice]] = await pool.execute(
+      'SELECT status, balance_amount FROM invoices WHERE id = ?',
+      [inv.id]
     );
 
     res.json({
@@ -2321,7 +2320,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
         orderId: razorpay_order_id,
         amount: paidAmount,
         invoiceId: inv.invoice_id,
-        invoiceStatus: newStatus
+        invoiceStatus: updatedInvoice?.status || (recordResult.alreadyRecorded ? 'paid' : 'partially_paid')
       }
     });
   } catch (error) {
@@ -2439,15 +2438,38 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     // Generate reference ID
     const referenceId = `OFF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // Record the payment intent as verification_pending (for Cash, Cheque, Bank Transfer)
+    // Record the payment intent as verification_pending (for Cash, Cheque, Bank Transfer).
+    // franchise_partner_id, customer and the PAY- id are what the staff Payments screens
+    // scope and list on -- the bare insert used to leave them NULL, which hid the intent
+    // from the FP portal that is meant to verify it.
     await ensurePaymentColumns();
+    const fpId = inv.franchise_partner_id || null;
+    const customerName = [customerData.first_name, customerData.last_name].filter(Boolean).join(' ') || 'Customer';
+    const paymentCode = await generatePaymentId(fpId);
     const [paymentResult] = await pool.execute(
       `INSERT INTO payments (
-        invoice_id, property_id, amount, payment_method, payment_date,
-        transaction_id, status, remarks, created_at
-      ) VALUES (?, ?, ?, ?, NOW(), ?, 'verification_pending', ?, NOW())`,
-      [inv.id, inv.property_id, charge.amount, paymentMethod, referenceId,
+        payment_id, invoice_id, invoice_number, property_id, property_code,
+        estimate_id, customer_id, customer_name, customer_email, franchise_partner_id,
+        amount, payment_method, payment_type, payment_date,
+        transaction_id, transaction_reference, status,
+        received_by_name, received_by_role, remarks, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offline', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
+      [paymentCode, inv.id, inv.invoice_id || null, inv.property_id, inv.property_code || null,
+       inv.estimate_id || null, inv.customer_id || customerId, inv.customer_name || customerName,
+       inv.customer_email || customerData.email || null, fpId,
+       charge.amount, paymentMethod, referenceId, referenceId,
+       customerName,
        `Offline payment intent from Customer Portal - Awaiting verification.${halfPaymentNote(charge.plan)}`]
+    );
+
+    // Same audit row the staff record route writes, so the intent is visible in Payment
+    // History from the moment it is created.
+    await pool.execute(
+      `INSERT INTO payment_history (invoice_id, payment_id, action, new_status, amount, description, performed_by_name, performed_by_role)
+       VALUES (?, ?, ?, 'verification_pending', ?, ?, ?, 'customer')`,
+      [inv.id, paymentResult.insertId, await paymentHistoryAction('created'), charge.amount,
+       `Offline payment intent recorded via Customer Portal (${paymentMethod}) - Ref: ${referenceId}`,
+       customerName]
     );
 
     res.json({
