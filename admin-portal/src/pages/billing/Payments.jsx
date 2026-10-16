@@ -355,7 +355,7 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
   const daysInfo = getDaysInfo();
 
   return (
-    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
+    <Modal onClose={onClose} className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -444,7 +444,7 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-320px)]">
           {/* Step 1: Payment Details */}
           {currentStep === 1 && (
             <div>
@@ -911,7 +911,7 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   const daysInfo = getDaysInfo();
 
   return (
-    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
+    <Modal onClose={onClose} className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -1000,7 +1000,7 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-320px)]">
           {/* Step 1: Cheque Payment Details */}
           {currentStep === 1 && (
             <div>
@@ -1634,7 +1634,7 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
   const daysInfo = getDaysInfo();
 
   return (
-    <Modal align="top" onClose={onClose} className="w-full max-w-5xl max-h-[95vh] overflow-hidden">
+    <Modal onClose={onClose} className="w-full max-w-5xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -1723,7 +1723,7 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-320px)]">
           {/* Step 1: Bank Transfer Details */}
           {currentStep === 1 && (
             <div>
