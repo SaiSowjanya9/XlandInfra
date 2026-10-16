@@ -138,6 +138,63 @@ const STATUS_CONFIG = {
   refunded: { label: 'Refunded', color: 'bg-gray-100 text-gray-600' }
 };
 
+// One picker for "Received/Verified By" across the verify modals. The staff dropdown
+// deadlocks the modal when the FP team has no employees -- the field is required but
+// nothing is selectable, so Review Payment silently refuses -- so an empty list falls
+// back to free text.
+const StaffPicker = ({ employees, loading, formData, setFormData, className }) => {
+  if (!loading && employees.length === 0) {
+    return (
+      <input
+        type="text"
+        value={formData.receivedBy || ''}
+        onChange={(e) => setFormData(prev => ({ ...prev, receivedBy: e.target.value }))}
+        placeholder="Enter staff name"
+        className={className}
+      />
+    );
+  }
+  return (
+    <div className="relative">
+      <select
+        value={formData.receivedById}
+        onChange={(e) => {
+          const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
+          setFormData(prev => ({
+            ...prev,
+            receivedById: e.target.value,
+            receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
+          }));
+        }}
+        className={`${className} appearance-none bg-white`}
+      >
+        <option value="">Select Staff / Employee</option>
+        {loading ? (
+          <option disabled>Loading employees...</option>
+        ) : (
+          employees.map(emp => (
+            <option key={emp.id} value={emp.id}>
+              {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
+            </option>
+          ))
+        )}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+    </div>
+  );
+};
+
+// Error banner pinned above the footer so a failed validation is visible at the button
+// the user just clicked -- inside the scrolled content it sits off-screen and the click
+// looks dead.
+const ModalError = ({ error, onDismiss }) => error ? (
+  <div className="px-6 py-3 bg-red-50 border-t border-red-200 flex items-center gap-2">
+    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+    <p className="text-red-700 text-sm flex-1">{error}</p>
+    <button onClick={onDismiss}><X className="w-4 h-4 text-red-600" /></button>
+  </div>
+) : null;
+
 // Format currency
 const formatCurrencyShort = (amount) => {
   const num = parseFloat(amount) || 0;
@@ -388,14 +445,6 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700 text-sm">{error}</p>
-              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
-            </div>
-          )}
-
           {/* Step 1: Payment Details */}
           {currentStep === 1 && (
             <div>
@@ -437,32 +486,13 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <select
-                          value={formData.receivedById}
-                          onChange={(e) => {
-                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              receivedById: e.target.value,
-                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                        >
-                          <option value="">Select Staff / Employee</option>
-                          {loadingEmployees ? (
-                            <option disabled>Loading employees...</option>
-                          ) : (
-                            employees.map(emp => (
-                              <option key={emp.id} value={emp.id}>
-                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
-                              </option>
-                            ))
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                      <StaffPicker
+                        employees={employees}
+                        loading={loadingEmployees}
+                        formData={formData}
+                        setFormData={setFormData}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
@@ -669,6 +699,8 @@ const CashPaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) =
             </div>
           )}
         </div>
+
+        <ModalError error={error} onDismiss={() => setError('')} />
 
         {/* Footer */}
         <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
@@ -879,9 +911,9 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
   const daysInfo = getDaysInfo();
 
   return (
-    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+    <Modal align="top" onClose={onClose} className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
             <button onClick={currentStep > 1 ? () => setCurrentStep(1) : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
               <ChevronLeft className="w-5 h-5 text-gray-600" />
@@ -969,14 +1001,6 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700 text-sm">{error}</p>
-              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
-            </div>
-          )}
-
           {/* Step 1: Cheque Payment Details */}
           {currentStep === 1 && (
             <div>
@@ -1082,32 +1106,13 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Received By <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <select
-                          value={formData.receivedById}
-                          onChange={(e) => {
-                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              receivedById: e.target.value,
-                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                        >
-                          <option value="">Select Staff / Employee</option>
-                          {loadingEmployees ? (
-                            <option disabled>Loading employees...</option>
-                          ) : (
-                            employees.map(emp => (
-                              <option key={emp.id} value={emp.id}>
-                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
-                              </option>
-                            ))
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                      <StaffPicker
+                        employees={employees}
+                        loading={loadingEmployees}
+                        formData={formData}
+                        setFormData={setFormData}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Location <span className="text-red-500">*</span></label>
@@ -1328,6 +1333,8 @@ const ChequePaymentVerifyModal = ({ isOpen, onClose, onSuccess, payment, user })
             </div>
           )}
         </div>
+
+        <ModalError error={error} onDismiss={() => setError('')} />
 
         {/* Footer */}
         <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
@@ -1627,7 +1634,7 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
   const daysInfo = getDaysInfo();
 
   return (
-    <Modal onClose={onClose} className="w-full max-w-5xl max-h-[90vh] overflow-y-auto my-auto">
+    <Modal align="top" onClose={onClose} className="w-full max-w-5xl max-h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-3">
@@ -1717,14 +1724,6 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(95vh-320px)]">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700 text-sm">{error}</p>
-              <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4 text-red-600" /></button>
-            </div>
-          )}
-
           {/* Step 1: Bank Transfer Details */}
           {currentStep === 1 && (
             <div>
@@ -1732,42 +1731,8 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
               <p className="text-sm text-gray-500 mb-6">Verify the bank transfer information below</p>
               
               <div className="grid grid-cols-2 gap-6">
-                {/* Left Column - How it works + Bank Details */}
+                {/* Left Column - Bank Details */}
                 <div className="space-y-5">
-                  {/* How it works */}
-                  <div className="border border-blue-200 rounded-xl p-5 bg-blue-50/50">
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">How it works?</h4>
-                      </div>
-                    </div>
-                    <ol className="space-y-2 text-sm text-gray-700 ml-2">
-                      <li className="flex items-start gap-2">
-                        <span className="font-semibold text-blue-600">1.</span>
-                        <span>Customer transfers amount to bank account</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-semibold text-blue-600">2.</span>
-                        <span>Verify the UTR/reference number in bank statement</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-semibold text-blue-600">3.</span>
-                        <span>Upload payment proof for records</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-semibold text-blue-600">4.</span>
-                        <span>Confirm and update payment status</span>
-                      </li>
-                    </ol>
-                    <div className="mt-4 pt-3 border-t border-blue-200 flex items-center gap-2 text-blue-700">
-                      <Info className="w-4 h-4" />
-                      <span className="text-sm font-medium">No additional charges for Bank Transfer</span>
-                    </div>
-                  </div>
-
                   {/* Our Bank Account Details */}
                   <div className="border border-gray-200 rounded-xl p-5 bg-white">
                     <h4 className="font-semibold text-blue-700 mb-4">Our Bank Account Details</h4>
@@ -1913,32 +1878,13 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
                     {/* Verified By */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Verified By <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <select
-                          value={formData.receivedById}
-                          onChange={(e) => {
-                            const selectedEmp = employees.find(emp => emp.id === parseInt(e.target.value));
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              receivedById: e.target.value,
-                              receivedBy: selectedEmp ? `${selectedEmp.firstName || ''} ${selectedEmp.lastName || ''}`.trim() : ''
-                            }));
-                          }}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                        >
-                          <option value="">Select Staff / Employee</option>
-                          {loadingEmployees ? (
-                            <option disabled>Loading employees...</option>
-                          ) : (
-                            employees.map(emp => (
-                              <option key={emp.id} value={emp.id}>
-                                {emp.firstName || ''} {emp.lastName || ''} ({emp.userId || emp.role || 'Staff'})
-                              </option>
-                            ))
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                      <StaffPicker
+                        employees={employees}
+                        loading={loadingEmployees}
+                        formData={formData}
+                        setFormData={setFormData}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   </div>
 
@@ -2161,6 +2107,8 @@ const BankTransferVerifyModal = ({ isOpen, onClose, onSuccess, payment, user }) 
             </div>
           )}
         </div>
+
+        <ModalError error={error} onDismiss={() => setError('')} />
 
         {/* Footer */}
         <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">

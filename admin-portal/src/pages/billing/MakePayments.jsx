@@ -174,33 +174,9 @@ const FeeIndicator = () => (
 
 /**
  * Guidance panels. They belong in the narrow right-hand column in small type, so the form beside
- * them stays the main element of the page. Every payment method uses the same three, which is why
+ * them stays the main element of the page. Every payment method uses the same ones, which is why
  * they are defined once here rather than written out per method.
  */
-const HowItWorksPanel = ({ icon: Icon, iconBg, iconColor, steps, note }) => (
-  <div className="border border-gray-200 rounded-xl p-4">
-    <div className="flex items-center gap-2.5 mb-3">
-      <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center`}>
-        <Icon className={`w-4 h-4 ${iconColor}`} />
-      </div>
-      <h4 className="text-sm font-semibold text-gray-900">How it works?</h4>
-    </div>
-    <ol className="space-y-1.5 text-xs leading-relaxed text-gray-600">
-      {steps.map((step, index) => (
-        <li key={index} className="flex gap-1.5">
-          <span className="font-semibold text-gray-900">{index + 1}.</span>{step}
-        </li>
-      ))}
-    </ol>
-    {note && (
-      <div className="mt-3 flex items-center gap-1.5 text-green-600">
-        <Info className="w-3.5 h-3.5 flex-shrink-0" />
-        <span className="text-xs">{note}</span>
-      </div>
-    )}
-  </div>
-);
-
 const RemindersPanel = ({ title, items }) => (
   <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/50">
     <h4 className="text-sm font-semibold text-amber-800 mb-2">{title}</h4>
@@ -1303,18 +1279,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
               {/* Right Column - guidance, kept small so the form stays the main element */}
               <div className="space-y-4">
-                <HowItWorksPanel
-                  icon={Building2}
-                  iconBg="bg-blue-100"
-                  iconColor="text-blue-600"
-                  steps={[
-                    'Transfer the exact amount to the bank account',
-                    'Use the provided reference number in your transfer',
-                    'Upload payment proof for verification',
-                    'We will verify and update your payment'
-                  ]}
-                  note="No additional charges for Bank Transfer"
-                />
                 <RemindersPanel
                   title="Important Notes"
                   items={[
@@ -1663,18 +1627,6 @@ const MakePayments = ({ user, portalType = 'admin' }) => {
 
                   {/* Right Column - guidance, kept small so the form stays the main element */}
                   <div className="space-y-4">
-                    <HowItWorksPanel
-                      icon={FileCheck}
-                      iconBg="bg-red-100"
-                      iconColor="text-red-600"
-                      steps={[
-                        'Collect cheque from customer',
-                        'Enter cheque details beside',
-                        'Deposit cheque in bank',
-                        'Payment updated after cheque clears'
-                      ]}
-                      note="No additional charges for Cheque Payment"
-                    />
                     <RemindersPanel
                       title="Important Reminders"
                       items={[
