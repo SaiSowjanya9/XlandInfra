@@ -2813,12 +2813,13 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     });
     
     await pool.execute(`
-      UPDATE payments SET 
+      UPDATE payments SET
         status = ?,
         amount = ?,
         payment_date = ?,
         received_by_name = ?,
         received_by = ?,
+        received_by_role = ?,
         transaction_id = COALESCE(?, transaction_id),
         remarks = COALESCE(?, remarks),
         cheque_number = COALESCE(?, cheque_number),
@@ -2829,7 +2830,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         payment_location = COALESCE(?, payment_location),
         updated_at = NOW()
       WHERE id = ?
-    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, transactionRef || null, fullRemarks || null,
+    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, req.user?.role || null, transactionRef || null, fullRemarks || null,
       checkNumber || null, checkDate || null, bankName || null, branchName || null, payeeName || null, paymentLocation || null, id]);
 
     // Audit the verification so it appears in Payment History — offline intents recorded

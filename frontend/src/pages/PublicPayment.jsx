@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   CreditCard, 
@@ -120,6 +120,8 @@ const PublicPayment = () => {
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
+  const [intentRef, setIntentRef] = useState(null);
+  const intentRecorded = useRef(false);
 
   // Fetch invoice details
   useEffect(() => {
@@ -167,8 +169,21 @@ const PublicPayment = () => {
         setError('Payment link not available. Please contact support.');
       }
     } else {
-      // Show offline payment instructions
+      // Show offline payment instructions, and record the intent so the team sees a
+      // pending payment to verify. Without this row a cash/cheque/bank payment made
+      // through the link left no trace in Payments.
       setStep(2);
+      if (!intentRecorded.current) {
+        intentRecorded.current = true;
+        fetch(`${API_BASE}/api/razorpay/public/record-payment-intent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoiceId, token, paymentMethod: selectedMethod })
+        })
+          .then(r => r.json())
+          .then(r => { if (r.success && r.data?.referenceId) setIntentRef(r.data.referenceId); })
+          .catch(() => {});
+      }
     }
   };
 
@@ -420,6 +435,11 @@ const PublicPayment = () => {
                   <p className="text-xl font-bold text-green-600">{formatCurrency(invoice?.balanceAmount)}</p>
                 </div>
               </div>
+              {intentRef && (
+                <p className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                  Payment reference: <span className="font-mono font-semibold text-gray-800">{intentRef}</span> — quote this when paying
+                </p>
+              )}
             </div>
 
             {/* Bank Transfer Instructions */}

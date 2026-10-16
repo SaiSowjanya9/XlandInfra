@@ -1619,6 +1619,19 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
         if (normalizedMethod === 'bank') normalizedMethod = 'bank_transfer';
         if (normalizedMethod === 'check') normalizedMethod = 'cheque';
 
+        // A pending intent already covers this invoice -- return its reference rather
+        // than stack another row staff could also verify.
+        const [existingIntents] = await pool.execute(
+          `SELECT id, transaction_id, amount, payment_method FROM payments
+           WHERE invoice_id = ? AND status = 'verification_pending' ORDER BY id DESC LIMIT 1`,
+          [inv.id]
+        );
+        if (existingIntents.length > 0) {
+          paymentRecordId = existingIntents[0].id;
+          referenceId = existingIntents[0].transaction_id || referenceId;
+          recordedAmount = parseFloat(existingIntents[0].amount);
+          recordedPlan = plan;
+        } else {
         // Create payment record with verification_pending status. franchise_partner_id and
         // the PAY- id are what the staff Payments screens scope and list on -- without them
         // the intent was invisible to the FP portal meant to verify it.
@@ -1632,7 +1645,7 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
             amount, payment_method, payment_type, payment_date,
             transaction_id, transaction_reference, status,
             received_by_name, received_by_role, remarks, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offline', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', NOW(), ?, ?, 'verification_pending', ?, 'customer', ?, NOW())`,
           [paymentCode, inv.id, inv.invoice_id || null, inv.property_id, inv.property_code || null,
            inv.estimate_id || null, inv.customer_id || null, inv.customer_name || null,
            inv.customer_email || null, fpId,
@@ -1654,6 +1667,7 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
         recordedAmount = paymentAmount;
         recordedPlan = plan;
         console.log(`[Payment Record Created] ID: ${paymentRecordId}, Invoice: ${invoiceId}, Method: ${normalizedMethod}, Amount: ${paymentAmount}, Status: verification_pending`);
+        }
       }
     }
 
