@@ -119,12 +119,12 @@ const formatPropertyType = (type) => {
 const PAYMENT_METHODS = {
   razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
   cash: { label: 'Cash', icon: Banknote, color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200' },
-  bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
+  bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   upi: { label: 'UPI', icon: Smartphone, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-  debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  check: { label: 'Cheque', icon: FileCheck, color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+  debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+  check: { label: 'Cheque', icon: FileCheck, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
   // The verify flow stores 'cheque' while older rows say 'check' -- same method, two names
-  cheque: { label: 'Cheque', icon: FileCheck, color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+  cheque: { label: 'Cheque', icon: FileCheck, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
   other: { label: 'Other', icon: CreditCard, color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' }
 };
 
