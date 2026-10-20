@@ -95,7 +95,9 @@ const employeeName = (employee) => {
 };
 
 // What a portal needs to show an employee: never the password hash, and the role in the one
-// spelling the rest of the code compares against.
+// spelling the rest of the code compares against. `allZones` is the employee holding the `all`
+// marker, which the picker says out loud -- "Manager" and "Manager, every zone" are different
+// answers to "who covers this property".
 const presentEmployee = (employee, zones = []) => ({
   id: employee.id,
   user_id: employee.user_id || null,
@@ -104,7 +106,8 @@ const presentEmployee = (employee, zones = []) => ({
   email: employee.email || null,
   phone: employee.phone || null,
   role: normalizeEmployeeRole(employee.role),
-  zones
+  zones,
+  allZones: zones.some((name) => String(name || '').trim().toLowerCase() === ALL_ZONES)
 });
 
 /**
@@ -190,11 +193,22 @@ const coversZone = (zones, zone, decode = (value) => value) => {
 };
 
 /**
- * The employees an FP may hand a complaint to, the ones covering the complaint's zone first.
+ * The employees an FP may hand a complaint to: **the ones dedicated to the complaint's own zone**,
+ * and nobody else.
  *
- * Every assignable employee is returned, not only the zone's own: a zone with nobody assigned to
- * it would otherwise be an empty picker, and the FP would have no way to act on the complaint at
- * all. `recommended` is what the picker groups by.
+ * The zone is a filter, not a sort key. A picker that also listed the rest of the roster made the
+ * FP read a dozen names and their zone lists to find the two people who actually cover the
+ * property, which is the opposite of what zone-centric assignment is for. An employee holding the
+ * `all` marker covers every zone and is therefore always offered.
+ *
+ * A zone nobody covers returns nothing, and the dialog says so and points at Employee Zone
+ * Management -- the fix for "no one is assigned to Zone A" is to assign someone to Zone A, not to
+ * hand the complaint to whoever happens to be on the list. The route itself stays permissive about
+ * the assignee's zone (it checks only the role), so an assignment already made survives the zone
+ * being renamed or taken away.
+ *
+ * A complaint with no zone at all cannot be narrowed, so that one lists every assignable employee.
+ * `recommended` says whether the row was matched by zone rather than offered for want of one.
  */
 const listAssignableEmployees = async (pool, { franchisePartnerId, zone, decode } = {}) => {
   if (!franchisePartnerId) return [];
@@ -205,13 +219,14 @@ const listAssignableEmployees = async (pool, { franchisePartnerId, zone, decode 
     [franchisePartnerId]
   );
   const zoneMap = await fetchEmployeeZones(pool, franchisePartnerId);
-  return employees
+  const assignable = employees
     .filter((employee) => isAssignableRole(employee.role))
     .map((employee) => {
       const zones = zoneMap.get(employee.id) || [];
       return { ...presentEmployee(employee, zones), recommended: coversZone(zones, zone, decode) };
-    })
-    .sort((a, b) => (b.recommended === a.recommended ? 0 : b.recommended ? 1 : -1));
+    });
+  const named = decode ? decode(String(zone || '')).trim() : String(zone || '').trim();
+  return named ? assignable.filter((employee) => employee.recommended) : assignable;
 };
 
 module.exports = {

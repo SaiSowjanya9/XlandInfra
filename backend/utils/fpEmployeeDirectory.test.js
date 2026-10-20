@@ -108,7 +108,7 @@ test('the caller is resolved by user_id or email, never by the token id as an em
   assert.ok(calls.every((call) => call.params[0] === 8));
 });
 
-test('the picker offers every assignable employee, the zone\'s own first', async () => {
+test('the picker offers the zone\'s own employees and nobody else', async () => {
   const employees = [
     { id: 1, first_name: 'Ravi', last_name: 'M', role: 'fp_manager', email: 'ravi@x.com', user_id: 11 },
     { id: 2, first_name: 'Sita', last_name: 'B', role: 'supervisor', email: 'sita@x.com', user_id: 12 },
@@ -121,25 +121,42 @@ test('the picker offers every assignable employee, the zone\'s own first', async
     execute: async (sql) => {
       if (sql.includes('FROM fp_employees')) return [employees];
       if (sql.includes('FROM fp_employee_zones')) {
-        return [[{ fp_employee_id: 3, zone_name: 'North Zone' }, { fp_employee_id: 1, zone_name: 'South Zone' }]];
+        return [[
+          { fp_employee_id: 3, zone_name: 'North Zone' },
+          { fp_employee_id: 1, zone_name: 'South Zone' },
+          { fp_employee_id: 2, zone_name: 'all' }
+        ]];
       }
       return [[]];
     }
   };
 
+  // The zone is a filter, not a sort key: the coordinator who holds North Zone, and the supervisor
+  // who holds every zone. The manager is South Zone's, the executive holds none, and the field
+  // staff member has no portal to read an assignment in at all -- none of them belong on a North
+  // Zone complaint, and reading past them to find the two who do is the thing this fixes.
   const listed = await listAssignableEmployees(pool, { franchisePartnerId: 8, zone: 'North Zone' });
-  // Manager, coordinator, supervisor and executive all have the Complaint Form; field staff do not,
-  // so they are never offered.
-  assert.deepEqual(listed.map((e) => e.id), [3, 1, 2, 4]);
-  assert.deepEqual(listed.map((e) => e.recommended), [true, false, false, false]);
+  assert.deepEqual(listed.map((e) => e.id), [2, 3]);
+  assert.ok(listed.every((e) => e.recommended));
+  // The row shows what somebody does, and says when they cover everything.
+  assert.deepEqual(listed.map((e) => [e.name, e.role, e.allZones]), [
+    ['Sita B', 'supervisor', true],
+    ['Priya N', 'coordinator', false]
+  ]);
+
+  // A zone nobody covers offers nobody: the fix is to put somebody in that zone, which the dialog
+  // says, rather than handing the complaint to whoever is on the roster.
+  assert.deepEqual(
+    (await listAssignableEmployees(pool, { franchisePartnerId: 8, zone: 'East Zone' })).map((e) => e.id),
+    [2], 'only the every-zone supervisor'
+  );
+
+  // A complaint with no zone cannot be narrowed, so that one lists everybody assignable -- and
   // schema_v8's fp_ prefix is dropped, so the screen reads one spelling.
-  assert.equal(listed.find((e) => e.id === 1).role, 'manager');
-  assert.equal(listed[0].name, 'Priya N');
-  // A zone nobody holds still lists everybody: an empty picker would leave the FP unable to act on
-  // the complaint at all.
-  const elsewhere = await listAssignableEmployees(pool, { franchisePartnerId: 8, zone: 'East Zone' });
-  assert.equal(elsewhere.length, 4);
-  assert.ok(elsewhere.every((e) => !e.recommended));
+  const unzoned = await listAssignableEmployees(pool, { franchisePartnerId: 8, zone: '' });
+  assert.deepEqual(unzoned.map((e) => e.id), [1, 2, 3, 4]);
+  assert.equal(unzoned.find((e) => e.id === 1).role, 'manager');
+
   // Nothing from the employment record that a picker has no business showing.
   assert.ok(!Object.keys(listed[0]).includes('password_hash'));
 });

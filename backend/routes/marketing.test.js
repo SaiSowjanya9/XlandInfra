@@ -797,26 +797,30 @@ test('a complaint is assigned inside its own partner, and only to a role with th
   assert.equal(missing.status, 404);
 });
 
-test('the assignable list recommends the employees holding the zone', async (t) => {
+test('the assignable list is the zone\'s own employees, and only theirs', async (t) => {
   const request = await startServer(t);
 
   const listed = await request('/fp/marketing/complaints/employees?zone=North%20Zone');
   assert.equal(listed.status, 200);
-  // The field staff member is left out; the three with the Complaint Form are offered, the
-  // recommended ones first.
-  assert.deepEqual(listed.data.map((e) => e.id), [4, 5, 10]);
-  assert.deepEqual(listed.data.map((e) => e.recommended), [true, true, false]);
-  // 'all' is the every-zone assignment, so that manager covers North Zone too -- and the role is
-  // normalised, since schema_v8 spelled it fp_manager.
-  assert.deepEqual(listed.data.map((e) => e.role), ['coordinator', 'manager', 'supervisor']);
+  // The coordinator holds North Zone and the manager holds 'all', which is every zone. The
+  // supervisor holds none and the field staff member has no portal at all, so neither is offered:
+  // the picker is who covers this property, not the roster.
+  assert.deepEqual(listed.data.map((e) => e.id), [4, 5]);
+  assert.ok(listed.data.every((e) => e.recommended));
+  // The role is normalised, since schema_v8 spelled it fp_manager, and the every-zone holder says
+  // so -- "Manager" and "Manager, all zones" are different answers to who covers a property.
+  assert.deepEqual(listed.data.map((e) => [e.role, e.allZones]), [['coordinator', false], ['manager', true]]);
   // Never the password hash or the rest of the employment record.
   assert.deepEqual(Object.keys(listed.data[0]).sort(),
-    ['email', 'employee_code', 'id', 'name', 'phone', 'recommended', 'role', 'user_id', 'zones']);
+    ['allZones', 'email', 'employee_code', 'id', 'name', 'phone', 'recommended', 'role', 'user_id', 'zones']);
 
-  // A zone this coordinator does not hold still lists everybody -- an empty picker would leave the
-  // FP unable to act on the complaint at all -- but recommends only who covers it.
+  // A zone only the every-zone manager covers offers only them.
   const other = await request('/fp/marketing/complaints/employees?zone=East%20Zone');
-  assert.deepEqual(other.data.map((e) => [e.id, e.recommended]), [[5, true], [4, false], [10, false]]);
+  assert.deepEqual(other.data.map((e) => e.id), [5]);
+
+  // A complaint with no zone cannot be narrowed, so that one lists everybody assignable.
+  const unzoned = await request('/fp/marketing/complaints/employees');
+  assert.deepEqual(unzoned.data.map((e) => e.id), [4, 5, 10]);
 
   // It is the assignment's own picker, so the portals that cannot assign cannot read it either.
   assert.equal((await request('/manager/marketing/complaints/employees')).status, 403);
