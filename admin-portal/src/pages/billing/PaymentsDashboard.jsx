@@ -84,7 +84,7 @@ const formatCurrency = (amount) => {
 
 const formatCurrencyShort = (amount) => {
   const num = parseFloat(amount) || 0;
-  return '₹' + new Intl.NumberFormat('en-IN').format(num);
+  return '₹' + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(num);
 };
 
 // For an axis tick or a label sitting over a bar, where ₹1,50,300 is wider than the bar itself and
@@ -204,15 +204,22 @@ const DonutSegments = ({ data, total, size, valueLabel, formatValue }) => {
   );
 };
 
-const DonutChart = ({ data, total, centerLabel, size = 130 }) => (
-  <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-    <DonutSegments data={data} total={total} size={size} valueLabel="Amount" formatValue={formatCurrencyShort} />
-    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-base sm:text-lg font-bold text-gray-900 tabular-nums whitespace-nowrap">{formatCurrencyShort(total)}</span>
-      <span className="text-xs sm:text-sm text-gray-500">{centerLabel}</span>
+const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
+  // The hole of a 130px donut is ~80px across, so the centre figure sizes itself to its length --
+  // ₹65,018 can take the large type where ₹12,34,567 cannot without lying across the ring.
+  const label = formatCurrencyShort(total);
+  const totalSize = label.length > 8 ? 'text-sm sm:text-base'
+    : label.length > 6 ? 'text-base sm:text-lg' : 'text-lg sm:text-xl';
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <DonutSegments data={data} total={total} size={size} valueLabel="Amount" formatValue={formatCurrencyShort} />
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className={`${totalSize} font-bold text-gray-900 tabular-nums whitespace-nowrap`}>{label}</span>
+        <span className="text-xs sm:text-sm text-gray-500">{centerLabel}</span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Simple Donut for Invoice Status (with count instead of currency)
 const DonutChartCount = ({ data, total, size = 130 }) => (
