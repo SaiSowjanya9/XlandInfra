@@ -13,6 +13,7 @@ import DonutChart from '../../components/common/DonutChart';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import DashboardSummaryCards from '../../components/common/DashboardSummaryCards';
 import { formatDate } from '../../utils/dateFormat';
 import { 
   SCHEDULE_STATUS_COLORS, 
@@ -524,41 +525,15 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         </>
       </PageHeader>
 
-      {/* Stat Cards - one row, always. Below 2xl the row scrolls sideways so every
-          label shows in full; six squeezed columns is what truncated them before. */}
-      <div className="-mx-1 overflow-x-auto px-1 py-1">
-        <div className="grid min-w-full grid-flow-col auto-cols-[minmax(11rem,1fr)] gap-3 sm:gap-4 2xl:grid-flow-row 2xl:grid-cols-6">
-        {[
-          { label: "Today's", sublabel: "Schedules", value: todaysSchedules.length, icon: CalendarDays, color: '#3B82F6', bg: '#DBEAFE', link: 'View Today', path: '/schedules/calendar' },
-          { label: 'Upcoming', sublabel: '(7 Days)', value: upcoming7Days.length, icon: Clock, color: '#F59E0B', bg: '#FEF3C7', link: 'View Upcoming', path: '/schedules/calendar' },
-          { label: 'Pending', sublabel: 'Properties', value: pendingProperties.length, icon: Building2, color: '#8B5CF6', bg: '#EDE9FE', link: 'View Pending', path: '/schedules/pending' },
-          { label: 'Reschedule', sublabel: 'Requests', value: rescheduleRequests.length, icon: RotateCcw, color: '#EC4899', bg: '#FCE7F3', link: 'View Requests', path: '/schedules/reschedule-requests' },
-          { label: 'Cancelled', sublabel: 'Schedules', value: cancelledSchedules.length, icon: XCircle, color: '#EF4444', bg: '#FEE2E2', link: 'View Cancelled', path: '/schedules/cancelled' },
-          { label: 'Overdue', sublabel: 'Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: '#DC2626', bg: '#FEE2E2', link: 'View Overdue', path: '/schedules/all' }
-        ].map((card, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow flex flex-col min-h-[120px] sm:min-h-[140px]">
-            <div className="flex items-start gap-2 mb-auto">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: card.bg }}>
-                <card.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: card.color }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm text-gray-700 font-semibold leading-tight truncate">{card.label}</p>
-                <p className="text-[10px] sm:text-xs text-gray-500 leading-tight truncate">{card.sublabel}</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{card.value}</p>
-              <button 
-                onClick={() => navigate(`${getBasePath()}${card.path}`)}
-                className="text-xs text-blue-600 hover:underline font-medium mt-1"
-              >
-                {card.link}
-              </button>
-            </div>
-          </div>
-        ))}
-        </div>
-      </div>
+      {/* The shared summary row, as on Payments, Estimates and Work Orders */}
+      <DashboardSummaryCards cards={[
+        { key: 'today', label: "Today's", sublabel: 'Schedules', value: todaysSchedules.length, icon: CalendarDays, color: 'blue', linkText: 'View Today', to: `${getBasePath()}/schedules/calendar` },
+        { key: 'upcoming', label: 'Upcoming', sublabel: '(7 Days)', value: upcoming7Days.length, icon: Clock, color: 'amber', linkText: 'View Upcoming', to: `${getBasePath()}/schedules/calendar` },
+        { key: 'pending', label: 'Pending', sublabel: 'Properties', value: pendingProperties.length, icon: Building2, color: 'purple', linkText: 'View Pending', to: `${getBasePath()}/schedules/pending` },
+        { key: 'reschedule', label: 'Reschedule', sublabel: 'Requests', value: rescheduleRequests.length, icon: RotateCcw, color: 'pink', linkText: 'View Requests', to: `${getBasePath()}/schedules/reschedule-requests` },
+        { key: 'cancelled', label: 'Cancelled', sublabel: 'Schedules', value: cancelledSchedules.length, icon: XCircle, color: 'red', linkText: 'View Cancelled', to: `${getBasePath()}/schedules/cancelled` },
+        { key: 'overdue', label: 'Overdue', sublabel: 'Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: 'rose', linkText: 'View Overdue', to: `${getBasePath()}/schedules/all` }
+      ]} />
 
       {/* Charts Row - Responsive grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">

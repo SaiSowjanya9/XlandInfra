@@ -42,6 +42,7 @@ import {
 } from 'recharts';
 import DonutChart from './common/DonutChart';
 import useChartTooltip from './common/ChartTooltip';
+import DashboardSummaryCards from './common/DashboardSummaryCards';
 import { getAuthToken } from '../utils/safeStorage';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
@@ -278,6 +279,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   };
 
   const stats = getStats();
+
+  // What each status is worth as a share of the whole, for the summary card's sublabel
+  const shareOfTotal = count => `${stats.total ? ((count / stats.total) * 100).toFixed(1) : 0}% of total`;
 
   // Status chart data
   const getStatusChartData = () => {
@@ -936,65 +940,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
-        <StatCard 
-          title="Total Work Orders" 
-          value={stats.total} 
-          percentage="100% of all work orders"
-          icon={ClipboardList}
-          color="blue"
-          linkText="View All"
-        />
-        <StatCard 
-          title="Pending" 
-          value={stats.pending} 
-          percentage={`${stats.total ? ((stats.pending / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={Clock}
-          color="amber"
-          linkText="View All"
-        />
-        <StatCard 
-          title="Assigned" 
-          value={stats.assigned} 
-          percentage={`${stats.total ? ((stats.assigned / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={UserCheck}
-          color="blue"
-          linkText="View All"
-        />
-        <StatCard 
-          title="In Progress" 
-          value={stats.inProgress} 
-          percentage={`${stats.total ? ((stats.inProgress / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={Play}
-          color="purple"
-          linkText="View All"
-        />
-        <StatCard 
-          title="Completed" 
-          value={stats.completed} 
-          percentage={`${stats.total ? ((stats.completed / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={CheckCircle}
-          color="green"
-          linkText="View All"
-        />
-        <StatCard 
-          title="Closed" 
-          value={stats.closed} 
-          percentage={`${stats.total ? ((stats.closed / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={Archive}
-          color="gray"
-          linkText="View All"
-        />
-        <StatCard 
-          title="Cancelled" 
-          value={stats.cancelled} 
-          percentage={`${stats.total ? ((stats.cancelled / stats.total) * 100).toFixed(1) : 0}% of total`}
-          icon={XCircle}
-          color="red"
-          linkText="View All"
-        />
-      </div>
+      {/* The shared summary row, as on Payments, Estimates and Schedules */}
+      <DashboardSummaryCards cards={[
+        { key: 'total', label: 'Total Work Orders', sublabel: '100% of all work orders', value: stats.total, icon: ClipboardList, color: 'blue', to: `${getBasePath()}/work-orders` },
+        { key: 'pending', label: 'Pending', sublabel: shareOfTotal(stats.pending), value: stats.pending, icon: Clock, color: 'amber', to: `${getBasePath()}/work-orders` },
+        { key: 'assigned', label: 'Assigned', sublabel: shareOfTotal(stats.assigned), value: stats.assigned, icon: UserCheck, color: 'indigo', to: `${getBasePath()}/work-orders` },
+        { key: 'inProgress', label: 'In Progress', sublabel: shareOfTotal(stats.inProgress), value: stats.inProgress, icon: Play, color: 'purple', to: `${getBasePath()}/work-orders` },
+        { key: 'completed', label: 'Completed', sublabel: shareOfTotal(stats.completed), value: stats.completed, icon: CheckCircle, color: 'green', to: `${getBasePath()}/work-orders` },
+        { key: 'closed', label: 'Closed', sublabel: shareOfTotal(stats.closed), value: stats.closed, icon: Archive, color: 'gray', to: `${getBasePath()}/work-orders` },
+        { key: 'cancelled', label: 'Cancelled', sublabel: shareOfTotal(stats.cancelled), value: stats.cancelled, icon: XCircle, color: 'red', to: `${getBasePath()}/work-orders` }
+      ]} />
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
@@ -1287,35 +1242,6 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-// Stat Card Component
-const StatCard = ({ title, value, percentage, icon: Icon, color, linkText }) => {
-  const colorClasses = {
-    blue: { bg: 'bg-blue-50', icon: 'bg-blue-100 text-blue-600', text: 'text-blue-600' },
-    amber: { bg: 'bg-amber-50', icon: 'bg-amber-100 text-amber-600', text: 'text-amber-600' },
-    purple: { bg: 'bg-purple-50', icon: 'bg-purple-100 text-purple-600', text: 'text-purple-600' },
-    green: { bg: 'bg-green-50', icon: 'bg-green-100 text-green-600', text: 'text-green-600' },
-    gray: { bg: 'bg-gray-50', icon: 'bg-gray-100 text-gray-600', text: 'text-gray-600' },
-    red: { bg: 'bg-red-50', icon: 'bg-red-100 text-red-600', text: 'text-red-600' }
-  };
-  const colors = colorClasses[color] || colorClasses.blue;
-
-  return (
-    <div className={`${colors.bg} rounded-xl p-3 border border-gray-100 min-w-0`}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-xs text-gray-500 font-medium leading-tight">{title}</p>
-        <div className={`p-1.5 rounded-lg ${colors.icon} flex-shrink-0`}>
-          <Icon className="w-4 h-4" />
-        </div>
-      </div>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
-      <p className="text-[10px] text-gray-500 mt-1 truncate">{percentage}</p>
-      <button className={`text-xs ${colors.text} font-medium mt-1.5 flex items-center gap-0.5 hover:underline`}>
-        {linkText} <ChevronRight className="w-3 h-3" />
-      </button>
     </div>
   );
 };
