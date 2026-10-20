@@ -336,6 +336,10 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                   )}
                 </div>
 
+                {/* Employee Zone Management stands alone, in the slot Employee Management
+                    has in the FP portal: before Marketing, which is always last */}
+                <NavLink item={employeeZoneItem} mobile />
+
                 {/* Marketing -- read-only. The four screens are the FP portal's, over this
                     executive's own zones and visits; the backend mount decides what they answer. */}
                 <div className="mt-1">
@@ -465,7 +469,7 @@ const ExecutiveLayout = ({ admin, onLogout, children }) => {
                   )}
                 </div>
 
-                {/* Employee Zone Management stands alone, last in the sidebar order */}
+                {/* No Marketing section in this branch, so Employee Zone really is last here */}
                 <NavLink item={employeeZoneItem} mobile />
 
               </>

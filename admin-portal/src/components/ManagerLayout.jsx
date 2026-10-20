@@ -165,11 +165,13 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     return (first + last).toUpperCase() || 'M';
   };
 
-  // Nav items - Add Customer removed for all managers
+  // Nav items - Add Customer removed for all managers.
+  //
+  // Complaints are reached inside Marketing, as they are in the FP portal: every portal's sidebar
+  // follows the FP order, and the FP portal has no heading of its own for them.
   const navItems = [
     { path: '/manager', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/manager/customers/add', icon: UserPlus, label: 'Add Customer' },
-    { path: '/manager/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/manager/properties', icon: Building2, label: 'Property Management' },
   ];
   // Stands alone rather than inside a section; rendered last, where Employee Management sits
