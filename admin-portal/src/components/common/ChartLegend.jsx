@@ -19,7 +19,7 @@
 export default function ChartLegend({ items = [], className = '', size = 'sm', layout = 'list' }) {
   const rows = items.filter(Boolean);
   if (!rows.length) return null;
-  const text = size === 'xs' ? 'text-[11px]' : 'text-xs sm:text-sm';
+  const text = size === 'xs' ? 'text-[11px]' : size === 'md' ? 'text-sm' : 'text-xs sm:text-sm';
   if (layout === 'row') {
     return (
       <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${text} ${className}`}>
