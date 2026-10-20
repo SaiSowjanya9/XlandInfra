@@ -175,6 +175,25 @@ fetch('/api/manager/dashboard', { ... });
 ## Dashboard UI
 
 - Keep dashboard summary cards equal in width and height in a single row, with consistent icon sizing, spacing, and label/count alignment. On narrow screens, scroll the card row instead of wrapping cards or overflowing the page. Keep date, notification, and refresh controls compact on the row below.
+- **A dashboard's summary row is `components/common/DashboardSummaryCards.jsx`, never a copy.** Four
+  dashboards had four designs for the same row: Payments (white card, coloured `border-l-4` edge,
+  icon tile, label over a sublabel, the figure, "View All →"), Estimates (top border over a
+  white-to-tint gradient, the figure at `text-2xl`), Work Orders (a tinted `bg-blue-50` card with
+  the icon opposite the label, wrapping onto a second line at narrow widths) and Schedules (white
+  with a plain grey border). **The Payments card is the agreed design** — it is the user's call —
+  and it now lives in the shared component, so a page states only its figures.
+- A card is `{ key, label, sublabel, value, title, icon, color, linkText, to, onClick }`: `to`
+  renders a router link, `onClick` a button, neither means no action, and `linkText` defaults to
+  "View All". `color` is a **named accent** (`blue`, `green`, `amber`, `red`, `rose`, `purple`,
+  `indigo`, `pink`, `teal`, `orange`, `gray`), not a hex value — Tailwind is scanned statically, so
+  the edge/tile/icon/link classes are spelled out in `ACCENTS` and the `2xl` column count in
+  `COLUMNS`. A hex passed as `color` silently falls back to blue.
+- **The figure is sized to its own length** (`valueSize`), because one row carries both a count like
+  `13` and a total like `₹7,92,547`: a count set at the currency size looks lost in the card, and a
+  total set at the count size overflows it. Pass the exact figure as `title` where `value` is
+  abbreviated.
+- The compact `components/common/DashboardStatCards.jsx` is a **different** component on purpose:
+  Manager and FP use a 64px link-row with no sublabel and no action. Do not merge the two.
 - **An Add Customer entry-type tile keeps its name on one line.** "Gated Community" wrapped to two,
   which made that one tile taller than the other four and left the row ragged. The label is
   `text-xs … whitespace-nowrap` and the tile is padded `px-1.5 py-4 md:py-5` — the narrow sides are

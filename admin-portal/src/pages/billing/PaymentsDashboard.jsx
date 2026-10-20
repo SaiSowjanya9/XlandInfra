@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   TrendingUp,
   XCircle,
-  ArrowRight,
   Plus,
   Calendar,
   ChevronDown,
@@ -32,6 +31,7 @@ import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
+import DashboardSummaryCards from '../../components/common/DashboardSummaryCards';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
 
@@ -674,125 +674,27 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       </div>
 
       <div className="p-4 sm:p-6">
-        {/* Stats Cards - one row, always. Below 2xl the row scrolls sideways so every
-            label shows in full; six squeezed columns is what truncated them before. */}
-        <div className="-mx-1 mb-4 overflow-x-auto px-1 py-1 sm:mb-6">
-          <div className="grid min-w-full grid-flow-col auto-cols-[minmax(11rem,1fr)] gap-3 2xl:grid-flow-row 2xl:grid-cols-6">
-          {/* Total Invoice Amount */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-blue-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Total Invoice</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">Amount</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.totalInvoiceAmount)}>{formatCurrency(dashboardData.totalInvoiceAmount)}</p>
-              <button onClick={() => navigate(`${basePath}/billing/invoices`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-600 hover:text-blue-700 font-medium mt-1">
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Amount Collected */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-green-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Collected</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.collectedPercentage}%</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.amountCollected)}>{formatCurrency(dashboardData.amountCollected)}</p>
-              <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-green-600 hover:text-green-700 font-medium mt-1">
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Pending Amount */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-amber-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Pending</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.pendingPercentage}%</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.pendingAmount)}>{formatCurrency(dashboardData.pendingAmount)}</p>
-              <button onClick={() => navigateToPaymentsList('verification_pending')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-amber-600 hover:text-amber-700 font-medium mt-1">
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Overdue Amount */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-red-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Overdue</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.overduePercentage}%</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.overdueAmount)}>{formatCurrency(dashboardData.overdueAmount)}</p>
-              <button onClick={() => navigate(`${basePath}/billing/invoices?status=overdue`)} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-red-600 hover:text-red-700 font-medium mt-1">
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Today's Collections */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-purple-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Today's</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.todaysPaymentCount} Payments</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.todaysCollections)}>{formatCurrency(dashboardData.todaysCollections)}</p>
-              <button onClick={() => navigateToPaymentsList('paid')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-purple-600 hover:text-purple-700 font-medium mt-1">
-                View <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Failed Payments */}
-          <div className="bg-white rounded-xl p-3 sm:p-4 border-l-4 border-l-rose-500 shadow-sm flex flex-col min-h-[110px] sm:min-h-[125px]">
-            <div className="flex items-center gap-2 mb-auto">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-                <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] sm:text-xs font-semibold text-gray-700 block truncate">Failed</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400">{dashboardData.failedCount} Transactions</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm sm:text-base font-bold text-gray-900 tabular-nums truncate" title={formatCurrencyShort(dashboardData.failedPayments)}>{formatCurrency(dashboardData.failedPayments)}</p>
-              <button onClick={() => navigateToPaymentsList('failed')} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-rose-600 hover:text-rose-700 font-medium mt-1">
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-          </div>
-        </div>
+        {/* The shared summary row, as on Estimates, Work Orders and Schedules */}
+        <DashboardSummaryCards className="mb-4 sm:mb-6" cards={[
+          { key: 'invoiced', label: 'Total Invoice', sublabel: 'Amount', color: 'blue', icon: FileText,
+            value: formatCurrency(dashboardData.totalInvoiceAmount), title: formatCurrencyShort(dashboardData.totalInvoiceAmount),
+            onClick: () => navigate(`${basePath}/billing/invoices`) },
+          { key: 'collected', label: 'Collected', sublabel: `${dashboardData.collectedPercentage}%`, color: 'green', icon: CheckCircle,
+            value: formatCurrency(dashboardData.amountCollected), title: formatCurrencyShort(dashboardData.amountCollected),
+            onClick: () => navigateToPaymentsList('paid') },
+          { key: 'pending', label: 'Pending', sublabel: `${dashboardData.pendingPercentage}%`, color: 'amber', icon: Clock,
+            value: formatCurrency(dashboardData.pendingAmount), title: formatCurrencyShort(dashboardData.pendingAmount),
+            onClick: () => navigateToPaymentsList('verification_pending') },
+          { key: 'overdue', label: 'Overdue', sublabel: `${dashboardData.overduePercentage}%`, color: 'red', icon: AlertTriangle,
+            value: formatCurrency(dashboardData.overdueAmount), title: formatCurrencyShort(dashboardData.overdueAmount),
+            onClick: () => navigate(`${basePath}/billing/invoices?status=overdue`) },
+          { key: 'today', label: "Today's", sublabel: `${dashboardData.todaysPaymentCount} Payments`, color: 'purple', icon: TrendingUp,
+            value: formatCurrency(dashboardData.todaysCollections), title: formatCurrencyShort(dashboardData.todaysCollections),
+            linkText: 'View', onClick: () => navigateToPaymentsList('paid') },
+          { key: 'failed', label: 'Failed', sublabel: `${dashboardData.failedCount} Transactions`, color: 'rose', icon: XCircle,
+            value: formatCurrency(dashboardData.failedPayments), title: formatCurrencyShort(dashboardData.failedPayments),
+            onClick: () => navigateToPaymentsList('failed') }
+        ]} />
 
         {/* Charts Row 1 - Responsive. min-w-0 keeps each card inside its cell (same
             fix as the schedules dashboard tables); 3 across only where they fit. */}

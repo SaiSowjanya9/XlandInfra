@@ -14,6 +14,7 @@ import {
   Wrench
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import DashboardSummaryCards from '../components/common/DashboardSummaryCards';
 import { 
   PieChart, 
   Pie, 
@@ -330,88 +331,21 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   );
   const formatMoney = value => `₹${(Number(value) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
-  // Stat cards configuration - matching the reference image exactly with gradient backgrounds
+  // What each kind and status is worth as a share of the whole, for the summary card's sublabel
+  const shareOfTotal = count => (totalEstimates
+    ? `${((count / totalEstimates) * 100).toFixed(1)}% of total`
+    : '0% of total');
+
+  // The figures for the shared summary row; the card design itself lives in DashboardSummaryCards
   const statCards = [
-    {
-      label: 'Total Estimates',
-      value: totalEstimates,
-      percentage: '100% of all estimates',
-      icon: FileText,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      gradientEnd: 'rgba(59, 130, 246, 0.08)'
-    },
-    {
-      label: 'Direct Estimates',
-      value: directEstimates,
-      percentage: totalEstimates ? `${((directEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Send,
-      iconBg: '#EDE9FE',
-      iconColor: '#8B5CF6',
-      borderColor: '#8B5CF6',
-      gradientEnd: 'rgba(139, 92, 246, 0.08)'
-    },
-    {
-      label: 'Property-Based',
-      value: propertyBasedEstimates,
-      percentage: totalEstimates ? `${((propertyBasedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Building2,
-      iconBg: '#CCFBF1',
-      iconColor: '#14B8A6',
-      borderColor: '#14B8A6',
-      gradientEnd: 'rgba(20, 184, 166, 0.08)'
-    },
-    {
-      label: 'Work Order',
-      value: workOrderEstimates,
-      percentage: totalEstimates ? `${((workOrderEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Wrench,
-      iconBg: '#FFEDD5',
-      iconColor: '#F97316',
-      borderColor: '#F97316',
-      gradientEnd: 'rgba(249, 115, 22, 0.08)'
-    },
-    {
-      label: 'Draft',
-      value: draftEstimates,
-      percentage: totalEstimates ? `${((draftEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: FileEdit,
-      iconBg: '#FEF3C7',
-      iconColor: '#F59E0B',
-      borderColor: '#F59E0B',
-      gradientEnd: 'rgba(245, 158, 11, 0.08)'
-    },
-    {
-      label: 'Sent',
-      value: sentEstimates,
-      percentage: totalEstimates ? `${((sentEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: Mail,
-      iconBg: '#DBEAFE',
-      iconColor: '#3B82F6',
-      borderColor: '#3B82F6',
-      gradientEnd: 'rgba(59, 130, 246, 0.08)'
-    },
-    {
-      label: 'Approved',
-      value: approvedEstimates,
-      percentage: totalEstimates ? `${((approvedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: CheckCircle,
-      iconBg: '#D1FAE5',
-      iconColor: '#10B981',
-      borderColor: '#10B981',
-      gradientEnd: 'rgba(16, 185, 129, 0.08)'
-    },
-    {
-      label: 'Rejected',
-      value: rejectedEstimates,
-      percentage: totalEstimates ? `${((rejectedEstimates / totalEstimates) * 100).toFixed(1)}% of total` : '0% of total',
-      icon: XCircle,
-      iconBg: '#FEE2E2',
-      iconColor: '#EF4444',
-      borderColor: '#EF4444',
-      gradientEnd: 'rgba(239, 68, 68, 0.08)'
-    }
+    { key: 'total', label: 'Total Estimates', value: totalEstimates, sublabel: '100% of all estimates', icon: FileText, color: 'blue' },
+    { key: 'direct', label: 'Direct Estimates', value: directEstimates, sublabel: shareOfTotal(directEstimates), icon: Send, color: 'purple' },
+    { key: 'property', label: 'Property-Based', value: propertyBasedEstimates, sublabel: shareOfTotal(propertyBasedEstimates), icon: Building2, color: 'teal' },
+    { key: 'workorder', label: 'Work Order', value: workOrderEstimates, sublabel: shareOfTotal(workOrderEstimates), icon: Wrench, color: 'orange' },
+    { key: 'draft', label: 'Draft', value: draftEstimates, sublabel: shareOfTotal(draftEstimates), icon: FileEdit, color: 'amber' },
+    { key: 'sent', label: 'Sent', value: sentEstimates, sublabel: shareOfTotal(sentEstimates), icon: Mail, color: 'indigo' },
+    { key: 'approved', label: 'Approved', value: approvedEstimates, sublabel: shareOfTotal(approvedEstimates), icon: CheckCircle, color: 'green' },
+    { key: 'rejected', label: 'Rejected', value: rejectedEstimates, sublabel: shareOfTotal(rejectedEstimates), icon: XCircle, color: 'red' }
   ];
 
   // ============================================
@@ -668,44 +602,8 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
         />
       </PageHeader>
 
-      {/* Stat Cards Row — one line; on narrow screens the row scrolls instead of wrapping
-          a ninth card onto a lonely second row */}
-      <div className="flex gap-3 overflow-x-auto pb-1">
-        {statCards.map((card, index) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={index}
-              className="min-w-[150px] flex-1 rounded-xl p-3 shadow-sm hover:shadow-md transition-all"
-              style={{ 
-                borderTop: `3px solid ${card.borderColor}`,
-                background: `linear-gradient(135deg, white 0%, white 60%, ${card.gradientEnd} 100%)`
-              }}
-            >
-              <div className="flex items-center gap-1.5 mb-2">
-                <div 
-                  className="p-1.5 rounded-lg"
-                  style={{ backgroundColor: card.iconBg }}
-                >
-                  <Icon className="w-3.5 h-3.5" style={{ color: card.iconColor }} />
-                </div>
-                <span className="text-xs font-medium text-gray-600 leading-tight">{card.label}</span>
-              </div>
-              <div className="text-2xl font-bold text-gray-900 mb-0.5">{card.value}</div>
-              <div className="text-[10px] text-gray-500 mb-1">{card.percentage}</div>
-              <div 
-                onClick={() => navigate(`${getBasePath()}/estimates`)}
-                className="text-[10px] font-medium flex items-center gap-0.5 cursor-pointer hover:gap-1 transition-all"
-                style={{ color: card.borderColor }}
-              >
-                {/* The arrow had been saved as its UTF-8 bytes read as Latin-1, so every card
-                    read "View All â†'" on screen. It is a character, not an encoding. */}
-                View All →
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* The shared summary row, as on Payments, Work Orders and Schedules */}
+      <DashboardSummaryCards cards={statCards.map(card => ({ ...card, to: `${getBasePath()}/estimates` }))} />
 
       {/* Profit & Margin Summary for the estimates counted above, following the same date range.
           Costed from the pricing snapshot saved with each service -- the same figures the payments
