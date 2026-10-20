@@ -2686,6 +2686,7 @@ router.get('/fp-portal-links', requireExecutiveScope, async (req, res) => {
 });
 
 const { createMarketingRouter } = require('./marketing');
+const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 
 // ============================================
 // MARKETING (shared with the FP, admin and Ops Manager portals)
@@ -2700,8 +2701,10 @@ const { createMarketingRouter } = require('./marketing');
 // (see the zone+creator clause around coordinator.js's estimates list). An estimate's zone is the
 // property's, not the author's, so zone-only would hide an executive's own visits from them.
 //
-// Writes: none. The executive reads the pipeline their visits feed; the review is the
-// coordinator's to make and the follow-up columns belong to the FP, admin and manager portals.
+// Writes: none on a lead -- the executive reads the pipeline their visits feed, the review is the
+// coordinator's to make and the follow-up columns belong to the FP, admin and manager portals. The
+// one exception is a complaint the FP assigned to them: reporting its status (In Progress only)
+// and saving its note is the whole point of the assignment, and `assignee` holds them to that row.
 const executiveMarketingScope = async (req) => {
   if (!req.franchisePartnerId) {
     throw Object.assign(
@@ -2715,6 +2718,12 @@ const executiveMarketingScope = async (req) => {
   // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
   // falls back to this person's own records rather than to nothing.
   const unrestricted = rawZones.includes('__ALL__');
+  const employee = await resolveFpEmployee(pool, {
+    franchisePartnerId: req.franchisePartnerId,
+    userId: req.user?.id,
+    email: req.user?.email,
+    username: req.user?.username
+  });
   return {
     fpIds: [req.franchisePartnerId],
     writeFpId: req.franchisePartnerId,
@@ -2726,6 +2735,7 @@ const executiveMarketingScope = async (req) => {
     },
     canWrite: false,
     canReview: false,
+    assignee: employee ? { employeeId: employee.id } : null,
     withPartnerName: false
   };
 };

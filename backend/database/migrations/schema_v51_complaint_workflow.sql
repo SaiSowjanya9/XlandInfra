@@ -106,3 +106,54 @@ CALL xland_add_index_if_missing('fp_marketing_complaints', 'idx_fp_marketing_com
 
 DROP PROCEDURE IF EXISTS xland_add_column_if_missing;
 DROP PROCEDURE IF EXISTS xland_add_index_if_missing;
+
+-- ============================================
+-- THE EMPLOYEE TABLES THE ASSIGNMENT READS
+-- ============================================
+--
+-- Not strictly part of the complaint workflow, but it is what the assignment picker reads, and both
+-- columns below are broken in ways that break features far older than this one. Found by running
+-- the workflow against the local database, which still carried the original definitions.
+--
+-- 1. fp_employees.role -- ENUM -> VARCHAR
+--
+-- schema_v8 declared it ENUM('fp_manager','fp_supervisor','fp_executive') while the FP's Add
+-- Employee form has long sent 'manager', 'coordinator', 'supervisor' and 'executive'. MySQL answers
+-- WARN_DATA_TRUNCATED (errno 1265) for every one of them, so where the original column survives NO
+-- employee can be created at all -- and a coordinator cannot exist even in principle, which would
+-- leave the assignment picker empty. A VARCHAR holds every value the ENUM did.
+SET @role_is_enum = (
+  SELECT COUNT(*) FROM information_schema.columns
+   WHERE table_schema = DATABASE()
+     AND table_name = 'fp_employees'
+     AND column_name = 'role'
+     AND data_type = 'enum'
+);
+SET @role_ddl = IF(@role_is_enum > 0,
+  "ALTER TABLE fp_employees MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'executive'",
+  'SELECT ''skip: fp_employees.role is already a VARCHAR'' AS result');
+PREPARE stmt FROM @role_ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 2. fp_employee_zones.zone_id -- NOT NULL -> NULL
+--
+-- A zone is a *name* merged from several sources (see backend/utils/zoneDelete.js), so the zone
+-- routes insert (franchise_partner_id, fp_employee_id, zone_name) and have no id to put in
+-- zone_id -- which schema_v8 made NOT NULL with no default. Every assignment therefore failed with
+-- ER_NO_DEFAULT_FOR_FIELD (errno 1364), which silently left zone-centric access inert: an employee
+-- with no rows here falls back to "own records only" on every screen. schema_v29 added zone_name
+-- but left zone_id alone. A nullable column still satisfies its foreign key.
+SET @zone_id_required = (
+  SELECT COUNT(*) FROM information_schema.columns
+   WHERE table_schema = DATABASE()
+     AND table_name = 'fp_employee_zones'
+     AND column_name = 'zone_id'
+     AND is_nullable = 'NO'
+);
+SET @zone_ddl = IF(@zone_id_required > 0,
+  'ALTER TABLE fp_employee_zones MODIFY COLUMN zone_id INT NULL',
+  'SELECT ''skip: fp_employee_zones.zone_id is already nullable'' AS result');
+PREPARE stmt FROM @zone_ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

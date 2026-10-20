@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Megaphone, Archive, ArchiveRestore, Loader2, AlertCircle, Target, FileWarning, Search } from 'lucide-react';
+import { Megaphone, Archive, ArchiveRestore, Loader2, AlertCircle, Target, FileWarning, Search, MessageSquare, X } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import { getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
 import { PROPERTY_TYPES } from '../../utils/estimateStore';
 import EmptyState from '../../components/common/EmptyState';
+import Modal from '../../components/common/Modal';
 import { useFP } from '../../contexts/FPContext';
-import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions } from '../../utils/marketingApi';
+import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions, marketingHasTracker } from '../../utils/marketingApi';
+import { complaintStatusStyle } from '../../utils/complaintStatus';
 import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -66,8 +68,12 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
   const unavailable = portalType === 'franchise' && user?.role === 'manager';
   // Restoring a row is a write, so the read-only portals see the archive without the button.
   const { canEdit } = marketingPermissions(portalType);
+  // The supervisor portal has the Complaint Form and no lead pipeline, so this screen is its
+  // archived complaints alone: its backend mount answers 403 to the tracker read, and asking anyway
+  // would put an error where the first tab is.
+  const hasTracker = marketingHasTracker(portalType);
 
-  const [activeTab, setActiveTab] = useState('tracker'); // 'tracker' | 'complaints'
+  const [activeTab, setActiveTab] = useState(hasTracker ? 'tracker' : 'complaints'); // 'tracker' | 'complaints'
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -76,6 +82,9 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
   const [complaintsLoading, setComplaintsLoading] = useState(false);
   const [complaintsError, setComplaintsError] = useState('');
   const [restoringComplaintId, setRestoringComplaintId] = useState(null);
+  // What the assignee reported, read-only: a closed complaint is archived, and the record of what
+  // was actually done must stay readable without restoring it first.
+  const [noteTarget, setNoteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Same row filters as the live tracker: search covers estimate ID and customer name, the
@@ -135,7 +144,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
     }
   }, [token, apiPath, fpId]);
 
-  useEffect(() => { if (!unavailable) loadArchived(); }, [unavailable, loadArchived]);
+  useEffect(() => { if (!unavailable && hasTracker) loadArchived(); }, [unavailable, hasTracker, loadArchived]);
   useEffect(() => { if (!unavailable) loadArchivedComplaints(); }, [unavailable, loadArchivedComplaints]);
 
   const restoreRow = async (est) => {
@@ -200,14 +209,15 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
         </div>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold text-warm-text">Archived</h1>
-          <p className="text-xs text-warm-muted">Deleted tracker entries and complaint forms land here — restore them any time</p>
+          <p className="text-xs text-warm-muted">Closed complaints, deleted tracker entries and deleted complaint forms land here — restore them any time</p>
         </div>
       </div>
 
-      {/* Tabs -- tracker entries and complaint forms archive separately */}
+      {/* Tabs -- tracker entries and complaint forms archive separately. A portal with no lead
+          pipeline has only the second one. */}
       <div className="bg-warm-section border border-warm-border rounded-xl shadow-warm px-2 flex overflow-x-auto">
         {[
-          { id: 'tracker', label: 'Tracker Entries', icon: Target, count: rows.length },
+          ...(hasTracker ? [{ id: 'tracker', label: 'Tracker Entries', icon: Target, count: rows.length }] : []),
           { id: 'complaints', label: 'Complaint Forms', icon: FileWarning, count: complaints.length },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -249,7 +259,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
             <EmptyState
               icon={FileWarning}
               title="No archived complaint forms"
-              description="Complaint forms you delete land here and can be restored"
+              description="Complaints you close, and complaint forms you delete, land here and can be restored"
             />
           ) : (
             <div className="overflow-x-auto">
@@ -258,6 +268,8 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                   <tr className="border-b border-warm-border bg-warm-section">
                     <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Property ID</th>
                     <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Zone</th>
+                    <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Assigned To</th>
                     <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Responsible Person</th>
                     <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Concern</th>
                     <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Contact Person</th>
@@ -271,21 +283,38 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                     <tr key={row.id} className="border-b border-warm-border/70 hover:bg-warm-section transition-colors">
                       <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                       <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(decodeEntities(row.status || '') || 'Open')}`}>
+                          {decodeEntities(row.status || '') || 'Open'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.assigned_employee_name) || <span className="text-warm-muted">Unassigned</span>}</td>
                       <td className="py-3 px-4 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
                       <td className="py-3 px-4 text-warm-text max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
                       <td className="py-3 px-4 text-warm-text">{decodeEntities(row.contact_person_name) || '-'}</td>
                       <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
                       <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.archived_at)}</td>
                       <td className="py-3 px-4">
-                        {canEdit && <button
-                          onClick={() => restoreComplaint(row)}
-                          disabled={restoringComplaintId === row.id}
-                          className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors disabled:opacity-60 whitespace-nowrap"
-                          title="Restore to complaint form"
-                        >
-                          {restoringComplaintId === row.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
-                          Restore
-                        </button>}
+                        <div className="flex items-center gap-1.5">
+                          {/* The notes the assignee left, still readable once the complaint is
+                              closed -- that record is the reason the complaint was closed. */}
+                          <button
+                            onClick={() => setNoteTarget(row)}
+                            className={`p-1.5 rounded-lg transition-colors ${row.complaint_note ? 'text-warm-accent hover:bg-warm-accent-soft' : 'text-warm-muted hover:bg-warm-border/60 hover:text-warm-text'}`}
+                            title={row.complaint_note ? 'View notes' : 'No notes were saved'}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                          {canEdit && <button
+                            onClick={() => restoreComplaint(row)}
+                            disabled={restoringComplaintId === row.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors disabled:opacity-60 whitespace-nowrap"
+                            title="Restore to complaint form"
+                          >
+                            {restoringComplaintId === row.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
+                            Restore
+                          </button>}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -435,6 +464,49 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
           </div>
         )}
       </div>
+      )}
+
+      {/* Read-only notes. An archived complaint is not edited -- restore it first -- but what the
+          assignee reported is the record of why it was closed, so it stays readable here. */}
+      {noteTarget && (
+        <Modal overlayClassName="lg:pl-72" onClose={() => setNoteTarget(null)} className="w-full max-w-lg">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-warm-text">Notes / Comments</h3>
+              <p className="text-xs text-warm-muted">
+                {decodeEntities(noteTarget.property_id) || '-'} · archived {formatDate(noteTarget.archived_at)}
+              </p>
+            </div>
+            <button onClick={() => setNoteTarget(null)} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
+              <X className="w-5 h-5 text-warm-muted" />
+            </button>
+          </div>
+          <div className="p-5">
+            <div className="px-3 py-2.5 border border-warm-border rounded-[10px] text-sm text-warm-text whitespace-pre-wrap bg-warm-section min-h-[80px] [overflow-wrap:anywhere]">
+              {decodeEntities(noteTarget.complaint_note || '') || 'No notes were saved against this complaint.'}
+            </div>
+            {decodeEntities(noteTarget.note_updated_by || '') && (
+              <p className="mt-1.5 text-[11px] text-warm-muted">
+                Last saved by {decodeEntities(noteTarget.note_updated_by)}
+                {noteTarget.note_updated_at ? ` · ${formatDate(noteTarget.note_updated_at)}` : ''}
+              </p>
+            )}
+            {decodeEntities(noteTarget.closed_by || '') && (
+              <p className="mt-1 text-[11px] text-warm-muted">
+                Closed by {decodeEntities(noteTarget.closed_by)}
+                {noteTarget.closed_at ? ` · ${formatDate(noteTarget.closed_at)}` : ''}
+              </p>
+            )}
+            <div className="flex justify-end pt-4 mt-4 border-t border-warm-border">
+              <button
+                onClick={() => setNoteTarget(null)}
+                className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {toast && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, AlertCircle, FileWarning } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
+import { complaintStatusStyle } from '../utils/complaintStatus';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
 
@@ -16,10 +17,17 @@ const displayConcern = (complaint) => {
   return value;
 };
 
+// Rows written before schema_v51 carry no status, and a complaint nobody has touched is Open.
+const statusOf = (complaint) => decodeEntities(complaint?.status || '') || 'Open';
+
 // Read-only view of fp_marketing_complaints for staff portals: admin and the Operations Manager
 // see every partner's complaints (endpoint returns all rows plus the partner's name), the zone
 // manager sees only their own zones. The owning FP edits and archives from their portal, so this
 // table has no action buttons -- a row opens the read-only detail modal.
+//
+// The workflow itself -- assigning, reporting, closing -- is worked in Marketing > Complaint Form,
+// which is the screen with the controls. This is the glance: where each complaint has got to, with
+// whom, and what they have written about it.
 const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner = false }) => {
   const token = getAuthToken();
   const [complaints, setComplaints] = useState([]);
@@ -89,6 +97,7 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
                   <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Property ID</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Zone</th>
                   {showPartner && <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Franchise Partner</th>}
+                  <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Assigned To</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Responsible Person</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Concern</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500 whitespace-nowrap">Contact Person</th>
@@ -108,16 +117,23 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
                     <td className="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                     <td className="py-3 px-4 text-gray-900">{decodeEntities(row.zone) || '-'}</td>
                     {showPartner && <td className="py-3 px-4 text-gray-900">{decodeEntities(row.franchise_partner_name) || '-'}</td>}
+                    <td className="py-3 px-4 text-gray-900 whitespace-nowrap">
+                      {decodeEntities(row.assigned_employee_name) || <span className="text-gray-400">Unassigned</span>}
+                    </td>
                     <td className="py-3 px-4 text-gray-900">{decodeEntities(row.responsible_person) || '-'}</td>
                     <td className="py-3 px-4 text-gray-900 max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
                     <td className="py-3 px-4 text-gray-900">{decodeEntities(row.contact_person_name) || '-'}</td>
                     <td className="py-3 px-4 text-gray-900 whitespace-nowrap">{decodeEntities(row.phone_number) || '-'}</td>
                     <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{formatDate(row.created_at)}</td>
+                    {/* The complaint's own status, not merely whether the row was archived: this
+                        column used to read "Open" for everything that had not been deleted, which
+                        said nothing about whether anyone was working on it. */}
                     <td className="py-3 px-4">
-                      {row.archived_at ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 whitespace-nowrap">Archived</span>
-                      ) : (
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">Open</span>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${complaintStatusStyle(statusOf(row))}`}>
+                        {statusOf(row)}
+                      </span>
+                      {row.archived_at && statusOf(row) !== 'Closed' && (
+                        <span className="ml-1.5 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 whitespace-nowrap">Archived</span>
                       )}
                     </td>
                   </tr>
@@ -144,6 +160,17 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
               </button>
             </div>
             <div className="p-5 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${complaintStatusStyle(statusOf(viewing))}`}>
+                  {statusOf(viewing)}
+                </span>
+                {decodeEntities(viewing.assigned_employee_name || '') && (
+                  <span className="text-xs text-gray-500">
+                    assigned to {decodeEntities(viewing.assigned_employee_name)}
+                    {decodeEntities(viewing.assigned_employee_role_label || '') ? ` (${decodeEntities(viewing.assigned_employee_role_label)})` : ''}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="min-w-0"><label className={labelCls}>Property ID</label><div className={readOnlyCls}>{decodeEntities(viewing.property_id) || '-'}</div></div>
                 <div className="min-w-0"><label className={labelCls}>Zone</label><div className={readOnlyCls}>{decodeEntities(viewing.zone) || '-'}</div></div>
@@ -156,6 +183,18 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
                 <div className="min-w-0"><label className={labelCls}>Phone Number</label><div className={readOnlyCls}>{decodeEntities(viewing.phone_number) || '-'}</div></div>
               </div>
               <div className="min-w-0"><label className={labelCls}>Comments</label><div className={readOnlyCls}>{decodeEntities(viewing.comments) || '-'}</div></div>
+              {/* What the assigned employee reported back. Read-only here: the notes are written in
+                  Marketing > Complaint Form, by the assignee or by whoever reviews it. */}
+              <div className="min-w-0">
+                <label className={labelCls}>Notes / Comments from the field</label>
+                <div className={readOnlyCls}>{decodeEntities(viewing.complaint_note || '') || '-'}</div>
+                {decodeEntities(viewing.note_updated_by || '') && (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Last saved by {decodeEntities(viewing.note_updated_by)}
+                    {viewing.note_updated_at ? ` · ${formatDate(viewing.note_updated_at)}` : ''}
+                  </p>
+                )}
+              </div>
             </div>
           </Modal>
       )}

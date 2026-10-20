@@ -3231,4 +3231,59 @@ router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
   }
 });
 
+const { createMarketingRouter } = require('./marketing');
+const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
+
+// ============================================
+// MARKETING -- COMPLAINTS ONLY
+// ============================================
+//
+// routes/marketing.js serves every portal; this mount gives the supervisor portal the Complaint
+// Form and nothing else of Marketing.
+//
+// That is the whole reason it exists: complaints are assigned to supervisors like they are to
+// coordinators and executives, so a supervisor needs the screen to read the assignment, set
+// In Progress and save what they did. The marketing *tracker* is a different thing entirely -- the
+// partner's lead pipeline -- and is none of a supervisor's business, so `canReadTracker: false`
+// refuses those reads here rather than relying on the sidebar not to link them. The tracker writes
+// are already refused by `canWrite: false` / `canReview: false`.
+//
+// Rows: the partner's complaints within this person's assigned zones, plus any complaint assigned
+// to them, wherever the property sits -- it is the FP who picks the assignee, so it can
+// legitimately be outside their zones.
+//
+// Writes: none, except on their own assignment -- the status (In Progress only) and the note.
+const supervisorMarketingScope = async (req) => {
+  if (!req.franchisePartnerId) {
+    throw Object.assign(
+      new Error('Complaints are only available to a supervisor under a franchise partner.'),
+      { status: 403 }
+    );
+  }
+  const employeeId = await getEmployeeIdForZoneLookup(req);
+  const creatorEmail = getCreatorIdentifier(req);
+  const rawZones = await getAssignedZones(employeeId, creatorEmail);
+  // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
+  // falls back to this person's own records rather than to nothing.
+  const unrestricted = rawZones.includes('__ALL__');
+  const employee = await resolveFpEmployee(pool, {
+    franchisePartnerId: req.franchisePartnerId,
+    userId: req.user?.id,
+    email: req.user?.email,
+    username: req.user?.username
+  });
+  return {
+    fpIds: [req.franchisePartnerId],
+    writeFpId: req.franchisePartnerId,
+    zones: unrestricted ? null : rawZones,
+    canWrite: false,
+    canReview: false,
+    canReadTracker: false,
+    assignee: employee ? { employeeId: employee.id } : null,
+    withPartnerName: false
+  };
+};
+
+router.use('/marketing', requireSupervisorScope, createMarketingRouter({ resolveScope: supervisorMarketingScope }));
+
 module.exports = router;

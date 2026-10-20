@@ -313,11 +313,20 @@ page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
   partner, narrowed with `?fpId=`) and `/api/manager/marketing` (its partner, within its assigned
   zones). A change to a tracker field or a complaint rule therefore cannot reach one portal and
   miss another.
-- **Five portals, not three.** FP, admin and Ops Manager edit; the **coordinator** reads and may
-  set Coordinator Reviewed (nothing else); the **executive** reads only. The **supervisor portal
-  has no Marketing at all** — no mount in the backend, no nav entry, by design. Each portal's
-  permissions are mirrored for the UI by `marketingPermissions` in `src/utils/marketingApi.js`;
-  the server is the authority and refuses the rest regardless of what a screen renders.
+- **Six portals, not three.** FP, admin and Ops Manager edit; the **coordinator** reads and may
+  set Coordinator Reviewed (nothing else); the **executive** reads only; the **supervisor** has the
+  **Complaint Form and nothing else of Marketing** — no tracker, no marketing dashboard. Each
+  portal's permissions are mirrored for the UI by `marketingPermissions` in
+  `src/utils/marketingApi.js`; the server is the authority and refuses the rest regardless of what
+  a screen renders.
+- **The supervisor mount exists for the complaints alone.** Complaints are assigned to supervisors
+  as they are to coordinators, so that portal needs the screen to read the assignment, report
+  In Progress and save what was done — but the partner's lead pipeline is none of its business.
+  `canReadTracker: false` on its scope is what refuses `GET /tracker`, `/tracker/archived` and
+  `/dashboard`; leaving the router unmounted was the old answer, and a sidebar that does not link a
+  screen is not a permission. `marketingHasTracker(portalType)` mirrors the same fact for the UI,
+  which is why Archived shows that portal only its Complaint Forms tab — a screen that asked for the
+  tracker anyway would put a 403 where the first tab should be.
 - **The mount decides what is visible; the router never asks the role.** `resolveScope(req)`
   returns `fpIds` (`null` = every partner, `[]` = nothing), `writeFpId` (the partner a new
   complaint belongs to), `zones` (`null` = unrestricted), `creator` (see below), `canWrite`,
@@ -399,6 +408,146 @@ page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
   `node --test admin-portal/src/utils/marketingApi.test.js`.
 - The guard tests in `utils/marketingDashboard.test.js` and `utils/marketingFollowUp.test.js` read
   **`routes/marketing.js`** now. If the marketing code moves again, repoint them.
+
+## A Complaint Is a Piece of Work, Not Just a Record
+
+`Open → Assigned → In Progress → Reviewed → Closed`, and **closing is what archives it**
+(`schema_v51_complaint_workflow.sql`). A complaint is filed by an employee portal or by the
+customer's own Contact page; the FP hands it to one zone-centric employee, that employee works it
+and writes a note, and the FP or its manager verifies the note and closes it — at which point the
+row lands in Marketing > Archived. The resident who filed it is emailed at every step
+(`schema_v52`, below).
+
+- **One policy function decides who may move a complaint where**:
+  `resolveComplaintStatus` / `complaintStatusesFor` in `backend/utils/marketingComplaints.js`,
+  mirrored for the screens by `admin-portal/src/utils/complaintStatus.js`. The assignee may set
+  **`In Progress` and nothing else** — they report progress, they do not sign their own work off —
+  and the FP and its manager may set anything **except `Assigned`**, because assigning is what
+  produces that status: offered from the dropdown it would let a row claim an assignee nobody
+  chose. `forbidden` on the result separates "no such status" (400) from "not yours to set" (403).
+- **Assigning is the FP's alone; closing is the FP's and its manager's.** The admin portal may
+  create and edit complaints but does neither. Per-portal in `marketingPermissions`
+  (`canAssign`, `canClose`) and per-mount in `resolveScope` — the server refuses the rest.
+- **The scope gained `assignee: { employeeId }`,** resolved per request by
+  `resolveFpEmployee` in `backend/utils/fpEmployeeDirectory.js`. It does two things: the complaint
+  lists add `OR assigned_employee_id = ?` (`zoneFilter(scope, prefix, { withAssignee: true })`), so
+  an assignment is visible to the person who has to act on it even outside their zones — the FP
+  picks the assignee, so it can legitimately be someone else's zone — and `assigneeOnly(scope)`
+  holds a caller who cannot otherwise write to **that one row**. Without it an assignee could
+  report on every complaint their zones cover.
+- **Resolve an employee by `user_id`, then email/username — never by treating the token's `id` as
+  an `fp_employees.id`.** Both are auto-increment sequences and collide constantly; a wrong match
+  hands one employee another's assigned complaints.
+- **Manager, coordinator, supervisor and executive can be assigned — nobody else.** The test is
+  whether the role has the Complaint Form screen to read the assignment in and report back from;
+  field staff have no portal of their own, so a complaint handed to one would go to a screen that
+  does not exist. `ASSIGNABLE_ROLES` + `normalizeEmployeeRole`, which strips schema_v8's `fp_`
+  prefix so `fp_manager` and `manager` describe the same person.
+- **The picker lists every assignable employee, not only the zone's own**, with `recommended` set
+  for those holding the complaint's zone (or the literal `all`). A zone with nobody assigned to it
+  would otherwise be an empty picker, leaving the FP unable to act on the complaint at all.
+- **The note is the tracker's note, for complaints**: one `complaint_note` capped at 500 *decoded*
+  characters, its own `PUT …/complaints/:id/note`, a `MessageSquare` bubble in the Actions column
+  that opens read-first (so a click meant only to read leaves no half-typed draft), and the same
+  text read back in the detail modal with an Edit link onto the same lightbox. It stays readable in
+  Marketing > Archived after closing — that note is the record of why the complaint was closed.
+- **Notifications are sent after the write, outside any transaction, and never throw.**
+  `services/complaintNotifications.js`: the assignee on assignment, the FP **and its managers** when
+  the assignee reports progress or saves a note, the assignee when it is closed. A failed mail
+  server must not undo the thing it was announcing — that is how a customer once paid and had the
+  payment rolled back (see `payment_history.action`). Managers covering the zone are preferred but
+  it **falls back to every active manager**: the review is what closes the complaint, so a complaint
+  nobody is asked to verify would sit at In Progress for ever.
+- Email HTML is written from the **stored, escaped** text (nothing is escaped on output
+  server-side); the in-portal `portal_notifications` message is **decoded**, because the portals
+  render it as text. Getting this backwards either un-escapes user input into a message or shows
+  `GC&#x2F;1` in a notification.
+- **`status` and `archived_at` must never disagree.** Closing sets `closed_at`, `closed_by` *and*
+  `archived_at` together; restoring from Archived brings a `Closed` row back as **`Reviewed`** and
+  clears both close stamps. In that `UPDATE` the `status` assignment comes **last**: MySQL evaluates
+  a single-table UPDATE's assignments left to right and a later one sees what an earlier one wrote,
+  so stamps written first would be testing the status the statement had already changed.
+- **A row written before schema_v51 has no status**, so every reader defaults it to `Open` —
+  `presentComplaintRow` server-side, `statusOf` in the screens. A blank cell where the workflow
+  should be says nothing at all.
+- The in-portal signal an assignee actually sees is the **"Assigned to me (n)"** chip on Marketing >
+  Complaint Form plus the tinted rows, because `assigned_to_me` is stamped on each row by the
+  server — the browser cannot work out which `fp_employees` row the caller is. The
+  `portal_notifications` rows are written as well, but no portal renders a generic feed today
+  (`SchedulingNotificationsPanel` is exported and never used).
+- Regression tests: `node --test backend/utils/marketingComplaints.test.js`,
+  `node --test backend/routes/marketing.test.js` and
+  `node --test admin-portal/src/utils/complaintStatus.test.js` (which compares the browser's copy of
+  the policy with the server's, so a portal cannot offer a status whose save answers 403).
+
+### The Customer Hears About Their Own Complaint
+
+The resident is the fifth audience: they are emailed when the complaint is **filed** and on **every**
+status move through to **Closed**, and the same status is on their portal's Contact / Help page and
+in its notification bell.
+
+- **`customer_account_id` and `customer_email` are stamped when the complaint is filed**
+  (`schema_v52_complaint_customer.sql`), not looked up on each update — a customer who changes their
+  address still gets the updates on a complaint already under way, exactly as the assignee's name is
+  stamped at assignment.
+- **A complaint the FP files on a resident's behalf reaches that resident too**, through
+  `utils/complaintCustomer.js`. The match is deliberately narrow: the property's account whose
+  **phone** is the one on the complaint, or — failing that — the property's **single** account.
+  Several households on one property code and no phone match means **nobody is told**. Telling the
+  wrong household that *their* complaint is being worked on, and then that it is resolved, is worse
+  than telling no one.
+- **The field notes never leave the staff portals.** The customer is told the *state* of their
+  complaint; `complaint_note` is the assignee's report for the FP and its manager to verify. Saving
+  a note therefore sends the customer nothing, which `marketing.test.js` asserts explicitly.
+- **`presentCustomerComplaint` decodes its text server-side**, which no staff list does. The customer
+  portal has no `decodeEntities` of its own and shipping one there to read a status line is worse
+  than decoding a display-only projection — but that payload must then never be fed back into a form
+  or an email body, both of which rely on the stored, escaped form.
+- **A `portal_notifications` row carrying only a franchise partner is visible to *every* customer of
+  that partner.** The customer feed's original branch is "anything for the `customer` role whose
+  partner owns my property", so a complaint — which concerns one household — is matched on
+  `pn.user_id` (the `customer_accounts.id` that raised it) and **excluded from that branch**. One
+  fragment, `utils/customerNotificationScope.js`, serves the list, its unread count and both
+  mark-read routes, because they have to agree: a row a customer can see but not dismiss sticks in
+  their bell for ever.
+- **Those reads must not join `onboarded_properties`.** They used to
+  `LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id` and test
+  `op.id = ?`, which matches one row per property the partner owns — so any notification the property
+  condition did not narrow (a work order, and then a complaint) came back **once per property**: a
+  customer with one unread update saw it ten times and the badge counted all ten. Every branch is now
+  an `EXISTS`, which cannot multiply rows. Regression test:
+  `node --test backend/utils/customerNotificationScope.test.js`.
+- The bell navigates to `action_url`, and the customer portal's pages live under **`/dashboard`**
+  (`frontend/src/App.jsx`) — `/contact` alone is the public marketing site's own route.
+- Regression tests: `node --test backend/utils/complaintCustomer.test.js` and the customer hops in
+  `backend/routes/marketing.test.js`.
+
+### The Employee Tables Were Broken Underneath It
+
+Both found by running the complaint workflow against the real local database, and both older than
+it. `schema_v51` fixes them and `ensureFpEmployeeSchema` (`utils/fpEmployeeDirectory.js`, called
+from `server.js` on boot) does the same thing at runtime.
+
+- **`fp_employees.role` was `ENUM('fp_manager','fp_supervisor','fp_executive')`** while the FP's Add
+  Employee form sends `manager`, `coordinator`, `supervisor`, `executive`. MySQL answers
+  `WARN_DATA_TRUNCATED` (errno 1265) for every one of them, so where the original column survives
+  **no employee can be created at all** — and a coordinator cannot exist even in principle.
+- **`fp_employee_zones.zone_id` is `INT NOT NULL` with no default** while the zone routes insert
+  `(franchise_partner_id, fp_employee_id, zone_name)` — a zone is a *name* merged from several
+  sources, so there is no id to put there. Every assignment failed with
+  `ER_NO_DEFAULT_FOR_FIELD` (errno 1364), which **silently left zone-centric access inert**: an
+  employee with no rows in that table falls back to "own records only" on every screen.
+  `schema_v29` added `zone_name` and left `zone_id` alone.
+- **`portal_notifications.type` was an ENUM too**, with no `complaint` — so every complaint
+  notification was refused with errno 1265 and dropped. `ensurePortalNotificationsSchema` now widens
+  it the same way it widens `role_type`.
+- **MySQL 8 answers `information_schema` queries with UPPERCASE column names** whatever case the
+  SELECT is written in, so `SELECT data_type …` read as `row.data_type` is `undefined` — and a
+  guard written that way reports nothing, changes nothing and looks like it ran. Alias what you
+  read (`SELECT DATA_TYPE AS dataType`), as `utils/paymentColumns.js` does. The first version of
+  `ensureFpEmployeeSchema` had exactly this bug; it was caught only by reverting the columns
+  locally and watching the boot log. Regression test:
+  `node --test backend/utils/fpEmployeeDirectory.test.js`.
 
 ## Franchise Partner Display Name Is Column-Drifted
 

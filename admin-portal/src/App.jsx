@@ -703,6 +703,15 @@ function App() {
                     <Route path="schedules" element={<Navigate to="/supervisor/schedules/dashboard" replace />} />
                     <Route path="schedules/reschedule-requests" element={<RescheduleServicePage user={user} portalType="supervisor" />} />
                     <Route path="schedules/cancelled" element={<CancelledSchedulesPage user={user} portalType="supervisor" />} />
+                    {/* Complaints -- the one part of Marketing this portal has. Complaints are
+                        assigned to supervisors like they are to coordinators, so the screen has to
+                        be here; the lead tracker and the marketing dashboard are not, and the
+                        backend mount refuses those reads rather than trusting these routes.
+                        Archived holds the complaints that were closed, which is where an assignee
+                        finds the one they finished. */}
+                    <Route path="marketing/complaint-form" element={<MarketingComplaintForm user={user} portalType="supervisor" />} />
+                    <Route path="marketing/archived" element={<MarketingArchived user={user} portalType="supervisor" />} />
+                    <Route path="marketing" element={<Navigate to="/supervisor/marketing/complaint-form" replace />} />
                     <Route path="*" element={<Navigate to="/supervisor" replace />} />
                   </Routes>
                 </SupervisorLayout>

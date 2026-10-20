@@ -3653,6 +3653,7 @@ router.put('/schedules/notifications/:notificationId/read', requireManagerScope,
 // Only a manager created by a franchise partner gets the section: a standalone manager has no
 // partner behind the tracker, and the sidebar hides Marketing from it for the same reason.
 const { createMarketingRouter } = require('./marketing');
+const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 
 const managerMarketingScope = async (req) => {
   if (!req.isFPManager || !req.franchisePartnerId) {
@@ -3664,11 +3665,23 @@ const managerMarketingScope = async (req) => {
   // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty
   // list means no zone was assigned, which the router turns into "no rows" rather than "no filter".
   const unrestricted = rawZones.includes('__ALL__');
+  // A manager reviews what its partner's employees report on a complaint and closes it, which is
+  // also what archives it. Assigning stays the FP's own decision. A manager can be the assignee
+  // too, so it resolves its own employee row like the coordinator and executive mounts do -- a
+  // complaint handed to it is then visible and reportable wherever the property sits.
+  const employee = await resolveFpEmployee(pool, {
+    franchisePartnerId: req.franchisePartnerId,
+    userId: req.user?.id,
+    email: req.user?.email,
+    username: req.user?.username
+  });
   return {
     fpIds: [req.franchisePartnerId],
     writeFpId: req.franchisePartnerId,
     zones: unrestricted ? null : rawZones,
     canWrite: true,
+    canClose: true,
+    assignee: employee ? { employeeId: employee.id } : null,
     withPartnerName: false
   };
 };

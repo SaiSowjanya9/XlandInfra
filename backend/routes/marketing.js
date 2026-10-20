@@ -26,8 +26,18 @@ const {
   toDateOnly, dueStatus, effectiveCustomerResponse
 } = require('../utils/marketingFollowUp');
 const {
-  COMPLAINT_TABLE, complaintSelect, ensureMarketingComplaintsTable, parseComplaintBody
+  COMPLAINT_TABLE, COMPLAINT_STATUSES, complaintSelect, ensureMarketingComplaintsTable,
+  parseComplaintBody, parseComplaintNote, resolveComplaintStatus, isAssignableRole,
+  normalizeEmployeeRole
 } = require('../utils/marketingComplaints');
+const {
+  employeeName, fetchFpEmployee, listAssignableEmployees
+} = require('../utils/fpEmployeeDirectory');
+const {
+  notifyComplaintAssigned, notifyComplaintProgress, notifyComplaintClosed,
+  notifyCustomerComplaintStatus
+} = require('../services/complaintNotifications');
+const { resolveComplaintCustomer } = require('../utils/complaintCustomer');
 const { partnerNameExpression } = require('../utils/franchisePartnerName');
 const { ROLE_NAMES } = require('../config/roles');
 
@@ -233,6 +243,25 @@ const presentTrackerRow = (row) => {
   };
 };
 
+/**
+ * What a complaint looks like to the portal.
+ *
+ * `status` is never blank: schema_v47 created the table without the column, so rows written
+ * before schema_v51 read back as NULL and a list of them would show nothing where the workflow is.
+ *
+ * `assigned_to_me` is how the shared screen knows whose row this is -- the status dropdown and the
+ * note bubble are open to the assignee in portals that are read-only everywhere else, and the
+ * browser cannot work that out for itself: it does not know which fp_employees row the caller is.
+ */
+const presentComplaintRow = (row, scope = {}) => ({
+  ...row,
+  status: row.status || 'Open',
+  assigned_employee_role_label: row.assigned_employee_role
+    ? (ROLE_NAMES[normalizeEmployeeRole(row.assigned_employee_role)] || row.assigned_employee_role)
+    : '',
+  assigned_to_me: !!(scope.assignee?.employeeId && row.assigned_employee_id === scope.assignee.employeeId)
+});
+
 // ============================================
 // SCOPE
 // ============================================
@@ -245,6 +274,13 @@ const presentTrackerRow = (row) => {
 //   writeFpId       number | null     partner a newly created complaint belongs to
 //   zones           string[] | null   null = unrestricted; [] = no zones assigned
 //   canWrite        boolean           false = reads only (the view-only Operations Manager)
+//   canReadTracker  boolean           default true; false = complaints only (the supervisor portal,
+//                                     which has the Complaint Form and no lead pipeline)
+//   canAssign       boolean           hand a complaint to an employee (the FP account only)
+//   canClose        boolean           verify and close a complaint (the FP and its manager)
+//   assignee        object | null     { employeeId } -- the fp_employees row this caller is, so a
+//                                     complaint assigned to them is theirs to report on even
+//                                     outside their zones
 //   withPartnerName boolean           join franchise_partners into the lists
 
 // `fpIds === null` is the admin's "every partner", so it adds no condition. A list binds one
@@ -268,7 +304,12 @@ const fpFilter = (scope, prefix = '') => {
 // visits and find it empty, since an estimate's zone is the property's and not theirs. The
 // complaints table has a zone but no created_by_id, so asking for the clause there fails the whole
 // statement with "Unknown column 'c.created_by_id'", which is a 500 where a list should be.
-const zoneFilter = (scope, prefix = '', { withCreator = false } = {}) => {
+//
+// `withAssignee` is the complaints table's own equivalent: a complaint handed to this employee is
+// theirs to see and report on wherever the property sits, exactly as a lead they entered is. Zone
+// alone would hide an assignment from the person who has to act on it -- and it is the FP who
+// chooses the assignee, so it can legitimately be someone outside the zone.
+const zoneFilter = (scope, prefix = '', { withCreator = false, withAssignee = false } = {}) => {
   if (!scope.zones) return { sql: '', params: [] };
 
   const creator = withCreator && scope.creator && [
@@ -277,20 +318,25 @@ const zoneFilter = (scope, prefix = '', { withCreator = false } = {}) => {
     { column: 'created_by_name', value: scope.creator.username }
   ].filter((match) => match.value !== undefined && match.value !== null && match.value !== '');
 
-  const creatorSql = creator && creator.length
-    ? creator.map((match) => ` OR ${prefix}${match.column} = ?`).join('')
-    : '';
-  const creatorParams = creator ? creator.map((match) => match.value) : [];
+  const extra = [
+    ...(creator || []),
+    ...(withAssignee && scope.assignee?.employeeId
+      ? [{ column: 'assigned_employee_id', value: scope.assignee.employeeId }]
+      : [])
+  ];
+
+  const extraSql = extra.length ? extra.map((match) => ` OR ${prefix}${match.column} = ?`).join('') : '';
+  const extraParams = extra.map((match) => match.value);
 
   // No zone assigned at all: own records only, rather than everything or nothing.
   if (!scope.zones.length) {
-    return creatorSql
-      ? { sql: ` AND (1 = 0${creatorSql})`, params: creatorParams }
+    return extraSql
+      ? { sql: ` AND (1 = 0${extraSql})`, params: extraParams }
       : { sql: ' AND 1 = 0', params: [] };
   }
   return {
-    sql: ` AND (${prefix}zone IN (${scope.zones.map(() => '?').join(',')})${creatorSql})`,
-    params: [...scope.zones, ...creatorParams]
+    sql: ` AND (${prefix}zone IN (${scope.zones.map(() => '?').join(',')})${extraSql})`,
+    params: [...scope.zones, ...extraParams]
   };
 };
 
@@ -360,12 +406,66 @@ const createMarketingRouter = ({ resolveScope }) => {
     return handler(req, res, scope);
   });
 
+  // Reporting on a complaint -- its status and its note -- is open to the employee it was assigned
+  // to as well as to the portals that may edit marketing records. That is the whole point of the
+  // workflow: the coordinator and executive portals are read-only everywhere else, and the person
+  // who did the work is the one who knows what happened. The handlers below hold them to their own
+  // row (`assigneeOnly`) and to the one status they may set (`resolveComplaintStatus`).
+  const scopedComplaintReport = (handler) => scoped(async (req, res, scope) => {
+    if (!scope.canWrite && !scope.assignee?.employeeId) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to change marketing records.' });
+    }
+    return handler(req, res, scope);
+  });
+
+  // The lead pipeline, which not every portal that handles complaints is entitled to see. The
+  // supervisor portal has the Complaint Form because complaints are assigned to supervisors, but
+  // marketing leads are none of its business -- and mounting the router for the complaints alone
+  // would otherwise hand it `GET /tracker` as well. The tracker *writes* are already refused by
+  // canWrite/canReview; this is what closes the reads.
+  const scopedTrackerRead = (handler) => scoped(async (req, res, scope) => {
+    if (scope.canReadTracker === false) {
+      return res.status(403).json({ success: false, message: 'The marketing tracker is not available for your account.' });
+    }
+    return handler(req, res, scope);
+  });
+
+  // Handing a complaint to an employee is the franchise partner's own decision.
+  const scopedAssign = (handler) => scoped(async (req, res, scope) => {
+    if (!scope.canAssign) {
+      return res.status(403).json({ success: false, message: 'Only the franchise partner can assign a complaint.' });
+    }
+    return handler(req, res, scope);
+  });
+
+  // A caller who may not edit marketing records at all reaches exactly one complaint: the one
+  // assigned to them. Without this an assignee could report on any complaint their zones cover.
+  const assigneeOnly = (scope, prefix = '') => (
+    scope.canWrite
+      ? { sql: '', params: [] }
+      : { sql: ` AND ${prefix}assigned_employee_id = ?`, params: [scope.assignee.employeeId] }
+  );
+
+  // The row a complaint write replies with, partner name included: every one of them feeds its
+  // reply straight back into the portal's list, and a reply without the partner blanked the
+  // admin's Franchise Partner cell until the next reload.
+  const readComplaint = async (id, scope) => {
+    const partner = await partnerNameParts(scope, 'c.');
+    const [rows] = await pool.execute(
+      `SELECT ${complaintSelect('c.')}${partner.column}
+       FROM ${COMPLAINT_TABLE} c${partner.join}
+       WHERE c.id = ?`,
+      [id]
+    );
+    return rows[0] ? presentComplaintRow(rows[0], scope) : null;
+  };
+
   // ============================================
   // MARKETING TRACKER
   // ============================================
 
   // Direct estimates for the tracker list and the New picker; latest first.
-  router.get('/tracker', scoped(async (req, res, scope) => {
+  router.get('/tracker', scopedTrackerRead(async (req, res, scope) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
@@ -387,7 +487,7 @@ const createMarketingRouter = ({ resolveScope }) => {
   }));
 
   // Tracker entries that were archived -- newest archive first.
-  router.get('/tracker/archived', scoped(async (req, res, scope) => {
+  router.get('/tracker/archived', scopedTrackerRead(async (req, res, scope) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
@@ -410,7 +510,7 @@ const createMarketingRouter = ({ resolveScope }) => {
   // Everything Marketing > Dashboard draws, from the rows Marketing > Tracker edits: tracked,
   // non-archived direct estimates. The counting rules live in utils/marketingDashboard.js so they
   // can be tested without a database.
-  router.get('/dashboard', scoped(async (req, res, scope) => {
+  router.get('/dashboard', scopedTrackerRead(async (req, res, scope) => {
     try {
       await ensureMarketingTrackerColumns();
       const fp = fpFilter(scope, 'e.');
@@ -789,7 +889,7 @@ const createMarketingRouter = ({ resolveScope }) => {
       await ensureMarketingComplaintsTable();
       const includeArchived = req.query.includeArchived === 'true';
       const fp = fpFilter(scope, 'c.');
-      const zone = zoneFilter(scope, 'c.');
+      const zone = zoneFilter(scope, 'c.', { withAssignee: true });
       const partner = await partnerNameParts(scope, 'c.');
       const [rows] = await pool.execute(
         `SELECT ${complaintSelect('c.')}${partner.column}
@@ -798,7 +898,7 @@ const createMarketingRouter = ({ resolveScope }) => {
          ORDER BY ${includeArchived ? '(c.archived_at IS NOT NULL), ' : ''}c.created_at DESC`,
         [...fp.params, ...zone.params]
       );
-      res.json({ success: true, data: rows });
+      res.json({ success: true, data: rows.map((row) => presentComplaintRow(row, scope)) });
     } catch (error) {
       fail(res, error, 'Failed to fetch complaints');
     }
@@ -810,7 +910,7 @@ const createMarketingRouter = ({ resolveScope }) => {
     try {
       await ensureMarketingComplaintsTable();
       const fp = fpFilter(scope, 'c.');
-      const zone = zoneFilter(scope, 'c.');
+      const zone = zoneFilter(scope, 'c.', { withAssignee: true });
       const partner = await partnerNameParts(scope, 'c.');
       const [rows] = await pool.execute(
         `SELECT ${complaintSelect('c.')}${partner.column}
@@ -819,9 +919,32 @@ const createMarketingRouter = ({ resolveScope }) => {
          ORDER BY c.archived_at DESC`,
         [...fp.params, ...zone.params]
       );
-      res.json({ success: true, data: rows });
+      res.json({ success: true, data: rows.map((row) => presentComplaintRow(row, scope)) });
     } catch (error) {
       fail(res, error, 'Failed to fetch archived complaints');
+    }
+  }));
+
+  // The employees a complaint can be handed to, the ones covering ?zone= first.
+  //
+  // Only the three portals that have a Marketing section are offered (manager, coordinator,
+  // executive): the supervisor portal has none, so a supervisor would never see the assignment.
+  // Every assignable employee is returned rather than only the zone's own -- a zone with nobody
+  // assigned to it would otherwise be an empty picker, leaving the FP unable to act at all -- and
+  // `recommended` is what the picker groups by.
+  router.get('/complaints/employees', scopedAssign(async (req, res, scope) => {
+    try {
+      if (!scope.writeFpId) {
+        return res.status(400).json({ success: false, message: 'Select the franchise partner first.' });
+      }
+      const employees = await listAssignableEmployees(pool, {
+        franchisePartnerId: scope.writeFpId,
+        zone: req.query.zone,
+        decode: decodeEntities
+      });
+      res.json({ success: true, data: employees });
+    } catch (error) {
+      fail(res, error, 'Failed to fetch assignable employees');
     }
   }));
 
@@ -838,25 +961,29 @@ const createMarketingRouter = ({ resolveScope }) => {
       if (errors.length > 0) {
         return res.status(400).json({ success: false, message: errors.join('; ') });
       }
+      // A complaint filed by staff is still about somebody's home, and that resident hears about
+      // every step of it from here on -- so the account is resolved now and stamped on the row,
+      // rather than looked up again on each update. It is deliberately a narrow match: see
+      // utils/complaintCustomer.js. No match simply means nobody is written to.
+      const customer = await resolveComplaintCustomer(pool, complaint);
       const [result] = await pool.execute(
         `INSERT INTO ${COMPLAINT_TABLE}
            (franchise_partner_id, property_id, zone, responsible_person,
-            concern_with, concern_with_other, contact_person_name, phone_number, comments)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            concern_with, concern_with_other, contact_person_name, phone_number, comments,
+            customer_account_id, customer_email)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           scope.writeFpId, complaint.property_id, complaint.zone, complaint.responsible_person,
           complaint.concern_with, complaint.concern_with_other,
-          complaint.contact_person_name, complaint.phone_number, complaint.comments
+          complaint.contact_person_name, complaint.phone_number, complaint.comments,
+          customer?.id || null, customer?.email || null
         ]
       );
-      const partner = await partnerNameParts(scope, 'c.');
-      const [rows] = await pool.execute(
-        `SELECT ${complaintSelect('c.')}${partner.column}
-         FROM ${COMPLAINT_TABLE} c${partner.join}
-         WHERE c.id = ?`,
-        [result.insertId]
-      );
-      res.json({ success: true, message: 'Complaint logged', data: rows[0] });
+      const saved = await readComplaint(result.insertId, scope);
+      // The acknowledgement goes out as soon as it is logged, so the resident is not left wondering
+      // whether a complaint filed about their home reached anyone.
+      notifyCustomerComplaintStatus(saved, { status: 'Open' });
+      res.json({ success: true, message: 'Complaint logged', data: saved });
     } catch (error) {
       fail(res, error, 'Failed to save complaint');
     }
@@ -892,16 +1019,197 @@ const createMarketingRouter = ({ resolveScope }) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ success: false, message: 'Complaint not found' });
       }
-      const partner = await partnerNameParts(scope, 'c.');
-      const [rows] = await pool.execute(
-        `SELECT ${complaintSelect('c.')}${partner.column}
-         FROM ${COMPLAINT_TABLE} c${partner.join}
-         WHERE c.id = ?`,
-        [id]
-      );
-      res.json({ success: true, message: 'Complaint updated', data: rows[0] });
+      res.json({ success: true, message: 'Complaint updated', data: await readComplaint(id, scope) });
     } catch (error) {
       fail(res, error, 'Failed to update complaint');
+    }
+  }));
+
+  // ============================================
+  // COMPLAINT WORKFLOW
+  // ============================================
+  //
+  //   Open -> Assigned -> In Progress -> Reviewed -> Closed
+  //
+  // The FP hands a complaint to one zone-centric employee (Assigned), who works it, reports
+  // In Progress and saves a note; the FP or its manager then verifies that note, marks it Reviewed
+  // and closes it -- and closing archives the row. Who may set what is
+  // utils/marketingComplaints.js's `resolveComplaintStatus`, so the rule lives in one place rather
+  // than in five portals' screens.
+  //
+  // Every notification is sent *after* the write has succeeded and outside any transaction. A
+  // notification that fails must not undo the thing it was announcing -- that is how a customer
+  // once paid and had the payment rolled back (see AGENTS.md on payment_history.action) -- so the
+  // services here swallow their own errors and these handlers do not await an outcome from them.
+
+  // Hand a complaint to one employee. Reassignment is the same call: it replaces the assignee and
+  // puts the row back to Assigned, because a new assignee has not started on it.
+  router.put('/complaints/:id/assign', scopedAssign(async (req, res, scope) => {
+    try {
+      await ensureMarketingComplaintsTable();
+      const id = parseRowId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+      }
+      if (!scope.writeFpId) {
+        return res.status(400).json({ success: false, message: 'Select the franchise partner this complaint belongs to.' });
+      }
+      const employee = await fetchFpEmployee(pool, req.body.employeeId, scope.writeFpId);
+      if (!employee) {
+        return res.status(404).json({ success: false, message: 'Employee not found' });
+      }
+      // Every assignable role has the Complaint Form screen to read the assignment in and report
+      // back from; anything else would be handing the complaint to a portal that cannot answer it.
+      if (!isAssignableRole(employee.role)) {
+        return res.status(400).json({
+          success: false,
+          message: 'A complaint can only be assigned to a manager, coordinator, supervisor or executive.'
+        });
+      }
+      const fp = fpFilter(scope);
+      const zone = zoneFilter(scope);
+      const actor = trackerActor(req);
+      const [result] = await pool.execute(
+        `UPDATE ${COMPLAINT_TABLE} SET
+           assigned_employee_id = ?, assigned_employee_name = ?, assigned_employee_role = ?,
+           assigned_at = NOW(), assigned_by = ?,
+           status = 'Assigned', status_updated_by = ?, status_updated_by_role = ?,
+           status_updated_at = NOW(), updated_at = NOW()
+         WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}`,
+        [
+          employee.id, employeeName(employee), normalizeEmployeeRole(employee.role),
+          actor.name, actor.name, actor.role,
+          id, ...fp.params, ...zone.params
+        ]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      const complaint = await readComplaint(id, scope);
+      notifyComplaintAssigned(complaint);
+      // The customer is told their complaint has reached somebody, but never who: the assignee's
+      // name is for the staff portals.
+      notifyCustomerComplaintStatus(complaint, { status: 'Assigned' });
+      res.json({ success: true, message: `Assigned to ${employeeName(employee)}`, data: complaint });
+    } catch (error) {
+      fail(res, error, 'Failed to assign complaint');
+    }
+  }));
+
+  // Move a complaint along. The assignee may set In Progress and nothing else; the FP and its
+  // manager may set anything but Assigned, which only assigning produces.
+  router.put('/complaints/:id/status', scopedComplaintReport(async (req, res, scope) => {
+    try {
+      await ensureMarketingComplaintsTable();
+      const id = parseRowId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+      }
+      const fp = fpFilter(scope);
+      const zone = zoneFilter(scope, '', { withAssignee: true });
+      const mine = assigneeOnly(scope);
+      const [current] = await pool.execute(
+        `SELECT id, status, assigned_employee_id, archived_at FROM ${COMPLAINT_TABLE}
+         WHERE id = ?${fp.sql}${zone.sql}${mine.sql}`,
+        [id, ...fp.params, ...zone.params, ...mine.params]
+      );
+      if (!current.length) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      if (current[0].archived_at) {
+        return res.status(400).json({
+          success: false,
+          message: 'This complaint is archived. Restore it from Marketing > Archived to change its status.'
+        });
+      }
+      const isAssignee = !!(scope.assignee?.employeeId
+        && current[0].assigned_employee_id === scope.assignee.employeeId);
+      const { error, forbidden, status } = resolveComplaintStatus(req.body, {
+        canClose: !!scope.canClose,
+        isAssignee
+      });
+      if (error) {
+        return res.status(forbidden ? 403 : 400).json({ success: false, message: error });
+      }
+
+      // Closed and archived are the same event: the agreed workflow is that closing a complaint
+      // moves it to Archived, and leaving archived_at behind would show a closed complaint in the
+      // live list for ever.
+      const closing = decodeEntities(status).trim() === 'Closed';
+      const actor = trackerActor(req);
+      const [result] = await pool.execute(
+        `UPDATE ${COMPLAINT_TABLE} SET
+           status = ?,
+           status_updated_by = ?, status_updated_by_role = ?, status_updated_at = NOW(),
+           closed_at = ${closing ? 'NOW()' : 'NULL'},
+           closed_by = ${closing ? '?' : 'NULL'},
+           archived_at = ${closing ? 'NOW()' : 'archived_at'},
+           updated_at = NOW()
+         WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}${mine.sql}`,
+        [
+          status, actor.name, actor.role,
+          ...(closing ? [actor.name] : []),
+          id, ...fp.params, ...zone.params, ...mine.params
+        ]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      const complaint = await readComplaint(id, scope);
+      // The assignee reporting progress is what asks the FP and its manager for a review; the
+      // close is what tells the assignee it is finished. An FP moving the row along itself needs
+      // no announcement -- it is the one doing it.
+      if (closing) notifyComplaintClosed(complaint);
+      else if (isAssignee && !scope.canWrite) notifyComplaintProgress(complaint, { statusChanged: true });
+      // The customer hears about every move, whoever made it -- that is the whole point of the
+      // status as far as they are concerned, and Closed is the one that matters most.
+      notifyCustomerComplaintStatus(complaint, { status: decodeEntities(status).trim() });
+      res.json({
+        success: true,
+        message: closing ? 'Complaint closed and moved to Archived' : 'Status updated',
+        data: complaint
+      });
+    } catch (error) {
+      fail(res, error, 'Failed to update complaint status');
+    }
+  }));
+
+  // The note bubble in the Actions column -- one box per complaint, capped at 500 characters, the
+  // same feature the marketing tracker's note is. It is the assignee's report of what they did,
+  // which is why they may write it in portals that are read-only everywhere else; the FP and its
+  // manager read it, and may add to it when they verify.
+  router.put('/complaints/:id/note', scopedComplaintReport(async (req, res, scope) => {
+    try {
+      await ensureMarketingComplaintsTable();
+      const id = parseRowId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+      }
+      const { error, note } = parseComplaintNote(req.body);
+      if (error) {
+        return res.status(400).json({ success: false, message: error });
+      }
+      const fp = fpFilter(scope);
+      const zone = zoneFilter(scope, '', { withAssignee: true });
+      const mine = assigneeOnly(scope);
+      const actor = trackerActor(req);
+      const [result] = await pool.execute(
+        `UPDATE ${COMPLAINT_TABLE} SET complaint_note = ?,
+           note_updated_by = ?, note_updated_by_role = ?, note_updated_at = NOW(),
+           updated_at = NOW()
+         WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}${mine.sql}`,
+        [note, actor.name, actor.role, id, ...fp.params, ...zone.params, ...mine.params]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      const complaint = await readComplaint(id, scope);
+      if (!scope.canWrite && complaint?.assigned_to_me) {
+        notifyComplaintProgress(complaint, { noteChanged: true });
+      }
+      res.json({ success: true, message: 'Note saved', data: complaint });
+    } catch (error) {
+      fail(res, error, 'Failed to save note');
     }
   }));
 
@@ -930,6 +1238,10 @@ const createMarketingRouter = ({ resolveScope }) => {
   }));
 
   // Bring an archived complaint back to the complaint form list.
+  //
+  // A complaint that was archived by being closed comes back as Reviewed, not Closed: closing is
+  // what archives a complaint, so a Closed row sitting in the live list would contradict the one
+  // rule the workflow rests on -- and reopening it is the only reason to restore it.
   router.put('/complaints/:id/unarchive', scopedWrite(async (req, res, scope) => {
     try {
       await ensureMarketingComplaintsTable();
@@ -939,10 +1251,20 @@ const createMarketingRouter = ({ resolveScope }) => {
       }
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope);
+      const actor = trackerActor(req);
       const [result] = await pool.execute(
-        `UPDATE ${COMPLAINT_TABLE} SET archived_at = NULL
+        // MySQL evaluates a single-table UPDATE's assignments left to right, and a later one sees
+        // the value an earlier one just wrote -- so `status` is assigned LAST. Written first, the
+        // three stamps below would be testing the status this statement had already changed, and a
+        // reopened complaint would record nobody as having reopened it.
+        `UPDATE ${COMPLAINT_TABLE} SET archived_at = NULL,
+           status_updated_by = CASE WHEN status = 'Closed' THEN ? ELSE status_updated_by END,
+           status_updated_by_role = CASE WHEN status = 'Closed' THEN ? ELSE status_updated_by_role END,
+           status_updated_at = CASE WHEN status = 'Closed' THEN NOW() ELSE status_updated_at END,
+           closed_at = NULL, closed_by = NULL,
+           status = CASE WHEN status = 'Closed' THEN 'Reviewed' ELSE status END
          WHERE id = ? AND archived_at IS NOT NULL${fp.sql}${zone.sql}`,
-        [id, ...fp.params, ...zone.params]
+        [actor.name, actor.role, id, ...fp.params, ...zone.params]
       );
       if (result.affectedRows === 0) {
         return res.status(404).json({ success: false, message: 'Archived complaint not found' });
@@ -963,6 +1285,7 @@ module.exports = {
   TRACKER_OPTIONS,
   trackerSelect,
   presentTrackerRow,
+  presentComplaintRow,
   effectiveTrackerStatus,
   autoTrackerStatus,
   COORDINATOR_REVIEW_AFTER_MS

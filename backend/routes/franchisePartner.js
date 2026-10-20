@@ -6989,6 +6989,11 @@ const fpMarketingScope = (req) => {
     writeFpId: req.fpId,
     zones: null,
     canWrite: true,
+    // Handing a complaint to one of its own zone-centric employees is the franchise partner's own
+    // decision, and so is closing it once the work has been verified -- closing is what moves the
+    // complaint into Marketing > Archived.
+    canAssign: true,
+    canClose: true,
     withPartnerName: false
   };
 };
