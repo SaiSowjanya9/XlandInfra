@@ -100,11 +100,13 @@ const EmployeeLayout = ({ admin, onLogout, children }) => {
     location.pathname.startsWith('/employee/employee-zone-management')
   );
 
-  // Base nav items - filtered based on role
+  // Base nav items - filtered based on role.
+  //
+  // Complaints are reached inside Marketing, as they are in the FP portal: every portal's sidebar
+  // follows the FP order, and the FP portal has no heading of its own for them.
   const allNavItems = [
     { path: '/employee', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employee/create-customer', icon: FileInput, label: 'Add Customer' },
-    { path: '/employee/complaints', icon: FileWarning, label: 'Complaints' },
     { path: '/employee/user-management', icon: Shield, label: 'User Management', adminOnly: true },
     // The QR endpoints are admin/super_admin only (`adminOnly` in backend/routes/qr.js), so for an
     // Operations Manager this opened a page whose every request answered 403 and whose every figure

@@ -26,6 +26,7 @@ import {
   History,
   Calendar,
   FileWarning,
+  Megaphone,
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
@@ -86,10 +87,11 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     
   ];
 
-  // Complaints sub-items. This portal has the Complaint Form and no other part of Marketing: a
-  // complaint is assigned to supervisors as it is to coordinators, but the partner's lead tracker is
-  // none of a supervisor's business and its backend mount refuses those reads outright.
-  const complaintsSubItems = [
+  // Marketing sub-items -- the Complaint Form and its archive, in the FP portal's own order. This
+  // portal has no other part of Marketing: a complaint is assigned to supervisors as it is to
+  // coordinators, but the partner's lead tracker (Dashboard, Tracker) is none of a supervisor's
+  // business and its backend mount refuses those reads outright.
+  const marketingSubItems = [
     { path: '/supervisor/marketing/complaint-form', icon: FileWarning, label: 'Complaint Form' },
     { path: '/supervisor/marketing/archived', icon: Archive, label: 'Archived' },
   ];
@@ -98,7 +100,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/supervisor/estimates';
   const isBillingPaymentsActive = billingPaymentsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/billing');
   const isSchedulesActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/schedules');
-  const isComplaintsActive = complaintsSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/marketing');
+  const isMarketingActive = marketingSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/supervisor/marketing');
   
   // Color constants for sidebar
   const colors = {
@@ -120,47 +122,47 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
     if (isBillingPaymentsActive) setExpandedMenus(prev => ({ ...prev, billingPayments: true }));
     if (isSchedulesActive) setExpandedMenus(prev => ({ ...prev, schedules: true }));
-    if (isComplaintsActive) setExpandedMenus(prev => ({ ...prev, complaints: true }));
-  }, [location.pathname, isVendorActive, isEstimatesActive, isBillingPaymentsActive, isSchedulesActive, isComplaintsActive]);
+    if (isMarketingActive) setExpandedMenus(prev => ({ ...prev, marketing: true }));
+  }, [location.pathname, isVendorActive, isEstimatesActive, isBillingPaymentsActive, isSchedulesActive, isMarketingActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false, billingPayments: false, schedules: false, complaints: false });
+      setExpandedMenus({ vendors: opening, estimates: false, billingPayments: false, schedules: false, marketing: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening, billingPayments: false, schedules: false, complaints: false });
+      setExpandedMenus({ vendors: false, estimates: opening, billingPayments: false, schedules: false, marketing: false });
     }
   };
 
   const toggleBillingPayments = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.billingPayments;
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: opening, schedules: false, complaints: false });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: opening, schedules: false, marketing: false });
     }
   };
 
   const toggleSchedules = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.schedules;
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: opening, complaints: false });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: opening, marketing: false });
     }
   };
 
-  const toggleComplaints = () => {
+  const toggleMarketing = () => {
     if (!sidebarCollapsed) {
-      const opening = !expandedMenus.complaints;
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: false, complaints: opening });
+      const opening = !expandedMenus.marketing;
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: false, marketing: opening });
     }
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments || expandedMenus.schedules || expandedMenus.complaints;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.billingPayments || expandedMenus.schedules || expandedMenus.marketing;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -169,7 +171,7 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: false, complaints: false });
+      setExpandedMenus({ vendors: false, estimates: false, billingPayments: false, schedules: false, marketing: false });
     };
     return (
       <Link
@@ -427,64 +429,6 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               )}
             </div>
 
-            {/* Complaints Section -- the Complaint Form and its archive, the only part of
-                Marketing this portal has: complaints are assigned to supervisors, leads are not. */}
-            <div className="mt-1">
-              <button
-                onClick={toggleComplaints}
-                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
-                style={{
-                  background: (expandedMenus.complaints || (isComplaintsActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
-                  color: (expandedMenus.complaints || (isComplaintsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
-                }}
-                onMouseEnter={(e) => { if (!expandedMenus.complaints && !(isComplaintsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
-                onMouseLeave={(e) => { if (!expandedMenus.complaints && !(isComplaintsActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
-                title={sidebarCollapsed ? 'Complaints' : ''}
-              >
-                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
-                  <FileWarning className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.complaints || (isComplaintsActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
-                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Complaints</span>}
-                </div>
-                {!sidebarCollapsed && (
-                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
-                    expandedMenus.complaints ? 'bg-amber-500/20' : 'bg-white/10'
-                  }`}>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        expandedMenus.complaints ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: expandedMenus.complaints ? colors.activeText : colors.iconGold }}
-                    />
-                  </span>
-                )}
-              </button>
-              {expandedMenus.complaints && !sidebarCollapsed && (
-                <div className="ml-4 mt-1 space-y-1 pl-3">
-                  {complaintsSubItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.path;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setSidebarOpen(false)}
-                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
-                        style={{
-                          background: isActive ? colors.activeBg : 'transparent',
-                          color: isActive ? colors.activeText : colors.primaryText,
-                        }}
-                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
-                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
             {/* Vendor Management Section */}
             <div className="mt-1">
               <button
@@ -518,6 +462,64 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
               {expandedMenus.vendors && !sidebarCollapsed && (
                 <div className="ml-4 mt-1 space-y-1 pl-3" >
                   {vendorSubItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                        style={{
+                          background: isActive ? colors.activeBg : 'transparent',
+                          color: isActive ? colors.activeText : colors.primaryText,
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Marketing Section -- last, as in the FP portal. Only the Complaint Form and its
+                archive: complaints are assigned to supervisors, the lead pipeline is not. */}
+            <div className="mt-1">
+              <button
+                onClick={toggleMarketing}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                style={{
+                  background: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent',
+                  color: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText,
+                }}
+                onMouseEnter={(e) => { if (!expandedMenus.marketing && !(isMarketingActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={(e) => { if (!expandedMenus.marketing && !(isMarketingActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                title={sidebarCollapsed ? 'Marketing' : ''}
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                  <Megaphone className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.marketing || (isMarketingActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                  {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Marketing</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                    expandedMenus.marketing ? 'bg-amber-500/20' : 'bg-white/10'
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedMenus.marketing ? 'rotate-180' : ''
+                      }`}
+                      style={{ color: expandedMenus.marketing ? colors.activeText : colors.iconGold }}
+                    />
+                  </span>
+                )}
+              </button>
+              {expandedMenus.marketing && !sidebarCollapsed && (
+                <div className="ml-4 mt-1 space-y-1 pl-3">
+                  {marketingSubItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
                     return (

@@ -218,6 +218,32 @@ fetch('/api/manager/dashboard', { ... });
   second band butted against the first. This is the one place the warm skin is deliberately used
   outside the FP portal.
 
+## Every Sidebar Follows the FP Portal's Order
+
+The FP portal's sidebar is the canonical order, and every other portal lists whichever of those
+headings it has **in that same order**:
+
+1. Dashboard · 2. Add Customer · 3. Property Management · 4. Work Orders · 5. Estimates / AMC ·
+6. Billing & Payments · 7. Schedules · 8. Vendor Management · 9. Employee (Zone) Management ·
+10. Marketing
+
+- **Marketing is always last**, and **Employee (Zone) Management immediately before it** — the
+  manager, coordinator and executive portals used to render that standalone item *after* Marketing.
+  Where a portal's branch has no Marketing section at all (a standalone coordinator or executive,
+  who has no franchise partner behind the pipeline), Employee Zone really is last.
+- **Complaints have no heading of their own**, in any portal: they are reached inside Marketing, at
+  `Marketing > Complaint Form`, because that is where the FP portal keeps them. The manager and
+  admin portals used to carry a top-level **Complaints** item at position 3 — their read-only
+  inboxes (`/manager/complaints`, `/employee/complaints`) are still routed but no longer linked,
+  since `Marketing > Complaint Form` shows the same rows *and* the workflow.
+- **The supervisor portal's one Marketing screen is still called Marketing**, in Marketing's slot,
+  with the Complaint Form and Archived under it in the FP sub-order. A section named after its only
+  child would have been the one portal whose headings read differently.
+- Every portal's Marketing sub-items are already the FP's four in the FP's order — Dashboard,
+  Tracker, Complaint Form, Archived — minus whatever that portal's mount refuses.
+- The admin portal's **User Management** and **QR Management** have no FP counterpart and stay where
+  they are, above Property Management.
+
 ## Work Orders Header
 
 - **Every portal's Work Orders page uses `components/workorders/WorkOrdersHeader.jsx`.** Six pages
