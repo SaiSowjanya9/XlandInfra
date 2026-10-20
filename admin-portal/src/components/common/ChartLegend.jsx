@@ -19,7 +19,10 @@
 export default function ChartLegend({ items = [], className = '', size = 'sm', layout = 'list' }) {
   const rows = items.filter(Boolean);
   if (!rows.length) return null;
-  const text = size === 'xs' ? 'text-[11px]' : size === 'md' ? 'text-sm sm:text-base' : 'text-xs sm:text-sm';
+  // 'md' is 14px flat rather than 14/16: at 16px a label and its figure -- "Verification Pending"
+  // beside "₹2,07,348 (76.1%)" -- no longer share a line in a 176px legend column, and the figure
+  // wrapping under its own label reads as a second entry.
+  const text = size === 'xs' ? 'text-[11px]' : size === 'md' ? 'text-sm' : 'text-xs sm:text-sm';
   if (layout === 'row') {
     return (
       <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${text} ${className}`}>
