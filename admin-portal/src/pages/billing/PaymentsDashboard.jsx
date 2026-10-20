@@ -154,7 +154,7 @@ const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
 // chart lists every slice, but which arc is which is only answerable by pointing at one.
 const DonutSegments = ({ data, total, size, valueLabel, formatValue }) => {
   const chart = useChartTooltip();
-  const strokeWidth = size > 140 ? 24 : 20;
+  const strokeWidth = size > 160 ? 24 : 20;
   const radius = size / 2 - strokeWidth / 2 - 5;
   const circumference = 2 * Math.PI * radius;
   let currentOffset = 0;
@@ -204,9 +204,9 @@ const DonutSegments = ({ data, total, size, valueLabel, formatValue }) => {
   );
 };
 
-const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
-  // The hole of a 130px donut is ~80px across, so the centre figure sizes itself to its length --
-  // ₹65,018 can take the large type where ₹12,34,567 cannot without lying across the ring.
+const DonutChart = ({ data, total, centerLabel, size = 144 }) => {
+  // The hole is ~94px across, so the centre figure still sizes itself to its length -- ₹65,018 can
+  // take the large type where ₹12,34,567 cannot without lying across the ring.
   const label = formatCurrencyShort(total);
   const totalSize = label.length > 8 ? 'text-sm sm:text-base'
     : label.length > 6 ? 'text-base sm:text-lg' : 'text-lg sm:text-xl';
@@ -222,7 +222,7 @@ const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
 };
 
 // Simple Donut for Invoice Status (with count instead of currency)
-const DonutChartCount = ({ data, total, size = 130 }) => (
+const DonutChartCount = ({ data, total, size = 144 }) => (
   <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
     <DonutSegments data={data} total={total} size={size} valueLabel="Invoices" formatValue={value => `${value}`} />
     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -876,7 +876,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   data={dashboardData.paymentsByMode}
                   total={dashboardData.amountCollected}
                   centerLabel="Total"
-                  size={130}
+                  size={144}
                 />
               </div>
               <ChartLegend size="md" className="2xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
@@ -905,7 +905,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   data={dashboardData.paymentsByStatus}
                   total={dashboardData.paymentsByStatus.reduce((sum, s) => sum + s.value, 0)}
                   centerLabel="Total"
-                  size={130}
+                  size={144}
                 />
               </div>
               <ChartLegend size="md" className="2xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
@@ -1010,7 +1010,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <DonutChartCount 
                   data={dashboardData.invoicesByStatus}
                   total={dashboardData.totalInvoices || 0}
-                  size={130}
+                  size={144}
                 />
               </div>
               <ChartLegend size="md" className="2xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
