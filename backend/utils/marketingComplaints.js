@@ -7,12 +7,43 @@
  * write every field, the customer route derives all but concern/comments from the login profile.
  * Deleting a row only archives it: it leaves the form's list and lands in Marketing > Archived
  * under its own tab, restorable from there.
+ *
+ * A complaint is also a piece of work, and this file owns that workflow too (schema_v51): the FP
+ * assigns it to one zone-centric employee, the assignee works it and saves a note, and the FP or
+ * its manager verifies and closes it -- closing archives it. Who may move it where is
+ * `resolveComplaintStatus` below, so the rule is one function rather than a condition repeated in
+ * five portals. Regression test: `node --test backend/utils/marketingComplaints.test.js`.
  */
 
 const { pool } = require('../config/database');
 const { decodeEntities } = require('./htmlEntities');
 
 const COMPLAINT_TABLE = 'fp_marketing_complaints';
+
+// The workflow columns, added to a table created by schema_v47 (which has none of them). Checked
+// against information_schema rather than with MariaDB's "ADD COLUMN IF NOT EXISTS", which MySQL 8
+// does not support -- the same tolerance ensureMarketingTrackerColumns gives fp_estimates.
+const COMPLAINT_WORKFLOW_COLUMNS = [
+  { name: 'status', def: "VARCHAR(40) NOT NULL DEFAULT 'Open'" },
+  { name: 'assigned_employee_id', def: 'INT NULL' },
+  { name: 'assigned_employee_name', def: 'VARCHAR(255) NULL' },
+  { name: 'assigned_employee_role', def: 'VARCHAR(60) NULL' },
+  { name: 'assigned_at', def: 'TIMESTAMP NULL' },
+  { name: 'assigned_by', def: 'VARCHAR(150) NULL' },
+  { name: 'complaint_note', def: 'TEXT NULL' },
+  { name: 'note_updated_by', def: 'VARCHAR(150) NULL' },
+  { name: 'note_updated_by_role', def: 'VARCHAR(60) NULL' },
+  { name: 'note_updated_at', def: 'TIMESTAMP NULL' },
+  { name: 'status_updated_by', def: 'VARCHAR(150) NULL' },
+  { name: 'status_updated_by_role', def: 'VARCHAR(60) NULL' },
+  { name: 'status_updated_at', def: 'TIMESTAMP NULL' },
+  { name: 'closed_at', def: 'TIMESTAMP NULL' },
+  { name: 'closed_by', def: 'VARCHAR(150) NULL' },
+  // Who filed it, so the complaint can report back (schema_v52). The email is stamped at filing
+  // rather than looked up each time, for the same reason the assignee's name is.
+  { name: 'customer_account_id', def: 'INT NULL' },
+  { name: 'customer_email', def: 'VARCHAR(255) NULL' }
+];
 
 const ensureMarketingComplaintsTable = async () => {
   try {
@@ -22,8 +53,8 @@ const ensureMarketingComplaintsTable = async () => {
       [COMPLAINT_TABLE]
     );
     if (tables[0].n === 0) {
-      // Same statement as schema_v47_marketing_complaints.sql, so a deployment that has not
-      // applied the file still works.
+      // Same statement as schema_v47_marketing_complaints.sql plus the schema_v51 workflow
+      // columns, so a deployment that has applied neither file still works.
       await pool.execute(
         `CREATE TABLE ${COMPLAINT_TABLE} (
           id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -36,13 +67,45 @@ const ensureMarketingComplaintsTable = async () => {
           contact_person_name VARCHAR(255) NOT NULL,
           phone_number VARCHAR(50) NOT NULL,
           comments TEXT NOT NULL,
+          status VARCHAR(40) NOT NULL DEFAULT 'Open',
+          assigned_employee_id INT NULL,
+          assigned_employee_name VARCHAR(255) NULL,
+          assigned_employee_role VARCHAR(60) NULL,
+          assigned_at TIMESTAMP NULL,
+          assigned_by VARCHAR(150) NULL,
+          complaint_note TEXT NULL,
+          note_updated_by VARCHAR(150) NULL,
+          note_updated_by_role VARCHAR(60) NULL,
+          note_updated_at TIMESTAMP NULL,
+          status_updated_by VARCHAR(150) NULL,
+          status_updated_by_role VARCHAR(60) NULL,
+          status_updated_at TIMESTAMP NULL,
+          closed_at TIMESTAMP NULL,
+          closed_by VARCHAR(150) NULL,
+          customer_account_id INT NULL,
+          customer_email VARCHAR(255) NULL,
           archived_at TIMESTAMP NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           PRIMARY KEY (id),
-          KEY idx_fp_marketing_complaints_fp (franchise_partner_id)
+          KEY idx_fp_marketing_complaints_fp (franchise_partner_id),
+          KEY idx_fp_marketing_complaints_assignee (assigned_employee_id),
+          KEY idx_fp_marketing_complaints_customer (customer_account_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
       );
+      return;
+    }
+    for (const col of COMPLAINT_WORKFLOW_COLUMNS) {
+      // SHOW COLUMNS ... LIKE ? cannot bind its pattern in a prepared statement, so the existence
+      // check goes through information_schema instead
+      const [cols] = await pool.execute(
+        `SELECT COUNT(*) AS n FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+        [COMPLAINT_TABLE, col.name]
+      );
+      if (cols[0].n === 0) {
+        await pool.execute(`ALTER TABLE ${COMPLAINT_TABLE} ADD COLUMN ${col.name} ${col.def}`);
+      }
     }
   } catch (e) { /* table exists or cannot be created; the query below will say which */ }
 };
@@ -62,8 +125,16 @@ const COMPLAINT_TEXT_FIELDS = [
 ];
 
 const COMPLAINT_COLUMNS = [
-  'id', 'property_id', 'zone', 'responsible_person',
+  // The owning partner rides along because every notification the workflow sends is resolved from
+  // it -- the assignee's mailbox, the partner's own, and its managers' are all looked up by it.
+  'id', 'franchise_partner_id', 'property_id', 'zone', 'responsible_person',
   'concern_with', 'concern_with_other', 'contact_person_name', 'phone_number', 'comments',
+  'status', 'assigned_employee_id', 'assigned_employee_name', 'assigned_employee_role',
+  'assigned_at', 'assigned_by',
+  'complaint_note', 'note_updated_by', 'note_updated_by_role', 'note_updated_at',
+  'status_updated_by', 'status_updated_by_role', 'status_updated_at',
+  'closed_at', 'closed_by',
+  'customer_account_id', 'customer_email',
   'archived_at', 'created_at', 'updated_at'
 ];
 
@@ -122,13 +193,109 @@ const parseCustomerComplaintBody = (body) => {
   return { errors, complaint };
 };
 
+// ============================================
+// WORKFLOW
+// ============================================
+
+/**
+ * Where a complaint can be, in order:
+ *
+ *   Open         filed, nobody is on it yet
+ *   Assigned     handed to one zone-centric employee (set by the assignment itself)
+ *   In Progress  that employee is working it -- the only status they may set
+ *   Reviewed     the FP or its manager has verified what the employee did
+ *   Closed       officially closed, which also archives the row
+ */
+const COMPLAINT_STATUSES = ['Open', 'Assigned', 'In Progress', 'Reviewed', 'Closed'];
+
+// The four portals a complaint can be assigned into: each of them has the Complaint Form screen to
+// read the assignment in and report back from. The supervisor portal has that screen and nothing
+// else of Marketing -- no tracker, no marketing dashboard -- which its mount enforces with
+// `canReadTracker: false` rather than by leaving the router unmounted (see routes/supervisor.js).
+const ASSIGNABLE_ROLES = ['manager', 'coordinator', 'supervisor', 'executive'];
+
+// fp_employees.role is 'manager' on rows written by the current employee form and 'fp_manager' on
+// rows from schema_v8's ENUM, so the prefix is dropped before either is compared with a role name.
+const normalizeEmployeeRole = (role) => String(role || '').trim().toLowerCase().replace(/^fp_/, '');
+
+const isAssignableRole = (role) => ASSIGNABLE_ROLES.includes(normalizeEmployeeRole(role));
+
+/**
+ * The note behind the bubble in the Actions column -- one box per complaint, like the marketing
+ * tracker's. Judged on the decoded text: the stored form is escaped once by middleware/security.js,
+ * so the escaped length is not what the user typed.
+ */
+const parseComplaintNote = (body) => {
+  const raw = body?.note;
+  const note = raw === undefined || raw === null ? '' : String(raw).trim();
+  if (decodeEntities(note).trim().length > 500) {
+    return { error: 'Note must be 500 characters or fewer.', note: null };
+  }
+  return { error: null, note: note || null };
+};
+
+/**
+ * Who may move a complaint where.
+ *
+ * `canClose` is the FP and its manager -- they verify the work and close it, which is also what
+ * archives the row. `isAssignee` is the employee the complaint was handed to: they report progress
+ * and nothing else, so they may set exactly 'In Progress'. A caller who is both (a manager working
+ * their own assignment) gets the union, which is `canClose`'s list.
+ *
+ * Note that nobody sets 'Assigned' by hand: it is what assigning produces. Allowing it from the
+ * dropdown would let a row claim an assignee it does not have.
+ *
+ * @returns {string[]} the statuses this caller may select, in workflow order
+ */
+const complaintStatusesFor = ({ canClose = false, isAssignee = false } = {}) => {
+  if (canClose) return COMPLAINT_STATUSES.filter((status) => status !== 'Assigned');
+  if (isAssignee) return ['In Progress'];
+  return [];
+};
+
+/**
+ * Validate a requested status against the caller and the row.
+ *
+ * Returns `{ error }` with the message to answer, or `{ status }` with the stored form of the
+ * status to write. `forbidden` separates "no such status" (a 400) from "not yours to set" (a 403),
+ * so a portal that offers the wrong option and a caller reaching past their permissions do not
+ * answer with the same thing. Request text arrives HTML-escaped, so 'In&#x20;Progress' never
+ * appears -- but an apostrophe or slash would, and validation therefore judges the decoded text
+ * exactly as the concern options do.
+ */
+const resolveComplaintStatus = (body, { canClose = false, isAssignee = false } = {}) => {
+  const raw = (body?.status || '').toString().trim().slice(0, 40);
+  const status = decodeEntities(raw).trim();
+  if (!status) return { error: 'Status is required' };
+  if (!COMPLAINT_STATUSES.includes(status)) {
+    return { error: `Status must be one of: ${COMPLAINT_STATUSES.join(', ')}` };
+  }
+  const allowed = complaintStatusesFor({ canClose, isAssignee });
+  if (!allowed.includes(status)) {
+    return {
+      forbidden: true,
+      error: allowed.length
+        ? `You may only set: ${allowed.join(', ')}`
+        : 'You do not have permission to change a complaint status.'
+    };
+  }
+  return { error: null, status: raw };
+};
+
 module.exports = {
   COMPLAINT_TABLE,
   COMPLAINT_COLUMNS,
   COMPLAINT_SELECT,
+  COMPLAINT_STATUSES,
+  ASSIGNABLE_ROLES,
   complaintSelect,
   CONCERN_OPTIONS,
   ensureMarketingComplaintsTable,
   parseComplaintBody,
-  parseCustomerComplaintBody
+  parseCustomerComplaintBody,
+  parseComplaintNote,
+  normalizeEmployeeRole,
+  isAssignableRole,
+  complaintStatusesFor,
+  resolveComplaintStatus
 };

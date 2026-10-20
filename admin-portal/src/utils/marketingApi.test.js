@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getMarketingApiPath, getMarketingBasePath, marketingFpId, withMarketingFp, canLogComplaint,
-  marketingPermissions
+  marketingPermissions, marketingHasTracker
 } from './marketingApi.js';
 
 test('every portal that shows Marketing resolves to its own API prefix', () => {
@@ -12,27 +12,63 @@ test('every portal that shows Marketing resolves to its own API prefix', () => {
   // The admin portal's routes live under /employee but its API prefix is /api/admin.
   assert.equal(getMarketingApiPath('admin'), 'admin');
   assert.equal(getMarketingApiPath('employee'), 'admin');
-  // The coordinator and executive portals read the same screens; their own mounts decide what
-  // they answer and what they will not write.
+  // The coordinator, supervisor and executive portals read the same screens; their own mounts
+  // decide what they answer and what they will not write.
   assert.equal(getMarketingApiPath('coordinator'), 'coordinator');
+  assert.equal(getMarketingApiPath('supervisor'), 'supervisor');
   assert.equal(getMarketingApiPath('executive'), 'executive');
   // An unknown portal falls back to the FP prefix, which is scoped by the caller's own token --
   // never to the admin prefix, which would be the one that shows every partner's leads.
   assert.equal(getMarketingApiPath(undefined), 'fp');
-  assert.equal(getMarketingApiPath('supervisor'), 'fp', 'the supervisor portal has no Marketing');
+});
+
+test('the supervisor portal has the Complaint Form and no lead pipeline', () => {
+  // Complaints are assigned to supervisors as they are to coordinators, so the screen is there --
+  // but the partner's tracker is none of a supervisor's business, and its backend mount answers 403
+  // to those reads (canReadTracker: false). A screen that asked anyway would show an error where a
+  // tab should be, which is why this flag and that scope have to agree.
+  assert.equal(marketingHasTracker('supervisor'), false);
+  for (const portal of ['franchise', 'fp', 'admin', 'employee', 'manager', 'coordinator', 'executive', undefined]) {
+    assert.equal(marketingHasTracker(portal), true, String(portal));
+  }
+  assert.equal(getMarketingBasePath('supervisor'), '/supervisor');
+  // It reads and reports on its own assignments, exactly as the executive does, and reviews nothing.
+  assert.deepEqual(marketingPermissions('supervisor'),
+    { canEdit: false, canReview: false, canAssign: false, canClose: false });
 });
 
 test('only the portals that own the records may change them', () => {
   for (const portal of ['franchise', 'fp', 'admin', 'employee', 'manager']) {
-    assert.deepEqual(marketingPermissions(portal), { canEdit: true, canReview: true }, portal);
+    const { canEdit, canReview } = marketingPermissions(portal);
+    assert.deepEqual({ canEdit, canReview }, { canEdit: true, canReview: true }, portal);
   }
-  // The coordinator's one write is the review -- setting it to Yes records their name, which is
-  // what that column is for.
-  assert.deepEqual(marketingPermissions('coordinator'), { canEdit: false, canReview: true });
-  assert.deepEqual(marketingPermissions('executive'), { canEdit: false, canReview: false });
+  // The coordinator's one write on a lead is the review -- setting it to Yes records their name,
+  // which is what that column is for.
+  assert.deepEqual(marketingPermissions('coordinator'), { canEdit: false, canReview: true, canAssign: false, canClose: false });
+  assert.deepEqual(marketingPermissions('executive'), { canEdit: false, canReview: false, canAssign: false, canClose: false });
   // An unknown portal is never silently given write access it was not granted... except that the
   // default is the FP portal's own, which is scoped to the caller's token either way.
-  assert.deepEqual(marketingPermissions(undefined), { canEdit: true, canReview: true });
+  assert.deepEqual(marketingPermissions(undefined), { canEdit: true, canReview: true, canAssign: false, canClose: false });
+});
+
+test('a complaint is assigned by its franchise partner and closed by the partner or its manager', () => {
+  // Assigning is the FP's own decision; the manager shares the close, because closing *is* the
+  // review it performs -- and it archives the complaint.
+  assert.deepEqual(
+    ['franchise', 'fp', 'manager', 'admin', 'employee', 'coordinator', 'supervisor', 'executive']
+      .map((portal) => [portal, marketingPermissions(portal).canAssign, marketingPermissions(portal).canClose]),
+    [
+      ['franchise', true, true],
+      ['fp', true, true],
+      ['manager', false, true],
+      // The admin portal may create and edit complaints, but the workflow belongs to the partner.
+      ['admin', false, false],
+      ['employee', false, false],
+      ['coordinator', false, false],
+      ['supervisor', false, false],
+      ['executive', false, false]
+    ]
+  );
 });
 
 test('navigation base path follows the portal, not the API prefix', () => {

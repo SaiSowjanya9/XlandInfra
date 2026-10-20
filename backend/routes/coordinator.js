@@ -3156,6 +3156,7 @@ router.get('/schedules/all', requireCoordinatorScope, async (req, res) => {
 });
 
 const { createMarketingRouter } = require('./marketing');
+const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 
 // ============================================
 // MARKETING (shared with the FP, admin and Ops Manager portals)
@@ -3170,8 +3171,11 @@ const { createMarketingRouter } = require('./marketing');
 // (see the zone+creator clause around coordinator.js's estimates list). An estimate's zone is the
 // property's, not the author's, so zone-only would hide an executive's own visits from them.
 //
-// Writes: read-only except Coordinator Reviewed. Marking it Yes records their name in
-// coordinator_name, which is the one thing that column is for; everything else is refused.
+// Writes: read-only except Coordinator Reviewed and the complaints assigned to this coordinator.
+// Marking the review Yes records their name in coordinator_name, which is the one thing that
+// column is for; everything else on a lead is refused. A complaint the FP handed to them is
+// theirs to report on -- the status (In Progress only) and the note -- because they are the one
+// who did the work; `assignee` is what holds them to their own row.
 const coordinatorMarketingScope = async (req) => {
   if (!req.franchisePartnerId) {
     throw Object.assign(
@@ -3185,6 +3189,12 @@ const coordinatorMarketingScope = async (req) => {
   // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
   // falls back to this person's own records rather than to nothing.
   const unrestricted = rawZones.includes('__ALL__');
+  const employee = await resolveFpEmployee(pool, {
+    franchisePartnerId: req.franchisePartnerId,
+    userId: req.user?.id,
+    email: req.user?.email,
+    username: req.user?.username
+  });
   return {
     fpIds: [req.franchisePartnerId],
     writeFpId: req.franchisePartnerId,
@@ -3196,6 +3206,7 @@ const coordinatorMarketingScope = async (req) => {
     },
     canWrite: false,
     canReview: true,
+    assignee: employee ? { employeeId: employee.id } : null,
     withPartnerName: false
   };
 };

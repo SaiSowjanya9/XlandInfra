@@ -12,6 +12,13 @@ const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../m
 const {
   COMPLAINT_TABLE, COMPLAINT_SELECT, ensureMarketingComplaintsTable, parseCustomerComplaintBody
 } = require('../utils/marketingComplaints');
+const {
+  notifyCustomerComplaintStatus, complaintReference
+} = require('../services/complaintNotifications');
+const { decodeEntities } = require('../utils/htmlEntities');
+// Which notifications are this customer's own -- one rule for the list, its count and both
+// mark-read routes, because they have to agree
+const { customerNotificationScope } = require('../utils/customerNotificationScope');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
@@ -49,6 +56,35 @@ const generateTempPassword = () => {
 const generateActivationToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
+
+/**
+ * A complaint as its own customer may see it: where it has got to, and what they told us.
+ *
+ * The staff columns are deliberately left out — the field notes are the assignee's report for the
+ * FP and its manager to verify, the assignee's name and the actor stamps are internal, and
+ * `status` defaults to Open because rows written before schema_v51 carry none.
+ *
+ * The text is **decoded here**, unlike every staff list, which decodes in the browser: the customer
+ * portal has no `decodeEntities` of its own, and shipping one to it to read a status line is worse
+ * than decoding a display-only projection. There is no escaping hole in that — React escapes what
+ * it renders — but it does mean this payload must never be fed back into a form or an email body,
+ * both of which rely on the stored, escaped form.
+ */
+const presentCustomerComplaint = (complaint) => ({
+  id: complaint.id,
+  reference: complaintReference(complaint),
+  status: decodeEntities(complaint.status || '') || 'Open',
+  property_id: decodeEntities(complaint.property_id || ''),
+  zone: decodeEntities(complaint.zone || ''),
+  concern_with: decodeEntities(complaint.concern_with || ''),
+  concern_with_other: decodeEntities(complaint.concern_with_other || ''),
+  contact_person_name: decodeEntities(complaint.contact_person_name || ''),
+  phone_number: decodeEntities(complaint.phone_number || ''),
+  comments: decodeEntities(complaint.comments || ''),
+  created_at: complaint.created_at,
+  status_updated_at: complaint.status_updated_at,
+  closed_at: complaint.closed_at
+});
 
 // Customer authentication middleware
 const authenticateCustomer = async (req, res, next) => {
@@ -2535,6 +2571,7 @@ router.get('/notifications', authenticateCustomer, async (req, res) => {
     const customerId = req.customer.id;
     const propertyId = req.customer.propertyId;
     const { limit = 20, unreadOnly = false } = req.query;
+    const mine = customerNotificationScope(req.customer);
 
     // Get notifications for this customer's property
     // Also include notifications targeted at 'customer' role for this franchise partner
@@ -2553,31 +2590,19 @@ router.get('/notifications', authenticateCustomer, async (req, res) => {
         pn.priority,
         pn.created_at
       FROM portal_notifications pn
-      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
-      WHERE (
-        (pn.role_type = 'customer' AND op.id = ?)
-        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
-          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
-        ))
-      )
+      WHERE ${mine.sql}
       ${unreadOnly === 'true' ? 'AND pn.is_read = FALSE' : ''}
       ORDER BY pn.created_at DESC
       LIMIT ${Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)}
-    `, [propertyId, propertyId]);
+    `, mine.params);
 
     // Get unread count
     const [[{ unreadCount }]] = await pool.execute(`
       SELECT COUNT(*) as unreadCount
       FROM portal_notifications pn
-      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
-      WHERE (
-        (pn.role_type = 'customer' AND op.id = ?)
-        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
-          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
-        ))
-      )
+      WHERE ${mine.sql}
       AND pn.is_read = FALSE
-    `, [propertyId, propertyId]);
+    `, mine.params);
 
     res.json({
       success: true,
@@ -2609,19 +2634,14 @@ router.get('/notifications', authenticateCustomer, async (req, res) => {
 router.put('/notifications/:id/read', authenticateCustomer, async (req, res) => {
   try {
     const { id } = req.params;
-    const propertyId = req.customer.propertyId;
+    const mine = customerNotificationScope(req.customer);
 
-    // Verify the notification belongs to this customer's property
+    // Verify the notification is this customer's -- the same rule the list itself applies, or a row
+    // they can see would be one they cannot dismiss
     const [notification] = await pool.execute(`
       SELECT pn.id FROM portal_notifications pn
-      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
-      WHERE pn.id = ? AND (
-        (pn.role_type = 'customer' AND op.id = ?)
-        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
-          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
-        ))
-      )
-    `, [id, propertyId, propertyId]);
+      WHERE pn.id = ? AND ${mine.sql}
+    `, [id, ...mine.params]);
 
     if (notification.length === 0) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
@@ -2642,20 +2662,14 @@ router.put('/notifications/:id/read', authenticateCustomer, async (req, res) => 
 // Mark all notifications as read
 router.put('/notifications/mark-all-read', authenticateCustomer, async (req, res) => {
   try {
-    const propertyId = req.customer.propertyId;
+    const mine = customerNotificationScope(req.customer);
 
-    // Mark all customer notifications for this property as read
+    // Mark this customer's own notifications as read -- the same rule the list applies
     await pool.execute(`
       UPDATE portal_notifications pn
-      LEFT JOIN onboarded_properties op ON op.franchise_partner_id = pn.franchise_partner_id
       SET pn.is_read = TRUE, pn.read_at = NOW()
-      WHERE pn.is_read = FALSE AND (
-        (pn.role_type = 'customer' AND op.id = ?)
-        OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
-          SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
-        ))
-      )
-    `, [propertyId, propertyId]);
+      WHERE pn.is_read = FALSE AND ${mine.sql}
+    `, mine.params);
 
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
@@ -2956,25 +2970,55 @@ router.post('/complaints', authenticateCustomer, async (req, res) => {
       });
     }
 
+    // Stamped with who filed it, which is what every later update is addressed by: the status
+    // emails, and the in-portal notification that must reach this customer and no other.
     const [result] = await pool.execute(
       `INSERT INTO ${COMPLAINT_TABLE}
          (franchise_partner_id, property_id, zone, responsible_person,
-          concern_with, concern_with_other, contact_person_name, phone_number, comments)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          concern_with, concern_with_other, contact_person_name, phone_number, comments,
+          customer_account_id, customer_email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         fpId, sanitizeString(propertyCode), sanitizeString(zone), sanitizeString(responsible),
         complaint.concern_with, complaint.concern_with_other,
-        sanitizeString(contactName), sanitizeString(phone), complaint.comments
+        sanitizeString(contactName), sanitizeString(phone), complaint.comments,
+        req.customer.id, req.customer.email
       ]
     );
     const [rows] = await pool.execute(
       `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE} WHERE id = ?`,
       [result.insertId]
     );
-    res.json({ success: true, message: 'Complaint submitted', data: rows[0] });
+    // The acknowledgement, sent after the row is safely stored and never awaited into the response:
+    // a complaint that was saved must not answer 500 because a mail server was slow.
+    notifyCustomerComplaintStatus(rows[0], { status: 'Open' });
+    res.json({ success: true, message: 'Complaint submitted', data: presentCustomerComplaint(rows[0]) });
   } catch (error) {
     console.error('Customer complaint create error:', error);
     res.status(500).json({ success: false, message: 'Failed to submit complaint', error: error.message });
+  }
+});
+
+// ============================================
+// GET /api/customers/complaints - the customer's own complaints, newest first
+// ============================================
+// Scoped to the account that filed them, not to the property: several residents can share a
+// property code, and a complaint is personal to whoever raised it. Archived rows are returned too —
+// closing a complaint archives it, so filtering them out would hide exactly the outcome the
+// customer is waiting for.
+router.get('/complaints', authenticateCustomer, async (req, res) => {
+  try {
+    await ensureMarketingComplaintsTable();
+    const [rows] = await pool.execute(
+      `SELECT ${COMPLAINT_SELECT} FROM ${COMPLAINT_TABLE}
+       WHERE customer_account_id = ?
+       ORDER BY created_at DESC`,
+      [req.customer.id]
+    );
+    res.json({ success: true, data: rows.map(presentCustomerComplaint) });
+  } catch (error) {
+    console.error('Customer complaints fetch error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch complaints', error: error.message });
   }
 });
 

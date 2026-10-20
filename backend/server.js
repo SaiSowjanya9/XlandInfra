@@ -265,6 +265,16 @@ const startServer = async () => {
     } catch (error) {
       console.error('Could not bring portal_notifications up to date; notifications may fail until this is fixed:', error.message);
     }
+    // The employee tables drifted from what the code writes: fp_employees.role was an ENUM of three
+    // fp_-prefixed roles while the Add Employee form sends 'manager'/'coordinator'/'supervisor'/
+    // 'executive' (errno 1265, nothing stored), and fp_employee_zones.zone_id is NOT NULL while the
+    // zone routes insert a zone_name only (errno 1364, no zone ever assigned)
+    try {
+      const changed = await require('./utils/fpEmployeeDirectory').ensureFpEmployeeSchema(pool);
+      if (changed.length) console.log(`✅ FP employees: ${changed.join('; ')}`);
+    } catch (error) {
+      console.error('Could not bring the FP employee tables up to date; creating employees or assigning zones may fail until this is fixed:', error.message);
+    }
     console.log('✅ Database mode: Connected');
     console.log('✅ QR Management System initialized');
     // Start work order cleanup scheduler (auto-delete closed/cancelled after 30 days)

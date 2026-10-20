@@ -1,11 +1,40 @@
-import { useState } from 'react';
-import { Phone, Mail, MapPin, Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Phone, Mail, MapPin, Clock, Loader2, CheckCircle, AlertCircle, FileWarning } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Keep in step with CONCERN_OPTIONS in backend/utils/marketingComplaints.js and
 // admin-portal/src/pages/FPMarketingComplaintForm.jsx.
 const CONCERN_OPTIONS = ['Service Delay', 'Poor Quality Work', 'Incomplete Work', 'Safety Issue', 'Vendor Issue', 'Maintenance Issue', 'Pricing/Payments', 'Other'];
+
+// Where a complaint has got to, in the customer's own words. The statuses themselves are the
+// server's (backend/utils/marketingComplaints.js) — this is only how they read here, the same way
+// admin-portal/src/utils/complaintStatus.js tints them for the staff portals.
+const STATUS_COPY = {
+  Open: { label: 'Received', note: 'Logged with our service team', style: 'bg-gray-100 text-gray-700 border-gray-200' },
+  Assigned: { label: 'Assigned', note: 'With a member of our team', style: 'bg-blue-50 text-blue-700 border-blue-200' },
+  'In Progress': { label: 'In Progress', note: 'Being attended to now', style: 'bg-amber-50 text-amber-700 border-amber-200' },
+  Reviewed: { label: 'Being Verified', note: 'Work finished, our team is checking it', style: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  Closed: { label: 'Resolved', note: 'Verified and closed', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+};
+
+const statusCopy = (status) => STATUS_COPY[status] || STATUS_COPY.Open;
+
+// A saved concern is a fixed option, or the typed text where that option was "Other".
+const displayConcern = (complaint) => {
+  if (!complaint.concern_with) return '-';
+  if (complaint.concern_with === 'Other') return complaint.concern_with_other || 'Other';
+  return complaint.concern_with;
+};
+
+// dd/mm/yyyy, in IST, like every other date in the portals.
+const formatDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 const Contact = () => {
   const [concernWith, setConcernWith] = useState('');
@@ -14,6 +43,27 @@ const Contact = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [complaints, setComplaints] = useState([]);
+  const [complaintsLoading, setComplaintsLoading] = useState(true);
+
+  // The customer's own complaints, so the status they are emailed about is also here to look up.
+  const loadComplaints = useCallback(async () => {
+    const token = localStorage.getItem('customerToken');
+    if (!token) { setComplaintsLoading(false); return; }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/customers/complaints`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) setComplaints(result.data || []);
+    } catch (err) {
+      // The form above still works; an empty list is not worth an error banner over it.
+    } finally {
+      setComplaintsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadComplaints(); }, [loadComplaints]);
 
   const contactInfo = [
     {
@@ -84,6 +134,7 @@ const Contact = () => {
         setConcernWith('');
         setConcernOther('');
         setComments('');
+        loadComplaints();
       } else {
         setFormError(result.message || 'Failed to submit complaint');
       }
@@ -255,6 +306,66 @@ const Contact = () => {
           </form>
         )}
       </div>
+
+      {/* Your Complaints -- the same status the emails announce, so a customer who missed one can
+          still see where their complaint stands. Complaints our team files about your property
+          appear here too. The field notes stay with the service team. */}
+      {(complaintsLoading || complaints.length > 0) && (
+        <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Your Complaints</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            We email you whenever one of these moves, and the latest status is always here
+          </p>
+
+          {complaintsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-gold-600" />
+              <span className="ml-2 text-sm text-gray-500">Loading your complaints...</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {complaints.map((complaint) => {
+                const copy = statusCopy(complaint.status);
+                return (
+                  <div key={complaint.id} className="p-4 border border-gray-200 rounded-xl">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">{complaint.reference}</span>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${copy.style}`}>
+                            {copy.label}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-900 mt-1 [overflow-wrap:anywhere]">{displayConcern(complaint)}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{copy.note}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-gray-500">Filed {formatDate(complaint.created_at)}</p>
+                        {complaint.closed_at ? (
+                          <p className="text-xs text-emerald-700">Closed {formatDate(complaint.closed_at)}</p>
+                        ) : complaint.status_updated_at ? (
+                          <p className="text-xs text-gray-500">Updated {formatDate(complaint.status_updated_at)}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {complaint.comments && (
+                      <p className="text-xs text-gray-500 mt-2 whitespace-pre-wrap [overflow-wrap:anywhere] border-t border-gray-100 pt-2">
+                        {complaint.comments}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+              {complaints.length === 0 && (
+                <div className="py-6 text-center">
+                  <FileWarning className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">You have not filed any complaints yet</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2 } from 'lucide-react';
+import {
+  FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2,
+  MessageSquare, UserPlus, CheckCircle2, MapPin, Inbox
+} from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
 import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint, marketingPermissions } from '../../utils/marketingApi';
+import {
+  COMPLAINT_STATUSES, complaintStatusesFor, canNoteOnComplaint, complaintStatusStyle
+} from '../../utils/complaintStatus';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
 import Modal from '../../components/common/Modal';
@@ -23,6 +29,27 @@ const displayConcern = (complaint) => {
   if (!value) return '-';
   if (value === 'Other') return decodeEntities(complaint.concern_with_other || '') || 'Other';
   return value;
+};
+
+// Rows written before schema_v51 carry no status at all, and a complaint nobody has touched is Open.
+const statusOf = (complaint) => decodeEntities(complaint?.status || '') || 'Open';
+
+// "Priya N (Coordinator)" -- the role is stamped on the row at assignment, so a renamed or removed
+// employee still reads.
+const assigneeLabel = (complaint) => {
+  const name = decodeEntities(complaint?.assigned_employee_name || '');
+  if (!name) return '';
+  const role = decodeEntities(complaint?.assigned_employee_role_label || '');
+  return role ? `${name} (${role})` : name;
+};
+
+// Who last touched the note or the status, for the view modal's small print. The role is not
+// repeated here -- it is already against the name in Assigned To, and the server stores it as a
+// code the browser has no copy of the labels for.
+const stampLine = (by, at) => {
+  const name = decodeEntities(by || '');
+  if (!name) return '';
+  return at ? `${name} · ${formatDate(at)}` : name;
 };
 
 const emptyComplaintForm = {
@@ -49,7 +76,10 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   // succeed is worse than a button that says why.
   // The coordinator and executive portals read this list; only the portals that own the records
   // may add to or change it. The server refuses the rest regardless.
-  const { canEdit } = marketingPermissions(portalType);
+  // canAssign is the franchise partner's own; canClose is the review the FP and its manager make,
+  // and closing a complaint is also what archives it. Reporting on a complaint assigned to *this*
+  // employee is decided per row, by `assigned_to_me`, not per portal.
+  const { canEdit, canAssign, canClose } = marketingPermissions(portalType);
   const canCreate = canEdit && canLogComplaint(portalType, selectedFp);
   // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
   // manager is refused there. These same screens are the Ops Manager portal's own Marketing
@@ -71,8 +101,29 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  // The employee's own view of the list: "what has been handed to me", which is how an assignment
+  // is checked in their portal.
+  const [mineOnly, setMineOnly] = useState(false);
   const [zoneOptions, setZoneOptions] = useState([]);
   const [employeeOptions, setEmployeeOptions] = useState([]);
+  // The note bubble in the Actions column, exactly as the marketing tracker's works: noteTarget is
+  // the complaint whose lightbox is open, noteEditing flips it between reading and writing.
+  const [noteTarget, setNoteTarget] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const [noteEditing, setNoteEditing] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState('');
+  // Assigning: the complaint being handed over, and the partner's assignable employees with the
+  // ones covering its zone marked as recommended.
+  const [assignTarget, setAssignTarget] = useState(null);
+  const [assignEmployees, setAssignEmployees] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignSaving, setAssignSaving] = useState(null);
+  const [assignError, setAssignError] = useState('');
+  // Closing archives the complaint, so it is confirmed rather than saved straight from the dropdown.
+  const [closeTarget, setCloseTarget] = useState(null);
+  const [statusSaving, setStatusSaving] = useState(null);
   // True while the Zone text came from a property match rather than the keyboard, so a Property ID
   // that stops matching only clears what the page itself filled in -- never a hand-typed zone.
   const zoneAutoFilled = useRef(false);
@@ -176,25 +227,189 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
     return map;
   }, [properties]);
 
+  // How many of these are this employee's own. The chip only appears where there are any, so the
+  // FP and admin portals -- which are assigned nothing -- never see it.
+  const mineCount = useMemo(() => complaints.filter(c => c.assigned_to_me).length, [complaints]);
+  useEffect(() => { if (!mineCount) setMineOnly(false); }, [mineCount]);
+
   const filteredComplaints = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return complaints.filter(c => {
+      if (mineOnly && !c.assigned_to_me) return false;
+      if (statusFilter && statusOf(c) !== statusFilter) return false;
       if (zoneFilter && decodeEntities(c.zone || '').trim() !== zoneFilter) return false;
       if (employeeFilter && decodeEntities(c.responsible_person || '').trim() !== employeeFilter) return false;
       if (q) {
         const haystack = [
           c.property_id,
           c.contact_person_name,
+          c.assigned_employee_name,
           propertyNameByCode[decodeEntities(c.property_id || '').toLowerCase()]
         ].map(v => decodeEntities(v || '').toLowerCase());
         if (!haystack.some(v => v.includes(q))) return false;
       }
       return true;
     });
-  }, [complaints, searchQuery, zoneFilter, employeeFilter, propertyNameByCode]);
+  }, [complaints, searchQuery, zoneFilter, employeeFilter, statusFilter, mineOnly, propertyNameByCode]);
 
-  const filtersActive = !!(searchQuery.trim() || zoneFilter || employeeFilter);
-  const clearFilters = () => { setSearchQuery(''); setZoneFilter(''); setEmployeeFilter(''); };
+  const filtersActive = !!(searchQuery.trim() || zoneFilter || employeeFilter || statusFilter || mineOnly);
+  const clearFilters = () => {
+    setSearchQuery(''); setZoneFilter(''); setEmployeeFilter(''); setStatusFilter(''); setMineOnly(false);
+  };
+
+  // ============================================
+  // WORKFLOW -- assign, status, note
+  // ============================================
+  //
+  // Open -> Assigned -> In Progress -> Reviewed -> Closed. The server is the authority on who may
+  // move a complaint where (utils/complaintStatus.js mirrors it); every save below replies with the
+  // whole row, which goes straight back into the list.
+
+  const applySaved = (row) => {
+    if (!row) return;
+    setComplaints(prev => prev.map(c => (c.id === row.id ? row : c)));
+    // The detail modal and the note lightbox can both be open over the row being saved, so they
+    // are refreshed too rather than left holding the version from before the save.
+    setModal(prev => (prev?.row?.id === row.id ? { ...prev, row } : prev));
+    setNoteTarget(prev => (prev?.id === row.id ? row : prev));
+  };
+
+  // A closed complaint leaves the list, because closing is also what archives it.
+  const dropRow = (id) => {
+    setComplaints(prev => prev.filter(c => c.id !== id));
+    setModal(prev => (prev?.row?.id === id ? null : prev));
+    setNoteTarget(prev => (prev?.id === id ? null : prev));
+  };
+
+  const saveStatus = async (row, status) => {
+    setStatusSaving(row.id);
+    try {
+      const res = await fetch(withMarketingFp(`${API_BASE}/api/${apiPath}/marketing/complaints/${row.id}/status`, fpId), {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (status === 'Closed') dropRow(row.id); else applySaved(result.data);
+        showToast(result.message || 'Status updated');
+      } else {
+        showToast(result.message || 'Failed to update status.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to update status. Please try again.', 'error');
+    } finally {
+      setStatusSaving(null);
+      setCloseTarget(null);
+    }
+  };
+
+  // Choosing Closed asks first: it ends the complaint and moves it to Marketing > Archived.
+  const chooseStatus = (row, status) => {
+    if (!status || status === statusOf(row)) return;
+    if (status === 'Closed') setCloseTarget(row); else saveStatus(row, status);
+  };
+
+  const loadAssignEmployees = useCallback(async (row) => {
+    setAssignLoading(true);
+    setAssignError('');
+    try {
+      const zone = encodeURIComponent(decodeEntities(row.zone || ''));
+      const res = await fetch(withMarketingFp(
+        `${API_BASE}/api/${apiPath}/marketing/complaints/employees?zone=${zone}`, fpId), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) setAssignEmployees(result.data || []);
+      else setAssignError(result.message || 'Failed to load employees.');
+    } catch (e) {
+      setAssignError('Failed to load employees. Please try again.');
+    } finally {
+      setAssignLoading(false);
+    }
+  }, [token, apiPath, fpId]);
+
+  const openAssign = (row) => {
+    setAssignTarget(row);
+    setAssignEmployees([]);
+    loadAssignEmployees(row);
+  };
+
+  const assignTo = async (employee) => {
+    setAssignSaving(employee.id);
+    setAssignError('');
+    try {
+      const res = await fetch(withMarketingFp(
+        `${API_BASE}/api/${apiPath}/marketing/complaints/${assignTarget.id}/assign`, fpId), {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: employee.id })
+      });
+      const result = await res.json();
+      if (result.success) {
+        applySaved(result.data);
+        setAssignTarget(null);
+        showToast(result.message || 'Complaint assigned');
+      } else {
+        setAssignError(result.message || 'Failed to assign.');
+      }
+    } catch (e) {
+      setAssignError('Failed to assign. Please try again.');
+    } finally {
+      setAssignSaving(null);
+    }
+  };
+
+  // The note lightbox. An existing note opens read-only with an Edit button, so a click meant only
+  // to read never leaves a half-typed draft behind; an empty one goes straight to the box.
+  const openNote = (row) => {
+    setNoteTarget(row);
+    setNoteText(decodeEntities(row.complaint_note || ''));
+    setNoteEditing(canNoteOnComplaint(row, { canEdit }) && !row.complaint_note);
+    setNoteError('');
+  };
+
+  const closeNote = () => { setNoteTarget(null); setNoteError(''); };
+
+  // Cancel returns to the saved note when there is one; otherwise there was nothing to read and the
+  // lightbox simply closes.
+  const cancelNoteEdit = () => {
+    setNoteError('');
+    if (noteTarget?.complaint_note) {
+      setNoteText(decodeEntities(noteTarget.complaint_note));
+      setNoteEditing(false);
+    } else {
+      setNoteTarget(null);
+    }
+  };
+
+  const saveNote = async () => {
+    const text = noteText.trim();
+    if (text.length > 500) { setNoteError('Note must be 500 characters or fewer.'); return; }
+    setNoteSaving(true);
+    setNoteError('');
+    try {
+      const res = await fetch(withMarketingFp(
+        `${API_BASE}/api/${apiPath}/marketing/complaints/${noteTarget.id}/note`, fpId), {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: text })
+      });
+      const result = await res.json();
+      if (result.success) {
+        applySaved(result.data);
+        setNoteText(decodeEntities(result.data?.complaint_note || ''));
+        setNoteEditing(false);
+        showToast('Note saved');
+      } else {
+        setNoteError(result.message || 'Failed to save note.');
+      }
+    } catch (e) {
+      setNoteError('Failed to save note. Please try again.');
+    } finally {
+      setNoteSaving(false);
+    }
+  };
 
   // A property's zone rides under three names depending on how the record was saved.
   const zoneOf = (p) => decodeEntities(p?.zone_name || p?.zoneName || p?.zone || '');
@@ -347,14 +562,20 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
             <h1 className="text-lg font-semibold text-warm-text">Complaint Form</h1>
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          disabled={!canCreate}
-          title={canCreate ? undefined : 'Select a franchise partner to log a complaint against'}
-          className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#B5812A]"
-        >
-          <Plus className="w-4 h-4" /> New Complaint
-        </button>
+        {/* A portal that cannot log a complaint at all is not shown the button: disabled, it read
+            "Select a franchise partner to log a complaint against", which is not why the coordinator,
+            supervisor or executive portals cannot use it. Where the portal may log one and simply
+            has not picked a partner yet (the admin), that is exactly what the tooltip says. */}
+        {canEdit && (
+          <button
+            onClick={openCreate}
+            disabled={!canCreate}
+            title={canCreate ? undefined : 'Select a franchise partner to log a complaint against'}
+            className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#B5812A]"
+          >
+            <Plus className="w-4 h-4" /> New Complaint
+          </button>
+        )}
       </div>
 
       {/* All complaints */}
@@ -397,6 +618,31 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               <option value="">All Employees</option>
               {employeeNames.map(n => <option key={n} value={n}>{n}</option>)}
             </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`h-[38px] px-3 border border-warm-border rounded-[10px] text-sm bg-white focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20 ${statusFilter ? 'text-warm-text' : 'text-warm-muted'}`}
+            >
+              <option value="">All Statuses</option>
+              {/* Closed complaints are archived, so they are read in Marketing > Archived rather
+                  than filtered for here. */}
+              {COMPLAINT_STATUSES.filter(s => s !== 'Closed').map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            {/* An employee's own view of the list -- what has been handed to them. Shown only where
+                there is something assigned to this caller, so the FP and admin portals never see it. */}
+            {mineCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setMineOnly(v => !v)}
+                className={`inline-flex items-center gap-1.5 h-[38px] px-3 rounded-[10px] text-sm font-medium border transition-colors whitespace-nowrap ${
+                  mineOnly
+                    ? 'bg-warm-accent-soft border-warm-accent text-warm-accent'
+                    : 'bg-white border-warm-border text-warm-muted hover:text-warm-text'
+                }`}
+              >
+                <Inbox className="w-4 h-4" /> Assigned to me ({mineCount})
+              </button>
+            )}
             {filtersActive && (
               <button
                 type="button"
@@ -423,15 +669,17 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
           <EmptyState
             icon={FileWarning}
             title="No complaints logged yet"
-            description="Log a customer complaint to see it here"
-            action={(
+            description={canEdit
+              ? 'Log a customer complaint to see it here'
+              : 'Complaints for your zones, and any assigned to you, appear here'}
+            action={canEdit ? (
               <button
                 onClick={openCreate}
                 className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
               >
                 <Plus className="w-4 h-4" /> New Complaint
               </button>
-            )}
+            ) : undefined}
           />
         ) : filteredComplaints.length === 0 ? (
           <div className="py-16 text-center">
@@ -455,6 +703,8 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                       has to say which one the complaint belongs to. */}
                   {showPartner && <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Franchise Partner</th>}
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Zone</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Assigned To</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Responsible Person</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Concern</th>
                   <th className="text-left py-3 px-4 font-medium text-warm-muted whitespace-nowrap">Contact Person</th>
@@ -464,16 +714,50 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredComplaints.map((row) => (
+                {filteredComplaints.map((row) => {
+                  // What this caller may do to this row. The status options come from the shared
+                  // policy, so a portal never offers one whose save would answer 403.
+                  const statusOptions = complaintStatusesFor({ canClose, isAssignee: row.assigned_to_me });
+                  const canNote = canNoteOnComplaint(row, { canEdit });
+                  return (
                   <tr
                     key={row.id}
                     onClick={() => openView(row)}
-                    className="border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors"
+                    className={`border-b border-warm-border/70 hover:bg-warm-section cursor-pointer transition-colors ${row.assigned_to_me ? 'bg-warm-accent-soft/40' : ''}`}
                     title="Click to view"
                   >
                     <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                     {showPartner && <td className="py-3 px-4 text-warm-muted">{decodeEntities(row.franchise_partner_name) || '-'}</td>}
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
+                    {/* The status column the assignee reports from, and the FP and its manager
+                        review in. A caller who may set nothing reads it as a badge. */}
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      {statusOptions.length ? (
+                        <select
+                          value={statusOf(row)}
+                          disabled={statusSaving === row.id}
+                          onChange={(e) => chooseStatus(row, e.target.value)}
+                          className={`h-[30px] pl-2 pr-6 rounded-full text-[11px] font-medium border cursor-pointer appearance-none bg-no-repeat focus:outline-none focus:ring-2 focus:ring-warm-accent/20 disabled:opacity-60 ${complaintStatusStyle(statusOf(row))}`}
+                          style={{ backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' stroke-width=\'2\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.35rem center', backgroundSize: '0.85em' }}
+                          title={row.assigned_to_me && !canClose ? 'Report your progress on this complaint' : 'Change status'}
+                        >
+                          {/* The stored status is always listed, even where this caller could not
+                              have set it -- a select whose value is missing shows the wrong row. */}
+                          {[...new Set([statusOf(row), ...statusOptions])].map(s => (
+                            <option key={s} value={s} disabled={!statusOptions.includes(s)}>{s}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(statusOf(row))}`}>
+                          {statusOf(row)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-warm-text">
+                      {assigneeLabel(row)
+                        ? <span className="whitespace-nowrap">{assigneeLabel(row)}</span>
+                        : <span className="text-warm-muted">Unassigned</span>}
+                    </td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.responsible_person) || '-'}</td>
                     <td className="py-3 px-4 text-warm-text max-w-[180px]"><span className="block truncate" title={displayConcern(row)}>{displayConcern(row)}</span></td>
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.contact_person_name) || '-'}</td>
@@ -481,6 +765,22 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                     <td className="py-3 px-4 text-warm-muted whitespace-nowrap">{formatDate(row.created_at)}</td>
                     <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-0.5">
+                        {/* The note bubble. The accent tint marks a row that already carries a
+                            note, so a filled one is visible without opening it. */}
+                        <button
+                          onClick={() => openNote(row)}
+                          className={`p-1.5 rounded-lg transition-colors ${row.complaint_note ? 'text-warm-accent hover:bg-warm-accent-soft' : 'text-warm-muted hover:bg-warm-border/60 hover:text-warm-text'}`}
+                          title={row.complaint_note ? 'View notes' : (canNote ? 'Add notes' : 'No notes yet')}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </button>
+                        {canAssign && <button
+                          onClick={() => openAssign(row)}
+                          className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
+                          title={row.assigned_employee_id ? 'Reassign complaint' : 'Assign to an employee'}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>}
                         {canEdit && <button
                           onClick={() => openEdit(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
@@ -498,7 +798,8 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -526,6 +827,23 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
 
             {modal.mode === 'view' ? (
               <div className="p-5 space-y-3">
+                {/* Where the complaint has got to, and with whom. The status is read here and set
+                    from the list's own column, so it is never maintained in two places. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${complaintStatusStyle(statusOf(modal.row))}`}>
+                    {statusOf(modal.row)}
+                  </span>
+                  {assigneeLabel(modal.row) && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-warm-muted">
+                      <UserPlus className="w-3.5 h-3.5" /> {assigneeLabel(modal.row)}
+                    </span>
+                  )}
+                  {stampLine(modal.row.status_updated_by, modal.row.status_updated_at) && (
+                    <span className="text-xs text-warm-muted">
+                      · updated by {stampLine(modal.row.status_updated_by, modal.row.status_updated_at)}
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="min-w-0"><label className={labelCls}>Property ID</label><div className={readOnlyCls}>{decodeEntities(modal.row.property_id) || '-'}</div></div>
                   <div className="min-w-0"><label className={labelCls}>Zone</label><div className={readOnlyCls}>{decodeEntities(modal.row.zone) || '-'}</div></div>
@@ -535,13 +853,58 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                   <div className="min-w-0"><label className={labelCls}>Phone Number</label><div className={readOnlyCls}>{decodeEntities(modal.row.phone_number) || '-'}</div></div>
                 </div>
                 <div className="min-w-0"><label className={labelCls}>Comments</label><div className={readOnlyCls}>{decodeEntities(modal.row.comments) || '-'}</div></div>
+
+                {/* The notes saved from the Actions column's bubble, read back here -- this is what
+                    the FP and its manager verify before closing the complaint. Editing goes through
+                    the same lightbox the bubble opens, so the text lives in one place. */}
+                <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-3.5">
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <label className="block text-xs font-medium text-warm-muted">Notes / Comments</label>
+                    {canNoteOnComplaint(modal.row, { canEdit }) && (
+                      <button
+                        onClick={() => openNote(modal.row)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-warm-accent hover:text-warm-accent-hover transition-colors flex-shrink-0"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> {modal.row.complaint_note ? 'Edit' : 'Add notes'}
+                      </button>
+                    )}
+                  </div>
+                  <div className={`${readOnlyCls} bg-white`}>
+                    {decodeEntities(modal.row.complaint_note || '') || '-'}
+                  </div>
+                  {stampLine(modal.row.note_updated_by, modal.row.note_updated_at) && (
+                    <p className="mt-1.5 text-[11px] text-warm-muted">
+                      Last saved by {stampLine(modal.row.note_updated_by, modal.row.note_updated_at)}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-end gap-3 pt-2 border-t border-warm-border">
-                  <button
-                    onClick={() => openEdit(modal.row)}
-                    className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" /> Edit
-                  </button>
+                  {/* Closing is the review step, and it moves the complaint to Archived. */}
+                  {canClose && statusOf(modal.row) !== 'Closed' && (
+                    <button
+                      onClick={() => setCloseTarget(modal.row)}
+                      className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-emerald-700 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors mr-auto"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Verify &amp; Close
+                    </button>
+                  )}
+                  {canAssign && (
+                    <button
+                      onClick={() => openAssign(modal.row)}
+                      className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
+                    >
+                      <UserPlus className="w-4 h-4" /> {modal.row.assigned_employee_id ? 'Reassign' : 'Assign'}
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={() => openEdit(modal.row)}
+                      className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" /> Edit
+                    </button>
+                  )}
                   <button
                     onClick={() => setModal(null)}
                     className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
@@ -701,6 +1064,211 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 className="px-4 py-2 bg-red-600 text-white rounded-[10px] text-sm hover:bg-red-700 transition-colors"
               >
                 Move to Archived
+              </button>
+            </div>
+          </Modal>
+      )}
+
+      {/* Assign to an employee. The ones covering the complaint's zone come first and are marked
+          Recommended; the rest are still offered, because a zone with nobody assigned to it would
+          otherwise leave the complaint with nowhere to go. */}
+      {assignTarget && (
+        <Modal overlayClassName="lg:pl-72" onClose={() => setAssignTarget(null)} className="w-full max-w-lg max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-warm-text">Assign Complaint</h3>
+                <p className="text-xs text-warm-muted">
+                  {decodeEntities(assignTarget.property_id) || '-'} · {decodeEntities(assignTarget.zone) || 'no zone'}
+                </p>
+              </div>
+              <button onClick={() => setAssignTarget(null)} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
+                <X className="w-5 h-5 text-warm-muted" />
+              </button>
+            </div>
+            <div className="p-5">
+              {assignTarget.assigned_employee_id && (
+                <p className="mb-3 text-xs text-warm-muted">
+                  Currently with <span className="font-medium text-warm-text">{assigneeLabel(assignTarget)}</span>.
+                  Reassigning hands it to someone else and puts it back to Assigned.
+                </p>
+              )}
+              {assignError && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600">{assignError}</p>
+                </div>
+              )}
+              {assignLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-5 h-5 animate-spin text-warm-accent" />
+                  <span className="ml-2 text-sm text-warm-muted">Loading employees...</span>
+                </div>
+              ) : assignEmployees.length === 0 ? (
+                <div className="py-8 text-center">
+                  <UserPlus className="w-8 h-8 mx-auto mb-2 text-warm-muted" strokeWidth={1.5} />
+                  <p className="text-sm text-warm-muted">
+                    No manager, coordinator or executive is available under this franchise partner.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {assignEmployees.map((employee) => (
+                    <button
+                      key={employee.id}
+                      type="button"
+                      disabled={assignSaving !== null}
+                      onClick={() => assignTo(employee)}
+                      className={`w-full px-3 py-2.5 text-left rounded-[10px] border transition-colors flex items-center gap-3 disabled:opacity-60 ${
+                        employee.recommended
+                          ? 'border-warm-accent bg-warm-accent-soft/50 hover:bg-warm-accent-soft'
+                          : 'border-warm-border bg-white hover:bg-warm-section'
+                      } ${assignTarget.assigned_employee_id === employee.id ? 'ring-2 ring-warm-accent/30' : ''}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-warm-text [overflow-wrap:anywhere]">
+                          {decodeEntities(employee.name) || decodeEntities(employee.email) || `Employee ${employee.id}`}
+                        </p>
+                        <p className="text-xs text-warm-muted capitalize [overflow-wrap:anywhere]">
+                          {employee.role}{employee.zones?.length ? ` · ${employee.zones.map(z => decodeEntities(z)).join(', ')}` : ' · no zone assigned'}
+                        </p>
+                      </div>
+                      {employee.recommended && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-warm-accent bg-white border border-warm-accent whitespace-nowrap flex-shrink-0">
+                          <MapPin className="w-3 h-3" /> Recommended
+                        </span>
+                      )}
+                      {assignSaving === employee.id && <Loader2 className="w-4 h-4 animate-spin text-warm-accent flex-shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Modal>
+      )}
+
+      {/* The notes lightbox -- the same feature the marketing tracker's note bubble opens.
+          z-[60] lifts it over the complaint modal, which is one of the two places it opens from. */}
+      {noteTarget && (
+        <Modal overlayClassName="lg:pl-72" zIndex="z-[60]" onClose={closeNote} className="w-full max-w-lg">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-warm-text">Notes / Comments</h3>
+                <p className="text-xs text-warm-muted">
+                  {decodeEntities(noteTarget.property_id) || '-'} · {decodeEntities(noteTarget.contact_person_name) || '-'}
+                </p>
+              </div>
+              <button onClick={closeNote} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
+                <X className="w-5 h-5 text-warm-muted" />
+              </button>
+            </div>
+            <div className="p-5">
+              {noteEditing ? (
+                <>
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
+                    maxLength={500}
+                    rows={5}
+                    autoFocus
+                    placeholder="What was done about this complaint..."
+                    className="w-full px-3 py-2.5 border border-warm-border rounded-[10px] text-sm text-warm-text bg-white resize-y focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20"
+                  />
+                  <div className="mt-1 text-right text-[11px] text-warm-muted">{noteText.trim().length}/500</div>
+                </>
+              ) : (
+                <>
+                  <div className="px-3 py-2.5 border border-warm-border rounded-[10px] text-sm text-warm-text whitespace-pre-wrap bg-warm-section min-h-[80px] [overflow-wrap:anywhere]">
+                    {decodeEntities(noteTarget.complaint_note || '') || '-'}
+                  </div>
+                  {stampLine(noteTarget.note_updated_by, noteTarget.note_updated_at) && (
+                    <p className="mt-1.5 text-[11px] text-warm-muted">
+                      Last saved by {stampLine(noteTarget.note_updated_by, noteTarget.note_updated_at)}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {noteError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600">{noteError}</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4 mt-4 border-t border-warm-border">
+                {noteEditing ? (
+                  <>
+                    <button
+                      onClick={cancelNoteEdit}
+                      className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-muted border border-warm-border hover:bg-warm-section transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveNote}
+                      disabled={noteSaving}
+                      className="inline-flex items-center gap-2 px-5 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors disabled:opacity-60"
+                    >
+                      {noteSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {noteSaving ? 'Saving...' : 'Save Notes'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {canNoteOnComplaint(noteTarget, { canEdit }) && (
+                      <button
+                        onClick={() => setNoteEditing(true)}
+                        className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" /> Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={closeNote}
+                      className="px-4 h-[38px] rounded-[10px] text-sm font-medium text-white bg-[#B5812A] hover:bg-[#a07325] transition-colors"
+                    >
+                      Close
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </Modal>
+      )}
+
+      {/* Verify and close. Closing is what moves a complaint to Archived, so it is confirmed --
+          and the dialog says so where the work has not been marked Reviewed yet. */}
+      {closeTarget && (
+        <Modal overlayClassName="lg:pl-72" zIndex="z-[60]" onClose={() => setCloseTarget(null)} className="w-full max-w-md p-6">
+            <h3 className="text-base font-semibold text-warm-text mb-2">Close this complaint?</h3>
+            <p className="text-sm text-warm-muted mb-3">
+              The complaint for <span className="font-medium text-warm-text">{decodeEntities(closeTarget.property_id) || 'this property'}</span> will
+              be closed and moved to Marketing &gt; Archived.
+              {closeTarget.assigned_employee_name ? ` ${decodeEntities(closeTarget.assigned_employee_name)} will be notified.` : ''}
+            </p>
+            {statusOf(closeTarget) !== 'Reviewed' && (
+              <div className="mb-4 p-3 bg-warm-warning border border-[#F3E2B3] rounded-[10px] flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  This complaint is still <span className="font-medium">{statusOf(closeTarget)}</span>. Check the notes
+                  before closing it.
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setCloseTarget(null)}
+                className="px-4 py-2 border border-warm-border rounded-[10px] text-sm text-warm-text hover:bg-warm-section transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveStatus(closeTarget, 'Closed')}
+                disabled={statusSaving === closeTarget.id}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-[10px] text-sm hover:bg-emerald-800 transition-colors disabled:opacity-60"
+              >
+                {statusSaving === closeTarget.id && <Loader2 className="w-4 h-4 animate-spin" />}
+                <CheckCircle2 className="w-4 h-4" /> Close Complaint
               </button>
             </div>
           </Modal>

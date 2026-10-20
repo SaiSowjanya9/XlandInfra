@@ -37,3 +37,15 @@ test('an up-to-date table is left alone, and v22\'s ENUM role_type is widened to
   assert.deepEqual(await ensurePortalNotificationsSchema(enumTable), ['role_type (widened)']);
   assert.ok(enumTable.statements.some(sql => /MODIFY COLUMN role_type VARCHAR\(20\) NULL/.test(sql)));
 });
+
+test("v22's ENUM type has no 'complaint', so it is widened too", async () => {
+  // Every complaint notification was refused with WARN_DATA_TRUNCATED (errno 1265) and dropped --
+  // the insert is wrapped in a catch, so nothing said so.
+  const pool = fakePool([['user_id', 'int'], ['role_type', 'varchar'], ['type', 'enum'], ['reference_type', 'varchar'],
+    ['reference_id', 'int'], ['reference_data', 'json'], ['action_url', 'varchar'], ['action_label', 'varchar'],
+    ['is_read', 'tinyint'], ['read_at', 'timestamp'], ['is_dismissed', 'tinyint'], ['dismissed_at', 'timestamp'],
+    ['priority', 'varchar'], ['recipient_roles', 'json'], ['vendor_id', 'int'], ['expires_at', 'timestamp'],
+    ['franchise_partner_id', 'int']]);
+  assert.deepEqual(await ensurePortalNotificationsSchema(pool), ['type (widened)']);
+  assert.ok(pool.statements.some(sql => /MODIFY COLUMN type VARCHAR\(50\) NOT NULL/.test(sql)));
+});

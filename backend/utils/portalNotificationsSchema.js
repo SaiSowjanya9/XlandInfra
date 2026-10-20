@@ -7,8 +7,10 @@
 // workflow stores `recipient_roles` and `vendor_id`, the rest `role_type`. Checked against
 // information_schema rather than with `ADD COLUMN IF NOT EXISTS`, which MySQL 8 does not support.
 //
-// role_type is a VARCHAR, not v22's ENUM: that ENUM had no 'customer', so the customer filter could
-// never match a row. An existing ENUM is widened to a VARCHAR, which keeps every value it holds.
+// role_type and type are VARCHARs, not v22's ENUMs: that role_type ENUM had no 'customer', so the
+// customer filter could never match a row, and the type ENUM had no 'complaint', so every complaint
+// notification was refused with WARN_DATA_TRUNCATED (errno 1265) and silently dropped. An existing
+// ENUM is widened to a VARCHAR, which keeps every value it holds.
 const CREATE = `CREATE TABLE IF NOT EXISTS portal_notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   notification_id VARCHAR(50) UNIQUE NOT NULL,
@@ -16,6 +18,7 @@ const CREATE = `CREATE TABLE IF NOT EXISTS portal_notifications (
   franchise_partner_id INT,
   role_type VARCHAR(20) NULL,
   type VARCHAR(50) NOT NULL,
+  -- see the ENUM note above: both of these are deliberately not ENUMs
   title VARCHAR(255) NOT NULL,
   message TEXT,
   reference_type VARCHAR(50),
@@ -74,6 +77,12 @@ const ensurePortalNotificationsSchema = async pool => {
   if (existing.get('role_type') === 'enum') {
     await pool.query('ALTER TABLE portal_notifications MODIFY COLUMN role_type VARCHAR(20) NULL');
     added.push('role_type (widened)');
+  }
+  // ...and v22's `type` ENUM has no 'complaint', so the complaint workflow's notifications were
+  // refused with errno 1265 and lost. Every writer already treats this column as free text.
+  if (existing.get('type') === 'enum') {
+    await pool.query('ALTER TABLE portal_notifications MODIFY COLUMN type VARCHAR(50) NOT NULL');
+    added.push('type (widened)');
   }
   if (added.includes('role_type')) {
     const [indexes] = await pool.query(
