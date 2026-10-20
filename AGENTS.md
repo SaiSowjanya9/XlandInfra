@@ -443,9 +443,20 @@ row lands in Marketing > Archived. The resident who filed it is emailed at every
   field staff have no portal of their own, so a complaint handed to one would go to a screen that
   does not exist. `ASSIGNABLE_ROLES` + `normalizeEmployeeRole`, which strips schema_v8's `fp_`
   prefix so `fp_manager` and `manager` describe the same person.
-- **The picker lists every assignable employee, not only the zone's own**, with `recommended` set
-  for those holding the complaint's zone (or the literal `all`). A zone with nobody assigned to it
-  would otherwise be an empty picker, leaving the FP unable to act on the complaint at all.
+- **The picker lists the complaint's own zone and nobody else.** The zone is a *filter*, not a sort
+  key: an employee is offered when their `fp_employee_zones` rows hold that zone or the literal
+  `all`. Listing the rest of the roster alongside them made the FP read a dozen names and their
+  zone lists to find the two people who actually cover the property, which is the opposite of what
+  zone-centric assignment is for. Each row therefore carries **the name and the job role** — the
+  zone is in the dialog's own header, so repeating every employee's zone list is noise.
+- **A zone nobody covers offers nobody**, and the dialog says so and points at Employee Zone
+  Management: the fix for "no one is assigned to Zone A" is to put somebody in Zone A, not to hand
+  the complaint to whoever is on the list. A complaint with no zone at all cannot be narrowed, so
+  that one does list everybody assignable.
+- **The assign route stays permissive about the assignee's zone** — it checks the role and nothing
+  else. The picker is where the zone rule lives, so an assignment already made survives the zone
+  being renamed or taken away, and the complaints list still shows an assignee their own row from
+  outside their zones.
 - **The note is the tracker's note, for complaints**: one `complaint_note` capped at 500 *decoded*
   characters, its own `PUT …/complaints/:id/note`, a `MessageSquare` bubble in the Actions column
   that opens read-first (so a click meant only to read leaves no half-typed draft), and the same

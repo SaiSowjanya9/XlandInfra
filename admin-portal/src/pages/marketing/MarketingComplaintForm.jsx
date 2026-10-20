@@ -1092,6 +1092,14 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                   Reassigning hands it to someone else and puts it back to Assigned.
                 </p>
               )}
+              {/* Every name here covers this complaint's zone -- that is what the list is. The zone
+                  itself is in the header above, so the row carries the one thing that tells two
+                  candidates apart: what they do. */}
+              {!assignLoading && assignEmployees.length > 0 && decodeEntities(assignTarget.zone || '') && (
+                <p className="mb-3 text-xs text-warm-muted">
+                  Employees assigned to <span className="font-medium text-warm-text">{decodeEntities(assignTarget.zone)}</span>
+                </p>
+              )}
               {assignError && (
                 <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-[10px] flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -1105,9 +1113,15 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </div>
               ) : assignEmployees.length === 0 ? (
                 <div className="py-8 text-center">
-                  <UserPlus className="w-8 h-8 mx-auto mb-2 text-warm-muted" strokeWidth={1.5} />
-                  <p className="text-sm text-warm-muted">
-                    No manager, coordinator or executive is available under this franchise partner.
+                  <MapPin className="w-8 h-8 mx-auto mb-2 text-warm-muted" strokeWidth={1.5} />
+                  {/* Nobody covers this zone. The fix is to put somebody in it, not to hand the
+                      complaint to whoever happens to be on the roster. */}
+                  <p className="text-sm text-warm-text font-medium">
+                    No one is assigned to {decodeEntities(assignTarget.zone || '') || 'this zone'}
+                  </p>
+                  <p className="text-sm text-warm-muted mt-1">
+                    Assign a manager, coordinator, supervisor or executive to this zone in
+                    Employee Zone Management, then assign the complaint.
                   </p>
                 </div>
               ) : (
@@ -1118,24 +1132,20 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                       type="button"
                       disabled={assignSaving !== null}
                       onClick={() => assignTo(employee)}
-                      className={`w-full px-3 py-2.5 text-left rounded-[10px] border transition-colors flex items-center gap-3 disabled:opacity-60 ${
-                        employee.recommended
-                          ? 'border-warm-accent bg-warm-accent-soft/50 hover:bg-warm-accent-soft'
-                          : 'border-warm-border bg-white hover:bg-warm-section'
-                      } ${assignTarget.assigned_employee_id === employee.id ? 'ring-2 ring-warm-accent/30' : ''}`}
+                      className={`w-full px-3 py-2.5 text-left rounded-[10px] border border-warm-border bg-white hover:bg-warm-section transition-colors flex items-center gap-3 disabled:opacity-60 ${
+                        assignTarget.assigned_employee_id === employee.id ? 'ring-2 ring-warm-accent/30' : ''
+                      }`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-warm-text [overflow-wrap:anywhere]">
                           {decodeEntities(employee.name) || decodeEntities(employee.email) || `Employee ${employee.id}`}
                         </p>
-                        <p className="text-xs text-warm-muted capitalize [overflow-wrap:anywhere]">
-                          {employee.role}{employee.zones?.length ? ` · ${employee.zones.map(z => decodeEntities(z)).join(', ')}` : ' · no zone assigned'}
+                        <p className="text-xs text-warm-muted capitalize">
+                          {employee.role}{employee.allZones ? ' · all zones' : ''}
                         </p>
                       </div>
-                      {employee.recommended && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-warm-accent bg-white border border-warm-accent whitespace-nowrap flex-shrink-0">
-                          <MapPin className="w-3 h-3" /> Recommended
-                        </span>
+                      {assignTarget.assigned_employee_id === employee.id && (
+                        <span className="text-[11px] font-medium text-warm-accent whitespace-nowrap flex-shrink-0">Current</span>
                       )}
                       {assignSaving === employee.id && <Loader2 className="w-4 h-4 animate-spin text-warm-accent flex-shrink-0" />}
                     </button>

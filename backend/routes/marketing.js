@@ -925,13 +925,12 @@ const createMarketingRouter = ({ resolveScope }) => {
     }
   }));
 
-  // The employees a complaint can be handed to, the ones covering ?zone= first.
+  // The employees a complaint can be handed to: the ones dedicated to ?zone=, and nobody else.
   //
-  // Only the three portals that have a Marketing section are offered (manager, coordinator,
-  // executive): the supervisor portal has none, so a supervisor would never see the assignment.
-  // Every assignable employee is returned rather than only the zone's own -- a zone with nobody
-  // assigned to it would otherwise be an empty picker, leaving the FP unable to act at all -- and
-  // `recommended` is what the picker groups by.
+  // Only a role with the Complaint Form screen is offered (manager, coordinator, supervisor,
+  // executive) -- anyone else has no portal to read the assignment in. The zone is a filter rather
+  // than a sort key, so the FP reads the two or three people who cover the property instead of the
+  // whole roster; see utils/fpEmployeeDirectory.js for what happens when a zone has nobody.
   router.get('/complaints/employees', scopedAssign(async (req, res, scope) => {
     try {
       if (!scope.writeFpId) {
