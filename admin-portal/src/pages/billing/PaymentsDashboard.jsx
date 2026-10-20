@@ -139,11 +139,11 @@ const EstimateAxisTick = ({ x, y, payload, rows = [] }) => {
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{`${row.estimateId || ''}${row.property ? ` · ${row.property}` : ''}`}</title>
-      <text textAnchor="middle" dy={14} fontSize={12} fontWeight={600} fill="#334155">{shortEstimateId(row.estimateId || '')}</text>
-      {row.property && <text textAnchor="middle" dy={30} fontSize={11} fill="#94A3B8">
+      <text textAnchor="middle" dy={15} fontSize={13} fontWeight={600} fill="#334155">{shortEstimateId(row.estimateId || '')}</text>
+      {row.property && <text textAnchor="middle" dy={32} fontSize={12} fill="#94A3B8">
         {row.property.length > 18 ? `${row.property.slice(0, 17)}…` : row.property}
       </text>}
-      {row.marginPercent != null && <text textAnchor="middle" dy={46} fontSize={11} fontWeight={600} fill="#4F6BED">
+      {row.marginPercent != null && <text textAnchor="middle" dy={50} fontSize={12} fontWeight={600} fill="#4F6BED">
         {`${row.marginPercent}% margin`}
       </text>}
     </g>
@@ -215,7 +215,7 @@ const DonutChart = ({ data, total, centerLabel, size = 130 }) => {
       <DonutSegments data={data} total={total} size={size} valueLabel="Amount" formatValue={formatCurrencyShort} />
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span className={`${totalSize} font-bold text-gray-900 tabular-nums whitespace-nowrap`}>{label}</span>
-        <span className="text-xs sm:text-sm text-gray-500">{centerLabel}</span>
+        <span className="text-sm text-gray-500">{centerLabel}</span>
       </div>
     </div>
   );
@@ -227,7 +227,7 @@ const DonutChartCount = ({ data, total, size = 130 }) => (
     <DonutSegments data={data} total={total} size={size} valueLabel="Invoices" formatValue={value => `${value}`} />
     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
       <span className="text-xl sm:text-2xl font-bold text-gray-900 tabular-nums">{total}</span>
-      <span className="text-xs sm:text-sm text-gray-500">Total</span>
+      <span className="text-sm text-gray-500">Total</span>
     </div>
   </div>
 );
@@ -814,7 +814,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <ChartLegend layout="row" items={COLLECTION_TREND_SERIES} />
+            <ChartLegend layout="row" size="md" items={COLLECTION_TREND_SERIES} />
             {/* Drawn by the chart library rather than by hand: the bars had no axis, no gridline
                 and no figure on them, so a tall blue bar beside a short green one said only
                 "more than" -- how much more was unanswerable without hovering. The invoiced and
@@ -827,19 +827,19 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       barGap={2} barCategoryGap="20%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: '#E2E8F0' }} interval="preserveStartEnd"
-                        tick={{ fontSize: 11, fill: '#64748B' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={52}
+                        tick={{ fontSize: 12, fill: '#475569' }} />
+                      <YAxis tick={{ fontSize: 12, fill: '#475569' }} tickLine={false} axisLine={false} width={56}
                         tickFormatter={value => formatCurrencyCompact(value)} />
                       <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={formatCurrency} />} />
                       {/* A figure over every bar is unreadable across thirty days, so they appear
                           only where the range is short enough for them to stand apart */}
                       <Bar dataKey="invoiceAmount" name="Invoice Amount" fill="#93C5FD" radius={[3, 3, 0, 0]} maxBarSize={28}>
                         {collectionTrend.length <= 8 && <LabelList dataKey="invoiceAmount" position="top"
-                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 10, fill: '#475569' }} />}
+                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 11, fill: '#334155' }} />}
                       </Bar>
                       <Bar dataKey="collectedAmount" name="Collected Amount" fill="#4ADE80" radius={[3, 3, 0, 0]} maxBarSize={28}>
                         {collectionTrend.length <= 8 && <LabelList dataKey="collectedAmount" position="top"
-                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 10, fill: '#475569' }} />}
+                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 11, fill: '#334155' }} />}
                       </Bar>
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -929,8 +929,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   footer: agingTotal > 0 ? `${((bucket.amount / agingTotal) * 100).toFixed(1)}% of outstanding` : undefined
                 })}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs sm:text-sm text-gray-600">{bucket.label}</span>
-                    <span className="text-xs sm:text-sm font-medium text-gray-900">{formatCurrencyShort(bucket.amount)}</span>
+                    <span className="text-sm text-gray-600">{bucket.label}</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrencyShort(bucket.amount)}</span>
                   </div>
                   <div className="h-5 sm:h-6 bg-gray-100 rounded-lg overflow-hidden">
                     <div 
@@ -972,8 +972,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   footer: customerCollectedTotal > 0 ? `${((customer.amount / customerCollectedTotal) * 100).toFixed(1)}% of the top 5` : undefined
                 })}>
                   <div className="flex items-center justify-between mb-1 gap-2">
-                    <span className="text-sm text-gray-700 truncate flex-1 min-w-0">{customer.name}</span>
-                    <span className="text-sm font-medium text-gray-900 flex-shrink-0">{formatCurrencyShort(customer.amount)}</span>
+                    <span className="text-sm sm:text-base text-gray-700 truncate flex-1 min-w-0">{customer.name}</span>
+                    <span className="text-sm sm:text-base font-medium text-gray-900 flex-shrink-0">{formatCurrencyShort(customer.amount)}</span>
                   </div>
                   <div className="h-3 sm:h-4 bg-gray-100 rounded overflow-hidden">
                     <div 
@@ -1072,7 +1072,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             {marginChart.length > 0 ? (
               <>
               {/* Above the plot and outside it, so nothing the chart draws can cross it */}
-              <ChartLegend layout="row" className="mt-5 justify-end" items={MARGIN_CHART_SERIES} />
+              <ChartLegend layout="row" size="md" className="mt-5 justify-end" items={MARGIN_CHART_SERIES} />
               <div className="mt-2 overflow-x-auto">
                 <div style={{ minWidth: Math.max(560, marginChart.length * 190) }} className="h-80 sm:h-[22rem]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1083,24 +1083,24 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                       barGap={2} barCategoryGap="22%">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                       <XAxis dataKey="estimateId" tickLine={false} axisLine={{ stroke: '#E2E8F0' }}
-                        interval={0} height={58} tick={<EstimateAxisTick rows={marginChart} />} />
-                      <YAxis yAxisId="money" tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
+                        interval={0} height={64} tick={<EstimateAxisTick rows={marginChart} />} />
+                      <YAxis yAxisId="money" tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} width={64}
                         tickFormatter={value => formatCurrencyCompact(value)} />
                       <YAxis yAxisId="margin" orientation="right" domain={[0, 100]} unit="%" width={44}
-                        tick={{ fontSize: 11, fill: '#64748B' }} tickLine={false} axisLine={false} />
+                        tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
                       <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={marginTrendValue}
                         footer={row => [row.property, row.propertyCode, row.createdAt && formatDate(new Date(row.createdAt))].filter(Boolean).join(' · ')} />} />
                       {/* The figures are compact -- ₹1.5L, not ₹1,50,300 -- because an exact label
                           is wider than the bar it belongs to and runs into its neighbour. Exact
                           figures are in the hover and in the cards above. */}
                       <Bar yAxisId="money" dataKey="vendorCost" name="Vendor Cost" fill="#A5B4FC" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                        <LabelList dataKey="vendorCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 11, fill: '#475569' }} />
+                        <LabelList dataKey="vendorCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 12, fill: '#334155' }} />
                       </Bar>
                       <Bar yAxisId="money" dataKey="xlandCost" name="XLAND Cost" fill="#FCD34D" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                        <LabelList dataKey="xlandCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 11, fill: '#475569' }} />
+                        <LabelList dataKey="xlandCost" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 12, fill: '#334155' }} />
                       </Bar>
                       <Bar yAxisId="money" dataKey="customerPrice" name="Customer Price" fill="#6EE7B7" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                        <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 11, fill: '#475569' }} />
+                        <LabelList dataKey="customerPrice" position="top" formatter={formatCurrencyCompact} style={{ fontSize: 12, fill: '#334155' }} />
                       </Bar>
                       {/* The line is the shape of the margin across the estimates; the figure for
                           each one is under the axis, where nothing else is drawn */}
