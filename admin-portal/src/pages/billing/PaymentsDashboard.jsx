@@ -205,17 +205,20 @@ const DonutSegments = ({ data, total, size, valueLabel, formatValue }) => {
 };
 
 const DonutChart = ({ data, total, centerLabel, size = 144 }) => {
-  // The hole is ~94px across, so the centre figure still sizes itself to its length -- ₹65,018 can
-  // take the large type where ₹12,34,567 cannot without lying across the ring.
+  // The centre figure is deliberately the small type on this card: it has only the ~94px hole to
+  // sit in, and at 16px ₹2,72,366 lay across the ring on both sides. It is sized to its own
+  // length, so a longer total shrinks further rather than growing out of the donut. The enlarged
+  // type belongs to the legend and the axes, which have the width for it.
   const label = formatCurrencyShort(total);
-  const totalSize = label.length > 8 ? 'text-sm sm:text-base'
-    : label.length > 6 ? 'text-base sm:text-lg' : 'text-lg sm:text-xl';
+  const totalSize = label.length > 11 ? 'text-[11px]'
+    : label.length > 8 ? 'text-[13px]'
+      : label.length > 6 ? 'text-sm' : 'text-base';
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <DonutSegments data={data} total={total} size={size} valueLabel="Amount" formatValue={formatCurrencyShort} />
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span className={`${totalSize} font-bold text-gray-900 tabular-nums whitespace-nowrap`}>{label}</span>
-        <span className="text-sm text-gray-500">{centerLabel}</span>
+        <span className="text-xs text-gray-500">{centerLabel}</span>
       </div>
     </div>
   );
@@ -226,8 +229,8 @@ const DonutChartCount = ({ data, total, size = 144 }) => (
   <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
     <DonutSegments data={data} total={total} size={size} valueLabel="Invoices" formatValue={value => `${value}`} />
     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-      <span className="text-xl sm:text-2xl font-bold text-gray-900 tabular-nums">{total}</span>
-      <span className="text-sm text-gray-500">Total</span>
+      <span className="text-lg font-bold text-gray-900 tabular-nums">{total}</span>
+      <span className="text-xs text-gray-500">Total</span>
     </div>
   </div>
 );
