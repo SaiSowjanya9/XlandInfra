@@ -735,9 +735,10 @@ test('the note bubble writes one capped field, scoped and credited like every wr
 // COMPLAINT WORKFLOW
 // ============================================
 //
-// Open -> Assigned -> In Progress -> Reviewed -> Closed. The FP hands a complaint to one
-// zone-centric employee, that employee reports progress and saves a note, and the FP or its
-// manager verifies it and closes it -- which archives the row.
+// Open -> Assigned -> In Review -> Closed. The FP hands a complaint to one zone-centric employee,
+// that employee saves a note -- which is itself the report, and moves the row to In Review -- and
+// the FP or its manager verifies it and closes it, which archives the row. The employee has no
+// status to set at any point.
 
 test('only the franchise partner hands a complaint to an employee', async (t) => {
   const request = await startServer(t);
@@ -826,44 +827,66 @@ test('the assignable list is the zone\'s own employees, and only theirs', async 
   assert.equal((await request('/manager/marketing/complaints/employees')).status, 403);
 });
 
-test('the assignee reports progress on their own complaint, and cannot close it', async (t) => {
+test('the assignee has no status of their own -- saving the note is the report', async (t) => {
   const request = await startServer(t);
   const priya = { id: 42, role: 'coordinator', firstName: 'Priya', lastName: 'N', username: 'priya' };
 
+  // Every status is refused, the retired ones included. An employee who can set a status can mark
+  // their own work reviewed, and the step exists precisely so that somebody else looks -- so the
+  // refusal points them at the note rather than just saying no.
+  for (const status of ['In Review', 'Closed', 'Open', 'In Progress', 'Reviewed']) {
+    const refused = await request('/coordinator/marketing/complaints/7/status', 'PUT', { status }, priya);
+    assert.equal(refused.status, 403, status);
+    assert.match(refused.message, /Save your notes/, status);
+  }
+
+  // Saving the note is the status move, and it is one statement: the note and the status can
+  // never disagree about whether the employee reported back.
   calls.length = 0;
   notified.length = 0;
-  const progress = await request('/coordinator/marketing/complaints/7/status', 'PUT', { status: 'In Progress' }, priya);
-  assert.equal(progress.status, 200);
+  const reported = await request('/coordinator/marketing/complaints/7/note', 'PUT',
+    { note: 'Replaced the pump and tested it.' }, priya);
+  assert.equal(reported.status, 200);
+  assert.match(reported.message, /In Review/);
 
-  const update = lastCall(`UPDATE ${COMPLAINT_TABLE} SET status`);
+  const update = lastCall(`UPDATE ${COMPLAINT_TABLE} SET complaint_note`);
+  assert.match(update.sql, /status = 'In Review'/);
   // A caller who may not edit marketing records reaches exactly one complaint: their own. Without
   // this clause an assignee could report on every complaint their zones cover.
   assert.match(update.sql, /assigned_employee_id = \?/);
   assert.ok(update.params.includes(4));
-  // Closing is the review step and archives the row, so neither is written here.
-  assert.doesNotMatch(update.sql, /closed_at = NOW\(\)/);
-  assert.match(update.sql, /archived_at = archived_at/);
-  // Who reported it comes from the token.
+  // Who reported it comes from the token, and stamps the status as well as the note.
   assert.ok(update.params.includes('Priya N'));
-  // The FP and its manager are asked to review it, and the customer is told it is being worked on.
+  // Closing is the review step and archives the row, so neither is written from here.
+  assert.doesNotMatch(update.sql, /closed_at = NOW\(\)/);
+  assert.doesNotMatch(update.sql, /archived_at = NOW\(\)/);
+  // MySQL evaluates a single-table UPDATE's assignments left to right, so `status` comes last:
+  // written first, the stamps after it would be testing the value it had just changed.
+  assert.ok(update.sql.indexOf('status_updated_by = ?') < update.sql.indexOf("status = 'In Review'"),
+    'the status assignment comes last');
+  // The FP and its manager are asked to verify it, and the customer is told it was attended to --
+  // the state, never the note itself.
   assert.deepEqual(notified, [
-    { event: 'progress', id: 7, statusChanged: true },
-    { event: 'customer', id: 7, status: 'In Progress', to: 'asha@example.com' }
+    { event: 'progress', id: 7, noteChanged: true, statusChanged: true },
+    { event: 'customer', id: 7, status: 'In Review', to: 'asha@example.com' }
   ]);
 
-  // In Progress is the one status they may set; Reviewed and Closed belong to the review.
-  for (const status of ['Reviewed', 'Closed', 'Open']) {
-    const refused = await request('/coordinator/marketing/complaints/7/status', 'PUT', { status }, priya);
-    assert.equal(refused.status, 403, status);
-    assert.match(refused.message, /only set: In Progress/, status);
-  }
-
-  // Somebody else's complaint is refused even where the zone would have shown it to them: the
-  // status route is held to the row, not merely to the zone.
+  // Somebody else's complaint is held off by the statement itself, even where the zone would have
+  // shown it to them: the note route is scoped to the row and the id in that clause is the
+  // caller's own (6), never the assignee's (4). And because they are not the assignee, the save
+  // reports nothing on their behalf -- no status move and nobody told.
   calls.length = 0;
-  const notMine = await request('/executive/marketing/complaints/7/status', 'PUT', { status: 'In Progress' });
-  assert.equal(notMine.status, 403);
-  assert.match(lastCall(`FROM ${COMPLAINT_TABLE}`).sql, /assigned_employee_id = \?/);
+  notified.length = 0;
+  await request('/executive/marketing/complaints/7/note', 'PUT', { note: 'x' });
+  const theirs = lastCall(`UPDATE ${COMPLAINT_TABLE} SET complaint_note`);
+  assert.match(theirs.sql, /assigned_employee_id = \?/);
+  assert.ok(theirs.params.includes(6), 'scoped to the caller, not the assignee');
+  assert.ok(!theirs.params.includes(4));
+  assert.doesNotMatch(theirs.sql, /status = 'In Review'/);
+  assert.deepEqual(notified, []);
+
+  // The status route refuses them outright: they are neither the FP nor its manager.
+  assert.equal((await request('/executive/marketing/complaints/7/status', 'PUT', { status: 'In Review' })).status, 403);
 });
 
 test('closing a complaint is also what archives it', async (t) => {
@@ -901,19 +924,20 @@ test('an archived complaint is read-only until it is restored, and comes back re
 
   // The stored row is archived for this one assertion.
   complaintRow.archived_at = '2026-02-01 10:00:00';
-  const refused = await request('/fp/marketing/complaints/7/status', 'PUT', { status: 'Reviewed' });
+  const refused = await request('/fp/marketing/complaints/7/status', 'PUT', { status: 'In Review' });
   complaintRow.archived_at = null;
   assert.equal(refused.status, 400);
   assert.match(refused.message, /Restore it/);
 
-  // Restoring a complaint that was archived by being closed brings it back as Reviewed: closing is
-  // what archives one, so a Closed row in the live list would contradict the rule the whole
-  // workflow rests on -- and reopening it is the only reason to restore it.
+  // Restoring a complaint that was archived by being closed brings it back as In Review: closing
+  // is what archives one, so a Closed row in the live list would contradict the rule the whole
+  // workflow rests on -- and reopening it is the only reason to restore it. In Review is where it
+  // belongs, because the employee's note is there and it is the FP's to judge again.
   calls.length = 0;
   await request('/fp/marketing/complaints/7/unarchive', 'PUT', undefined,
     { id: 8, role: 'franchise_partner', companyName: 'Hyderabad Partner' });
   const update = lastCall(`UPDATE ${COMPLAINT_TABLE} SET archived_at = NULL`);
-  assert.match(update.sql, /status = CASE WHEN status = 'Closed' THEN 'Reviewed' ELSE status END/);
+  assert.match(update.sql, /status = CASE WHEN status = 'Closed' THEN 'In Review' ELSE status END/);
   assert.match(update.sql, /closed_at = NULL, closed_by = NULL/);
   // MySQL evaluates a single-table UPDATE's assignments left to right, so the stamps are written
   // before `status`: after it they would be testing the value this statement had just changed, and
@@ -971,26 +995,31 @@ test('a portal can have the complaints without the lead pipeline', async (t) => 
   assert.match(list.sql, /AND \(c\.zone IN \(\?\) OR c\.assigned_employee_id = \?\)/);
   assert.deepEqual(list.params.slice(-2), ['North Zone', 4]);
 
-  // And the assignee reports on their own row exactly as a coordinator does.
+  // And the assignee reports on their own row exactly as a coordinator does: by saving the note,
+  // which is the one write that moves the complaint to In Review.
   calls.length = 0;
   notified.length = 0;
-  const progress = await request('/supervisor/marketing/complaints/7/status', 'PUT', { status: 'In Progress' }, vikram);
-  assert.equal(progress.status, 200);
-  assert.match(lastCall(`UPDATE ${COMPLAINT_TABLE} SET status`).sql, /assigned_employee_id = \?/);
+  const reported = await request('/supervisor/marketing/complaints/7/note', 'PUT',
+    { note: 'Cleared the blockage.' }, vikram);
+  assert.equal(reported.status, 200);
+  const noteUpdate = lastCall(`UPDATE ${COMPLAINT_TABLE} SET complaint_note`);
+  assert.match(noteUpdate.sql, /assigned_employee_id = \?/);
+  assert.match(noteUpdate.sql, /status = 'In Review'/);
   assert.ok(notified.some((n) => n.event === 'progress'), 'the FP and its manager are asked to review');
-  assert.equal((await request('/supervisor/marketing/complaints/7/note', 'PUT', { note: 'Cleared the blockage.' }, vikram)).status, 200);
 
-  // It writes nothing else: no new complaints, no edits, no assigning, no closing.
+  // It writes nothing else: no new complaints, no edits, no assigning, no closing -- and no status
+  // of its own, which is now true of every assignee in every portal.
   for (const [path, method, body] of [
     ['/complaints', 'POST', validComplaint],
     ['/complaints/7', 'PUT', validComplaint],
     ['/complaints/7/assign', 'PUT', { employeeId: 4 }],
     ['/complaints/7/archive', 'PUT'],
-    ['/tracker/31', 'PUT', validTracker]
+    ['/tracker/31', 'PUT', validTracker],
+    ['/complaints/7/status', 'PUT', { status: 'In Review' }],
+    ['/complaints/7/status', 'PUT', { status: 'Closed' }]
   ]) {
     assert.equal((await request(`/supervisor/marketing${path}`, method, body, vikram)).status, 403, `${method} ${path}`);
   }
-  assert.equal((await request('/supervisor/marketing/complaints/7/status', 'PUT', { status: 'Closed' }, vikram)).status, 403);
 });
 
 test('the complaint note is the assignee\'s report, capped like the tracker\'s', async (t) => {
@@ -1010,10 +1039,29 @@ test('the complaint note is the assignee\'s report, capped like the tracker\'s',
   assert.match(update.sql, /assigned_employee_id = \?/);
   assert.ok(update.params.includes('Priya N'));
   assert.ok(update.params.includes('Replaced the pump and tested it with the association secretary.'));
-  // The FP and its manager are told there is something to read -- and the customer is not: the
+  // The FP and its manager are told there is something to read, and the customer that their
+  // complaint has been attended to. The customer hop carries the *status* and nothing else: the
   // field notes are the assignee's report for the staff to verify, not a message to the resident.
-  assert.deepEqual(notified, [{ event: 'progress', id: 7, noteChanged: true }]);
-  assert.ok(!notified.some((n) => n.event === 'customer'), 'a note is not a customer update');
+  assert.deepEqual(notified, [
+    { event: 'progress', id: 7, noteChanged: true, statusChanged: true },
+    { event: 'customer', id: 7, status: 'In Review', to: 'asha@example.com' }
+  ]);
+
+  // An FP or its manager adding to the note is verifying it, not reporting, so the row must not
+  // move itself to In Review on their behalf -- the review step would be reviewing its own output.
+  calls.length = 0;
+  notified.length = 0;
+  assert.equal((await request('/fp/marketing/complaints/7/note', 'PUT', { note: 'Checked with the secretary.' })).status, 200);
+  assert.doesNotMatch(lastCall(`UPDATE ${COMPLAINT_TABLE} SET complaint_note`).sql, /status = 'In Review'/);
+  assert.deepEqual(notified, []);
+
+  // Nor is an empty note a report: clearing the box must not announce that the work was done.
+  calls.length = 0;
+  notified.length = 0;
+  await request('/coordinator/marketing/complaints/7/note', 'PUT', { note: '' },
+    { id: 42, role: 'coordinator', firstName: 'Priya', lastName: 'N', username: 'priya' });
+  assert.doesNotMatch(lastCall(`UPDATE ${COMPLAINT_TABLE} SET complaint_note`).sql, /status = 'In Review'/);
+  assert.ok(!notified.some((n) => n.event === 'customer'), 'an empty note is not a customer update');
 
   // 500 typed characters, judged on the decoded text: '&amp;' is one character to whoever typed it.
   const long = await request('/fp/marketing/complaints/7/note', 'PUT', { note: 'x'.repeat(501) });
@@ -1028,5 +1076,5 @@ test('the complaint note is the assignee\'s report, capped like the tracker\'s',
 
   // A portal with neither an assignment nor write permission is refused outright.
   assert.equal((await request('/opsManager/marketing/complaints/7/note', 'PUT', { note: 'x' })).status, 403);
-  assert.equal((await request('/opsManager/marketing/complaints/7/status', 'PUT', { status: 'Reviewed' })).status, 403);
+  assert.equal((await request('/opsManager/marketing/complaints/7/status', 'PUT', { status: 'In Review' })).status, 403);
 });

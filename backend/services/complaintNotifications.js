@@ -133,9 +133,10 @@ const partnerContact = async (franchisePartnerId) => {
  * The partner's managers, the ones covering the complaint's zone first.
  *
  * A zone with no manager assigned to it falls back to every active manager, because the review
- * step is what closes the complaint: a complaint nobody is asked to verify would sit at Reviewed
- * for ever. The work-order recipients in emailService deliberately do the opposite (strictly
- * zone-centric) -- that is a notice, this is a hand-off.
+ * step is what closes the complaint: a complaint nobody is asked to verify would sit at In Review
+ * for ever -- and the assignee cannot move it on themselves. The work-order recipients in
+ * emailService deliberately do the opposite (strictly zone-centric) -- that is a notice, this is
+ * a hand-off.
  */
 const partnerManagers = async (franchisePartnerId, zone) => {
   try {
@@ -218,10 +219,10 @@ const notifyComplaintAssigned = async (complaint) => {
     const property = decodeEntities(complaint.property_id || '');
     const html = complaintEmailHtml({
       heading: 'A complaint has been assigned to you',
-      intro: `${complaint.assigned_by || 'Your franchise partner'} has assigned this complaint to you. Please attend to it and keep its status up to date.`,
+      intro: `${complaint.assigned_by || 'Your franchise partner'} has assigned this complaint to you. Please attend to it and write up what you did.`,
       complaint,
       rows: [['Assigned by', complaint.assigned_by], ['Status', complaint.status]],
-      closing: `Open <strong>Marketing &rsaquo; Complaint Form</strong> in your portal to set the status to <strong>In Progress</strong> and save your notes against this complaint.`
+      closing: `Open <strong>Marketing &rsaquo; Complaint Form</strong> in your portal and save your notes against this complaint. Saving them moves it to <strong>In Review</strong> for your franchise partner to verify and close — there is no status for you to set.`
     });
     await send(employee.email, `New complaint assigned to you - ${property}`, html);
     await insertPortalNotification({
@@ -229,7 +230,7 @@ const notifyComplaintAssigned = async (complaint) => {
       userId: employee.user_id,
       roleType: normalizeEmployeeRole(employee.role),
       title: 'New complaint assigned to you',
-      message: summaryLine(complaint, 'Attend to this complaint and update its status.'),
+      message: summaryLine(complaint, 'Attend to this complaint and save your notes on it.'),
       complaintId: complaint.id,
       actionUrl: complaintPath(employee.role),
       priority: 'high'
@@ -240,16 +241,20 @@ const notifyComplaintAssigned = async (complaint) => {
 };
 
 /**
- * The assignee reported progress -- a status, a note, or both. The FP and its managers are the
- * ones who verify and close, so they are who hears about it.
+ * The assignee reported back. The FP and its managers are the ones who verify and close, so they
+ * are who hears about it.
+ *
+ * `statusChanged` means that save also moved the row to In Review -- the assignee has no status to
+ * set, so their note is the report and the one carries the other. It is false where the note was
+ * only edited again on a row already In Review.
  */
 const notifyComplaintProgress = async (complaint, { statusChanged = false, noteChanged = false } = {}) => {
   try {
     const partner = await partnerContact(complaint.franchise_partner_id);
     const managers = await partnerManagers(complaint.franchise_partner_id, complaint.zone);
     const who = complaint.assigned_employee_name || complaint.status_updated_by || 'The assigned employee';
-    const what = statusChanged && noteChanged ? 'updated the status and saved notes on'
-      : statusChanged ? 'updated the status of'
+    const what = statusChanged ? 'attended to and reported back on'
+      : noteChanged ? 'revised the notes on'
         : 'saved notes on';
     const property = decodeEntities(complaint.property_id || '');
     const html = complaintEmailHtml({
@@ -262,7 +267,7 @@ const notifyComplaintProgress = async (complaint, { statusChanged = false, noteC
         ['Updated By', complaint.note_updated_by || complaint.status_updated_by]
       ],
       note: complaint.complaint_note,
-      closing: `Open <strong>Marketing &rsaquo; Complaint Form</strong>, verify the work, and set the status to <strong>Closed</strong>. Closing moves the complaint to <strong>Marketing &rsaquo; Archived</strong>.`
+      closing: `Open <strong>Marketing &rsaquo; Complaint Form</strong>, read the notes below, and use <strong>Verify &amp; Close</strong> on the complaint. Closing moves it to <strong>Marketing &rsaquo; Archived</strong>.`
     });
 
     const subject = `Complaint ${property} ${statusChanged ? `is now ${decodeEntities(complaint.status || '')}` : 'has new notes'}`;
@@ -308,13 +313,9 @@ const CUSTOMER_STATUS_COPY = {
     heading: 'Your complaint has been assigned',
     intro: 'Your complaint has been assigned to a member of our team, who will attend to it shortly.'
   },
-  'In Progress': {
-    heading: 'Your complaint is being worked on',
-    intro: 'Our team is attending to your complaint now. We will let you know as soon as the work is done.'
-  },
-  Reviewed: {
-    heading: 'The work on your complaint has been checked',
-    intro: 'The work on your complaint is finished and is being verified by our team before we close it.'
+  'In Review': {
+    heading: 'Your complaint has been attended to',
+    intro: 'Our team has attended to your complaint and reported back. What was done is being verified before we close it.'
   },
   Closed: {
     heading: 'Your complaint has been resolved and closed',
@@ -389,7 +390,7 @@ const notifyComplaintClosed = async (complaint) => {
       userId: employee.user_id,
       roleType: normalizeEmployeeRole(employee.role),
       title: 'A complaint you worked on was closed',
-      message: summaryLine(complaint, 'Reviewed, closed and moved to Archived.'),
+      message: summaryLine(complaint, 'Verified, closed and moved to Archived.'),
       complaintId: complaint.id,
       actionUrl: complaintPath(employee.role)
     });

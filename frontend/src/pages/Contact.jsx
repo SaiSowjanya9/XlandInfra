@@ -13,12 +13,19 @@ const CONCERN_OPTIONS = ['Service Delay', 'Poor Quality Work', 'Incomplete Work'
 const STATUS_COPY = {
   Open: { label: 'Received', note: 'Logged with our service team', style: 'bg-gray-100 text-gray-700 border-gray-200' },
   Assigned: { label: 'Assigned', note: 'With a member of our team', style: 'bg-blue-50 text-blue-700 border-blue-200' },
-  'In Progress': { label: 'In Progress', note: 'Being attended to now', style: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Reviewed: { label: 'Being Verified', note: 'Work finished, our team is checking it', style: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  'In Review': { label: 'In Review', note: 'Attended to, now being verified by our team', style: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   Closed: { label: 'Resolved', note: 'Verified and closed', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
 };
 
-const statusCopy = (status) => STATUS_COPY[status] || STATUS_COPY.Open;
+// 'In Progress' and 'Reviewed' were the two steps In Review replaced (schema_v54). The server
+// normalises stored rows on the way out, so these only matter for a tab left open across the
+// change — but a complaint whose status tag fell back to "Received" would read as if the work had
+// never started.
+const RETIRED_STATUSES = { 'In Progress': 'In Review', Reviewed: 'In Review' };
+
+const statusCopy = (status) => (
+  STATUS_COPY[RETIRED_STATUSES[status] || status] || STATUS_COPY.Open
+);
 
 // A saved concern is a fixed option, or the typed text where that option was "Other".
 const displayConcern = (complaint) => {

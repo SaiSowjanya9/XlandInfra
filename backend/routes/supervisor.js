@@ -3242,8 +3242,8 @@ const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 // Form and nothing else of Marketing.
 //
 // That is the whole reason it exists: complaints are assigned to supervisors like they are to
-// coordinators and executives, so a supervisor needs the screen to read the assignment, set
-// In Progress and save what they did. The marketing *tracker* is a different thing entirely -- the
+// coordinators and executives, so a supervisor needs the screen to read the assignment and save
+// what they did. The marketing *tracker* is a different thing entirely -- the
 // partner's lead pipeline -- and is none of a supervisor's business, so `canReadTracker: false`
 // refuses those reads here rather than relying on the sidebar not to link them. The tracker writes
 // are already refused by `canWrite: false` / `canReview: false`.
@@ -3252,7 +3252,8 @@ const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 // to them, wherever the property sits -- it is the FP who picks the assignee, so it can
 // legitimately be outside their zones.
 //
-// Writes: none, except on their own assignment -- the status (In Progress only) and the note.
+// Writes: none, except the note on their own assignment -- and no status at all. Saving that note
+// is what moves the complaint to In Review for the FP to verify and close.
 const supervisorMarketingScope = async (req) => {
   if (!req.franchisePartnerId) {
     throw Object.assign(

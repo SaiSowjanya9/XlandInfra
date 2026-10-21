@@ -2703,8 +2703,9 @@ const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 //
 // Writes: none on a lead -- the executive reads the pipeline their visits feed, the review is the
 // coordinator's to make and the follow-up columns belong to the FP, admin and manager portals. The
-// one exception is a complaint the FP assigned to them: reporting its status (In Progress only)
-// and saving its note is the whole point of the assignment, and `assignee` holds them to that row.
+// one exception is a complaint the FP assigned to them: saving its note is the whole point of the
+// assignment -- and is also what moves it to In Review, since the assignee has no status of their
+// own to set. `assignee` holds them to that row.
 const executiveMarketingScope = async (req) => {
   if (!req.franchisePartnerId) {
     throw Object.assign(

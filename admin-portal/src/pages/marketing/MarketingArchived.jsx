@@ -8,7 +8,7 @@ import EmptyState from '../../components/common/EmptyState';
 import Modal from '../../components/common/Modal';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, marketingPermissions, marketingHasTracker } from '../../utils/marketingApi';
-import { complaintStatusStyle } from '../../utils/complaintStatus';
+import { complaintStatusStyle, normalizeComplaintStatus } from '../../utils/complaintStatus';
 import { formatDate } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -284,8 +284,8 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
                       <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                       <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
                       <td className="py-3 px-4">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(decodeEntities(row.status || '') || 'Open')}`}>
-                          {decodeEntities(row.status || '') || 'Open'}
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(decodeEntities(row.status || ''))}`}>
+                          {normalizeComplaintStatus(decodeEntities(row.status || ''))}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-warm-text whitespace-nowrap">{decodeEntities(row.assigned_employee_name) || <span className="text-warm-muted">Unassigned</span>}</td>

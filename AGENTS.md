@@ -374,8 +374,8 @@ page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
   `src/utils/marketingApi.js`; the server is the authority and refuses the rest regardless of what
   a screen renders.
 - **The supervisor mount exists for the complaints alone.** Complaints are assigned to supervisors
-  as they are to coordinators, so that portal needs the screen to read the assignment, report
-  In Progress and save what was done — but the partner's lead pipeline is none of its business.
+  as they are to coordinators, so that portal needs the screen to read the assignment and save what
+  was done — but the partner's lead pipeline is none of its business.
   `canReadTracker: false` on its scope is what refuses `GET /tracker`, `/tracker/archived` and
   `/dashboard`; leaving the router unmounted was the old answer, and a sidebar that does not link a
   screen is not a permission. `marketingHasTracker(portalType)` mirrors the same fact for the UI,
@@ -465,20 +465,40 @@ page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
 
 ## A Complaint Is a Piece of Work, Not Just a Record
 
-`Open → Assigned → In Progress → Reviewed → Closed`, and **closing is what archives it**
+`Open → Assigned → In Review → Closed`, and **closing is what archives it**
 (`schema_v51_complaint_workflow.sql`). A complaint is filed by an employee portal or by the
 customer's own Contact page; the FP hands it to one zone-centric employee, that employee works it
 and writes a note, and the FP or its manager verifies the note and closes it — at which point the
 row lands in Marketing > Archived. The resident who filed it is emailed at every step
 (`schema_v52`, below).
 
+- **The employee has no status to set; saving their note is the report.** `PUT …/complaints/:id/note`
+  moves the row to `In Review` *in the same `UPDATE`* that stores the note, stamping
+  `status_updated_by/_at` from the token — so the note and the status can never disagree about
+  whether the work was reported. `status` is assigned **last** in that statement, because MySQL
+  evaluates a single-table UPDATE's assignments left to right and the stamps must test the status
+  the row had. Only the assignee's own save counts: an FP or manager adding to the note is
+  *verifying* it (`!scope.canWrite`), an empty note is not a report, and a row already at
+  `In Review` is not restamped, so the FP keeps the time it was first reported back.
+- **`In Progress` and `Reviewed` are gone** (`schema_v54_complaint_in_review.sql`). They described
+  one state between them — the employee is done and the FP has to look — and the dropdown that let
+  the assignee choose between them let them mark their own work reviewed. Both stored values
+  migrate to `In Review`, and `normalizeComplaintStatus` (server) / the same export in
+  `complaintStatus.js` (browser) map them on the way out as well, so a deployment or a tab that has
+  not caught up still reads the workflow instead of badging real work as `Open`.
+  `resolveComplaintStatus` accepts either as `In Review` rather than answering 400, which is what
+  keeps a stale dropdown from becoming a dead screen.
 - **One policy function decides who may move a complaint where**:
   `resolveComplaintStatus` / `complaintStatusesFor` in `backend/utils/marketingComplaints.js`,
   mirrored for the screens by `admin-portal/src/utils/complaintStatus.js`. The assignee may set
-  **`In Progress` and nothing else** — they report progress, they do not sign their own work off —
-  and the FP and its manager may set anything **except `Assigned`**, because assigning is what
-  produces that status: offered from the dropdown it would let a row claim an assignee nobody
-  chose. `forbidden` on the result separates "no such status" (400) from "not yours to set" (403).
+  **nothing at all** — `complaintStatusesFor({ isAssignee: true })` is `[]`, so their Status cell is
+  a badge in every portal — and the FP and its manager may set anything **except `Assigned`**,
+  because assigning is what produces that status: offered from the dropdown it would let a row
+  claim an assignee nobody chose. `forbidden` on the result separates "no such status" (400) from
+  "not yours to set" (403), and an assignee's 403 names the note rather than saying "no permission".
+- **The FP keeps the dropdown *and* gets a `Verify & Close` action**, in the row's Actions column as
+  well as in the detail modal, because closing is the step the whole workflow waits on. The confirm
+  dialog warns when the row is not yet `In Review` — i.e. the assignee has not reported back.
 - **Assigning is the FP's alone; closing is the FP's and its manager's.** The admin portal may
   create and edit complaints but does neither. Per-portal in `marketingPermissions`
   (`canAssign`, `canClose`) and per-mount in `resolveScope` — the server refuses the rest.
@@ -518,22 +538,25 @@ row lands in Marketing > Archived. The resident who filed it is emailed at every
   Marketing > Archived after closing — that note is the record of why the complaint was closed.
 - **Notifications are sent after the write, outside any transaction, and never throw.**
   `services/complaintNotifications.js`: the assignee on assignment, the FP **and its managers** when
-  the assignee reports progress or saves a note, the assignee when it is closed. A failed mail
+  the assignee saves a note, the assignee when it is closed. A failed mail
   server must not undo the thing it was announcing — that is how a customer once paid and had the
   payment rolled back (see `payment_history.action`). Managers covering the zone are preferred but
-  it **falls back to every active manager**: the review is what closes the complaint, so a complaint
-  nobody is asked to verify would sit at In Progress for ever.
+  it **falls back to every active manager**: the review is what closes the complaint, and the
+  assignee cannot move it on themselves, so a complaint nobody is asked to verify would sit at
+  In Review for ever.
 - Email HTML is written from the **stored, escaped** text (nothing is escaped on output
   server-side); the in-portal `portal_notifications` message is **decoded**, because the portals
   render it as text. Getting this backwards either un-escapes user input into a message or shows
   `GC&#x2F;1` in a notification.
 - **`status` and `archived_at` must never disagree.** Closing sets `closed_at`, `closed_by` *and*
-  `archived_at` together; restoring from Archived brings a `Closed` row back as **`Reviewed`** and
-  clears both close stamps. In that `UPDATE` the `status` assignment comes **last**: MySQL evaluates
+  `archived_at` together; restoring from Archived brings a `Closed` row back as **`In Review`** —
+  the employee's note is there and it is the FP's to judge again — and clears both close stamps.
+  In that `UPDATE` the `status` assignment comes **last**: MySQL evaluates
   a single-table UPDATE's assignments left to right and a later one sees what an earlier one wrote,
   so stamps written first would be testing the status the statement had already changed.
-- **A row written before schema_v51 has no status**, so every reader defaults it to `Open` —
-  `presentComplaintRow` server-side, `statusOf` in the screens. A blank cell where the workflow
+- **A row written before schema_v51 has no status**, so every reader defaults it to `Open` through
+  `normalizeComplaintStatus` — `presentComplaintRow` server-side, `statusOf` in the screens, and
+  `STATUS_COPY` on the customer's own page. A blank cell where the workflow
   should be says nothing at all.
 - The in-portal signal an assignee actually sees is the **"Assigned to me (n)"** chip on Marketing >
   Complaint Form plus the tinted rows, because `assigned_to_me` is stamped on each row by the
@@ -562,8 +585,10 @@ in its notification bell.
   wrong household that *their* complaint is being worked on, and then that it is resolved, is worse
   than telling no one.
 - **The field notes never leave the staff portals.** The customer is told the *state* of their
-  complaint; `complaint_note` is the assignee's report for the FP and its manager to verify. Saving
-  a note therefore sends the customer nothing, which `marketing.test.js` asserts explicitly.
+  complaint; `complaint_note` is the assignee's report for the FP and its manager to verify. The
+  assignee's save therefore does tell the resident — but only that the complaint reached
+  `In Review`, never a word of the note, and `marketing.test.js` asserts the customer hop carries
+  the status alone. An FP editing the note, and an emptied note, tell them nothing at all.
 - **`presentCustomerComplaint` decodes its text server-side**, which no staff list does. The customer
   portal has no `decodeEntities` of its own and shipping one there to read a status line is worse
   than decoding a display-only projection — but that payload must then never be fed back into a form
