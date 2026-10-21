@@ -83,6 +83,34 @@ Mistakes that fail silently and have each already broken live endpoints:
 - A "Unknown column X in 'field list'" in the live log usually means the VPS is behind this repo,
   not that the code is wrong — the `assign_vendor` and `fp_amc_packages.price` errors were both
   fixed here well before they stopped appearing there. Check `git log` for the fix before chasing it.
+  **But check that a migration creates the column at all before assuming that.** `invoices.paid_at`
+  was written by every payment-completion path and created by nothing — not schema_v17's CREATE
+  TABLE, not v18/v21/v22, not v46's drift repair — so it was missing on every deployment, including
+  a database built from this repo. It failed differently in each path: `PUT /api/payments/:id/verify`
+  (the Payments screen of all six staff portals) updates `payments` and writes the history row
+  first, so the payment was marked paid while its invoice kept the old amount_paid/balance/status
+  and neither scheduling nor the receipt email — both after the invoice update — ever ran;
+  `recordRazorpayPayment` runs inside the payment's transaction, so there it rolled the payment
+  back entirely, losing customer-portal and payment-link payments the way a truncated
+  `payment_history.action` did. Never hard-code `paid_at` into an invoice `UPDATE`: splice
+  `paidAtAssignment(status)` from `utils/invoiceColumns.js` into the SET list
+  (`${paidAt.sql}` plus `...paidAt.params`), awaited **before** any `beginTransaction` because
+  DDL commits implicitly. It adds the column as `schema_v53_invoice_paid_at.sql` would and
+  returns empty SQL where it still cannot — a settlement timestamp must never be the reason a
+  payment is lost. `ensureInvoiceColumns` is the same guard for `archived`/`archived_at`, which
+  the invoice archive and restore routes used to `ALTER` in, and expect to fail, per request.
+  Regression test: `node --test backend/utils/invoiceColumns.test.js`, which fails if a writer
+  hard-codes the column, skips the splice, or runs the guard inside the transaction.
+- **The invoice's payment-link columns are `razorpay_payment_link_id` and `razorpay_short_url`.**
+  There are no `payment_link_id` / `payment_link_url` columns, so the customer portal's
+  `POST /api/customers/invoices/:id/initiate-payment` created a real Razorpay link and then 500ed
+  trying to record it, and its "existing valid link" check — reading the same non-columns — always
+  missed, minting a fresh link per request.
+- **Razorpay notes must carry `internal_invoice_id`.** `handlePaymentCaptured` and
+  `resolveInvoiceIdForPayment` resolve the invoice from that key and give up without it. The two
+  customer-portal routes used `invoice_db_id`, which nothing reads, so a Checkout payment whose
+  browser never reached `/verify-payment` (tab closed, network dropped) was dropped by the
+  `payment.captured` safety net with "no internal invoice ID".
 - **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
   union the global `zones` table, `fp_zones`, and zone text stored on properties
   (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id

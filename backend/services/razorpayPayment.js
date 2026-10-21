@@ -17,6 +17,7 @@ const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 const { markPaymentCompleted } = require('./schedulingWorkflow');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+const { paidAtAssignment } = require('../utils/invoiceColumns');
 
 // The action every Razorpay payment writes to payment_history. The Razorpay tab filters on it.
 const RAZORPAY_HISTORY_ACTION = 'razorpay_payment';
@@ -120,7 +121,13 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
   const connection = await pool.getConnection();
   let paymentDbId;
   try {
+    // Both resolve before the transaction opens: DDL commits implicitly in MySQL. The invoice
+    // update below writes paid_at, which no schema file ever created, and the resulting error
+    // was raised inside the transaction -- so it rolled the payment back and the customer paid
+    // for nothing. paidAt is empty where the column still cannot be created, because a
+    // settlement timestamp must never be the reason a payment is lost.
     await ensurePaymentColumns();
+    const paidAt = await paidAtAssignment(newPaymentStatus);
     await connection.beginTransaction();
 
     const [result] = await connection.execute(`
@@ -157,10 +164,10 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
         balance_amount = ?,
         payment_status = ?,
         status = ?,
-        paid_at = IF(? = 'paid', IFNULL(paid_at, NOW()), paid_at),
+        ${paidAt.sql}
         payment_link_status = 'paid'
       WHERE id = ?
-    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newPaymentStatus, newPaymentStatus, invoice.id]);
+    `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newPaymentStatus, ...paidAt.params, invoice.id]);
 
     // Property ID is the primary link between an invoice and its estimate
     if (invoice.property_id) {

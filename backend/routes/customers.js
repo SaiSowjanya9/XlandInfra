@@ -1743,8 +1743,8 @@ router.get('/invoices', async (req, res) => {
         amountPaid: amountPaid,
         balanceAmount: balanceAmount,
         status: inv.status,
-        paymentLinkId: inv.payment_link_id,
-        paymentLinkUrl: inv.payment_link_url,
+        paymentLinkId: inv.razorpay_payment_link_id,
+        paymentLinkUrl: inv.razorpay_short_url,
         paymentLinkStatus: inv.payment_link_status,
         sentAt: inv.sent_at,
         paidAt: inv.paid_at,
@@ -1926,8 +1926,8 @@ router.get('/invoices/:id', async (req, res) => {
         balanceAmount: balanceAmount,
         status: inv.status,
         notes: inv.notes,
-        paymentLinkId: inv.payment_link_id,
-        paymentLinkUrl: inv.payment_link_url,
+        paymentLinkId: inv.razorpay_payment_link_id,
+        paymentLinkUrl: inv.razorpay_short_url,
         paymentLinkStatus: inv.payment_link_status,
         sentAt: inv.sent_at,
         paidAt: inv.paid_at,
@@ -2029,14 +2029,16 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invoice is already fully paid' });
     }
 
-    // Check if there's an existing valid payment link
-    if (inv.payment_link_url && inv.payment_link_status !== 'expired' && inv.payment_link_status !== 'cancelled') {
+    // Check if there's an existing valid payment link. The columns are the ones schema_v18
+    // created: payment_link_url / payment_link_id were never columns at all, so this check
+    // always missed and a fresh Razorpay link was created on every request.
+    if (inv.razorpay_short_url && inv.payment_link_status !== 'expired' && inv.payment_link_status !== 'cancelled') {
       return res.json({
         success: true,
         message: 'Existing payment link found',
         data: {
-          paymentLinkUrl: inv.payment_link_url,
-          paymentLinkId: inv.payment_link_id,
+          paymentLinkUrl: inv.razorpay_short_url,
+          paymentLinkId: inv.razorpay_payment_link_id,
           amount: balanceAmount,
           invoiceId: inv.invoice_id
         }
@@ -2065,9 +2067,11 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
         email: true
       },
       reminder_enable: true,
+      // internal_invoice_id is what the payment_link.paid and payment.captured webhooks
+      // resolve the invoice from; the key this used to carry was read by nothing
       notes: {
         invoice_id: inv.invoice_id,
-        invoice_db_id: inv.id.toString(),
+        internal_invoice_id: inv.id.toString(),
         property_code: inv.property_code || '',
         customer_id: customerId.toString()
       },
@@ -2077,12 +2081,15 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
 
     const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
 
-    // Update invoice with payment link details
+    // Update invoice with payment link details. This wrote payment_link_id / payment_link_url,
+    // which no schema file creates, so it raised "Unknown column 'payment_link_id' in 'field
+    // list'" -- after the link had already been created at Razorpay, leaving it unrecorded.
     await pool.execute(
       `UPDATE invoices 
-       SET payment_link_id = ?, payment_link_url = ?, payment_link_status = 'created', updated_at = NOW()
+       SET razorpay_payment_link_id = ?, razorpay_short_url = ?, payment_link = ?,
+           payment_link_created_at = NOW(), payment_link_status = 'created', updated_at = NOW()
        WHERE id = ?`,
-      [paymentLink.id, paymentLink.short_url, id]
+      [paymentLink.id, paymentLink.short_url, paymentLink.short_url, id]
     );
 
     res.json({
@@ -2231,9 +2238,14 @@ router.post('/invoices/:id/create-order', async (req, res) => {
       amount: Math.round(charge.amount * 100), // Razorpay expects amount in paise
       currency: 'INR',
       receipt: `inv_${inv.invoice_id}_${Date.now()}`,
+      // internal_invoice_id is the key every consumer reads -- handlePaymentCaptured and
+      // resolveInvoiceIdForPayment both look it up and give up without it. This said
+      // invoice_db_id, which nothing reads, so when the browser never reached
+      // /verify-payment (tab closed, network dropped) the payment.captured webhook logged
+      // "no internal invoice ID" and the payment was lost.
       notes: {
         invoice_id: inv.invoice_id,
-        invoice_db_id: inv.id.toString(),
+        internal_invoice_id: inv.id.toString(),
         property_code: inv.property_code || '',
         customer_id: customerId.toString()
       }
