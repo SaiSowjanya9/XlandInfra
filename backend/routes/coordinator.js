@@ -3174,8 +3174,9 @@ const { resolveFpEmployee } = require('../utils/fpEmployeeDirectory');
 // Writes: read-only except Coordinator Reviewed and the complaints assigned to this coordinator.
 // Marking the review Yes records their name in coordinator_name, which is the one thing that
 // column is for; everything else on a lead is refused. A complaint the FP handed to them is
-// theirs to report on -- the status (In Progress only) and the note -- because they are the one
-// who did the work; `assignee` is what holds them to their own row.
+// theirs to report on -- the note, and no status of their own -- because they are the one who did
+// the work; saving that note is what moves the complaint to In Review for the FP to verify, and
+// `assignee` is what holds them to their own row.
 const coordinatorMarketingScope = async (req) => {
   if (!req.franchisePartnerId) {
     throw Object.assign(

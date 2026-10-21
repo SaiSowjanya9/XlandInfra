@@ -28,7 +28,7 @@ const {
 const {
   COMPLAINT_TABLE, COMPLAINT_STATUSES, complaintSelect, ensureMarketingComplaintsTable,
   parseComplaintBody, parseComplaintNote, resolveComplaintStatus, isAssignableRole,
-  normalizeEmployeeRole
+  normalizeEmployeeRole, normalizeComplaintStatus
 } = require('../utils/marketingComplaints');
 const {
   employeeName, fetchFpEmployee, listAssignableEmployees
@@ -246,16 +246,18 @@ const presentTrackerRow = (row) => {
 /**
  * What a complaint looks like to the portal.
  *
- * `status` is never blank: schema_v47 created the table without the column, so rows written
- * before schema_v51 read back as NULL and a list of them would show nothing where the workflow is.
+ * `status` is never blank and never retired: schema_v47 created the table without the column, so
+ * rows written before schema_v51 read back as NULL and a list of them would show nothing where the
+ * workflow is -- and rows written before schema_v54 hold 'In Progress' or 'Reviewed', which no
+ * portal offers any more. `normalizeComplaintStatus` answers both with 'Open' and 'In Review'.
  *
- * `assigned_to_me` is how the shared screen knows whose row this is -- the status dropdown and the
- * note bubble are open to the assignee in portals that are read-only everywhere else, and the
- * browser cannot work that out for itself: it does not know which fp_employees row the caller is.
+ * `assigned_to_me` is how the shared screen knows whose row this is -- the note bubble is open to
+ * the assignee in portals that are read-only everywhere else, and the browser cannot work that out
+ * for itself: it does not know which fp_employees row the caller is.
  */
 const presentComplaintRow = (row, scope = {}) => ({
   ...row,
-  status: row.status || 'Open',
+  status: normalizeComplaintStatus(row.status),
   assigned_employee_role_label: row.assigned_employee_role
     ? (ROLE_NAMES[normalizeEmployeeRole(row.assigned_employee_role)] || row.assigned_employee_role)
     : '',
@@ -1028,13 +1030,13 @@ const createMarketingRouter = ({ resolveScope }) => {
   // COMPLAINT WORKFLOW
   // ============================================
   //
-  //   Open -> Assigned -> In Progress -> Reviewed -> Closed
+  //   Open -> Assigned -> In Review -> Closed
   //
-  // The FP hands a complaint to one zone-centric employee (Assigned), who works it, reports
-  // In Progress and saves a note; the FP or its manager then verifies that note, marks it Reviewed
-  // and closes it -- and closing archives the row. Who may set what is
-  // utils/marketingComplaints.js's `resolveComplaintStatus`, so the rule lives in one place rather
-  // than in five portals' screens.
+  // The FP hands a complaint to one zone-centric employee (Assigned), who works it and saves a
+  // note -- and saving that note is what moves the row to In Review, because the employee has no
+  // status of their own to set. The FP or its manager then verifies the note and closes it, which
+  // archives the row. Who may set what is utils/marketingComplaints.js's
+  // `resolveComplaintStatus`, so the rule lives in one place rather than in five portals' screens.
   //
   // Every notification is sent *after* the write has succeeded and outside any transaction. A
   // notification that fails must not undo the thing it was announcing -- that is how a customer
@@ -1095,8 +1097,9 @@ const createMarketingRouter = ({ resolveScope }) => {
     }
   }));
 
-  // Move a complaint along. The assignee may set In Progress and nothing else; the FP and its
-  // manager may set anything but Assigned, which only assigning produces.
+  // Move a complaint along. This is the FP's and its manager's route: they may set anything but
+  // Assigned, which only assigning produces. An assignee reaching it is answered 403 and told to
+  // save their note instead -- that is their report, and it moves the row to In Review for them.
   router.put('/complaints/:id/status', scopedComplaintReport(async (req, res, scope) => {
     try {
       await ensureMarketingComplaintsTable();
@@ -1177,6 +1180,11 @@ const createMarketingRouter = ({ resolveScope }) => {
   // same feature the marketing tracker's note is. It is the assignee's report of what they did,
   // which is why they may write it in portals that are read-only everywhere else; the FP and its
   // manager read it, and may add to it when they verify.
+  //
+  // **For the assignee this route is also the status move.** They have no status to set, so
+  // writing up what they did is the report: the same statement puts the row at In Review and
+  // stamps who moved it, the FP and its managers are asked to verify, and the customer is told the
+  // state changed. Doing it in one UPDATE means the note and the status can never disagree.
   router.put('/complaints/:id/note', scopedComplaintReport(async (req, res, scope) => {
     try {
       await ensureMarketingComplaintsTable();
@@ -1191,22 +1199,55 @@ const createMarketingRouter = ({ resolveScope }) => {
       const fp = fpFilter(scope);
       const zone = zoneFilter(scope, '', { withAssignee: true });
       const mine = assigneeOnly(scope);
+      const [current] = await pool.execute(
+        `SELECT id, status, assigned_employee_id FROM ${COMPLAINT_TABLE}
+         WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}${mine.sql}`,
+        [id, ...fp.params, ...zone.params, ...mine.params]
+      );
+      if (!current.length) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      // Only the assignee's own save reports progress. An FP or its manager adding to the note is
+      // verifying it, not reporting, and must not move the row for itself; clearing the note is
+      // not a report either; and a row already at In Review stays there rather than being
+      // restamped on every edit, so the FP keeps the time it was first reported back.
+      const isAssignee = !!(scope.assignee?.employeeId
+        && current[0].assigned_employee_id === scope.assignee.employeeId);
+      const reporting = isAssignee && !scope.canWrite && !!note
+        && normalizeComplaintStatus(current[0].status) !== 'In Review';
       const actor = trackerActor(req);
       const [result] = await pool.execute(
+        // `status` is assigned last: MySQL evaluates a single-table UPDATE's assignments left to
+        // right and a later one sees what an earlier one wrote.
         `UPDATE ${COMPLAINT_TABLE} SET complaint_note = ?,
            note_updated_by = ?, note_updated_by_role = ?, note_updated_at = NOW(),
-           updated_at = NOW()
+           ${reporting ? 'status_updated_by = ?, status_updated_by_role = ?, status_updated_at = NOW(),' : ''}
+           updated_at = NOW()${reporting ? ", status = 'In Review'" : ''}
          WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}${mine.sql}`,
-        [note, actor.name, actor.role, id, ...fp.params, ...zone.params, ...mine.params]
+        [
+          note, actor.name, actor.role,
+          ...(reporting ? [actor.name, actor.role] : []),
+          id, ...fp.params, ...zone.params, ...mine.params
+        ]
       );
       if (result.affectedRows === 0) {
         return res.status(404).json({ success: false, message: 'Complaint not found' });
       }
       const complaint = await readComplaint(id, scope);
       if (!scope.canWrite && complaint?.assigned_to_me) {
-        notifyComplaintProgress(complaint, { noteChanged: true });
+        notifyComplaintProgress(complaint, { noteChanged: true, statusChanged: reporting });
       }
-      res.json({ success: true, message: 'Note saved', data: complaint });
+      // The customer hears the *state*, never the note: the field notes are the assignee's report
+      // for the FP and its manager to verify, and marketing.test.js asserts the text never leaves
+      // the staff portals.
+      if (reporting) notifyCustomerComplaintStatus(complaint, { status: 'In Review' });
+      res.json({
+        success: true,
+        message: reporting
+          ? 'Notes saved. The complaint is now In Review for your franchise partner to verify.'
+          : 'Note saved',
+        data: complaint
+      });
     } catch (error) {
       fail(res, error, 'Failed to save note');
     }
@@ -1238,9 +1279,10 @@ const createMarketingRouter = ({ resolveScope }) => {
 
   // Bring an archived complaint back to the complaint form list.
   //
-  // A complaint that was archived by being closed comes back as Reviewed, not Closed: closing is
+  // A complaint that was archived by being closed comes back as In Review, not Closed: closing is
   // what archives a complaint, so a Closed row sitting in the live list would contradict the one
-  // rule the workflow rests on -- and reopening it is the only reason to restore it.
+  // rule the workflow rests on -- and reopening it is the only reason to restore it. In Review is
+  // where it belongs, because the employee's note is there and it is the FP's to judge again.
   router.put('/complaints/:id/unarchive', scopedWrite(async (req, res, scope) => {
     try {
       await ensureMarketingComplaintsTable();
@@ -1261,7 +1303,7 @@ const createMarketingRouter = ({ resolveScope }) => {
            status_updated_by_role = CASE WHEN status = 'Closed' THEN ? ELSE status_updated_by_role END,
            status_updated_at = CASE WHEN status = 'Closed' THEN NOW() ELSE status_updated_at END,
            closed_at = NULL, closed_by = NULL,
-           status = CASE WHEN status = 'Closed' THEN 'Reviewed' ELSE status END
+           status = CASE WHEN status = 'Closed' THEN 'In Review' ELSE status END
          WHERE id = ? AND archived_at IS NOT NULL${fp.sql}${zone.sql}`,
         [actor.name, actor.role, id, ...fp.params, ...zone.params]
       );

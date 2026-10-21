@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, AlertCircle, FileWarning } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
 import { decodeEntities } from '../utils/text';
-import { complaintStatusStyle } from '../utils/complaintStatus';
+import { complaintStatusStyle, normalizeComplaintStatus } from '../utils/complaintStatus';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
 
@@ -18,7 +18,7 @@ const displayConcern = (complaint) => {
 };
 
 // Rows written before schema_v51 carry no status, and a complaint nobody has touched is Open.
-const statusOf = (complaint) => decodeEntities(complaint?.status || '') || 'Open';
+const statusOf = (complaint) => normalizeComplaintStatus(decodeEntities(complaint?.status || ''));
 
 // Read-only view of fp_marketing_complaints for staff portals: admin and the Operations Manager
 // see every partner's complaints (endpoint returns all rows plus the partner's name), the zone

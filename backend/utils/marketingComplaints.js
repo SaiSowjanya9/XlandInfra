@@ -200,13 +200,38 @@ const parseCustomerComplaintBody = (body) => {
 /**
  * Where a complaint can be, in order:
  *
- *   Open         filed, nobody is on it yet
- *   Assigned     handed to one zone-centric employee (set by the assignment itself)
- *   In Progress  that employee is working it -- the only status they may set
- *   Reviewed     the FP or its manager has verified what the employee did
- *   Closed       officially closed, which also archives the row
+ *   Open       filed, nobody is on it yet
+ *   Assigned   handed to one zone-centric employee (set by the assignment itself)
+ *   In Review  that employee has reported back -- set by *saving their note*, never by hand
+ *   Closed     the FP or its manager verified the note and closed it, which archives the row
+ *
+ * The employee has no status control at all: writing up what they did is the report, so the note
+ * is the signal and the status follows from it. That is why 'In Progress' and 'Reviewed' are gone
+ * -- one step, "the employee is done and the FP has to look", covered both, and a dropdown that
+ * let the assignee pick between them let them sign their own work off.
  */
-const COMPLAINT_STATUSES = ['Open', 'Assigned', 'In Progress', 'Reviewed', 'Closed'];
+const COMPLAINT_STATUSES = ['Open', 'Assigned', 'In Review', 'Closed'];
+
+/**
+ * The two statuses this workflow replaced, and what they are read as now.
+ *
+ * `schema_v54_complaint_in_review.sql` rewrites the stored rows, but normalising on the way out
+ * as well means a deployment that has not applied it yet still reads sensibly -- and a browser
+ * left open on the old dropdown posts a status that resolves instead of 400ing.
+ */
+const LEGACY_COMPLAINT_STATUSES = { 'In Progress': 'In Review', Reviewed: 'In Review' };
+
+/**
+ * A stored or posted status as one of COMPLAINT_STATUSES. Text arrives HTML-escaped
+ * (middleware/security.js), so it is decoded before being compared. Anything unrecognised --
+ * including the empty status every row written before schema_v51 carries -- reads as 'Open',
+ * because a blank where the workflow should be says nothing at all.
+ */
+const normalizeComplaintStatus = (status) => {
+  const value = decodeEntities(String(status || '')).trim();
+  if (LEGACY_COMPLAINT_STATUSES[value]) return LEGACY_COMPLAINT_STATUSES[value];
+  return COMPLAINT_STATUSES.includes(value) ? value : 'Open';
+};
 
 // The four portals a complaint can be assigned into: each of them has the Complaint Form screen to
 // read the assignment in and report back from. The supervisor portal has that screen and nothing
@@ -237,49 +262,59 @@ const parseComplaintNote = (body) => {
 /**
  * Who may move a complaint where.
  *
- * `canClose` is the FP and its manager -- they verify the work and close it, which is also what
- * archives the row. `isAssignee` is the employee the complaint was handed to: they report progress
- * and nothing else, so they may set exactly 'In Progress'. A caller who is both (a manager working
- * their own assignment) gets the union, which is `canClose`'s list.
+ * `canClose` is the FP and its manager: they verify the employee's note and close the complaint,
+ * which is also what archives the row. They keep the full dropdown so a row can be corrected --
+ * pushed back to Assigned is the exception, because assigning is what produces that status and
+ * offering it would let a row claim an assignee nobody chose.
  *
- * Note that nobody sets 'Assigned' by hand: it is what assigning produces. Allowing it from the
- * dropdown would let a row claim an assignee it does not have.
+ * **The assignee may set nothing.** They report by saving their note, which the server moves to
+ * 'In Review' for them (`PUT /complaints/:id/note`). An employee who could also set the status
+ * could mark their own work reviewed, and the point of the step is that somebody else looks.
  *
- * @returns {string[]} the statuses this caller may select, in workflow order
+ * @returns {string[]} the statuses this caller may select, in workflow order. Empty = read-only.
  */
-const complaintStatusesFor = ({ canClose = false, isAssignee = false } = {}) => {
+const complaintStatusesFor = ({ canClose = false } = {}) => {
   if (canClose) return COMPLAINT_STATUSES.filter((status) => status !== 'Assigned');
-  if (isAssignee) return ['In Progress'];
   return [];
 };
 
 /**
  * Validate a requested status against the caller and the row.
  *
- * Returns `{ error }` with the message to answer, or `{ status }` with the stored form of the
- * status to write. `forbidden` separates "no such status" (a 400) from "not yours to set" (a 403),
- * so a portal that offers the wrong option and a caller reaching past their permissions do not
- * answer with the same thing. Request text arrives HTML-escaped, so 'In&#x20;Progress' never
- * appears -- but an apostrophe or slash would, and validation therefore judges the decoded text
- * exactly as the concern options do.
+ * Returns `{ error }` with the message to answer, or `{ status }` with the canonical status to
+ * write. `forbidden` separates "no such status" (a 400) from "not yours to set" (a 403), so a
+ * portal that offers the wrong option and a caller reaching past their permissions do not answer
+ * with the same thing. Request text arrives HTML-escaped, so 'In&#x20;Review' never appears -- but
+ * an apostrophe or slash would, and validation therefore judges the decoded text exactly as the
+ * concern options do.
+ *
+ * A retired status ('In Progress', 'Reviewed') is accepted as 'In Review' rather than refused: the
+ * only thing that still sends one is a browser left open on the old dropdown, and answering 400
+ * there would be a dead screen rather than a corrected one.
+ *
+ * `isAssignee` is taken but deliberately grants nothing -- an assignee's report is their note. It
+ * stays in the signature so the caller can be told *that*, instead of a bare "no permission".
  */
 const resolveComplaintStatus = (body, { canClose = false, isAssignee = false } = {}) => {
   const raw = (body?.status || '').toString().trim().slice(0, 40);
-  const status = decodeEntities(raw).trim();
-  if (!status) return { error: 'Status is required' };
+  const decoded = decodeEntities(raw).trim();
+  if (!decoded) return { error: 'Status is required' };
+  const status = LEGACY_COMPLAINT_STATUSES[decoded] || decoded;
   if (!COMPLAINT_STATUSES.includes(status)) {
     return { error: `Status must be one of: ${COMPLAINT_STATUSES.join(', ')}` };
   }
-  const allowed = complaintStatusesFor({ canClose, isAssignee });
+  const allowed = complaintStatusesFor({ canClose });
   if (!allowed.includes(status)) {
     return {
       forbidden: true,
       error: allowed.length
         ? `You may only set: ${allowed.join(', ')}`
-        : 'You do not have permission to change a complaint status.'
+        : isAssignee
+          ? 'Save your notes instead — that moves the complaint to In Review for your franchise partner to verify and close.'
+          : 'You do not have permission to change a complaint status.'
     };
   }
-  return { error: null, status: raw };
+  return { error: null, status };
 };
 
 module.exports = {
@@ -287,6 +322,8 @@ module.exports = {
   COMPLAINT_COLUMNS,
   COMPLAINT_SELECT,
   COMPLAINT_STATUSES,
+  LEGACY_COMPLAINT_STATUSES,
+  normalizeComplaintStatus,
   ASSIGNABLE_ROLES,
   complaintSelect,
   CONCERN_OPTIONS,

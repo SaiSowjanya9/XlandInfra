@@ -9,7 +9,8 @@ import EmptyState from '../../components/common/EmptyState';
 import { useFP } from '../../contexts/FPContext';
 import { getMarketingApiPath, marketingFpId, withMarketingFp, canLogComplaint, marketingPermissions } from '../../utils/marketingApi';
 import {
-  COMPLAINT_STATUSES, complaintStatusesFor, canNoteOnComplaint, complaintStatusStyle
+  COMPLAINT_STATUSES, complaintStatusesFor, canNoteOnComplaint, complaintStatusStyle,
+  normalizeComplaintStatus
 } from '../../utils/complaintStatus';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
@@ -31,8 +32,9 @@ const displayConcern = (complaint) => {
   return value;
 };
 
-// Rows written before schema_v51 carry no status at all, and a complaint nobody has touched is Open.
-const statusOf = (complaint) => decodeEntities(complaint?.status || '') || 'Open';
+// Rows written before schema_v51 carry no status at all, and a complaint nobody has touched is
+// Open; rows written before schema_v54 carry one of the two statuses In Review replaced.
+const statusOf = (complaint) => normalizeComplaintStatus(decodeEntities(complaint?.status || ''));
 
 // "Priya N (Coordinator)" -- the role is stamped on the row at assignment, so a renamed or removed
 // employee still reads.
@@ -261,9 +263,13 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   // WORKFLOW -- assign, status, note
   // ============================================
   //
-  // Open -> Assigned -> In Progress -> Reviewed -> Closed. The server is the authority on who may
-  // move a complaint where (utils/complaintStatus.js mirrors it); every save below replies with the
-  // whole row, which goes straight back into the list.
+  // Open -> Assigned -> In Review -> Closed. The server is the authority on who may move a
+  // complaint where (utils/complaintStatus.js mirrors it); every save below replies with the whole
+  // row, which goes straight back into the list.
+  //
+  // The assignee has no status control: saving their note is the report, and the server moves the
+  // row to In Review in the same write -- which is why saveNote applies its reply like any other
+  // save rather than touching the status itself.
 
   const applySaved = (row) => {
     if (!row) return;
@@ -400,7 +406,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
         applySaved(result.data);
         setNoteText(decodeEntities(result.data?.complaint_note || ''));
         setNoteEditing(false);
-        showToast('Note saved');
+        // The server's own message, because an assignee's save is also the status move: it says
+        // the complaint is now In Review for the FP to verify, which 'Note saved' would hide.
+        showToast(result.message || 'Note saved');
       } else {
         setNoteError(result.message || 'Failed to save note.');
       }
@@ -716,8 +724,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               <tbody>
                 {filteredComplaints.map((row) => {
                   // What this caller may do to this row. The status options come from the shared
-                  // policy, so a portal never offers one whose save would answer 403.
-                  const statusOptions = complaintStatusesFor({ canClose, isAssignee: row.assigned_to_me });
+                  // policy, so a portal never offers one whose save would answer 403 -- for an
+                  // assignee that is none at all, and the cell is a badge.
+                  const statusOptions = complaintStatusesFor({ canClose });
                   const canNote = canNoteOnComplaint(row, { canEdit });
                   return (
                   <tr
@@ -729,8 +738,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                     <td className="py-3 px-4 font-medium text-warm-text whitespace-nowrap">{decodeEntities(row.property_id) || '-'}</td>
                     {showPartner && <td className="py-3 px-4 text-warm-muted">{decodeEntities(row.franchise_partner_name) || '-'}</td>}
                     <td className="py-3 px-4 text-warm-text">{decodeEntities(row.zone) || '-'}</td>
-                    {/* The status column the assignee reports from, and the FP and its manager
-                        review in. A caller who may set nothing reads it as a badge. */}
+                    {/* The status column. Only the FP and its manager may move a complaint by
+                        hand; for everyone else -- the assignee included -- it is a badge, because
+                        the assignee reports by saving their note and the server moves the row. */}
                     <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       {statusOptions.length ? (
                         <select
@@ -739,7 +749,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                           onChange={(e) => chooseStatus(row, e.target.value)}
                           className={`h-[30px] pl-2 pr-6 rounded-full text-[11px] font-medium border cursor-pointer appearance-none bg-no-repeat focus:outline-none focus:ring-2 focus:ring-warm-accent/20 disabled:opacity-60 ${complaintStatusStyle(statusOf(row))}`}
                           style={{ backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236B7280\' stroke-width=\'2\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.35rem center', backgroundSize: '0.85em' }}
-                          title={row.assigned_to_me && !canClose ? 'Report your progress on this complaint' : 'Change status'}
+                          title="Change status"
                         >
                           {/* The stored status is always listed, even where this caller could not
                               have set it -- a select whose value is missing shows the wrong row. */}
@@ -748,7 +758,12 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                           ))}
                         </select>
                       ) : (
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(statusOf(row))}`}>
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${complaintStatusStyle(statusOf(row))}`}
+                          title={row.assigned_to_me
+                            ? 'Save your notes to report back — that moves this complaint to In Review'
+                            : undefined}
+                        >
                           {statusOf(row)}
                         </span>
                       )}
@@ -774,6 +789,18 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                         >
                           <MessageSquare className="w-4 h-4" />
                         </button>
+                        {/* Verify and close, where the complaint has been reported back on. It is
+                            the FP's and its manager's step, and it archives the row -- so it sits
+                            in the list rather than only inside the detail modal. */}
+                        {canClose && statusOf(row) !== 'Closed' && <button
+                          onClick={() => setCloseTarget(row)}
+                          className="p-1.5 rounded-lg text-warm-muted hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                          title={statusOf(row) === 'In Review'
+                            ? 'Verify the notes and close this complaint'
+                            : 'Close this complaint'}
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>}
                         {canAssign && <button
                           onClick={() => openAssign(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
@@ -1247,7 +1274,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
       )}
 
       {/* Verify and close. Closing is what moves a complaint to Archived, so it is confirmed --
-          and the dialog says so where the work has not been marked Reviewed yet. */}
+          and the dialog says so where the assignee has not reported back yet. */}
       {closeTarget && (
         <Modal overlayClassName="lg:pl-72" zIndex="z-[60]" onClose={() => setCloseTarget(null)} className="w-full max-w-md p-6">
             <h3 className="text-base font-semibold text-warm-text mb-2">Close this complaint?</h3>
@@ -1256,12 +1283,12 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               be closed and moved to Marketing &gt; Archived.
               {closeTarget.assigned_employee_name ? ` ${decodeEntities(closeTarget.assigned_employee_name)} will be notified.` : ''}
             </p>
-            {statusOf(closeTarget) !== 'Reviewed' && (
+            {statusOf(closeTarget) !== 'In Review' && (
               <div className="mb-4 p-3 bg-warm-warning border border-[#F3E2B3] rounded-[10px] flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  This complaint is still <span className="font-medium">{statusOf(closeTarget)}</span>. Check the notes
-                  before closing it.
+                  This complaint is still <span className="font-medium">{statusOf(closeTarget)}</span>, so the assigned
+                  employee has not reported back on it yet.
                 </p>
               </div>
             )}
