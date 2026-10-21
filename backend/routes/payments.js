@@ -34,6 +34,8 @@ const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
 // Self-heals the schema_v31/v20/v25 payment columns and ENUMs on a database that skipped them
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+// Same for invoices.paid_at, which no schema file ever created (schema_v53)
+const { ensureInvoiceColumns, paidAtAssignment } = require('../utils/invoiceColumns');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 
 /**
@@ -1784,12 +1786,8 @@ router.put('/invoices/:id/archive', authenticate, canEditPayments, async (req, r
     const { id } = req.params;
     const fpId = getFPScope(req);
     
-    // Ensure archived column exists
-    try {
-      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived TINYINT(1) DEFAULT 0`);
-      await pool.execute(`ALTER TABLE invoices ADD COLUMN archived_at TIMESTAMP NULL`);
-    } catch (e) { /* Column might already exist */ }
-    
+    await ensureInvoiceColumns();
+
     let query = 'UPDATE invoices SET archived = 1, archived_at = NOW() WHERE id = ?';
     const params = [id];
     
@@ -1812,6 +1810,8 @@ router.put('/invoices/:id/restore', authenticate, canEditPayments, async (req, r
     const { id } = req.params;
     const fpId = getFPScope(req);
     
+    await ensureInvoiceColumns();
+
     let query = 'UPDATE invoices SET archived = 0, archived_at = NULL WHERE id = ?';
     const params = [id];
     
@@ -2893,16 +2893,20 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         newBalance = Math.max(0, invoiceAmount - totalPaid);
         const invoiceStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
 
+        // Adds paid_at as schema_v53 would, and resolves to empty SQL where it still cannot --
+        // this update threw "Unknown column 'paid_at'" after the payment had already been marked
+        // paid, leaving the invoice stale, unscheduled and with no receipt sent
+        const paidAt = await paidAtAssignment(invoiceStatus);
         await pool.execute(`
           UPDATE invoices SET
             amount_paid = ?,
             balance_amount = ?,
             payment_status = ?,
             status = ?,
-            paid_at = IF(? = 'paid', IFNULL(paid_at, NOW()), paid_at),
+            ${paidAt.sql}
             updated_at = NOW()
           WHERE id = ?
-        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, invoiceStatus, p.invoice_id]);
+        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, ...paidAt.params, p.invoice_id]);
 
         // Update fp_estimates payment_status to enable scheduling
         // PROPERTY_ID is the PRIMARY link - all records are linked by property
