@@ -16,6 +16,9 @@ const {
   notifyCustomerComplaintStatus, complaintReference
 } = require('../services/complaintNotifications');
 const { decodeEntities } = require('../utils/htmlEntities');
+// What has happened on the property, merged from work orders, invoices and visits -- and the rule
+// that keeps a visit in exactly one of the home page's two panels
+const { buildCustomerActivity, buildUpcomingVisits } = require('../utils/customerActivity');
 // Which notifications are this customer's own -- one rule for the list, its count and both
 // mark-read routes, because they have to agree
 const { customerNotificationScope } = require('../utils/customerNotificationScope');
@@ -1271,6 +1274,109 @@ router.post('/resend-activation', async (req, res) => {
   }
 });
 
+/**
+ * Which property a customer's records hang off.
+ *
+ * `customer_accounts` stores either the numeric property id or the property code (a string like
+ * "GC-1781557633834"), and rows elsewhere carry whichever of the two the screen that wrote them
+ * had, so both are resolved once here and every list matches on either. Only an all-digit value can
+ * be an id; the code is compared against `property_id` -- that guard is why a code lookup no longer
+ * asks MySQL to compare `id = 'GC-1781557633834'`.
+ */
+const resolveCustomerProperty = async (storedPropertyId, storedPropertyCode, storedPropertyName) => {
+  let numericPropertyId = storedPropertyId; // might already be numeric
+  let propertyCode = storedPropertyCode;
+  let propertyName = storedPropertyName;
+
+  const lookupId = storedPropertyId || storedPropertyCode;
+  if (lookupId) {
+    const numericLookup = /^\d+$/.test(String(lookupId)) ? Number(lookupId) : 0;
+
+    // Onboarded properties first, then the legacy table the employee portals write
+    const [opData] = await pool.execute(
+      `SELECT id, property_id, community_name FROM onboarded_properties
+       WHERE id = ? OR property_id = ?`,
+      [numericLookup, String(lookupId)]
+    );
+    if (opData.length > 0) {
+      numericPropertyId = opData[0].id;
+      propertyCode = propertyCode || opData[0].property_id;
+      propertyName = propertyName || opData[0].community_name;
+    } else {
+      const [pData] = await pool.execute(
+        `SELECT id, property_id, name FROM properties
+         WHERE id = ? OR property_id = ?`,
+        [numericLookup, String(lookupId)]
+      );
+      if (pData.length > 0) {
+        numericPropertyId = pData[0].id;
+        propertyCode = propertyCode || pData[0].property_id;
+        propertyName = propertyName || pData[0].name;
+      }
+    }
+  }
+
+  return { numericPropertyId, propertyCode, propertyName };
+};
+
+/**
+ * The work orders that are this customer's own, as a condition for the `wo` alias.
+ *
+ * Property name is deliberately NOT one of them: names are not unique (several communities are
+ * called "OHSS"), and matching on one leaked another household's requests.
+ */
+const customerWorkOrderScope = ({ numericPropertyId, propertyCode, customerId, email }) => {
+  const conditions = [];
+  const params = [];
+
+  if (numericPropertyId) {
+    conditions.push('wo.property_id = ?');
+    params.push(numericPropertyId);
+  }
+  if (propertyCode && propertyCode !== numericPropertyId) {
+    conditions.push('wo.property_id = ?');
+    params.push(propertyCode);
+  }
+  if (customerId) {
+    conditions.push('wo.resident_id = ?');
+    params.push(customerId);
+  }
+  if (email) {
+    conditions.push('LOWER(wo.customer_email) = LOWER(?)');
+    params.push(email);
+  }
+
+  // No identifier at all must return nothing, never everything
+  return { sql: conditions.length > 0 ? `(${conditions.join(' OR ')})` : '1=0', params };
+};
+
+/**
+ * The invoices raised against this customer's property, as a condition for the `i` alias. Email is
+ * a fallback only: an invoice carries the property, and the address on an account can change.
+ */
+const customerInvoiceScope = ({ numericPropertyId, propertyCode, email }) => {
+  const conditions = [];
+  const params = [];
+
+  if (numericPropertyId) {
+    conditions.push('i.property_id = ?');
+    params.push(numericPropertyId);
+  }
+  if (propertyCode) {
+    conditions.push('i.property_code = ?');
+    params.push(propertyCode);
+    // Some writers put the code in property_id, so cross-match it
+    conditions.push('i.property_id = ?');
+    params.push(propertyCode);
+  }
+  if (conditions.length === 0 && email) {
+    conditions.push('LOWER(i.customer_email) = LOWER(?)');
+    params.push(email);
+  }
+
+  return { sql: conditions.length > 0 ? `(${conditions.join(' OR ')})` : '1=0', params };
+};
+
 // ============================================
 // CUSTOMER DASHBOARD - Get customer-specific dashboard data
 // ============================================
@@ -1308,81 +1414,20 @@ router.get('/dashboard', async (req, res) => {
 
     const customerData = customer[0];
     const custEmail = customerEmail || customerData.email;
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code; // String like "GC-1781557633834"
 
-    // Resolve property to get both numeric ID and property code
-    let numericPropertyId = storedPropertyId; // might already be numeric
-    let propertyCode = storedPropertyCode;
-    let propertyName = customerData.property_name;
-
-    // Try to resolve from property tables if needed
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      // Try onboarded_properties first
-      const [opData] = await pool.execute(
-        `SELECT id, property_id, community_name FROM onboarded_properties 
-         WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-        propertyName = propertyName || opData[0].community_name;
-      } else {
-        // Try properties table
-        const [pData] = await pool.execute(
-          `SELECT id, property_id, name FROM properties 
-           WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-          propertyName = propertyName || pData[0].name;
-        }
-      }
-    }
+    const { numericPropertyId, propertyCode, propertyName } = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code, customerData.property_name
+    );
 
     console.log('[Customer Dashboard] Resolved property:', {
-      storedPropertyId, storedPropertyCode, numericPropertyId, propertyCode, propertyName, custEmail, customerId
+      storedPropertyId: customerData.property_id,
+      storedPropertyCode: customerData.property_code,
+      numericPropertyId, propertyCode, propertyName, custEmail, customerId
     });
 
-    // Build WHERE conditions - prioritize unique identifiers, AVOID property_name as it's not unique
-    // Match by: property_id (numeric), property_code (unique string), resident_id (customer account), or customer_email
-    const whereConditions = [];
-    const whereParams = [];
-    
-    // Primary: Match by numeric property ID (most reliable)
-    if (numericPropertyId) {
-      whereConditions.push('wo.property_id = ?');
-      whereParams.push(numericPropertyId);
-    }
-    
-    // Secondary: Match by property code (unique identifier like "GC-1781557633834")
-    if (propertyCode && propertyCode !== numericPropertyId) {
-      whereConditions.push('wo.property_id = ?');
-      whereParams.push(propertyCode);
-    }
-    
-    // Tertiary: Match by resident_id (customer account ID - ties to specific customer)
-    if (customerId) {
-      whereConditions.push('wo.resident_id = ?');
-      whereParams.push(customerId);
-    }
-    
-    // Quaternary: Match by customer email (ties to specific customer)
-    if (custEmail) {
-      whereConditions.push('LOWER(wo.customer_email) = LOWER(?)');
-      whereParams.push(custEmail);
-    }
-    
-    // NOTE: We intentionally DO NOT match by property_name because names are NOT unique
-    // and can cause cross-customer data leakage (e.g., multiple "OHSS" properties)
-    
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE (${whereConditions.join(' OR ')})` 
-      : 'WHERE 1=0'; // No valid conditions = no results
+    const scope = customerWorkOrderScope({ numericPropertyId, propertyCode, customerId, email: custEmail });
+    const whereClause = `WHERE ${scope.sql}`;
+    const whereParams = scope.params;
 
     // Get work orders for this customer
     const [workOrders] = await pool.execute(
@@ -1404,7 +1449,7 @@ router.get('/dashboard', async (req, res) => {
       whereParams
     );
 
-    console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName, 'with conditions:', whereConditions.length);
+    console.log('[Customer Dashboard] Found work orders:', workOrders.length, 'for property:', propertyName, 'with conditions:', whereParams.length);
 
     // Fetch attachments for each work order
     for (const wo of workOrders) {
@@ -1632,68 +1677,19 @@ router.get('/invoices', async (req, res) => {
 
     const customerData = customer[0];
     const customerEmail = customerData.email;
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code;
 
-    // Resolve property to get numeric ID and code
-    let numericPropertyId = storedPropertyId;
-    let propertyCode = storedPropertyCode;
+    const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code
+    );
 
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      const [opData] = await pool.execute(
-        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-      } else {
-        const [pData] = await pool.execute(
-          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-        }
-      }
-    }
+    const scope = customerInvoiceScope({ numericPropertyId, propertyCode, email: customerEmail });
+    const whereParams = scope.params;
 
-    // Build WHERE conditions - match invoices by property_id OR property_code
-    // Use flexible matching since property identifiers may be stored differently
-    const whereConditions = [];
-    const whereParams = [];
-    
-    // Match by numeric property ID against invoice's property_id
-    if (numericPropertyId) {
-      whereConditions.push('i.property_id = ?');
-      whereParams.push(numericPropertyId);
-    }
-    
-    // Match by property code against invoice's property_code
-    if (propertyCode) {
-      whereConditions.push('i.property_code = ?');
-      whereParams.push(propertyCode);
-      
-      // Also check if property_code is stored in property_id field (cross-match)
-      whereConditions.push('i.property_id = ?');
-      whereParams.push(propertyCode);
-    }
-    
-    // Only use email as fallback if NO property identifiers found
-    if (whereConditions.length === 0 && customerEmail) {
-      whereConditions.push('LOWER(i.customer_email) = LOWER(?)');
-      whereParams.push(customerEmail);
-    }
-    
     // Draft invoices still sit in Generated Invoices awaiting review; the customer only ever
     // sees an invoice once it has been sent and moved into the Invoices section.
-    const whereClause = whereConditions.length > 0
-      ? `WHERE (${whereConditions.join(' OR ')}) AND i.status IS NOT NULL AND LOWER(i.status) <> 'draft'`
-      : 'WHERE 1=0';
+    const whereClause = `WHERE ${scope.sql} AND i.status IS NOT NULL AND LOWER(i.status) <> 'draft'`;
 
-    console.log('[Customer Invoices] Query conditions:', { numericPropertyId, propertyCode, customerEmail, conditionsCount: whereConditions.length });
+    console.log('[Customer Invoices] Query conditions:', { numericPropertyId, propertyCode, customerEmail, conditionsCount: whereParams.length });
 
     // Get all invoices for this property
     const [invoices] = await pool.execute(
@@ -2915,6 +2911,84 @@ router.get('/schedules', authenticateCustomer, async (req, res) => {
   } catch (error) {
     console.error('Error fetching customer schedules:', error);
     res.status(500).json({ success: false, message: 'Error fetching schedules', error: error.message });
+  }
+});
+
+// ============================================
+// GET /api/customers/activity - the home page's Recent Activity and Upcoming Schedules
+// ============================================
+// Three tables with three shapes answer one question -- "what has happened on my property?" -- so
+// they are read here and merged by `utils/customerActivity.js`, which also owns the one rule that
+// separates the two panels: a visit is activity once it is over, and upcoming until then. Both
+// panels come back from a single request because they are one screen; splitting them would have the
+// home page fetch the same visits twice.
+router.get('/activity', authenticateCustomer, async (req, res) => {
+  try {
+    // LIMIT cannot be bound in a prepared statement, so it is clamped and inlined
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 8, 1), 25);
+    const customer = req.customer;
+
+    const property = await resolveCustomerProperty(customer.propertyId, customer.propertyCode, customer.propertyName);
+    const workOrderScope = customerWorkOrderScope({ ...property, customerId: customer.id, email: customer.email });
+    const invoiceScope = customerInvoiceScope({ ...property, email: customer.email });
+
+    // Each stream is dated by its own best column, which is not always the one it can be ordered by
+    // in SQL, so a little more is read than is shown and the merge decides.
+    const streamLimit = limit * 3;
+
+    const [workOrders] = await pool.execute(
+      `SELECT DISTINCT wo.id, wo.work_order_id, wo.category_name, wo.description, wo.status,
+              wo.created_at, wo.updated_at, wo.completed_at
+       FROM work_orders wo
+       WHERE ${workOrderScope.sql}
+       ORDER BY COALESCE(wo.completed_at, wo.updated_at, wo.created_at) DESC
+       LIMIT ${streamLimit}`,
+      workOrderScope.params
+    );
+
+    // `i.*`, never a column list: `paid_at` is created by schema_v53 and is missing from older
+    // deployments, so naming it would fail the whole statement and empty the feed. The merge reads
+    // it if it is there and dates the invoice by `sent_at` if it is not -- which is also why the
+    // ordering here stays off it.
+    const [invoices] = await pool.execute(
+      `SELECT i.* FROM invoices i
+       WHERE ${invoiceScope.sql} AND i.status IS NOT NULL AND LOWER(i.status) <> 'draft'
+       ORDER BY COALESCE(i.sent_at, i.created_at) DESC
+       LIMIT ${streamLimit}`,
+      invoiceScope.params
+    );
+
+    // Visits are narrowed to those nearest today in *either* direction. Ordering one way and taking
+    // the first n would hand back either the oldest history or the farthest-future visit and miss
+    // the next appointment entirely -- which is the one thing this panel exists to show.
+    const onboardedPropertyId = await resolveOnboardedPropertyId(customer);
+    const visitWindow = (limit + 5) * 2;
+    const [visits] = onboardedPropertyId
+      ? await pool.execute(
+        `SELECT sv.id, sv.visit_id, sv.status,
+                DATE_FORMAT(sv.scheduled_date, '%Y-%m-%d') as scheduled_date,
+                TIME_FORMAT(sv.scheduled_time_start, '%H:%i') as scheduled_time_start,
+                TIME_FORMAT(sv.scheduled_time_end, '%H:%i') as scheduled_time_end,
+                pss.service_name
+         FROM scheduled_visits sv
+         JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+         WHERE sv.property_id = ?
+         ORDER BY ABS(DATEDIFF(sv.scheduled_date, CURDATE())) ASC
+         LIMIT ${visitWindow}`,
+        [onboardedPropertyId]
+      )
+      : [[]];
+
+    res.json({
+      success: true,
+      data: {
+        activity: buildCustomerActivity({ workOrders, invoices, visits }, { limit }),
+        upcomingVisits: buildUpcomingVisits(visits, { limit: 4 })
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching customer activity:', error);
+    res.status(500).json({ success: false, message: 'Error fetching activity', error: error.message });
   }
 });
 

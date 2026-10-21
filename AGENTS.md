@@ -287,6 +287,61 @@ headings it has **in that same order**:
 - Gold `#B5812A`, not the lighter `warm-accent`, carries white button text: the tan accent does not
   meet contrast, which is the same rule the warm estimate screens follow.
 
+## Customer Portal Home
+
+`frontend/src/pages/Dashboard.jsx` is the resident's home page (`/dashboard`), and its order is
+fixed: **welcome banner → Quick Access → Recent Activity beside Upcoming Schedules**, with the
+Property panel and any pending Service Renewals under them.
+
+- **No summary/stat cards anywhere on it.** The Total Orders / Pending / Completed / Property row
+  was removed on the user's call and must not come back in another shape — not as a row of four, not
+  as figures inside the Quick Access cards. A **Quick Access card is navigation**: icon tile, title,
+  one line of description and an arrow, nothing else. The counts live on the page that owns them.
+- **Recent Activity replaced Recent Work Orders**, and it is all three streams: work orders,
+  payments and scheduled visits, newest first, each row dated with its own status badge. A
+  work-order row opens the **work order modal on this page** — that modal is the only place a
+  customer can read a work order's detail, since `WorkOrder.jsx` is the raise form and has no list —
+  and the other rows go to Payments or Schedules. "View All" expands the list in place (6 → 25);
+  there is no activity page to send anyone to.
+- **One request serves both panels**: `GET /api/customers/activity`, merged by
+  `backend/utils/customerActivity.js`, which owns the rule that splits them — **a visit is activity
+  once it is over, and upcoming until then**, so no visit can show in both panels or in neither.
+  `node --test backend/utils/customerActivity.test.js` fails if that split stops being
+  complementary.
+  - The route sends a **named tone** (`success`, `warning`, `info`, `danger`, `neutral`), never a
+    colour, because Tailwind is scanned statically; `ACTIVITY_TONES` in `Dashboard.jsx` is where
+    those five names become classes. A hex from the server renders as nothing.
+  - It reads invoices as `SELECT i.*` and never names `paid_at` in SQL: that column is created by
+    schema_v53 and is missing from older deployments, so naming it would fail the statement and
+    empty the feed (see the `invoices.paid_at` note above).
+  - Visits are narrowed with `ORDER BY ABS(DATEDIFF(sv.scheduled_date, CURDATE()))` — nearest today
+    in *either* direction. Ordering one way and taking the first n hands back either the oldest
+    history or the farthest-future visit and misses the next appointment, which is the one thing the
+    panel exists to show.
+  - Text is **decoded server-side**, as `presentCustomerComplaint` decodes: stored text is escaped
+    and this portal has no `decodeEntities` of its own. Display-only — never feed it to a form.
+- **The matching rule for "this customer's records" is shared.** `resolveCustomerProperty`,
+  `customerWorkOrderScope` and `customerInvoiceScope` in `routes/customers.js` are what `/dashboard`,
+  `/invoices` and `/activity` all use; the rule used to be copy-pasted per route. Property **name**
+  is never one of the conditions — names are not unique (several communities are called "OHSS") and
+  matching on one leaks another household's records.
+- **The bottom bar is `frontend/src/components/BottomNav.jsx`, locked to the bottom and `md:hidden`.**
+  Five tabs: Home, Work Orders, Schedules, Payments and More, where More opens a sheet with the
+  signed-in account, Contact / Help and Sign Out. It is rendered by `Layout`, for every customer
+  page and not just the home one, so `main` carries `pb-24 md:pb-6` to keep content clear of it. On
+  `md` and up the same destinations hang off the header's account menu — without them a desktop page
+  would be a dead end but for the brand link.
+- **The header owns the bell, Refresh and the account menu.** `components/NotificationBell.jsx`
+  moved out of the home page's body, where the one place a customer is told anything vanished the
+  moment they opened Work Orders. Refresh belongs to whichever page is open: a page registers its
+  fetch with `useRegisterRefresh` (`hooks/usePortalRefresh.jsx`) and the button calls it, reloading
+  the window only when nothing is registered — a Refresh that silently does nothing is worse than a
+  slow one. It also bumps the bell, because the unread count is what a customer watches.
+- `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
+  stay identical). Existing callers render byte-identically.
+- The banner's property image is a **warm gradient with a `Building2` watermark**, not a stock
+  photograph: no property image is stored yet. Swap it for the real thing when one is.
+
 ## Customer Portal — Payments & Invoices
 
 - **One list, filtered; not a tab per invoice kind.** `frontend/src/pages/Payment.jsx` opens on
