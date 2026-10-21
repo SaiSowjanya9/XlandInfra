@@ -269,6 +269,12 @@ headings it has **in that same order**:
   child would have been the one portal whose headings read differently.
 - Every portal's Marketing sub-items are already the FP's four in the FP's order — Dashboard,
   Tracker, Complaint Form, Archived — minus whatever that portal's mount refuses.
+- **Billing & Payments reads in the order the work happens**: Dashboard · Generated Invoices ·
+  Invoices · **Make Payments** · **Payments** · Payment History · Archived. Make Payments is the
+  action and Payments is its record, so the action comes first — they were the other way round, which
+  put the ledger before the thing that writes to it. Five portals carry this group (admin, FP,
+  manager, supervisor, employee; coordinator and executive have no Billing section) and each has its
+  own `billingPaymentsSubItems` array, so a change to one is a change to five.
 - The admin portal's **User Management** and **QR Management** have no FP counterpart and stay where
   they are, above Property Management.
 

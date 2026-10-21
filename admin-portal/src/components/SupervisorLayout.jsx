@@ -74,8 +74,8 @@ const SupervisorLayout = ({ admin, onLogout, children }) => {
     { path: '/supervisor/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/supervisor/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/supervisor/billing/invoices', icon: Receipt, label: 'Invoices' },
-    { path: '/supervisor/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/supervisor/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/supervisor/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/supervisor/billing/payment-history', icon: History, label: 'Payment History' },
     { path: '/supervisor/billing/archived', icon: Archive, label: 'Archived' }
   ];

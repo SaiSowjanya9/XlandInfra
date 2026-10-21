@@ -205,8 +205,8 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
     { path: '/manager/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/manager/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/manager/billing/invoices', icon: Receipt, label: 'Invoices' },
-    { path: '/manager/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/manager/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/manager/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/manager/billing/payment-history', icon: History, label: 'Payment History' },
     { path: '/manager/billing/archived', icon: Archive, label: 'Archived' }
   ];
