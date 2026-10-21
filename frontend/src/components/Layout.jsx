@@ -1,20 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ChevronDown, ClipboardList, CreditCard, HelpCircle, LogOut, RefreshCw, User } from 'lucide-react';
+import { ChevronDown, LogOut, RefreshCw, User } from 'lucide-react';
 import DismissPanel from './common/DismissPanel';
 import NotificationBell from './NotificationBell';
 import BottomNav from './BottomNav';
 import { PortalRefreshProvider, usePortalRefresh } from '../hooks/usePortalRefresh';
-
-// Where the account menu can reach. These are the destinations the bottom bar carries on a phone,
-// so they are listed here only from `md` up -- without them a desktop page with no bar would be a
-// dead end but for the brand link.
-const NAV = [
-  { label: 'Work Orders', icon: ClipboardList, path: '/dashboard/work-order' },
-  { label: 'Schedules', icon: Calendar, path: '/dashboard/schedule' },
-  { label: 'Payments', icon: CreditCard, path: '/dashboard/payment' },
-  { label: 'Contact / Help', icon: HelpCircle, path: '/dashboard/contact' },
-];
 
 /**
  * The portal header: the brand, the bell, Refresh and the account menu.
@@ -93,20 +83,6 @@ const PortalHeader = ({ user, onLogout }) => {
                   )}
                 </div>
                 <div className="p-2">
-                  {NAV.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setShowAccount(false)}
-                        className="hidden md:flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-gray-900 hover:bg-gray-100 transition-colors"
-                      >
-                        <Icon className="w-4 h-4 text-gold-600" />
-                        <span className="text-sm">{item.label}</span>
-                      </Link>
-                    );
-                  })}
                   <button
                     type="button"
                     onClick={onLogout}

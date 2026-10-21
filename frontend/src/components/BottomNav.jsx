@@ -7,9 +7,9 @@ import Modal from './common/Modal';
  * The customer portal's bottom bar, locked to the bottom of the screen on a phone.
  *
  * The four destinations a resident actually uses are one thumb-reach away on every page, which is
- * why they are here and not only on the home page. It is `md:hidden` on purpose: on a desktop the
- * same destinations hang off the header's account menu, and a bar pinned across a 1440px window
- * would be a phone pattern wearing a desktop's clothes.
+ * why they are here and not only on the home page. It is `md:hidden` on purpose: a bar pinned
+ * across a 1440px window would be a phone pattern wearing a desktop's clothes, where the brand link
+ * back to Home and its Quick Access cards are the way around.
  *
  * "More" is the fifth tab because a bar of five is the most that stays legible at 360px: it opens
  * the account itself -- who is signed in, the property, Contact / Help and Sign Out.

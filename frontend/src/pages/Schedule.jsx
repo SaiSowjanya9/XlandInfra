@@ -2,20 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import Modal from '../components/common/Modal';
+import StatCards from '../components/common/StatCards';
+import { istToday } from '../utils/ist';
+import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 import {
   AlertCircle, Calendar, CalendarCheck, CalendarDays, CheckCircle, ChevronLeft,
   ChevronRight, Clock, List, Loader2, RefreshCw, RotateCcw, Truck, Wrench, X
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-
-// The business runs on IST, so "today" must be the Indian date even when the
-// browser clock is not. backend/utils/scheduleStats.js applies the same rule to
-// the counts, so the summary cards and these lists always agree.
-const IST_OFFSET_MINUTES = 330;
-const istToday = () => new Date(Date.now() + IST_OFFSET_MINUTES * 60 * 1000)
-  .toISOString()
-  .slice(0, 10);
 
 // Visits still awaiting work, exactly as the employee portals define them
 const OPEN_STATUSES = ['scheduled', 'confirmed', 'work_order_created', 'missed'];
@@ -81,20 +76,6 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const SummaryCard = ({ icon: Icon, label, value, iconClass, valueClass = 'text-gray-900' }) => (
-  <div className="bg-white rounded-xl p-5 border border-gold-600/20">
-    <div className="flex items-center gap-3">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${iconClass}`}>
-        <Icon className="w-6 h-6" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-gray-500 text-sm truncate">{label}</p>
-        <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
-      </div>
-    </div>
-  </div>
-);
-
 const VisitRow = ({ visit, today, onSelect }) => {
   const date = parseDay(visit.scheduledDate);
   const status = displayStatus(visit, today);
@@ -142,8 +123,8 @@ const VisitRow = ({ visit, today, onSelect }) => {
 const VisitList = ({ visits, today, onSelect, emptyIcon: EmptyIcon, emptyTitle, emptyHint }) => {
   if (visits.length === 0) {
     return (
-      <div className="p-12 text-center">
-        <EmptyIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+      <div className="p-8 text-center">
+        <EmptyIcon className="w-10 h-10 text-gray-300 mx-auto mb-2" />
         <p className="text-gray-500">{emptyTitle}</p>
         <p className="text-gray-500 text-sm mt-1">{emptyHint}</p>
       </div>
@@ -393,6 +374,10 @@ const Schedule = ({ user }) => {
     fetchSchedules();
   }, [fetchSchedules]);
 
+  // What the header's Refresh means here: the visits and the counts above them come back together,
+  // so the cards can never report a different set from the list.
+  useRegisterRefresh(fetchSchedules);
+
   // The three tabs are disjoint and together cover every status: a visit is
   // either still active, finished (or superseded by a move), or cancelled.
   const { upcomingVisits, pastVisits, cancelledVisits } = useMemo(() => {
@@ -456,57 +441,36 @@ const Schedule = ({ user }) => {
   const selectedDayVisits = visitsByDay.get(selectedDay) || [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Schedules</h1>
-          <p className="text-gray-500">Service visits scheduled for your property</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header. The counts ride in the space beside the title rather than in a band of their own;
+          they are the server's own derived figures (utils/scheduleStats.js), so they cannot
+          disagree with the lists below. */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-6 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Schedules</h1>
           {user?.propertyName && (
             <p className="text-gray-500 text-sm mt-1">
               Property: <span className="text-gold-600 font-medium">{user.propertyName}</span>
             </p>
           )}
         </div>
+        <StatCards
+          className="lg:flex-1 lg:justify-end"
+          cards={[
+            { key: 'total', label: 'Total Visits', value: stats?.total || 0, icon: Calendar, accent: 'blue' },
+            { key: 'upcoming', label: 'Upcoming', value: stats?.upcoming || 0, icon: CalendarDays, accent: 'gold' },
+            { key: 'today', label: 'Today', value: stats?.today || 0, icon: Clock, accent: 'amber' },
+            { key: 'completed', label: 'Completed', value: stats?.completed || 0, icon: CheckCircle, accent: 'green' }
+          ]}
+        />
         <button
           onClick={fetchSchedules}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-900 disabled:opacity-50 self-start"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-gray-900 disabled:opacity-50 self-start shrink-0"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
         </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <SummaryCard
-          icon={Calendar}
-          label="Total Visits"
-          value={stats?.total || 0}
-          iconClass="bg-blue-100 text-blue-600"
-        />
-        <SummaryCard
-          icon={CalendarDays}
-          label="Upcoming"
-          value={stats?.upcoming || 0}
-          iconClass="bg-gold-600/20 text-gold-600"
-          valueClass="text-gold-600"
-        />
-        <SummaryCard
-          icon={Clock}
-          label="Today"
-          value={stats?.today || 0}
-          iconClass="bg-amber-100 text-amber-600"
-          valueClass="text-amber-600"
-        />
-        <SummaryCard
-          icon={CheckCircle}
-          label="Completed"
-          value={stats?.completed || 0}
-          iconClass="bg-green-100 text-green-600"
-          valueClass="text-green-600"
-        />
       </div>
 
       {/* Overdue notice - a visit past its date that is still open */}
@@ -586,8 +550,8 @@ const Schedule = ({ user }) => {
             <Loader2 className="w-8 h-8 text-gold-600 animate-spin" />
           </div>
         ) : error ? (
-          <div className="p-12 text-center">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+          <div className="p-8 text-center">
+            <AlertCircle className="w-10 h-10 text-red-600 mx-auto mb-2" />
             <p className="text-gray-900">{error}</p>
             <button
               onClick={fetchSchedules}
