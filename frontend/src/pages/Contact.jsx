@@ -78,12 +78,15 @@ const Contact = () => {
       title: 'Phone',
       details: '+91 8500 010 111',
       subtext: 'Mon-Sat, 8am-6pm',
+      // A phone and an email are things to act on, not to read: on a phone they dial and compose
+      href: 'tel:+918500010111',
     },
     {
       icon: Mail,
       title: 'Email',
       details: 'info@xlandinfra.com',
       subtext: 'We reply within 24 hours',
+      href: 'mailto:info@xlandinfra.com',
     },
     {
       icon: MapPin,
@@ -157,73 +160,69 @@ const Contact = () => {
   const autoGrowField = (el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; } };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
           Contact / Help
         </h1>
-        <p className="text-gray-500">
-          Get in touch with our support team
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Contact Information */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Contact Information
-          </h2>
-          <div className="space-y-6">
-            {contactInfo.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div key={index} className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-gold-600/20 border border-gold-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-6 h-6 text-gold-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">{item.title}</h3>
-                    <p className="text-gray-900">{item.details}</p>
-                    <p className="text-sm text-gray-500">{item.subtext}</p>
-                  </div>
+      {/* One card across the width, four details across it, and the emergency line along the
+          bottom. This was two cards side by side: four stacked rows at 24px apart made the left one
+          ~300px tall, and the right one held a single box and then matched that height with nothing
+          in it. */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Contact Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {contactInfo.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div key={index} className="flex items-start gap-3 min-w-0">
+                <span className="w-9 h-9 bg-gold-600/15 border border-gold-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-gold-600" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500">{item.title}</p>
+                  {item.href ? (
+                    <a href={item.href} className="block text-sm font-medium text-gray-900 hover:text-gold-600 transition-colors break-words">
+                      {item.details}
+                    </a>
+                  ) : (
+                    <p className="text-sm font-medium text-gray-900 break-words">{item.details}</p>
+                  )}
+                  <p className="text-xs text-gray-500 break-words">{item.subtext}</p>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Emergency Contact */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Need Help?
-          </h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-              <h3 className="font-medium text-red-600 mb-2">Emergency?</h3>
-              <p className="text-sm text-red-600/80 mb-3">
-                For urgent maintenance issues, please call our emergency line
-              </p>
-              <a
-                href="tel:+918500010111"
-                className="inline-flex items-center space-x-2 text-red-600 font-medium hover:text-red-600 transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span>+91 8500 010 111</span>
-              </a>
-            </div>
-          </div>
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+          <span className="w-9 h-9 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Phone className="w-4 h-4 text-red-600" />
+          </span>
+          <p className="flex-1 min-w-[10rem] leading-tight">
+            <span className="block text-[11px] uppercase tracking-wide text-red-600 font-medium">Emergency</span>
+            <span className="block text-xs text-gray-500">Urgent maintenance, any hour</span>
+          </p>
+          <a
+            href="tel:+918500010111"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors"
+          >
+            <Phone className="w-4 h-4" />
+            +91 8500 010 111
+          </a>
         </div>
       </div>
 
       {/* File a Complaint -- lands in the franchise partner's Marketing > Complaint Form list
           with property, zone, contact and phone filled from this account's profile. */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-6 mt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">
+      <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-5 mt-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
           File a Complaint
         </h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Tell us what went wrong and our team will get back to you.
-        </p>
 
         {submitted ? (
           <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -248,7 +247,7 @@ const Contact = () => {
               </div>
             )}
 
-            <div className="mb-5">
+            <div className="mb-4">
               <label className={labelCls}>
                 Concern With <span className="text-red-500">*</span>
               </label>
@@ -286,7 +285,7 @@ const Contact = () => {
               )}
             </div>
 
-            <div className="mb-5">
+            <div className="mb-4">
               <label className={labelCls}>
                 Comments <span className="text-red-500">*</span>
               </label>
@@ -294,7 +293,7 @@ const Contact = () => {
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 maxLength={4000}
-                rows={5}
+                rows={4}
                 placeholder="Describe the complaint"
                 className={`${inputCls} resize-y`}
               />
@@ -318,11 +317,8 @@ const Contact = () => {
           still see where their complaint stands. Complaints our team files about your property
           appear here too. The field notes stay with the service team. */}
       {(complaintsLoading || complaints.length > 0) && (
-        <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-6 mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Your Complaints</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            We email you whenever one of these moves, and the latest status is always here
-          </p>
+        <div className="bg-white rounded-2xl shadow-lg border border-gold-600/20 p-5 mt-5">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Complaints</h2>
 
           {complaintsLoading ? (
             <div className="flex items-center justify-center py-8">

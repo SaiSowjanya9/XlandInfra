@@ -295,8 +295,16 @@ Property panel and any pending Service Renewals under them.
 
 - **No summary/stat cards anywhere on it.** The Total Orders / Pending / Completed / Property row
   was removed on the user's call and must not come back in another shape — not as a row of four, not
-  as figures inside the Quick Access cards. A **Quick Access card is navigation**: icon tile, title,
-  one line of description and an arrow, nothing else. The counts live on the page that owns them.
+  as figures inside the Quick Access cards. A **Quick Access card is navigation**: icon tile, title
+  and an arrow, nothing else. The counts live on the page that owns them.
+- **No sentence under a title, anywhere in the customer portal.** Every descriptive sub-line is gone
+  on the user's call: the four Quick Access cards' ("Raise and track maintenance requests for your
+  property." and the rest), the Quick Access heading's own, the Recent Activity / Upcoming Schedules
+  / Property panel headers', and the page subtitles on Work Orders, Schedules, Payments and Contact
+  / Help. A resident reading "Payments" does not need to be told it is where payments are. What
+  stays: **empty-state copy** (it says what will appear there, which the title cannot), loading and
+  error lines, and anything carrying a value. `PanelHeader` therefore takes no `description` —
+  re-adding one puts the pattern back across three panels at once.
 - **Recent Activity replaced Recent Work Orders**, and it is all three streams: work orders,
   payments and scheduled visits, newest first, each row dated with its own status badge. A
   work-order row opens the **work order modal on this page** — that modal is the only place a
@@ -328,9 +336,11 @@ Property panel and any pending Service Renewals under them.
 - **The bottom bar is `frontend/src/components/BottomNav.jsx`, locked to the bottom and `md:hidden`.**
   Five tabs: Home, Work Orders, Schedules, Payments and More, where More opens a sheet with the
   signed-in account, Contact / Help and Sign Out. It is rendered by `Layout`, for every customer
-  page and not just the home one, so `main` carries `pb-24 md:pb-6` to keep content clear of it. On
-  `md` and up the same destinations hang off the header's account menu — without them a desktop page
-  would be a dead end but for the brand link.
+  page and not just the home one, so `main` carries `pb-24 md:pb-6` to keep content clear of it.
+- **The header's account menu holds the account and Sign Out — no navigation.** It briefly listed
+  the four destinations from `md` up, so a desktop page would not be a dead end; the user's call is
+  that the menu is for signing out, and the brand link back to Home with its Quick Access cards is
+  how a desktop gets around. Do not put the list back.
 - **The header owns the bell, Refresh and the account menu.** `components/NotificationBell.jsx`
   moved out of the home page's body, where the one place a customer is told anything vanished the
   moment they opened Work Orders. Refresh belongs to whichever page is open: a page registers its
@@ -339,8 +349,62 @@ Property panel and any pending Service Renewals under them.
   slow one. It also bumps the bell, because the unread count is what a customer watches.
 - `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
   stay identical). Existing callers render byte-identically.
-- The banner's property image is a **warm gradient with a `Building2` watermark**, not a stock
-  photograph: no property image is stored yet. Swap it for the real thing when one is.
+- **The banner carries no illustration.** It had a `Building2` watermark and a glass card reading
+  "A better living experience together." — a drawing of somebody else's building, and a slogan, on
+  every resident's home page. Both are gone; the decoration is the **soft blurred gold wash** the
+  rest of the site uses (`bg-gold-500/10 rounded-full blur-3xl`), which is the one decorative idiom
+  this codebase already shares. Do not put a stock photograph there: no property image is stored.
+
+## Customer Portal Stat Rows
+
+**The home page has no figures; every other page states its own**, through one component —
+`frontend/src/components/common/StatCards.jsx`. Work Orders, Schedules and Payments each had their
+own markup for the same row, which is how three radii, two icon sizes and a currency total set at a
+count's size got in.
+
+- **The figures ride in the page header, beside the title — never in a band of their own.** They
+  were full cards (48px icon tile, label, figure, four across) costing ~90px of height on every
+  page, while the header row above them sat half empty between the title and Refresh. A strip is one
+  line high and lives in that space: `<h1>` first, `<StatCards className="lg:flex-1 lg:justify-end">`
+  next, the page's own action last, in a `flex-col lg:flex-row` row. Putting the row back under the
+  title is the thing to avoid.
+- A card is `{ key, label, value, icon, accent, title }`, and `accent` is a **named** colour
+  (`blue`, `gold`, `amber`, `green`, `violet`, `red`, `gray`) — Tailwind is scanned statically, so a
+  hex passed here renders as no colour at all.
+- The strip **scrolls** where it does not fit instead of wrapping: wrapped cards pushed a phone's
+  actual content below the fold, which is what moving them into the header was for.
+- Portal pages are `py-6`, not `py-8`, and a panel header is `px-4 py-3`.
+
+**No card may be mostly empty, and no panel may stretch to match a taller neighbour.** Two specific
+shapes to avoid, both of which were on the customer portal:
+
+- **A card holding one thing beside a card holding several.** Contact / Help had Contact Information
+  (four rows, 24px apart, 48px tiles — ~300px tall) next to "Need Help?", which held a single
+  emergency box and then matched that height with nothing in it. It is now **one** card: the four
+  details in a `sm:grid-cols-2 xl:grid-cols-4` grid with 36px tiles, and the emergency line along
+  the bottom above a `border-t`. Phone and email are `tel:`/`mailto:` links — on a phone they dial
+  and compose rather than being read out.
+- **A two-column grid without `items-start`.** Grid items stretch by default, so the Dashboard's
+  Upcoming Schedules panel grew to match Recent Activity beside it and ended in a column of white
+  space pretending to be a card. Every side-by-side panel row in the portal carries `items-start`.
+- **Work Orders** (the raise form) builds its four from the dashboard route's **`byStatus`**, never
+  from its lumped `pending` — that figure counts everything unfinished, In Progress included, so
+  using it would double-count. Pending is `pending + assigned + under_review`; Completed is
+  `completed + closed`.
+- **Payments** counts the **displayed** invoices, so the figures follow the AMC / Work Order filter
+  — which is why the filter sits directly under them. The money comes from the invoice's own
+  columns: **`amountPaid`** for Total Paid and **`balanceAmount`** for Pending. Total Paid used to
+  sum `totalAmount` of invoices whose status had reached `paid`, so half of a half-paid invoice was
+  reported as ₹0 received and a discounted invoice as more than was taken. Overdue is an open
+  invoice whose `dueDate` is past **in IST** with a balance left.
+- **Schedules** uses the server's derived counts (`backend/utils/scheduleStats.js`) — `upcoming`,
+  `today` and `overdue` are date buckets over open visits, not stored statuses, so they must never
+  be re-derived in the browser.
+- **Every one of those pages registers its fetch with `useRegisterRefresh`**, so the header's
+  Refresh re-reads the figures instead of falling back to a window reload. The counts and the list
+  below them come from the same response, so they cannot report different sets.
+- `frontend/src/utils/ist.js` (`istToday`, `istDay`) is the portal's only "today": the stored day is
+  an IST day, and a browser in another zone must not make an invoice overdue a day early.
 
 ## Customer Portal — Payments & Invoices
 

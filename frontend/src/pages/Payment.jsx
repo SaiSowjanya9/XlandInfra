@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   CreditCard, 
@@ -31,6 +31,9 @@ import {
   Lock,
   HelpCircle
 } from 'lucide-react';
+import StatCards from '../components/common/StatCards';
+import { istDay, istToday } from '../utils/ist';
+import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1185,7 +1188,7 @@ const Payment = () => {
   const [payingInvoice, setPayingInvoice] = useState(null);
 
   // Fetch invoices
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -1217,11 +1220,15 @@ const Payment = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [fetchInvoices]);
+
+  // What the header's Refresh means here: re-read the invoices, which is what the figures above
+  // the list are counted from.
+  useRegisterRefresh(fetchInvoices);
 
   // Fetch single invoice details
   const fetchInvoiceDetails = async (invoiceId) => {
@@ -1281,64 +1288,54 @@ const Payment = () => {
     : invoiceFilter === 'workorder' ? workOrderInvoices
     : invoices;
 
-  // Stats calculations
-  const totalPending = displayedInvoices
-    .filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled')
-    .reduce((sum, inv) => sum + (inv.balanceAmount || 0), 0);
-  
+  // The figures are the invoice's own money columns, which is the only way they add up:
+  // `amountPaid` is what has actually been received (a part payment counts), and `balanceAmount` is
+  // what is still owed. Total Paid used to sum `totalAmount` of invoices whose status had reached
+  // 'paid', so half of a half-paid invoice was reported as ₹0 received and the full amount of a
+  // discounted one as received in full.
+  const openInvoices = displayedInvoices.filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled');
+
+  const totalPending = openInvoices.reduce((sum, inv) => sum + (inv.balanceAmount || 0), 0);
+
   const totalPaid = displayedInvoices
-    .filter(inv => inv.status === 'paid')
-    .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    .filter(inv => inv.status !== 'cancelled')
+    .reduce((sum, inv) => sum + (inv.amountPaid || 0), 0);
+
+  // Past its due date with money still on it. Counted in IST, like every other date in the portal.
+  const overdueCount = openInvoices.filter(inv => (
+    inv.dueDate && (inv.balanceAmount || 0) > 0 && istDay(inv.dueDate) < istToday()
+  )).length;
+
+  const statCards = [
+    { key: 'total', label: 'Total Invoices', value: displayedInvoices.length, icon: Receipt, accent: 'blue' },
+    {
+      key: 'pending',
+      label: 'Pending Amount',
+      value: formatCurrency(totalPending),
+      title: formatCurrency(totalPending),
+      icon: Clock,
+      accent: 'amber'
+    },
+    {
+      key: 'paid',
+      label: 'Total Paid',
+      value: formatCurrency(totalPaid),
+      title: formatCurrency(totalPaid),
+      icon: CheckCircle,
+      accent: 'green'
+    },
+    { key: 'overdue', label: 'Overdue', value: overdueCount, icon: AlertCircle, accent: 'red' }
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header, with the figures in the space beside the title. They follow the filter below: on
+          AMC they are the AMC invoices'. */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-6 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 shrink-0">
           Payments & Invoices
         </h1>
-        <p className="text-gray-500">
-          View and pay your invoices securely
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl p-5 border border-gold-600/20">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Receipt className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm">Total Invoices</p>
-              <p className="text-2xl font-bold text-gray-900">{displayedInvoices.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-5 border border-gold-600/20">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm">Pending Amount</p>
-              <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-5 border border-gold-600/20">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-gray-500 text-sm">Total Paid</p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</p>
-            </div>
-          </div>
-        </div>
+        <StatCards cards={statCards} className="lg:flex-1 lg:justify-end" />
       </div>
 
       {/* One list, narrowed by a filter rather than split across tabs */}

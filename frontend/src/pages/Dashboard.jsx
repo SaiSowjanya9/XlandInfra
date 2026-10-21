@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle, ArrowRight, Building2, Calendar, CalendarDays, Check, ChevronRight, ClipboardList,
-  Clock, Copy, CreditCard, FileText, HelpCircle, History, Home, Image, Loader2, MapPin, Paperclip,
+  Clock, Copy, CreditCard, FileText, HelpCircle, History, Image, Loader2, MapPin, Paperclip,
   RotateCcw, ThumbsDown, ThumbsUp, X
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
@@ -12,13 +12,13 @@ import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
 
-// Four destinations, and nothing but: the summary cards that used to sit under them are gone, so a
-// card here states what it is for rather than carrying a figure.
+// Four destinations, and nothing but. A card is its icon, its name and an arrow: the summary cards
+// that used to sit under them are gone, and the sentence each card carried explaining itself went
+// with them -- a resident reading "Payments" does not need to be told it is where payments are.
 const QUICK_ACCESS = [
   {
     path: '/dashboard/work-order',
     title: 'Work Orders',
-    description: 'Raise and track maintenance requests for your property.',
     icon: ClipboardList,
     tile: 'bg-blue-50 border-blue-100 text-blue-600',
     action: 'bg-blue-50 text-blue-600'
@@ -26,7 +26,6 @@ const QUICK_ACCESS = [
   {
     path: '/dashboard/schedule',
     title: 'Schedules',
-    description: 'View upcoming visits, maintenance and other schedules.',
     icon: Calendar,
     tile: 'bg-violet-50 border-violet-100 text-violet-600',
     action: 'bg-violet-50 text-violet-600'
@@ -34,7 +33,6 @@ const QUICK_ACCESS = [
   {
     path: '/dashboard/payment',
     title: 'Payments',
-    description: 'View bills, make payments and check payment history.',
     icon: CreditCard,
     tile: 'bg-emerald-50 border-emerald-100 text-emerald-600',
     action: 'bg-emerald-50 text-emerald-600'
@@ -42,7 +40,6 @@ const QUICK_ACCESS = [
   {
     path: '/dashboard/contact',
     title: 'Contact / Help',
-    description: 'Get support or talk to our customer care team.',
     icon: HelpCircle,
     tile: 'bg-gold-600/10 border-gold-500/20 text-gold-600',
     action: 'bg-gold-600/10 text-gold-600'
@@ -109,16 +106,15 @@ const EmptyState = ({ icon: Icon, title, description }) => (
   </div>
 );
 
-const PanelHeader = ({ icon: Icon, title, description, children }) => (
-  <div className="flex items-center justify-between gap-3 p-4 border-b border-gray-100">
+// A panel states its name and nothing else: the line of description under each title went the same
+// way as the Quick Access cards' sentences.
+const PanelHeader = ({ icon: Icon, title, children }) => (
+  <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
     <div className="flex items-center gap-3 min-w-0">
       <span className="w-9 h-9 shrink-0 rounded-lg bg-gold-600/10 border border-gold-500/20 flex items-center justify-center">
         <Icon className="w-4 h-4 text-gold-600" />
       </span>
-      <div className="min-w-0">
-        <h2 className="font-semibold text-gray-900 leading-tight">{title}</h2>
-        <p className="text-xs text-gray-500 truncate">{description}</p>
-      </div>
+      <h2 className="font-semibold text-gray-900 leading-tight truncate">{title}</h2>
     </div>
     {children}
   </div>
@@ -378,7 +374,7 @@ const Dashboard = ({ user }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       {error && (
         <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -386,53 +382,39 @@ const Dashboard = ({ user }) => {
         </div>
       )}
 
-      {/* Welcome banner */}
+      {/* Welcome banner. The decoration is the soft gold wash the rest of the site uses -- not an
+          illustration of a building, which was a picture of somebody else's property on every
+          customer's home page. */}
       <section className="relative overflow-hidden rounded-2xl border border-warm-border bg-gradient-to-r from-warm-section via-warm-accent-soft to-gold-100">
-        <div className="flex items-stretch">
-          <div className="flex-1 min-w-0 p-5 sm:p-7">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">Customer Portal</p>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900">
-              Welcome back, <span className="text-gold-600">{firstName}!</span>
-            </h1>
-            <p className="mt-1 text-sm sm:text-base text-gray-500">Here's what's happening with your property today.</p>
-            {propertyCode && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2">
-                <Building2 className="w-4 h-4 text-gold-600 shrink-0" />
-                <span className="text-xs sm:text-sm text-gray-500">Property ID:</span>
-                <span className="text-xs sm:text-sm font-semibold text-gold-600 truncate">{propertyCode}</span>
-                <button
-                  type="button"
-                  onClick={copyPropertyId}
-                  className="p-1 rounded hover:bg-gold-600/10 transition-colors"
-                  title={copied ? 'Copied' : 'Copy Property ID'}
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* The property's own image belongs here; until one is stored this is the brand's warm
-              gradient rather than a stock photograph of somebody else's building. */}
-          <div className="relative w-24 sm:w-56 lg:w-80 shrink-0 bg-gradient-to-br from-gold-200/60 via-gold-100 to-warm-accent-soft">
-            <Building2 className="absolute -right-4 bottom-0 w-32 h-32 sm:w-44 sm:h-44 text-gold-600/20" />
-            <div className="hidden lg:block absolute left-5 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-sm border border-white/60 rounded-xl px-4 py-3">
-              <Home className="w-4 h-4 text-gold-600" />
-              <p className="mt-2 text-xs leading-relaxed text-gray-900">
-                A better<br />living experience<br />together.
-              </p>
-              <span className="mt-2 block w-8 h-0.5 bg-gold-500/60" />
+        <div className="pointer-events-none absolute -top-16 -right-12 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-28 w-56 h-56 bg-gold-600/10 rounded-full blur-3xl" />
+        <div className="relative p-5">
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">Customer Portal</p>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900">
+            Welcome back, <span className="text-gold-600">{firstName}!</span>
+          </h1>
+          <p className="mt-1 text-sm sm:text-base text-gray-500">Here's what's happening with your property today.</p>
+          {propertyCode && (
+            <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2">
+              <Building2 className="w-4 h-4 text-gold-600 shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-500">Property ID:</span>
+              <span className="text-xs sm:text-sm font-semibold text-gold-600 truncate">{propertyCode}</span>
+              <button
+                type="button"
+                onClick={copyPropertyId}
+                className="p-1 rounded hover:bg-gold-600/10 transition-colors"
+                title={copied ? 'Copied' : 'Copy Property ID'}
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
       {/* Quick Access */}
       <section>
-        <div className="flex items-baseline gap-3 mb-3">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Access</h2>
-          <p className="text-xs text-gray-500 hidden sm:block">Get things done quickly with our most common services.</p>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Quick Access</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           {QUICK_ACCESS.map((item) => {
             const Icon = item.icon;
@@ -440,15 +422,12 @@ const Dashboard = ({ user }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className="group bg-white border border-gray-200 rounded-xl shadow-warm hover:shadow-warm-hover hover:border-gold-500/30 transition-all p-4 flex items-start gap-3"
+                className="group bg-white border border-gray-200 rounded-xl shadow-warm hover:shadow-warm-hover hover:border-gold-500/30 transition-all p-4 flex items-center gap-3"
               >
                 <span className={`w-10 h-10 shrink-0 rounded-lg border flex items-center justify-center ${item.tile}`}>
                   <Icon className="w-5 h-5" />
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-gray-900">{item.title}</span>
-                  <span className="block text-xs text-gray-500 leading-relaxed mt-0.5">{item.description}</span>
-                </span>
+                <span className="min-w-0 flex-1 font-semibold text-gray-900 truncate">{item.title}</span>
                 <span className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center transition-transform group-hover:translate-x-0.5 ${item.action}`}>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
@@ -458,10 +437,12 @@ const Dashboard = ({ user }) => {
         </div>
       </section>
 
-      {/* Recent Activity + Upcoming Schedules */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+      {/* Recent Activity + Upcoming Schedules. `items-start`, so the emptier of the two is only as
+          tall as what it holds -- a stretched panel is a column of white space pretending to be a
+          card, which is what the Contact page's "Need Help?" card used to be. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 items-start gap-4 sm:gap-5">
         <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={History} title="Recent Activity" description="Your latest updates and activities.">
+          <PanelHeader icon={History} title="Recent Activity">
             {activity.length > 0 && (
               <button
                 type="button"
@@ -518,7 +499,7 @@ const Dashboard = ({ user }) => {
         </section>
 
         <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={CalendarDays} title="Upcoming Schedules" description="Your upcoming visits and maintenance schedule.">
+          <PanelHeader icon={CalendarDays} title="Upcoming Schedules">
             <Link
               to="/dashboard/schedule"
               className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
@@ -581,7 +562,7 @@ const Dashboard = ({ user }) => {
       {/* Property */}
       {(propertyName || propertyCode) && (
         <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={Building2} title="Property" description="Your property details." />
+          <PanelHeader icon={Building2} title="Property" />
           <div className="flex items-center gap-4 p-4">
             <div className="w-16 h-16 shrink-0 rounded-lg bg-gradient-to-br from-gold-200/60 to-warm-accent-soft border border-warm-border flex items-center justify-center">
               <Building2 className="w-7 h-7 text-gold-600/70" />
