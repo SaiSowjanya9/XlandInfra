@@ -582,6 +582,25 @@ row lands in Marketing > Archived. The resident who filed it is emailed at every
   Management: the fix for "no one is assigned to Zone A" is to put somebody in Zone A, not to hand
   the complaint to whoever is on the list. A complaint with no zone at all cannot be narrowed, so
   that one does list everybody assignable.
+- **One assignee at a time: `PUT …/complaints/:id/assign` refuses a complaint that already has one**
+  (409), and the dialog locks every row in the picker while it is assigned — the current one badged
+  `Current`, the rest shown with a padlock, and **not** as disabled buttons. Reassignment used to be
+  this same call, which made the `Current` row itself a trap: clicking the employee who already had
+  it reset a complaint at **In Review** back to Assigned, re-stamped `assigned_at`/`assigned_by`,
+  and re-announced it — the assignee got a fresh "assigned to you" and the resident was told it had
+  just been assigned, after they had already been told it was being reviewed.
+- **`PUT …/complaints/:id/unassign` is the way out**, and the only one: it clears every assignment
+  column (including `assigned_by` — the next assignment stamps its own) and returns the row to
+  **Open**, because Assigned with nobody assigned is the status and the row disagreeing, the same
+  trap `status`/`archived_at` set when closing. The assignee's note stays: it is their report of
+  what they did, and it is the FP's to read either way. It is the FP's decision like the assignment
+  was (`scopedAssign`), and the dialog stays open on the now-unlocked list, because taking a
+  complaint off one employee is nearly always the first half of handing it to another.
+- **Unassigning tells the employee and not the resident.** `notifyComplaintUnassigned` takes the
+  employee id as an argument, since by then the row no longer knows who had it. The customer hears
+  about the *state* of their complaint, and the only copy for Open is the filing acknowledgement
+  ("We have received your complaint") — sending that a second time would be a plain lie. They are
+  told again the moment it reaches somebody, which is what Assigned is for.
 - **The assign route stays permissive about the assignee's zone** — it checks the role and nothing
   else. The picker is where the zone rule lives, so an assignment already made survives the zone
   being renamed or taken away, and the complaints list still shows an assignee their own row from

@@ -1,7 +1,8 @@
 /**
  * Who is told what as a complaint moves through its workflow.
  *
- *   assigned -> the assignee          "this is yours now"
+ *   assigned   -> the assignee          "this is yours now"
+ *   unassigned -> the assignee          "it has been taken back off you"
  *   progress -> the FP and its managers  the assignee set a status or saved a note
  *   closed   -> the assignee          the FP or its manager verified and closed it
  *   filed    -> the customer          "we have your complaint", with its reference
@@ -158,21 +159,24 @@ const partnerManagers = async (franchisePartnerId, zone) => {
   }
 };
 
-/** The fp_employees row a complaint is assigned to, or null. */
-const assignedEmployee = async (complaint) => {
-  if (!complaint.assigned_employee_id) return null;
+/** One fp_employees row, or null. */
+const employeeById = async (id) => {
+  if (!id) return null;
   try {
     const [rows] = await pool.execute(
       `SELECT id, user_id, first_name, last_name, username, email, role
        FROM fp_employees WHERE id = ? LIMIT 1`,
-      [complaint.assigned_employee_id]
+      [id]
     );
     return rows[0] || null;
   } catch (e) {
-    console.error('Complaint notification: assignee lookup failed:', e.message);
+    console.error('Complaint notification: employee lookup failed:', e.message);
     return null;
   }
 };
+
+/** The fp_employees row a complaint is assigned to, or null. */
+const assignedEmployee = async (complaint) => employeeById(complaint.assigned_employee_id);
 
 const insertPortalNotification = async ({
   franchisePartnerId, userId, roleType, title, message, complaintId, actionUrl, priority = 'normal'
@@ -237,6 +241,43 @@ const notifyComplaintAssigned = async (complaint) => {
     });
   } catch (e) {
     console.error('Complaint assignment notification failed:', e.message);
+  }
+};
+
+/**
+ * A complaint has been taken back off its assignee: tell them, so they stop working on it.
+ *
+ * The id is passed in rather than read off the row, because by the time this is called the row has
+ * already been cleared -- the complaint no longer knows who had it.
+ *
+ * @param {object} complaint the stored row, after the unassignment (so its status is Open)
+ * @param {{ employeeId: number, unassignedBy?: string }} options who had it, and who took it back
+ */
+const notifyComplaintUnassigned = async (complaint, { employeeId, unassignedBy } = {}) => {
+  try {
+    const employee = await employeeById(employeeId);
+    if (!employee) return;
+    const property = decodeEntities(complaint.property_id || '');
+    const html = complaintEmailHtml({
+      heading: 'A complaint is no longer assigned to you',
+      intro: `${unassignedBy || 'Your franchise partner'} has taken this complaint back. Nothing further is needed from you — it will be handed to somebody else.`,
+      complaint,
+      rows: [['Status', complaint.status], ['Taken back by', unassignedBy]],
+      note: complaint.complaint_note,
+      closing: 'Anything you had already written up stays on the complaint for your franchise partner to read.'
+    });
+    await send(employee.email, `Complaint no longer assigned to you - ${property}`, html);
+    await insertPortalNotification({
+      franchisePartnerId: complaint.franchise_partner_id,
+      userId: employee.user_id,
+      roleType: normalizeEmployeeRole(employee.role),
+      title: 'A complaint was taken off you',
+      message: summaryLine(complaint, 'This complaint is no longer yours to attend to.'),
+      complaintId: complaint.id,
+      actionUrl: complaintPath(employee.role)
+    });
+  } catch (e) {
+    console.error('Complaint unassignment notification failed:', e.message);
   }
 };
 
@@ -405,6 +446,7 @@ module.exports = {
   complaintReference,
   CUSTOMER_STATUS_COPY,
   notifyComplaintAssigned,
+  notifyComplaintUnassigned,
   notifyComplaintProgress,
   notifyComplaintClosed,
   notifyCustomerComplaintStatus
