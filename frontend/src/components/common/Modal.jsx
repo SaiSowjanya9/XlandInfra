@@ -64,9 +64,12 @@ const Modal = ({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
-  const placement = align === 'top'
-    ? `items-start justify-center overflow-y-auto ${top}`
-    : 'items-center justify-center';
+  // 'bottom' is the mobile sheet the customer portal's More tab opens: a dialog reached from the
+  // bottom bar must open beside the thumb that asked for it, not in the middle of the screen.
+  const placement = {
+    top: `items-start justify-center overflow-y-auto ${top}`,
+    bottom: 'items-end justify-center',
+  }[align] || 'items-center justify-center';
 
   return (
     <div
