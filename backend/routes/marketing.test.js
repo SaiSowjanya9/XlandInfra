@@ -20,13 +20,26 @@ const trackerRow = {
 };
 // Assigned to employee 4 and being worked on, which is what the status and note routes are judged
 // against: the current-row read in both of them comes back as this.
-const complaintRow = {
+const assignedComplaint = {
   id: 7, franchise_partner_id: 8, property_id: 'PROP-1', zone: 'North Zone', comments: 'Late visit',
   status: 'Assigned', assigned_employee_id: 4, assigned_employee_name: 'Priya N',
   assigned_employee_role: 'coordinator', archived_at: null,
   // Filed by, or about, this resident -- who hears about every move the complaint makes.
   customer_account_id: 55, customer_email: 'asha@example.com'
 };
+
+// The same complaint with nobody on it, which is the only state the assign route now operates on:
+// one assignee at a time, and taking it off somebody is its own route.
+const unassignedComplaint = {
+  ...assignedComplaint,
+  status: 'Open',
+  assigned_employee_id: null, assigned_employee_name: null, assigned_employee_role: null
+};
+
+// Which of the two the current-row reads come back as. `startServer` restores the assigned one
+// after every test, so a test that needs the other says so and nothing leaks into the next.
+let complaintRow = assignedComplaint;
+const complaintIs = (row) => { complaintRow = row; };
 
 // The partner's staff. 4, 5 and 10 are assignable -- each has the Complaint Form screen to read the
 // assignment in. Employee 9 is field staff, with no portal of their own, so a complaint handed to
@@ -98,6 +111,8 @@ const notified = [];
 require.cache[require.resolve('../services/complaintNotifications')] = {
   exports: {
     notifyComplaintAssigned: (complaint) => notified.push({ event: 'assigned', id: complaint?.id }),
+    notifyComplaintUnassigned: (complaint, { employeeId } = {}) =>
+      notified.push({ event: 'unassigned', id: complaint?.id, employeeId }),
     notifyComplaintProgress: (complaint, opts = {}) => notified.push({ event: 'progress', id: complaint?.id, ...opts }),
     notifyComplaintClosed: (complaint) => notified.push({ event: 'closed', id: complaint?.id }),
     notifyCustomerComplaintStatus: (complaint, { status } = {}) =>
@@ -184,6 +199,7 @@ const startServer = async (t) => {
   }
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => { complaintIs(assignedComplaint); });
   t.after(() => new Promise((resolve) => server.close(resolve)));
   return async (path, method = 'GET', body, user) => {
     const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
@@ -744,6 +760,9 @@ test('only the franchise partner hands a complaint to an employee', async (t) =>
   const request = await startServer(t);
   const fp = { id: 8, role: 'franchise_partner', companyName: 'Hyderabad Partner' };
 
+  // Assigning operates on a complaint nobody has yet; handing over one that is already assigned is
+  // refused, which the test below this one is about.
+  complaintIs(unassignedComplaint);
   calls.length = 0;
   notified.length = 0;
   const assigned = await request('/fp/marketing/complaints/7/assign', 'PUT', { employeeId: 4 }, fp);
@@ -776,6 +795,7 @@ test('only the franchise partner hands a complaint to an employee', async (t) =>
 
 test('a complaint is assigned inside its own partner, and only to a role with the screen', async (t) => {
   const request = await startServer(t);
+  complaintIs(unassignedComplaint);
 
   // A supervisor is assignable: that portal has the Complaint Form, which is the whole point of
   // mounting Marketing for it.
@@ -796,6 +816,85 @@ test('a complaint is assigned inside its own partner, and only to a role with th
 
   const missing = await request('/fp/marketing/complaints/7/assign', 'PUT', { employeeId: 404 });
   assert.equal(missing.status, 404);
+});
+
+test('a complaint with somebody on it is not assigned again -- it is unassigned first', async (t) => {
+  const request = await startServer(t);
+  const fp = { id: 8, role: 'franchise_partner', companyName: 'Hyderabad Partner' };
+
+  // The stored row is assigned to Priya N (employee 4) and has reached In Review.
+  complaintIs({ ...assignedComplaint, status: 'In Review' });
+
+  // Handing it to somebody else, and -- the one that used to happen by accident -- to the person
+  // who already has it, which is the row the dialog itself marks "Current".
+  for (const employeeId of [10, 4]) {
+    calls.length = 0;
+    notified.length = 0;
+    const refused = await request('/fp/marketing/complaints/7/assign', 'PUT', { employeeId }, fp);
+
+    assert.equal(refused.status, 409, `employee ${employeeId}`);
+    assert.match(refused.message, /already assigned to Priya N/);
+    assert.match(refused.message, /Unassign it first/);
+    // Nothing was written, so the row keeps In Review rather than falling back to Assigned...
+    assert.equal(calls.filter((c) => c.sql.startsWith(`UPDATE ${COMPLAINT_TABLE}`)).length, 0);
+    // ...and nobody was told a thing: a reassignment used to re-announce the complaint to the
+    // assignee and tell the resident it had just been assigned, after they had already been told
+    // it was being reviewed.
+    assert.deepEqual(notified, []);
+  }
+
+  // The refusal is the row's own state, not the caller's: it is read through the scope, so a
+  // complaint belonging to another partner is still "not found" rather than "already assigned".
+  assert.match(lastCall(`SELECT id, status, assigned_employee_id`).sql, /franchise_partner_id IN \(\?\)/);
+});
+
+test('unassigning hands a complaint back, and tells the employee it is no longer theirs', async (t) => {
+  const request = await startServer(t);
+  const fp = { id: 8, role: 'franchise_partner', companyName: 'Hyderabad Partner' };
+
+  calls.length = 0;
+  notified.length = 0;
+  const unassigned = await request('/fp/marketing/complaints/7/unassign', 'PUT', undefined, fp);
+  assert.equal(unassigned.status, 200);
+  assert.match(unassigned.message, /Unassigned from Priya N/);
+
+  const update = lastCall(`UPDATE ${COMPLAINT_TABLE} SET assigned_employee_id = NULL`);
+  // Every trace of the assignment goes, including who made it: the next assignment stamps its own.
+  assert.match(update.sql, /assigned_employee_name = NULL, assigned_employee_role = NULL/);
+  assert.match(update.sql, /assigned_at = NULL, assigned_by = NULL/);
+  // Back to Open, because a complaint at Assigned with nobody assigned would be the status and the
+  // row disagreeing -- the same trap closing sets between status and archived_at.
+  assert.match(update.sql, /status = 'Open'/);
+  // MySQL evaluates a single-table UPDATE's assignments left to right, so the status comes last.
+  assert.ok(update.sql.indexOf("status = 'Open'") > update.sql.indexOf('status_updated_at = NOW()'),
+    'the status assignment comes last');
+  assert.match(update.sql, /archived_at IS NULL/);
+  assert.match(update.sql, /franchise_partner_id IN \(\?\)/);
+  // Who took it back comes from the token, never from the body.
+  assert.ok(update.params.includes('Hyderabad Partner'));
+
+  // The employee is told -- they have to know to stop working on it -- and the employee id is
+  // passed in, because the row no longer knows who had it. The resident is told nothing: the only
+  // copy for Open is the filing acknowledgement, which would be a lie the second time, and they
+  // hear again as soon as it reaches somebody.
+  assert.deepEqual(notified, [{ event: 'unassigned', id: 7, employeeId: 4 }]);
+
+  // Only the franchise partner may take a complaint back, exactly as only it may hand one over.
+  for (const portal of ['manager', 'admin', 'coordinator', 'executive', 'opsManager']) {
+    assert.equal((await request(`/${portal}/marketing/complaints/7/unassign`, 'PUT')).status, 403, portal);
+  }
+});
+
+test('there is nothing to unassign on a complaint nobody has', async (t) => {
+  const request = await startServer(t);
+  complaintIs(unassignedComplaint);
+
+  calls.length = 0;
+  const refused = await request('/fp/marketing/complaints/7/unassign', 'PUT', undefined,
+    { id: 8, role: 'franchise_partner', companyName: 'Hyderabad Partner' });
+  assert.equal(refused.status, 400);
+  assert.match(refused.message, /not assigned to anyone/);
+  assert.equal(calls.filter((c) => c.sql.startsWith(`UPDATE ${COMPLAINT_TABLE}`)).length, 0);
 });
 
 test('the assignable list is the zone\'s own employees, and only theirs', async (t) => {

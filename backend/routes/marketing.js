@@ -34,8 +34,8 @@ const {
   employeeName, fetchFpEmployee, listAssignableEmployees
 } = require('../utils/fpEmployeeDirectory');
 const {
-  notifyComplaintAssigned, notifyComplaintProgress, notifyComplaintClosed,
-  notifyCustomerComplaintStatus
+  notifyComplaintAssigned, notifyComplaintUnassigned, notifyComplaintProgress,
+  notifyComplaintClosed, notifyCustomerComplaintStatus
 } = require('../services/complaintNotifications');
 const { resolveComplaintCustomer } = require('../utils/complaintCustomer');
 const { partnerNameExpression } = require('../utils/franchisePartnerName');
@@ -460,6 +460,22 @@ const createMarketingRouter = ({ resolveScope }) => {
       [id]
     );
     return rows[0] ? presentComplaintRow(rows[0], scope) : null;
+  };
+
+  // Where a complaint stands before a write changes it, scoped like every other read: who has it,
+  // what state it is in and whether it is archived. The assign and unassign routes decide on this
+  // -- a complaint with somebody on it may not be assigned to a second person -- and reading it
+  // through the scope is what stops one partner's id in the URL reaching another's row.
+  const currentComplaint = async (id, scope) => {
+    const fp = fpFilter(scope);
+    const zone = zoneFilter(scope);
+    const [rows] = await pool.execute(
+      `SELECT id, status, assigned_employee_id, assigned_employee_name, archived_at
+       FROM ${COMPLAINT_TABLE}
+       WHERE id = ?${fp.sql}${zone.sql}`,
+      [id, ...fp.params, ...zone.params]
+    );
+    return rows[0] || null;
   };
 
   // ============================================
@@ -1043,8 +1059,15 @@ const createMarketingRouter = ({ resolveScope }) => {
   // once paid and had the payment rolled back (see AGENTS.md on payment_history.action) -- so the
   // services here swallow their own errors and these handlers do not await an outcome from them.
 
-  // Hand a complaint to one employee. Reassignment is the same call: it replaces the assignee and
-  // puts the row back to Assigned, because a new assignee has not started on it.
+  // Hand a complaint to one employee.
+  //
+  // **A complaint that already has an assignee is refused here**, and the portals lock the picker to
+  // match. Reassignment used to be this same call, which meant a click on the employee who already
+  // had it -- the row the dialog itself marks "Current" -- silently reset a complaint that had
+  // reached In Review back to Assigned, re-stamped assigned_at/assigned_by, and told both the
+  // assignee and the resident it had just been assigned. Taking it off somebody is now its own
+  // decision: PUT /complaints/:id/unassign below, which returns the complaint to Open with nobody
+  // on it, after which it can be handed to the right person.
   router.put('/complaints/:id/assign', scopedAssign(async (req, res, scope) => {
     try {
       await ensureMarketingComplaintsTable();
@@ -1054,6 +1077,22 @@ const createMarketingRouter = ({ resolveScope }) => {
       }
       if (!scope.writeFpId) {
         return res.status(400).json({ success: false, message: 'Select the franchise partner this complaint belongs to.' });
+      }
+      const current = await currentComplaint(id, scope);
+      if (!current) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      if (current.archived_at) {
+        return res.status(400).json({
+          success: false,
+          message: 'This complaint is archived. Restore it from Marketing > Archived to assign it.'
+        });
+      }
+      if (current.assigned_employee_id) {
+        return res.status(409).json({
+          success: false,
+          message: `This complaint is already assigned to ${decodeEntities(current.assigned_employee_name || 'an employee')}. Unassign it first to hand it to someone else.`
+        });
       }
       const employee = await fetchFpEmployee(pool, req.body.employeeId, scope.writeFpId);
       if (!employee) {
@@ -1094,6 +1133,73 @@ const createMarketingRouter = ({ resolveScope }) => {
       res.json({ success: true, message: `Assigned to ${employeeName(employee)}`, data: complaint });
     } catch (error) {
       fail(res, error, 'Failed to assign complaint');
+    }
+  }));
+
+  // Take a complaint back off its assignee -- the way out of the lock above, and the FP's own
+  // decision like the assignment was.
+  //
+  // The row returns to **Open**, because a complaint with a status of Assigned and nobody assigned
+  // would be the two disagreeing, which is the same trap `status`/`archived_at` set when closing.
+  // The assignee's note is deliberately left where it is: it is their report of what they did, and
+  // it is the FP's to read whether or not the complaint stays with them.
+  //
+  // The resident is **not** told. They hear about the state of their complaint, and an internal
+  // hand-off is not a state they can act on -- the only copy for Open is the filing
+  // acknowledgement ("We have received your complaint"), which would be a plain lie the second time.
+  // They are told again as soon as it reaches somebody, which is what Assigned is for.
+  router.put('/complaints/:id/unassign', scopedAssign(async (req, res, scope) => {
+    try {
+      await ensureMarketingComplaintsTable();
+      const id = parseRowId(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ success: false, message: 'Invalid complaint id' });
+      }
+      const current = await currentComplaint(id, scope);
+      if (!current) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      if (current.archived_at) {
+        return res.status(400).json({
+          success: false,
+          message: 'This complaint is archived. Restore it from Marketing > Archived to change it.'
+        });
+      }
+      if (!current.assigned_employee_id) {
+        return res.status(400).json({ success: false, message: 'This complaint is not assigned to anyone.' });
+      }
+      const fp = fpFilter(scope);
+      const zone = zoneFilter(scope);
+      const actor = trackerActor(req);
+      // `status` is assigned last: MySQL evaluates a single-table UPDATE's assignments left to
+      // right, so anything written before it still reads the status the row came in with.
+      const [result] = await pool.execute(
+        `UPDATE ${COMPLAINT_TABLE} SET
+           assigned_employee_id = NULL, assigned_employee_name = NULL, assigned_employee_role = NULL,
+           assigned_at = NULL, assigned_by = NULL,
+           status_updated_by = ?, status_updated_by_role = ?, status_updated_at = NOW(),
+           updated_at = NOW(),
+           status = 'Open'
+         WHERE id = ? AND archived_at IS NULL${fp.sql}${zone.sql}`,
+        [actor.name, actor.role, id, ...fp.params, ...zone.params]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Complaint not found' });
+      }
+      const complaint = await readComplaint(id, scope);
+      // Told after the write, outside any transaction, and never awaited: the employee has to know
+      // to stop working on it, but a mail server must not undo the hand-off it was announcing.
+      notifyComplaintUnassigned(complaint, {
+        employeeId: current.assigned_employee_id,
+        unassignedBy: actor.name
+      });
+      res.json({
+        success: true,
+        message: `Unassigned from ${decodeEntities(current.assigned_employee_name || 'the employee')}`,
+        data: complaint
+      });
+    } catch (error) {
+      fail(res, error, 'Failed to unassign complaint');
     }
   }));
 

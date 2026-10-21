@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2,
-  MessageSquare, UserPlus, CheckCircle2, MapPin, Inbox
+  MessageSquare, UserPlus, UserMinus, Lock, CheckCircle2, MapPin, Inbox
 } from 'lucide-react';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
@@ -341,7 +341,12 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
     loadAssignEmployees(row);
   };
 
+  // Locked once somebody has it. Assigning over an existing assignee used to be allowed, which made
+  // the row the dialog marks "Current" a click that reset a complaint at In Review back to
+  // Assigned, re-stamped who assigned it and re-announced it to the assignee and the resident. The
+  // route refuses it too, so this is not the only guard.
   const assignTo = async (employee) => {
+    if (assignTarget.assigned_employee_id) return;
     setAssignSaving(employee.id);
     setAssignError('');
     try {
@@ -361,6 +366,33 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
       }
     } catch (e) {
       setAssignError('Failed to assign. Please try again.');
+    } finally {
+      setAssignSaving(null);
+    }
+  };
+
+  // The way out of that lock: the complaint returns to Open with nobody on it. The dialog stays
+  // open on the now-unlocked list, because taking it off one employee is almost always the first
+  // half of handing it to another.
+  const unassign = async () => {
+    setAssignSaving('unassign');
+    setAssignError('');
+    try {
+      const res = await fetch(withMarketingFp(
+        `${API_BASE}/api/${apiPath}/marketing/complaints/${assignTarget.id}/unassign`, fpId), {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const result = await res.json();
+      if (result.success) {
+        applySaved(result.data);
+        setAssignTarget(result.data);
+        showToast(result.message || 'Complaint unassigned');
+      } else {
+        setAssignError(result.message || 'Failed to unassign.');
+      }
+    } catch (e) {
+      setAssignError('Failed to unassign. Please try again.');
     } finally {
       setAssignSaving(null);
     }
@@ -804,7 +836,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                         {canAssign && <button
                           onClick={() => openAssign(row)}
                           className="p-1.5 rounded-lg text-warm-muted hover:bg-warm-border/60 hover:text-warm-text transition-colors"
-                          title={row.assigned_employee_id ? 'Reassign complaint' : 'Assign to an employee'}
+                          title={row.assigned_employee_id
+                            ? `Assigned to ${assigneeLabel(row)} — unassign to hand it to someone else`
+                            : 'Assign to an employee'}
                         >
                           <UserPlus className="w-4 h-4" />
                         </button>}
@@ -921,7 +955,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                       onClick={() => openAssign(modal.row)}
                       className="inline-flex items-center gap-2 px-4 h-[38px] rounded-[10px] text-sm font-medium text-warm-text border border-warm-border hover:bg-warm-section transition-colors"
                     >
-                      <UserPlus className="w-4 h-4" /> {modal.row.assigned_employee_id ? 'Reassign' : 'Assign'}
+                      <UserPlus className="w-4 h-4" /> {modal.row.assigned_employee_id ? 'Assignment' : 'Assign'}
                     </button>
                   )}
                   {canEdit && (
@@ -1113,11 +1147,27 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
               </button>
             </div>
             <div className="p-5">
+              {/* One assignee at a time: while somebody has it the list below is locked, and
+                  Unassign is the way out -- it returns the complaint to Open with nobody on it. */}
               {assignTarget.assigned_employee_id && (
-                <p className="mb-3 text-xs text-warm-muted">
-                  Currently with <span className="font-medium text-warm-text">{assigneeLabel(assignTarget)}</span>.
-                  Reassigning hands it to someone else and puts it back to Assigned.
-                </p>
+                <div className="mb-3 p-3 bg-warm-section border border-warm-border rounded-[10px] flex items-start gap-3">
+                  <p className="min-w-0 flex-1 text-xs text-warm-muted">
+                    Currently with <span className="font-medium text-warm-text">{assigneeLabel(assignTarget)}</span>.
+                    The employees below are locked while it is assigned — unassign it first to hand it
+                    to someone else.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={unassign}
+                    disabled={assignSaving !== null}
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 h-[34px] rounded-[10px] text-xs font-medium text-warm-text border border-warm-border bg-white hover:bg-warm-section transition-colors disabled:opacity-60"
+                  >
+                    {assignSaving === 'unassign'
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <UserMinus className="w-3.5 h-3.5" />}
+                    Unassign
+                  </button>
+                </div>
               )}
               {/* Every name here covers this complaint's zone -- that is what the list is. The zone
                   itself is in the header above, so the row carries the one thing that tells two
@@ -1153,30 +1203,49 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {assignEmployees.map((employee) => (
-                    <button
-                      key={employee.id}
-                      type="button"
-                      disabled={assignSaving !== null}
-                      onClick={() => assignTo(employee)}
-                      className={`w-full px-3 py-2.5 text-left rounded-[10px] border border-warm-border bg-white hover:bg-warm-section transition-colors flex items-center gap-3 disabled:opacity-60 ${
-                        assignTarget.assigned_employee_id === employee.id ? 'ring-2 ring-warm-accent/30' : ''
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-warm-text [overflow-wrap:anywhere]">
-                          {decodeEntities(employee.name) || decodeEntities(employee.email) || `Employee ${employee.id}`}
-                        </p>
-                        <p className="text-xs text-warm-muted capitalize">
-                          {employee.role}{employee.allZones ? ' · all zones' : ''}
-                        </p>
+                  {assignEmployees.map((employee) => {
+                    const locked = !!assignTarget.assigned_employee_id;
+                    const isCurrent = assignTarget.assigned_employee_id === employee.id;
+                    const body = (
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-warm-text [overflow-wrap:anywhere]">
+                            {decodeEntities(employee.name) || decodeEntities(employee.email) || `Employee ${employee.id}`}
+                          </p>
+                          <p className="text-xs text-warm-muted capitalize">
+                            {employee.role}{employee.allZones ? ' · all zones' : ''}
+                          </p>
+                        </div>
+                        {isCurrent
+                          ? <span className="text-[11px] font-medium text-warm-accent whitespace-nowrap flex-shrink-0">Current</span>
+                          : locked && <Lock className="w-3.5 h-3.5 text-warm-muted flex-shrink-0" />}
+                        {assignSaving === employee.id && <Loader2 className="w-4 h-4 animate-spin text-warm-accent flex-shrink-0" />}
+                      </>
+                    );
+
+                    // A locked row is not a disabled button: there is nothing for it to do, and a
+                    // button that cannot be pressed still reads as one that should be.
+                    return locked ? (
+                      <div
+                        key={employee.id}
+                        className={`w-full px-3 py-2.5 rounded-[10px] border border-warm-border flex items-center gap-3 ${
+                          isCurrent ? 'bg-white ring-2 ring-warm-accent/30' : 'bg-warm-section/60 opacity-70'
+                        }`}
+                      >
+                        {body}
                       </div>
-                      {assignTarget.assigned_employee_id === employee.id && (
-                        <span className="text-[11px] font-medium text-warm-accent whitespace-nowrap flex-shrink-0">Current</span>
-                      )}
-                      {assignSaving === employee.id && <Loader2 className="w-4 h-4 animate-spin text-warm-accent flex-shrink-0" />}
-                    </button>
-                  ))}
+                    ) : (
+                      <button
+                        key={employee.id}
+                        type="button"
+                        disabled={assignSaving !== null}
+                        onClick={() => assignTo(employee)}
+                        className="w-full px-3 py-2.5 text-left rounded-[10px] border border-warm-border bg-white hover:bg-warm-section transition-colors flex items-center gap-3 disabled:opacity-60"
+                      >
+                        {body}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
