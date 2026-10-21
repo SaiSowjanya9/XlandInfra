@@ -81,8 +81,8 @@ const Layout = ({ admin, onLogout, children }) => {
     { path: '/billing/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/billing/generate-invoices', icon: FileText, label: 'Generated Invoices' },
     { path: '/billing/invoices', icon: Receipt, label: 'Invoices' },
-    { path: '/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/billing/make-payments', icon: Wallet, label: 'Make Payments' },
+    { path: '/billing/payments', icon: CreditCard, label: 'Payments' },
     { path: '/billing/payment-history', icon: History, label: 'Payment History' },
     { path: '/billing/archived', icon: Archive, label: 'Archived' }
   ];
