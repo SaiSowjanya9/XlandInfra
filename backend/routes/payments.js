@@ -3697,6 +3697,7 @@ router.get('/:id/receipt', authenticate, canViewPayments, async (req, res) => {
     let query = `
       SELECT p.*, 
              i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+             i.balance_amount as invoice_balance,
              prop.community_name as property_name, prop.property_id as property_code,
              i.customer_email, i.customer_phone
       FROM payments p
@@ -3730,6 +3731,9 @@ router.get('/:id/receipt', authenticate, canViewPayments, async (req, res) => {
         propertyName: p.property_name,
         propertyCode: p.property_code,
         amount: parseFloat(p.amount),
+        // The lightbox needs the invoice's own figures, not just this row's amount
+        invoiceAmount: p.invoice_amount ? parseFloat(p.invoice_amount) : null,
+        balanceAmount: p.invoice_balance !== null && p.invoice_balance !== undefined ? parseFloat(p.invoice_balance) : null,
         paymentMethod: p.payment_method,
         paymentDate: p.payment_date,
         transactionReference: p.transaction_reference,
