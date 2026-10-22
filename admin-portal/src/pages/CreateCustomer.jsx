@@ -769,18 +769,18 @@ const CreateCustomer = ({ admin }) => {
                       <div className="space-y-2">
                         {createdProperty.customerAccounts.map((account, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-sm">
-                            {account.success ? (
+                            {account.success && account.emailSent !== false ? (
                               <>
                                 <Check className="w-4 h-4 text-green-600" />
                                 <span className="text-gray-700">
-                                  Activation email sent to <strong className="text-gray-900">{account.email}</strong>
+                                  {account.message || <>Activation email sent to <strong className="text-gray-900">{account.email}</strong></>}
                                 </span>
                               </>
                             ) : (
                               <>
                                 <AlertCircle className="w-4 h-4 text-amber-500" />
                                 <span className="text-gray-600">
-                                  {account.email}: {account.message}
+                                  {account.email}: {account.message || 'No email sent'}
                                 </span>
                               </>
                             )}

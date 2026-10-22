@@ -390,7 +390,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
       const result = await response.json();
 
       if (result.success) {
-        setMessage({ type: 'success', text: 'Customer created successfully!' });
+        setMessage({ type: 'success', text: result.message || 'Customer created successfully!' });
         resetForm();
         setSelectedEntryType(null);
         setSelectedCategory(null);

@@ -133,6 +133,53 @@ Mistakes that fail silently and have each already broken live endpoints:
   `--apply`. Only `fp_estimates.work_order_id` and `invoices.source_work_order_id` refer to the code;
   every other reference uses `work_orders.id`.
 
+## One Email, One Customer Account, One Property
+
+`customer_accounts.email` is `UNIQUE`, so a contact email owns exactly one portal login
+system-wide, and the account's `property_id`/`property_code`/`property_name` point at a
+single property. Every Add Customer / onboarding route resolves the same triage:
+
+- **No row** → create the account and send the activation email.
+- **Row, not activated** → re-issue the token/temp password and resend — and relink first,
+  so the link activates into the property it was just added to, not the stale one.
+- **Row, activated** → relink via `linkCustomerToProperty` and send the
+  "you've been added" notification (`notifyPropertyAdded`) — never an activation, which
+  would mint a temp password for an account that already has one.
+  Both live in `backend/utils/customerPropertyLink.js`; all seven call sites (onboarding,
+  FP/Manager/Coordinator/Supervisor/Executive property *and* simple create, and
+  `POST /api/customers/create`) go through it. Regression test:
+  `node --test backend/utils/customerPropertyLink.test.js`.
+
+The activated case used to fall through with no `else` — no email, no link, a silent
+success — so a property added for an email that had ever activated got no portal access
+at all while staff read "created successfully". The routes now return `accountLinked`
+and an honest `emailNote` in the message, and the five portal Add Customer pages show
+`result.message` instead of a hardcoded toast.
+
+Consequences that are easy to trip over:
+
+- **Re-adding an address moves the login's one property pointer.** A contact who holds
+  two properties sees only the most recently added one — there is no multi-property
+  account model, and widening it needs a join table, not a patch.
+- **Relinking sets `is_active = 1` deliberately.** Soft-deleting a property deactivates
+  the account by email, and the login query filters `is_active` before the password —
+  so a re-added customer would otherwise meet "Invalid email or password" forever.
+- **Soft delete deactivates by email, not by property.** Two properties sharing one
+  contact email means soft-deleting either locks the customer out of both until a
+  restore or a re-add.
+- **Permanent delete frees the email.** `…/properties/:id/permanent` deletes the
+  `customer_accounts` row "so email can be reused". The onboarded-properties lookup that
+  feeds it queried `poc_email`, a column that lives on `onboarded_vendors`, not
+  `onboarded_properties` (`contact_email`) — the query threw into an empty catch and the
+  cleanup silently depended on the `property_id` fallback matching. Fixed in
+  `routes/franchisePartner.js` and `routes/admin.js`.
+- **Still open:** `GET /api/fp/customers` unions a third list
+  (`customer_accounts` ⋈ `onboarded_properties` with `ca.franchise_partner_id IS NULL`)
+  that ignores which FP owns the property, so admin-created customers appear in every
+  FP's list. And a permanent delete issues `DELETE` against both `properties` and
+  `onboarded_properties` with the same numeric id — the PUT route accepts `sourceTable`
+  to disambiguate, the DELETE does not.
+
 ## Stored Text Is HTML-Escaped
 
 - **`middleware/security.js` escapes every string of every request** (`/` → `&#x2F;`, `&` →

@@ -574,6 +574,92 @@ const sendCustomerActivationEmail = async (customerData) => {
   }
 };
 
+// Tell an already-activated customer their login now covers another property. There is
+// no temporary password to send -- they sign in with the credentials they already set --
+// so this is a notification, not an activation.
+const sendPropertyAddedEmail = async (customerData) => {
+  const { email, firstName, propertyName, propertyCode } = customerData;
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('❌ Email credentials not configured! Set EMAIL_USER and EMAIL_PASS in .env');
+    return { success: false, error: 'Email credentials not configured' };
+  }
+
+  const loginUrl = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/login`;
+
+  const mailOptions = {
+    from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
+    replyTo: process.env.EMAIL_USER,
+    to: email,
+    subject: `You've Been Added to ${propertyName || 'a New Property'} - XLAND INFRA`,
+    headers: {
+      ...getDefaultHeaders(),
+      'X-Entity-Ref-ID': `property-added-${Date.now()}`,
+      'Message-ID': `<property-added-${Date.now()}@xlandinfra.com>`
+    },
+    text: `Hello ${firstName || 'Valued Customer'},\n\nYour XLAND INFRA customer account has been added to ${propertyName || 'a new property'}${propertyCode ? ` (${propertyCode})` : ''}.\n\nSign in with your existing email and password: ${loginUrl}\n\nRegards,\nXLAND INFRA Team`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <!-- Header -->
+          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
+              XLAND<span style="color: #D8B25C;">INFRA</span>
+            </h1>
+            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
+          </div>
+
+          <!-- Main Content -->
+          <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
+            <h2 style="color: #D8B25C; margin: 0 0 20px 0; font-size: 24px; font-weight: 400;">Hello, ${firstName || 'Valued Customer'}!</h2>
+
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
+              Your customer account has been added to <strong style="color: #D8B25C;">${propertyName || 'a new property'}</strong>${propertyCode ? `<br><span style="color: #888; font-size: 13px;">Property ID: <strong style="color: #D8B25C;">${propertyCode}</strong></span>` : ''}
+            </p>
+
+            <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
+              You already have a customer portal account — sign in with your existing email and password to see this property.
+            </p>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${loginUrl}" style="display: inline-block; background-color: #D8B25C; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 50px; font-size: 16px; font-weight: 600; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(216, 178, 92, 0.3);">
+                SIGN IN TO YOUR PORTAL
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background: #0D0D0D; padding: 25px 30px; border-radius: 0 0 16px 16px; border: 1px solid #D8B25C33; border-top: 2px solid #D8B25C;">
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0; text-align: center;">
+              If you were not expecting this, please contact our support team.
+            </p>
+            <p style="color: #444; font-size: 11px; margin: 0; text-align: center;">
+              © ${new Date().getFullYear()} XLAND INFRA Pvt Ltd. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Property-added email sent to ${email} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Error sending property-added email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 // Send password reset confirmation email
 const sendPasswordResetConfirmation = async (customerData) => {
   const { email, firstName } = customerData;
@@ -2803,6 +2889,7 @@ module.exports = {
   sendContactNotification,
   sendRegistrationNotification,
   sendCustomerActivationEmail,
+  sendPropertyAddedEmail,
   sendPasswordResetConfirmation,
   sendEmployeeWelcomeEmail,
   sendFPEmployeeWelcomeEmail,

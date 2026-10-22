@@ -760,7 +760,7 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, async (req, 
     } catch (e) {}
     if (!contactEmail) {
       try {
-        const [prop] = await pool.query('SELECT poc_email as contact_email FROM onboarded_properties WHERE id = ?', [id]);
+        const [prop] = await pool.query('SELECT contact_email FROM onboarded_properties WHERE id = ?', [id]);
         if (prop.length > 0) contactEmail = prop[0].contact_email;
       } catch (e) {}
     }
