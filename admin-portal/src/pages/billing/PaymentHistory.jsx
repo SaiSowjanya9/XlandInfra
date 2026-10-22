@@ -7,6 +7,7 @@ import { useFP } from '../../contexts/FPContext';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_GHOST_CLASS } from '../../components/common/PageHeader';
 import DismissPanel from '../../components/common/DismissPanel';
+import ReceiptModal from '../../components/billing/ReceiptModal';
 import {
   formatDate, formatDateTime, formatTime, maskTypedDate, parseTypedDate, toTypedDate, DATE_PLACEHOLDER
 } from '../../utils/dateFormat';
@@ -135,6 +136,9 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
   const [typedEnd, setTypedEnd] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [receipt, setReceipt] = useState(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   const token = getAuthToken();
 
@@ -166,6 +170,51 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
   }, [token, isAdminPortal, selectedFp, dateRange]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  // The payment code opens its receipt in a lightbox. The audit row only carries ids, so the
+  // receipt shape is fetched from /:id/receipt -- the same payload the Payments screen holds.
+  const openReceipt = async (row) => {
+    if (!row.paymentId || receiptLoading) return;
+    setReceiptLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${row.paymentId}/receipt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setReceipt(result.data);
+      } else {
+        setError(result.message || 'Could not load the receipt.');
+      }
+    } catch (err) {
+      setError('Could not load the receipt. Please try again.');
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const downloadReceipt = async (payment) => {
+    setDownloadingReceipt(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/receipt/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to generate receipt');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Receipt_${payment.paymentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Failed to download the receipt.');
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
 
   // The actions actually present, so the filter never offers one that would empty the table.
   const actionOptions = useMemo(() => (
@@ -387,9 +436,20 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-blue-600 truncate" title={row.paymentCode || ''}>
-                            {row.paymentCode || '-'}
-                          </p>
+                          {row.paymentId ? (
+                            <button
+                              onClick={() => openReceipt(row)}
+                              disabled={receiptLoading}
+                              className="text-left text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate disabled:opacity-50"
+                              title="View receipt"
+                            >
+                              {row.paymentCode || '-'}
+                            </button>
+                          ) : (
+                            <p className="text-sm font-medium text-gray-500 truncate" title={row.paymentCode || ''}>
+                              {row.paymentCode || '-'}
+                            </p>
+                          )}
                           <p className="text-[11px] text-gray-400 truncate" title={row.razorpayPaymentId || row.invoiceCode || ''}>
                             {row.invoiceCode || '-'}
                             {row.razorpayPaymentId ? ` · ${row.razorpayPaymentId}` : ''}
@@ -436,7 +496,17 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                     </div>
                     <div className="mt-2 flex items-end justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-blue-600 truncate">{row.paymentCode || '-'}</p>
+                        {row.paymentId ? (
+                          <button
+                            onClick={() => openReceipt(row)}
+                            disabled={receiptLoading}
+                            className="text-sm font-medium text-blue-600 hover:underline truncate disabled:opacity-50"
+                          >
+                            {row.paymentCode || '-'}
+                          </button>
+                        ) : (
+                          <p className="text-sm font-medium text-gray-500 truncate">{row.paymentCode || '-'}</p>
+                        )}
                         <p className="text-xs text-gray-500 truncate">
                           {row.invoiceCode || '-'}
                           {row.customerName ? ` · ${row.customerName}` : ''}
@@ -501,6 +571,16 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
           )}
         </div>
       </div>
+
+      {/* A click on a payment code opens its receipt here — a history row carries no Send
+          action: this is an audit view, so download and close only. */}
+      <ReceiptModal
+        isOpen={!!receipt}
+        onClose={() => setReceipt(null)}
+        payment={receipt}
+        onDownload={downloadReceipt}
+        downloading={downloadingReceipt}
+      />
     </div>
   );
 };
