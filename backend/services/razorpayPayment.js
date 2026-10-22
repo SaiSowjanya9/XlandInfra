@@ -254,6 +254,41 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
     }
   }
 
+  // Receipt email: every recorded payment — link, checkout, or webhook — reaches the customer
+  // the same way a staff-verified one does. Runs post-commit like scheduling; an email
+  // failure must never roll back the payment. The alreadyRecorded path returns before this,
+  // so a duplicate webhook/callback cannot send the receipt twice.
+  const customerEmail = paymentEntity?.email || invoice.customer_email || null;
+  if (customerEmail) {
+    try {
+      const { sendReceiptEmail } = require('./receiptEmail');
+      const receiptResult = await sendReceiptEmail({
+        paymentId: paymentCode,
+        receiptId: receiptCode,
+        invoiceId: invoice.invoice_id,
+        customerName: invoice.customer_name,
+        customerEmail,
+        propertyName: invoice.prop_name,
+        amount,
+        invoiceAmount: parseFloat(invoice.total_amount || 0),
+        balanceAmount: Math.max(0, newBalance),
+        paymentMethod: 'razorpay',
+        methodLabel,
+        paymentDate: new Date(),
+        transactionReference: razorpayPaymentId || paymentLinkId,
+        status: 'completed'
+      });
+      if (receiptResult.success) {
+        await pool.execute('UPDATE payments SET receipt_sent = 1, receipt_sent_at = NOW() WHERE id = ?', [paymentDbId]);
+        console.log(`[Razorpay ${source}] Receipt emailed to ${customerEmail} for ${paymentCode}`);
+      } else {
+        console.error(`[Razorpay ${source}] Receipt email failed for ${paymentCode}: ${receiptResult.error}`);
+      }
+    } catch (error) {
+      console.error(`[Razorpay ${source}] Receipt email error for ${paymentCode}:`, error);
+    }
+  }
+
   return {
     recorded: true,
     alreadyRecorded: false,

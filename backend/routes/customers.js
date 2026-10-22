@@ -1990,6 +1990,142 @@ router.get('/invoices/:id', async (req, res) => {
 });
 
 // ============================================
+// PAYMENT RECEIPTS - a customer's own payment, read-only
+// ============================================
+
+// Same ownership rule as GET /invoices/:id — a payment is reachable only when its invoice
+// matches the logged-in customer by property (either form of id/code) or by email.
+const customerCanAccessInvoice = (customerEmail, numericPropertyId, propertyCode, invoice) => {
+  const invoicePropertyId = String(invoice.property_id || '');
+  const invoicePropertyCode = String(invoice.property_code || '');
+  const invoiceEmail = String(invoice.customer_email || '').toLowerCase();
+  const custPropertyId = String(numericPropertyId || '');
+  const custPropertyCode = String(propertyCode || '');
+  const custEmail = String(customerEmail || '').toLowerCase();
+  return (
+    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+    (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
+    (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
+    (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
+    (custEmail && invoiceEmail && custEmail === invoiceEmail)
+  );
+};
+
+// Load a settled payment only if it belongs to this customer's invoice. Pending / failed /
+// refunded rows are not receipts — a verification_pending row carries no money yet.
+const loadCustomerPayment = async (customerId, paymentId) => {
+  const [customer] = await pool.execute(
+    `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
+    [customerId]
+  );
+  if (customer.length === 0) return { error: 404, message: 'Customer not found' };
+
+  const customerData = customer[0];
+  const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+    customerData.property_id, customerData.property_code, customerData.property_name
+  );
+
+  const [payments] = await pool.execute(
+    `SELECT p.*,
+            i.invoice_id as invoice_code, i.total_amount as invoice_amount,
+            i.balance_amount as invoice_balance, i.property_id as invoice_property_id,
+            i.property_code as invoice_property_code, i.customer_email as invoice_email,
+            prop.community_name as property_name, prop.property_id as prop_code
+     FROM payments p
+     LEFT JOIN invoices i ON p.invoice_id = i.id
+     LEFT JOIN onboarded_properties prop ON p.property_id = prop.id
+     WHERE p.id = ? AND p.status IN ('completed', 'paid', 'refunded')
+       AND COALESCE(p.archived, 0) = 0`,
+    [paymentId]
+  );
+
+  if (payments.length === 0) {
+    return { error: 404, message: 'Receipt not found' };
+  }
+
+  const p = payments[0];
+  const invoice = {
+    property_id: p.invoice_property_id,
+    property_code: p.invoice_property_code,
+    customer_email: p.invoice_email
+  };
+  if (!customerCanAccessInvoice(customerData.email, numericPropertyId, propertyCode, invoice)) {
+    return { error: 403, message: 'Access denied to this receipt' };
+  }
+  return { payment: p };
+};
+
+router.get('/payments/:id/receipt', authenticateCustomer, async (req, res) => {
+  try {
+    const result = await loadCustomerPayment(req.customer.id, req.params.id);
+    if (result.error) return res.status(result.error).json({ success: false, message: result.message });
+
+    const p = result.payment;
+    res.json({
+      success: true,
+      data: {
+        id: p.id,
+        paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+        receiptId: p.receipt_id || null,
+        invoiceId: p.invoice_code,
+        customerName: p.customer_name,
+        customerEmail: p.customer_email || p.invoice_email,
+        customerPhone: p.customer_phone || p.phone,
+        propertyName: p.property_name,
+        propertyCode: p.prop_code || p.property_code,
+        amount: parseFloat(p.amount),
+        invoiceAmount: p.invoice_amount ? parseFloat(p.invoice_amount) : null,
+        balanceAmount: p.invoice_balance !== null && p.invoice_balance !== undefined ? parseFloat(p.invoice_balance) : null,
+        paymentMethod: p.payment_method,
+        paymentDate: p.payment_date,
+        transactionReference: p.transaction_reference,
+        referenceNumber: p.reference_number,
+        status: p.status === 'completed' ? 'paid' : p.status
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching customer receipt:', error);
+    res.status(500).json({ success: false, message: 'Error fetching receipt', error: error.message });
+  }
+});
+
+router.get('/payments/:id/receipt/pdf', authenticateCustomer, async (req, res) => {
+  try {
+    const result = await loadCustomerPayment(req.customer.id, req.params.id);
+    if (result.error) return res.status(result.error).json({ success: false, message: result.message });
+
+    const p = result.payment;
+    const paymentData = {
+      paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      invoiceId: p.invoice_code,
+      customerName: p.customer_name,
+      customerEmail: p.customer_email || p.invoice_email,
+      customerPhone: p.customer_phone || p.phone,
+      propertyName: p.property_name,
+      propertyCode: p.prop_code || p.property_code,
+      amount: parseFloat(p.amount) || 0,
+      invoiceAmount: parseFloat(p.invoice_amount) || parseFloat(p.amount) || 0,
+      balanceAmount: parseFloat(p.invoice_balance) || 0,
+      paymentMethod: p.payment_method,
+      paymentDate: p.payment_date,
+      transactionReference: p.transaction_reference,
+      referenceNumber: p.reference_number,
+      status: p.status
+    };
+
+    const { generateReceiptPDF } = require('../services/pdfService');
+    const pdfBuffer = await generateReceiptPDF(paymentData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Receipt_${paymentData.paymentId}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating customer receipt PDF:', error);
+    res.status(500).json({ success: false, message: 'Error generating receipt PDF', error: error.message });
+  }
+});
+
+// ============================================
 // INITIATE PAYMENT - Create or get Razorpay payment link for an invoice
 // ============================================
 router.post('/invoices/:id/initiate-payment', async (req, res) => {
