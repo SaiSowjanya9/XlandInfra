@@ -1403,6 +1403,57 @@ For reusable task instructions for major modules, see `.devin/skills/`:
 - Work order estimates never have an AMC package, so the feed also returns `estimateType` and the Package column shows a muted "Work Order" chip for them instead of a dash. The frontend check normalizes the value, so `work_order`, `workOrder` and `work order` all match.
 - Test: `node --test backend/utils/pendingProperties.test.js` with `RUN_LOCAL_MYSQL_TESTS=1` and `NODE_ENV=development` (creates and rolls back its own records in the local database).
 
+## A Visit Is Not Written Before Its Estimate Is Approved
+
+**The customer portal shows a scheduled visit the moment it exists** — service, date, time window,
+vendor, "visit 3 of 12" — on its Schedules page and its home panel. Those visits are the agreement
+being carried out, so they must not precede the agreement.
+
+- The rule — `status = 'approved'` **and** `payment_status IN ('paid','partial')` — used to live only
+  in the **queue** that feeds the scheduling screen (`utils/pendingProperties.js`).
+  `POST /api/schedules/confirm` checked the caller's role and the payload and nothing else, so a
+  property reached any other way (a `propertyId` posted straight to the route, a tab left open from
+  before the estimate changed, a re-confirm) had visits written while its estimate was still Draft,
+  Sent or **Rejected** — and the resident read a booked service nobody had agreed to.
+- It is now enforced on the write too, through **`backend/utils/scheduleApproval.js`**:
+  `propertyScheduleGate(pool, { id, code })` answers `{ allowed, estimateId, reason }` and the route
+  refuses with **409** and that reason. `resolveScheduleGate` is the pure rule beside it, so the
+  decision can be read without following a query.
+- **A property with no estimate at all is allowed through.** Older and directly-onboarded properties
+  have none, the queue cannot list them either (it INNER JOINs `fp_estimates`), and refusing them
+  would take away scheduling that works today. The gate stops scheduling *ahead of* an estimate; it
+  does not require that one exists.
+- **Approved-but-unpaid is a separate refusal from unapproved**, with its own message: one waits on
+  the customer, the other on a payment being recorded, and they send staff to different screens.
+- The lookup matches `property_id` **or** `property_code`. An estimate stores the numeric id, but
+  failing *open* because a row carried the code instead is the one mistake that would make the whole
+  guard pointless.
+- **`property_service_schedules.estimate_id` is now stamped** by that route with the estimate that
+  authorised the schedule. The column is schema_v22's and `services/schedulingService.js` always
+  filled it, but the two inserts behind the Property Scheduling screen never did — so nothing could
+  say which estimate a schedule came from. It is written only where the column exists
+  (`hasScheduleEstimateColumn`), since naming a column a deployment lacks fails the whole insert.
+  On a re-confirm the stamp **follows the estimate in force**, not the first one ever used: after a
+  revision the schedule is being carried out under the new estimate, and naming the rejected one it
+  started from would misread as current.
+- **A rejection does not cancel anything, and that is the user's decision.** Rejecting an estimate
+  leaves existing visits alone. The reasoning is the normal shape of the workflow: a rejection is
+  frequently a mistake or the start of a revision — the employee edits the estimate, re-sends it,
+  the customer approves, and the work continues — so tearing the schedule down would destroy
+  hand-edited dates that have to be rebuilt by hand, for a sequence that resolves itself. The guard
+  above is what matters: with it, visits can only exist for an estimate that *was* approved and
+  paid, so a later rejection is an exception rather than the normal path. Do not add automatic
+  cancellation without asking again.
+- **Re-sending is what revives a rejected estimate.** The customer's emailed link is one-shot:
+  `estimatesSync.js` refuses a second action with "this estimate has already been rejected". The
+  employee therefore re-sends (which marks it Sent again and emails a **fresh** action token), and
+  the customer approves from the new mail. Any change that makes the status dropdown write `sent`
+  without going through the send handler would break that recovery path.
+- Tests: `node --test backend/utils/scheduleApproval.test.js` for the rule, and the gate cases in
+  `backend/routes/schedulesConfirm.test.js` (`RUN_LOCAL_MYSQL_TESTS=1 NODE_ENV=development`), which
+  run the real route against the local database — refused on Draft, refused on approved-unpaid,
+  allowed on approved-paid with the estimate stamped — and roll everything back.
+
 ## Estimate Types
 
 `fp_estimates.estimate_type` is created by `schema_v8` as `ENUM('property_based','direct')`, but the application also writes `'work_order'` (FP work order estimates) and `'custom'` (manager catalog estimates). On a database with the narrow enum those inserts fail in strict mode with "Data truncated for column 'estimate_type'" and the estimate is never saved.

@@ -10,6 +10,8 @@ const { authenticate } = require('../middleware/auth');
 const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
 const { orNull, isRecentlyAdded, formatPaymentStatus } = require('../utils/pendingProperties');
 const { fetchVendorlessServiceNames, serviceRowNeedsVendor } = require('../utils/vendorlessServices');
+// Approved and paid before any visit is written: the customer sees a visit the moment it exists
+const { propertyScheduleGate, hasScheduleEstimateColumn } = require('../utils/scheduleApproval');
 const { 
   adminOnly,
   managerOrAdmin,
@@ -1467,6 +1469,21 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       franchisePartnerId: propertyCheck[0].franchise_partner_id
     });
 
+    // The customer sees these visits the moment they exist, so the estimate behind them has to be
+    // approved and paid first. That rule used to live only in the queue that lists schedulable
+    // properties (utils/pendingProperties.js), which this route can be reached without going
+    // through -- a propertyId posted directly, a tab left open from before the estimate changed, a
+    // re-confirm -- so it is enforced here as well. A property with no estimate at all is allowed,
+    // as it always was.
+    const gate = await propertyScheduleGate(pool, {
+      id: propertyDbId,
+      code: propertyCheck[0].property_id
+    });
+    if (!gate.allowed) {
+      console.log('[Confirm Schedule] Refused:', gate.reason);
+      return res.status(409).json({ success: false, message: gate.reason });
+    }
+
     const serviceNameToUse = serviceName || serviceCategory || 'General Service';
     console.log('[Confirm Schedule] Using service name:', serviceNameToUse);
 
@@ -1483,12 +1500,28 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
 
     console.log('[Confirm Schedule] Existing schedule found:', existingSchedule.length > 0 ? `id=${existingSchedule[0].id}, name="${existingSchedule[0].service_name}"` : 'none');
 
+    // Which estimate authorised this schedule. The column is schema_v22's and
+    // services/schedulingService.js already fills it, but the two inserts behind this screen never
+    // did -- so nothing could say which estimate a schedule came from, and the right visits could
+    // not be retracted if that estimate were rejected. Written only where the column exists, since
+    // naming one a deployment lacks fails the whole statement.
+    const stampEstimate = gate.estimateId && await hasScheduleEstimateColumn(pool);
+
     if (existingSchedule.length > 0) {
       serviceScheduleId = existingSchedule[0].id;
-      // Update existing schedule - set status to 'active' and scheduling_status to 'scheduled'
+      // Update existing schedule - set status to 'active' and scheduling_status to 'scheduled'.
+      //
+      // The stamp follows the estimate **in force**, not the first one ever used: a rejection is
+      // often a mistake or a revision, and the employee then sends a modified estimate that the
+      // customer approves. The schedule carries on, so it must name the agreement it is actually
+      // being carried out under -- the rejected one it started from would misread as current.
       await pool.execute(
-        `UPDATE property_service_schedules SET status = 'active', scheduling_status = 'scheduled', total_visits = ?, updated_at = NOW() WHERE id = ?`,
-        [totalVisits || visits.length, serviceScheduleId]
+        `UPDATE property_service_schedules
+            SET status = 'active', scheduling_status = 'scheduled', total_visits = ?,
+                ${stampEstimate ? 'estimate_id = ?,' : ''}
+                updated_at = NOW()
+          WHERE id = ?`,
+        [totalVisits || visits.length, ...(stampEstimate ? [gate.estimateId] : []), serviceScheduleId]
       );
       console.log('[Confirm Schedule] Updated existing schedule:', serviceScheduleId, 'with scheduling_status=scheduled');
     } else {
@@ -1522,9 +1555,9 @@ router.post('/confirm', authenticate, canMakeSchedule, async (req, res) => {
       const frequencyType = frequencyMap[(frequency || 'monthly').toLowerCase()] || 'monthly';
       
       const [newSchedule] = await pool.execute(
-        `INSERT INTO property_service_schedules (schedule_id, property_id, service_name, service_category, vendor_id, frequency_type, total_visits, status, scheduling_status, franchise_partner_id, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'scheduled', ?, ?, NOW())`,
-        [scheduleId, propertyDbId, serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, franchisePartnerId || null, req.user.id]
+        `INSERT INTO property_service_schedules (schedule_id, property_id, ${stampEstimate ? 'estimate_id, ' : ''}service_name, service_category, vendor_id, frequency_type, total_visits, status, scheduling_status, franchise_partner_id, created_by, created_at)
+         VALUES (?, ?, ${stampEstimate ? '?, ' : ''}?, ?, ?, ?, ?, 'active', 'scheduled', ?, ?, NOW())`,
+        [scheduleId, propertyDbId, ...(stampEstimate ? [gate.estimateId] : []), serviceNameToUse, serviceCategory || null, vendorId || null, frequencyType, totalVisits || visits.length, franchisePartnerId || null, req.user.id]
       );
       serviceScheduleId = newSchedule.insertId;
       console.log('[Confirm Schedule] Created new schedule with DB id:', serviceScheduleId, 'with scheduling_status=scheduled');
