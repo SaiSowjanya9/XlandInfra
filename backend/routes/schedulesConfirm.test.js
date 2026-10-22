@@ -122,6 +122,39 @@ test('confirming a schedule saves its series and every visit, and re-confirming 
     const empty = await confirm([]);
     assert.equal(empty.status, 400);
     assert.equal(empty.body.success, false);
+
+    // ------------------------------------------------------------------
+    // The approval gate. Everything above ran on a property with no estimate, which is allowed --
+    // older properties have none. Give it one, and the route has to answer to it: the customer sees
+    // a visit the moment it exists, so it must not be written ahead of the estimate.
+    // ------------------------------------------------------------------
+    // `franchise_partner_id` is NOT NULL with no default on this table, so the fixture supplies one
+    const [estimate] = await connection.execute(
+      `INSERT INTO fp_estimates (estimate_id, franchise_partner_id, property_id, estimate_type, status, payment_status, total_amount)
+       VALUES (?, 1, ?, 'property_based', 'draft', 'pending', 1000)`,
+      [`EST-CONFIRM-${suffix}`, property.insertId]
+    );
+
+    const unapproved = await confirm([visit(1, '2026-12-26', '10:00 AM')]);
+    assert.equal(unapproved.status, 409, 'an unapproved estimate must refuse, not schedule');
+    assert.match(unapproved.body.message, /has not been approved yet/);
+
+    // Approved but unpaid is still refused -- the agreed rule is approved *and* paid, the same two
+    // conditions the Pending Property Schedules queue applies.
+    await connection.execute("UPDATE fp_estimates SET status = 'approved' WHERE id = ?", [estimate.insertId]);
+    const unpaid = await confirm([visit(1, '2026-12-26', '10:00 AM')]);
+    assert.equal(unpaid.status, 409);
+    assert.match(unpaid.body.message, /approved but no payment/);
+
+    // Paid, and the save goes through -- stamping the estimate that authorised it, which is what
+    // makes it possible to tell later which visits came from which estimate.
+    await connection.execute("UPDATE fp_estimates SET payment_status = 'paid' WHERE id = ?", [estimate.insertId]);
+    const allowed = await confirm([visit(1, '2026-12-26', '10:00 AM')]);
+    assert.equal(allowed.status, 200, allowed.body.message || allowed.body.error);
+    const [[stamped]] = await connection.execute(
+      'SELECT estimate_id FROM property_service_schedules WHERE id = ?', [allowed.body.data.serviceScheduleId]
+    );
+    assert.equal(stamped.estimate_id, estimate.insertId, 'the schedule records the estimate it was authorised by');
   } finally {
     await new Promise(resolve => server.close(resolve));
     await connection.rollback();
