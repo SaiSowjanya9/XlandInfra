@@ -1544,13 +1544,13 @@ const InvoiceDetailPanel = ({
 
   return (
     <Modal onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* ===== HEADER - Compact black with centered branding ===== */}
+        {/* ===== HEADER - letterhead on the warm section tint, like EstimateDocumentHeader ===== */}
         <div className="flex-shrink-0 relative">
-          <div className="bg-[#1a1a1a] px-6 py-3">
+          <div className="bg-warm-section px-6 py-3">
             {/* Close button - top right */}
-            <button 
-              onClick={(e) => { e.stopPropagation(); onClose(); }} 
-              className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded transition-colors z-10"
+            <button
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              className="absolute top-2 right-2 p-1 hover:bg-black/5 rounded transition-colors z-10"
             >
               <X className="w-4 h-4 text-gray-400" />
             </button>
@@ -1558,21 +1558,21 @@ const InvoiceDetailPanel = ({
             <div className="flex items-center justify-center gap-3">
               <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
               <div className="flex flex-col justify-center">
-                <h1 className="text-[#D39A1A] text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
+                <h1 className="text-gray-900 text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
-                  <span className="text-[#D39A1A] text-[7px] tracking-[0.12em]">PVT LTD</span>
-                  <div className="w-5 h-[1px] bg-[#D39A1A]"></div>
+                  <div className="w-5 h-[1px] bg-gray-900/50"></div>
+                  <span className="text-gray-900 text-[7px] tracking-[0.12em]">PVT LTD</span>
+                  <div className="w-5 h-[1px] bg-gray-900/50"></div>
                 </div>
               </div>
             </div>
           </div>
-          {/* Gold divider - simple and proportional */}
-          <div className="h-1.5 bg-gradient-to-r from-[#B77A00] via-[#D39A1A] to-[#B77A00]"></div>
+          {/* Warm divider - simple and proportional */}
+          <div className="h-1.5 bg-warm-accent"></div>
         </div>
 
         {/* ===== ID / DATE / DUE ROW - Compact ===== */}
-        <div className="px-5 py-3 flex-shrink-0 bg-white border-b border-gray-100">
+        <div className="px-5 py-3 flex-shrink-0 bg-white border-b border-warm-border">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-1.5 mb-0.5">
@@ -1580,7 +1580,7 @@ const InvoiceDetailPanel = ({
                 <span className="text-xs font-bold text-gray-900">{invoice.invoiceId}</span>
               </div>
               {invoice.sourceEstimateId && (
-                <p className="text-[9px] text-[#c9a227]">Estimate: {invoice.sourceEstimateId}</p>
+                <p className="text-[9px] text-[#8A6D12]">Estimate: {invoice.sourceEstimateId}</p>
               )}
             </div>
             <div className="text-right">
@@ -1599,16 +1599,16 @@ const InvoiceDetailPanel = ({
         {/* Content - Scrollable with flex-1 */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4 bg-white">
           
-          {/* ===== TOTAL AMOUNT DUE BANNER - Compact, elegant ===== */}
-          <div className="bg-[#D39A1A] rounded-lg px-5 py-3 text-center">
-            <p className="text-white/90 text-[10px] uppercase tracking-wider mb-0.5">
+          {/* ===== TOTAL AMOUNT DUE BANNER - the warm-accent band the estimate's Total uses ===== */}
+          <div className="bg-warm-accent rounded-lg px-5 py-3 text-center">
+            <p className="text-warm-text/70 text-[10px] uppercase tracking-wider mb-0.5">
               {invoice.status === 'partially_paid' ? 'Balance Due' : 'Total Amount Due'}
             </p>
-            <p className="text-white text-2xl font-bold">
+            <p className="text-warm-text text-2xl font-bold">
               Rs. {Math.round((invoice.status === 'partially_paid' ? invoice.balanceAmount : invoice.totalAmount) || 0).toLocaleString('en-IN')}
             </p>
             {invoice.status === 'partially_paid' && paidPercent(invoice) > 0 && (
-              <p className="text-white/85 text-[11px] mt-0.5">
+              <p className="text-warm-text/80 text-[11px] mt-0.5">
                 Paid {formatCurrency(invoice.amountPaid)} ({paidPercent(invoice)}%) of Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}
               </p>
             )}
@@ -1619,7 +1619,7 @@ const InvoiceDetailPanel = ({
               email stays on one line instead of snapping mid-word */}
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,max-content)] gap-3">
             {/* Property Details */}
-            <div className="bg-[#FBF7EE] rounded-lg p-3 border border-[#E8DCC8]">
+            <div className="bg-warm-section rounded-lg p-3 border border-warm-border">
               <p className="text-gray-900 text-xs font-bold uppercase mb-2">Property Details</p>
               <div className="text-xs space-y-1">
                 <p className="text-gray-600">Property ID: <span className="text-gray-800">{invoice.propertyCode || '-'}</span></p>
@@ -1630,7 +1630,7 @@ const InvoiceDetailPanel = ({
               </div>
             </div>
             {/* Customer Details */}
-            <div className="bg-[#FBF7EE] rounded-lg p-3 border border-[#E8DCC8]">
+            <div className="bg-warm-section rounded-lg p-3 border border-warm-border">
               <p className="text-gray-900 text-xs font-bold uppercase mb-2">Customer Details</p>
               <div className="text-xs space-y-1">
                 <p className="text-gray-600">Name: <span className="text-gray-800">{invoice.customerName || '-'}</span></p>
@@ -1643,7 +1643,7 @@ const InvoiceDetailPanel = ({
 
           {/* Payment Link Section (if exists) */}
           {invoice.paymentLink && (
-            <div className="p-4 bg-gradient-to-r from-[#c9a227]/10 to-amber-50 rounded-xl border border-[#c9a227]/30 shadow-sm">
+            <div className="p-4 bg-warm-accent-soft rounded-xl border border-warm-border shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <LinkIcon className="w-4 h-4 text-[#c9a227]" />
@@ -1669,7 +1669,7 @@ const InvoiceDetailPanel = ({
                     href={invoice.paymentLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#c9a227] text-white text-sm font-semibold rounded-lg hover:bg-[#b08a1f] transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-accent text-warm-text text-sm font-semibold rounded-lg hover:bg-warm-accent-hover transition-colors"
                   >
                     <CreditCard className="w-4 h-4" />
                     Pay Now
@@ -1677,7 +1677,7 @@ const InvoiceDetailPanel = ({
                 )}
                 <button
                   onClick={() => { navigator.clipboard.writeText(invoice.paymentLink); }}
-                  className="px-3 py-2 border border-[#c9a227] text-[#c9a227] text-sm font-medium rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-1"
+                  className="px-3 py-2 border border-warm-accent text-[#8A6D12] text-sm font-medium rounded-lg hover:bg-warm-accent-soft transition-colors flex items-center gap-1"
                   title="Copy Link"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -1810,18 +1810,18 @@ const InvoiceDetailPanel = ({
                 </div>
                 
                 {/* Services Table - Compact */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-lg border border-warm-border overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#c9a227]">
-                        <th className="w-8 px-2 py-2 text-xs font-semibold text-white text-center">#</th>
-                        <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Service</th>
-                        <th className="px-2 py-2 text-xs font-semibold text-white text-left">Description</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-center">Frequency</th>
-                        <th className="w-12 px-2 py-2 text-xs font-semibold text-white text-center">Visits</th>
+                      <tr className="bg-warm-section">
+                        <th className="w-8 px-2 py-2 text-xs font-semibold text-warm-muted text-center">#</th>
+                        <th className="w-28 px-2 py-2 text-xs font-semibold text-warm-muted text-left">Service</th>
+                        <th className="px-2 py-2 text-xs font-semibold text-warm-muted text-left">Description</th>
+                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Frequency</th>
+                        <th className="w-12 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Visits</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-warm-border/60">
                       {services.map((item, idx) => (
                         <tr key={idx} className="bg-white">
                           <td className="px-2 py-2 text-xs text-gray-700 text-center">{idx + 1}</td>
@@ -1903,19 +1903,19 @@ const InvoiceDetailPanel = ({
                 </div>
                 
                 {/* Addons Table - Compact */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-lg border border-warm-border overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-[#c9a227]">
-                        <th className="w-8 px-2 py-2 text-xs font-semibold text-white text-center">#</th>
-                        <th className="w-28 px-2 py-2 text-xs font-semibold text-white text-left">Service</th>
-                        <th className="px-2 py-2 text-xs font-semibold text-white text-left">Description</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-center">Frequency</th>
-                        <th className="w-12 px-2 py-2 text-xs font-semibold text-white text-center">Visits</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-white text-right">Price</th>
+                      <tr className="bg-warm-section">
+                        <th className="w-8 px-2 py-2 text-xs font-semibold text-warm-muted text-center">#</th>
+                        <th className="w-28 px-2 py-2 text-xs font-semibold text-warm-muted text-left">Service</th>
+                        <th className="px-2 py-2 text-xs font-semibold text-warm-muted text-left">Description</th>
+                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Frequency</th>
+                        <th className="w-12 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Visits</th>
+                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-right">Price</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-warm-border/60">
                       {addons.map((item, idx) => (
                         <tr key={idx} className="bg-white">
                           <td className="px-2 py-2 text-xs text-gray-700 text-center">{idx + 1}</td>
@@ -1933,40 +1933,30 @@ const InvoiceDetailPanel = ({
             ) : null;
           })()}
 
-          {/* ===== PRICE SUMMARY - Compact, right aligned ===== */}
+          {/* ===== PRICE SUMMARY - the card EstimatePriceSummary draws ===== */}
           <div className="flex justify-end">
             <div className="w-64">
-              {/* Section Header */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Price Summary</span>
-              </div>
-              
-              {/* Summary Box - Compact */}
-              <div className="bg-white rounded-lg border border-gray-200 p-3">
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="text-gray-800">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
+              <div className="overflow-hidden rounded-lg border border-warm-border">
+                <p className="border-b border-warm-border bg-warm-section px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-warm-muted">Price Summary</p>
+                <div className="divide-y divide-warm-border/60">
+                  <div className="flex justify-between px-3 py-1.5 text-xs">
+                    <span className="text-warm-muted">Subtotal</span>
+                    <span className="font-semibold text-warm-text">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  
                   {invoice.discountAmount > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Discount ({invoice.discountPercentage || 0}%):</span>
-                      <span className="text-green-600">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
+                    <div className="flex justify-between px-3 py-1.5 text-xs">
+                      <span className="text-warm-muted">Discount ({invoice.discountPercentage || 0}%)</span>
+                      <span className="font-semibold text-emerald-700">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
                     </div>
                   )}
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">GST ({(parseFloat(invoice.taxPercentage) || 0).toFixed(2)}%):</span>
-                    <span className="text-gray-800">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between px-3 py-1.5 text-xs">
+                    <span className="text-warm-muted">GST ({(parseFloat(invoice.taxPercentage) || 0).toFixed(2)}%)</span>
+                    <span className="font-semibold text-warm-text">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  
-                  <div className="border-t border-gray-200 pt-2 mt-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#c9a227] font-bold text-sm">Total:</span>
-                      <span className="text-[#c9a227] font-bold text-base">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-warm-accent px-3 py-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
+                  <span className="text-base font-bold text-warm-text">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -1974,9 +1964,9 @@ const InvoiceDetailPanel = ({
 
           {/* Payment History */}
           {invoice.payments && invoice.payments.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-                <CreditCard className="w-4 h-4 text-[#c9a227]" />
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-warm-border">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-warm-border bg-warm-section">
+                <CreditCard className="w-4 h-4 text-[#8A6D12]" />
                 <p className="text-gray-800 text-sm font-semibold uppercase tracking-wide">Payment History</p>
               </div>
               <div className="p-4 space-y-2">
@@ -1994,7 +1984,7 @@ const InvoiceDetailPanel = ({
           )}
 
           {/* Footer separator and message (Image 2) */}
-          <div className="border-t border-gray-200 pt-4 mt-6">
+          <div className="border-t border-warm-border pt-4 mt-6">
             <div className="flex items-center gap-2 text-gray-500">
               <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center">
                 <span className="text-gray-400 text-[10px]">♡</span>
@@ -2005,7 +1995,7 @@ const InvoiceDetailPanel = ({
         </div>
 
         {/* Footer Actions - Always visible */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-3 flex-shrink-0">
+        <div className="px-6 py-3 border-t border-warm-border bg-white flex items-center justify-end gap-3 flex-shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="px-5 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -2015,7 +2005,7 @@ const InvoiceDetailPanel = ({
           <button
             onClick={(e) => { e.stopPropagation(); onRecordPayment(); }}
             disabled={invoice.balanceAmount <= 0}
-            className="px-5 py-2 bg-[#c9a227] text-white rounded-lg text-sm font-medium hover:bg-[#b8941f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 bg-warm-accent text-warm-text rounded-lg text-sm font-medium hover:bg-warm-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Record Payment
           </button>
