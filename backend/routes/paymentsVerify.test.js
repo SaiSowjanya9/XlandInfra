@@ -124,3 +124,18 @@ test('the scheduling trigger repairs the pending_property_schedules schema first
   assert.match(markBlock, /ensurePendingScheduleSchema\(\)/,
     'markPaymentCompleted writes added_at/updated_at without the drift ensure');
 });
+
+test('the invoices list and detail show the ledger figure, not the stale amount_paid cache', () => {
+  // The verify route's old double-count wrote amount_paid = 2x the real total on rows it
+  // touched; those stored values were what GET /invoices returned until the list started
+  // computing settled_paid from the payments table (minus processed refunds).
+  const listIdx = routes.indexOf("router.get('/invoices'");
+  const detailIdx = routes.indexOf("router.get('/invoices/:id'");
+  for (const [name, block] of [['list', routes.slice(listIdx, listIdx + 9000)], ['detail', routes.slice(detailIdx, detailIdx + 9000)]]) {
+    assert.match(block, /settled_paid/, `GET /invoices ${name} does not compute settled_paid`);
+    assert.match(block, /SUM\(amount\) FROM payments WHERE invoice_id = i\.id AND status IN \('completed', 'paid'\)/,
+      `GET /invoices ${name} counts something other than settled payments`);
+    assert.match(block, /payment_refunds WHERE invoice_id = i\.id AND status = 'processed'/,
+      `GET /invoices ${name} forgets to subtract processed refunds`);
+  }
+});
