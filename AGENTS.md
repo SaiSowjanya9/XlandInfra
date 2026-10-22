@@ -133,7 +133,10 @@ Mistakes that fail silently and have each already broken live endpoints:
   assert `sent`/`overdue`/`cancelled`/`draft` but never a money state the amounts contradict.
   A payment status outside `completed`/`paid` (or `verification_pending` until verified) stores
   the row but settles nothing — `'failed'` used to settle the invoice because the gate was
-  `!= verification_pending`.
+  `!= verification_pending`. And no amount may exceed the invoice's outstanding balance:
+  `POST /payments`, `POST /record`, the verify route's corrected amount and `PUT /payments/:id`
+  all refuse it, because an overage used to write `amount_paid` past `total_amount` while the
+  balance clamped to 0.
 - **Settled money is payments minus processed refunds, and refunds live in their own ledger.**
   `payment_refunds` (schema_v55, `utils/refundLedger.js`, ensured at boot) carries one row per
   Razorpay refund keyed on `razorpay_refund_id` — a partial refund leaves its payment settled
