@@ -102,6 +102,9 @@ import WorkOrdersDashboard from './components/WorkOrdersDashboard';
 import BillingPlaceholder from './pages/billing/BillingPlaceholder';
 import Invoices from './pages/billing/Invoices';
 import Payments from './pages/billing/Payments';
+// The payment_history audit trail. It used to be another mount of Payments, which is why the two
+// routes rendered the same screen down to the heading.
+import PaymentHistory from './pages/billing/PaymentHistory';
 
 import GeneratedInvoices from './pages/billing/GeneratedInvoices';
 import CreateInvoice from './pages/billing/CreateInvoice';
@@ -401,7 +404,7 @@ function App() {
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="employee" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="employee" />} />
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="employee" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="employee" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="employee" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="employee" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="admin" />} />
                     <Route path="schedules/pending" element={<PendingPropertySchedules user={user} portalType="admin" />} />
@@ -502,7 +505,7 @@ function App() {
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="fp" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="fp" />} />
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="fp" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="fp" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="fp" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="fp" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="franchise" />} />
                     <Route path="schedules/pending" element={<PendingPropertySchedules user={user} portalType="franchise" />} />
@@ -571,7 +574,7 @@ function App() {
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="manager" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="manager" />} />
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="manager" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="manager" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="manager" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="manager" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="manager" />} />
                     <Route path="schedules/pending" element={<PendingPropertySchedules user={user} portalType="manager" />} />
@@ -632,7 +635,7 @@ function App() {
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="coordinator" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="coordinator" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="coordinator" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="coordinator" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="coordinator" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="coordinator" />} />
                     <Route path="schedules/pending" element={<PendingPropertySchedules user={user} portalType="coordinator" />} />
                     <Route path="schedules/property/:propertyId" element={<PropertySchedulingScreen user={user} portalType="coordinator" />} />
@@ -691,7 +694,7 @@ function App() {
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="supervisor" />} />
                     <Route path="billing/make-payments" element={<MakePayments user={user} portalType="supervisor" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="supervisor" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="supervisor" />} />
                     <Route path="billing/archived" element={<Invoices user={user} portalType="supervisor" defaultTab="archived" />} />
                     <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="supervisor" />} />
                     <Route path="schedules/pending" element={<PendingPropertySchedules user={user} portalType="supervisor" />} />
@@ -752,7 +755,7 @@ function App() {
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="executive" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="executive" />} />
                     <Route path="billing/payments" element={<Payments user={user} portalType="executive" />} />
-                    <Route path="billing/payment-history" element={<Payments user={user} portalType="executive" />} />
+                    <Route path="billing/payment-history" element={<PaymentHistory user={user} portalType="executive" />} />
                     {/* Marketing -- read-only here: a executive reads the pipeline their zones and
                         their own visits feed. The supervisor portal has no Marketing section at
                         all, by design. */}

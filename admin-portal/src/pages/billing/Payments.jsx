@@ -115,16 +115,25 @@ const formatPropertyType = (type) => {
   return type.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 };
 
-// Payment method config with colors matching reference image
+/**
+ * How a stored payment method reads in the table, the export and the receipt.
+ *
+ * Four methods are real: `razorpay` for everything taken online, and `cash`, `cheque` and
+ * `bank_transfer` offline. A Razorpay payment is stored as `razorpay` whether the customer used a
+ * card, net banking, UPI or a wallet -- the instrument is in
+ * `payment_history.payment_method_details`, which is why the Razorpay receipt renders
+ * "Card/Net Banking/UPI" rather than reading this map.
+ */
 const PAYMENT_METHODS = {
   razorpay: { label: 'Razorpay', icon: CreditCard, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
   cash: { label: 'Cash', icon: Banknote, color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200' },
   bank_transfer: { label: 'Bank Transfer', icon: Building2, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  upi: { label: 'UPI', icon: Smartphone, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-  debit_credit_card: { label: 'Card', icon: CreditCard, color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
-  check: { label: 'Cheque', icon: FileCheck, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
   // The verify flow stores 'cheque' while older rows say 'check' -- same method, two names
+  check: { label: 'Cheque', icon: FileCheck, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
   cheque: { label: 'Cheque', icon: FileCheck, color: 'text-cyan-700', bg: 'bg-cyan-50', border: 'border-cyan-200' },
+  // Not offered anywhere any more, but schema_v17's ENUM allows it and a legacy row may hold it:
+  // a stored value must still read as itself rather than fall through to 'Other'.
+  upi: { label: 'UPI', icon: Smartphone, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
   other: { label: 'Other', icon: CreditCard, color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' }
 };
 
@@ -2505,17 +2514,16 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const { fpList, selectedFp, selectFp } = useFP();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   const isAdminPortal = portalType === 'admin' || portalType === 'employee';
-  
-  // Set initial tab based on URL
-  const getInitialTab = () => {
-    if (location.pathname.includes('payment-history') || location.pathname.includes('offline')) return 'offline';
-    return 'online';
-  };
-  
+
+  // This screen is one list of every payment, online and offline together. It used to be two tabs
+  // chosen from the URL -- /payments opened 'online' and /payment-history 'offline' -- but the
+  // online half was switched off behind `{false && ...}` and the tab bar with it, so both routes
+  // rendered this same list under the same hard-coded "Payments" heading. The audit trail now has
+  // its own screen (pages/billing/PaymentHistory.jsx) and this one has no tabs.
+
   const [payments, setPayments] = useState([]);
   // Counted by the summary cards, which report overall figures rather than the filtered table
   const [summaryPayments, setSummaryPayments] = useState([]);
-  const [razorpayHistory, setRazorpayHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [headerSearchTerm, setHeaderSearchTerm] = useState('');
@@ -2534,13 +2542,10 @@ const Payments = ({ user, portalType = 'admin' }) => {
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [toast, setToast] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
-  const [activeTab, setActiveTab] = useState(getInitialTab); // 'online' or 'offline'
 
   // Refs for date inputs
   const offlineStartDateRef = useRef(null);
   const offlineEndDateRef = useRef(null);
-  const onlineStartDateRef = useRef(null);
-  const onlineEndDateRef = useRef(null);
 
   const token = getAuthToken();
 
@@ -2607,37 +2612,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
-
-  // Fetch Razorpay transaction history
-  const fetchRazorpayHistory = useCallback(async () => {
-    try {
-      const params = new URLSearchParams();
-      // Add FP filter for admin viewing specific FP
-      if (selectedFp && selectedFp.id !== 'all') {
-        params.append('fpId', selectedFp.id);
-      }
-      if (dateRange.start) params.append('startDate', dateRange.start);
-      if (dateRange.end) params.append('endDate', dateRange.end);
-      if (headerSearchTerm) params.append('search', headerSearchTerm);
-      
-      const url = `${API_BASE}/api/payments/razorpay-history${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setRazorpayHistory(result.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching Razorpay history:', err);
-    }
-  }, [token, dateRange, headerSearchTerm, selectedFp]);
-
-  useEffect(() => {
-    if (activeTab === 'online') {
-      fetchRazorpayHistory();
-    }
-  }, [activeTab, fetchRazorpayHistory]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -2953,14 +2927,23 @@ const Payments = ({ user, portalType = 'admin' }) => {
                 onChange={(e) => { setMethodFilter(e.target.value); setCurrentPage(1); }}
                 className="appearance-none pl-2 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300"
               >
+                {/* Only what a payment can actually be stored as. Everything taken online lands
+                    as 'razorpay' -- card, net banking, UPI and wallet alike, with the instrument
+                    itself in payment_history.payment_method_details -- and the three offline
+                    methods are the ones MakePayments and the customer's own page can record
+                    (routes/customers.js whitelists exactly cash, cheque and bank_transfer).
+                    Debit Card, Credit Card and Net Banking were offered here and nothing writes
+                    them, so choosing one always emptied the table; Razorpay, the one method that
+                    is written, was missing altogether. */}
                 <option value="all">All Methods</option>
-                <option value="debit_card">Debit Card</option>
-                <option value="credit_card">Credit Card</option>
-                <option value="net_banking">Net Banking</option>
-                <option value="upi">UPI</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cash">Cash</option>
-                <option value="check">Cheque</option>
+                <optgroup label="Online">
+                  <option value="razorpay">Razorpay</option>
+                </optgroup>
+                <optgroup label="Offline">
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Cheque</option>
+                </optgroup>
               </select>
               <ChevronDown className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -3235,195 +3218,6 @@ const Payments = ({ user, portalType = 'admin' }) => {
             </>
           )}
         </div>
-        {/* End of Payments Content - Online section removed, unified interface */}
-        {false && (
-          <>
-          {/* Filters Row for Online Payments */}
-          <div className="bg-white rounded-xl border border-gray-200 mb-4 p-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative">
-                <select
-                  value={methodFilter}
-                  onChange={(e) => { setMethodFilter(e.target.value); setCurrentPage(1); }}
-                  className="appearance-none pl-4 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="all">All Payment Methods</option>
-                  <option value="debit_card">Debit Card</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="net_banking">Net Banking</option>
-                  <option value="upi">UPI</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="cash">Cash</option>
-                  <option value="check">Cheque</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-
-              <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-                <Calendar 
-                  className="w-4 h-4 text-gray-400 flex-shrink-0 cursor-pointer" 
-                  onClick={() => onlineStartDateRef.current?.click()}
-                />
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    value={dateDisplayStart || formatDateIST(dateRange.start)}
-                    onChange={(e) => {
-                      const formatted = handleISTDateInput(e.target.value);
-                      setDateDisplayStart(formatted);
-                      if (formatted.length === 10) {
-                        setDateRange(prev => ({ ...prev, start: parseISTDate(formatted) }));
-                      } else if (formatted.length === 0) {
-                        setDateRange(prev => ({ ...prev, start: '' }));
-                      }
-                    }}
-                    onBlur={() => setDateDisplayStart('')}
-                    onClick={() => onlineStartDateRef.current?.click()}
-                    className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
-                  />
-                  <input type="date"
-                    ref={onlineStartDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
-                    value={dateRange.start}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setDateRange(prev => ({ ...prev, start: e.target.value }));
-                        setDateDisplayStart('');
-                      }
-                    }}
-                  />
-                </div>
-                <span className="text-gray-400">-</span>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    value={dateDisplayEnd || formatDateIST(dateRange.end)}
-                    onChange={(e) => {
-                      const formatted = handleISTDateInput(e.target.value);
-                      setDateDisplayEnd(formatted);
-                      if (formatted.length === 10) {
-                        setDateRange(prev => ({ ...prev, end: parseISTDate(formatted) }));
-                      } else if (formatted.length === 0) {
-                        setDateRange(prev => ({ ...prev, end: '' }));
-                      }
-                    }}
-                    onBlur={() => setDateDisplayEnd('')}
-                    onClick={() => onlineEndDateRef.current?.click()}
-                    className="text-sm border-none focus:outline-none bg-transparent w-[85px] cursor-pointer"
-                  />
-                  <input type="date"
-                    ref={onlineEndDateRef} className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
-                    value={dateRange.end}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setDateRange(prev => ({ ...prev, end: e.target.value }));
-                        setDateDisplayEnd('');
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={() => fetchRazorpayHistory()}
-                className="p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Refresh"
-              >
-                <RefreshCw className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            {/* History Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Transaction</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Invoice</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Customer</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Payment Method</th>
-                    <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Amount</th>
-                    <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Balance</th>
-                    <th className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {razorpayHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 bg-gray-100 rounded-full">
-                            <Receipt className="w-8 h-8 text-gray-400" />
-                          </div>
-                          <p className="text-gray-500 font-medium">No online payments yet</p>
-                          <p className="text-sm text-gray-400">Card, Net Banking & UPI payments will appear here</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    razorpayHistory.map((txn) => (
-                      <tr key={txn.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div>
-                            <button
-                              onClick={() => handleViewReceipt(txn)}
-                              className="font-medium text-blue-600 hover:text-blue-800 hover:underline text-sm cursor-pointer"
-                            >
-                              {txn.paymentId || `PAY-${txn.id}`}
-                            </button>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {new Date(txn.transactionDate).toLocaleDateString('en-IN', { 
-                                day: '2-digit', month: 'short', year: 'numeric', 
-                                hour: '2-digit', minute: '2-digit' 
-                              })}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-gray-900 text-sm">{txn.invoiceId || '-'}</p>
-                          {txn.invoiceTotal && (
-                            <p className="text-xs text-gray-500">Total: {formatCurrencyShort(txn.invoiceTotal)}</p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm text-gray-900">{txn.customerName || '-'}</p>
-                          <p className="text-xs text-gray-500">{txn.propertyName || '-'}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
-                            <CreditCard className="w-3 h-3" />
-                            {txn.paymentMethod}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <p className="font-semibold text-green-600">{formatCurrencyShort(txn.amountPaid)}</p>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <p className={`font-medium ${txn.balanceRemaining <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {txn.balanceRemaining <= 0 ? '₹0' : formatCurrencyShort(txn.balanceRemaining)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleViewReceipt(txn)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            View Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          </>
-        )}
       </div>
 
       {/* Use appropriate modal based on payment method */}

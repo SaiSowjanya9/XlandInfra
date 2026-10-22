@@ -2036,11 +2036,15 @@ const RecordPaymentModal = ({ invoice, onClose, onSuccess, formatCurrency }) => 
 
   const token = getAuthToken();
 
+  // Only what `payments.payment_method` can hold -- see backend/utils/paymentMethods.js.
+  // 'debit_credit_card' was offered here and is not an ENUM member, so recording a card payment
+  // truncated the column inside the payment's own transaction and rolled the whole thing back:
+  // the payment appeared to be taken and nothing was saved. Anything taken on a card goes through
+  // Razorpay, which records itself and needs no manual entry.
   const paymentMethods = [
     { value: 'cash', label: 'Cash', icon: Banknote },
     { value: 'upi_manual', label: 'UPI (QR / UPI ID)', icon: Receipt },
     { value: 'bank_transfer', label: 'Bank Transfer', icon: Building2 },
-    { value: 'debit_credit_card', label: 'Debit/Credit Card', icon: CreditCard },
     { value: 'cheque', label: 'Cheque', icon: FileText }
   ];
 

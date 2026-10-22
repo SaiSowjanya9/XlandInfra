@@ -401,14 +401,17 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       const failedPayments = failedPaymentsList.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
       // Payments by Mode - from ALL paid payments
+      // Labels for the methods that can actually appear: Razorpay for everything online, plus
+      // the offline three. 'debit_credit_card' was listed and is not a storable value at all;
+      // 'upi_manual' is, on older rows. An unlisted method falls back to its own name below.
       const modeMap = {
-        upi: { label: 'UPI', color: '#10B981' },
+        razorpay: { label: 'Razorpay', color: '#8B5CF6' },
         bank_transfer: { label: 'Bank Transfer', color: '#3B82F6' },
-        razorpay: { label: 'Razorpay Link', color: '#8B5CF6' },
-        debit_credit_card: { label: 'Card / POS', color: '#F59E0B' },
         cash: { label: 'Cash', color: '#6B7280' },
         check: { label: 'Cheque', color: '#14B8A6' },
-        cheque: { label: 'Cheque', color: '#14B8A6' }
+        cheque: { label: 'Cheque', color: '#14B8A6' },
+        upi: { label: 'UPI', color: '#10B981' },
+        upi_manual: { label: 'UPI', color: '#10B981' }
       };
       
       const paymentsByModeMap = {};

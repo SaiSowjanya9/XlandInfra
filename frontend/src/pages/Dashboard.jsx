@@ -394,10 +394,18 @@ const Dashboard = ({ user }) => {
             Welcome back, <span className="text-gold-600">{firstName}!</span>
           </h1>
           <p className="mt-1 text-sm sm:text-base text-gray-500">Here's what's happening with your property today.</p>
+          {/* The property, in the one place it is stated. The panel that used to carry its name
+              and ID again at the foot of the page is gone, so the name rides on this chip. */}
           {propertyCode && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2">
+            <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2 max-w-full">
               <Building2 className="w-4 h-4 text-gold-600 shrink-0" />
-              <span className="text-xs sm:text-sm text-gray-500">Property ID:</span>
+              {propertyName && (
+                <>
+                  <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{propertyName}</span>
+                  <span className="text-gray-300" aria-hidden="true">·</span>
+                </>
+              )}
+              <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">Property ID:</span>
               <span className="text-xs sm:text-sm font-semibold text-gold-600 truncate">{propertyCode}</span>
               <button
                 type="button"
@@ -558,24 +566,6 @@ const Dashboard = ({ user }) => {
           </div>
         </section>
       </div>
-
-      {/* Property */}
-      {(propertyName || propertyCode) && (
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={Building2} title="Property" />
-          <div className="flex items-center gap-4 p-4">
-            <div className="w-16 h-16 shrink-0 rounded-lg bg-gradient-to-br from-gold-200/60 to-warm-accent-soft border border-warm-border flex items-center justify-center">
-              <Building2 className="w-7 h-7 text-gold-600/70" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{propertyName || 'Your property'}</p>
-              {propertyCode && (
-                <p className="text-sm text-gray-500 truncate">Property ID: <span className="text-gold-600">{propertyCode}</span></p>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Pending Renewals - the customer's own approval, so it stays on the home page */}
       {renewals.length > 0 && (

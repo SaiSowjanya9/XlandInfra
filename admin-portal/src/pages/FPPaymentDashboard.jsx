@@ -302,8 +302,10 @@ const FPPaymentDashboard = ({ user }) => {
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Recent Payments</h3>
+            {/* /fp/payments/history was never a registered route -- the payments list is the one
+                under billing, and this button went nowhere. */}
             <button
-              onClick={() => navigate('/fp/payments/history')}
+              onClick={() => navigate('/fp/billing/payments')}
               className="text-sm text-amber-600 hover:text-amber-700 font-medium"
             >
               View All
