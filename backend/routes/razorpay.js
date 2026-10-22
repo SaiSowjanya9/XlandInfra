@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
@@ -43,19 +42,6 @@ if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
     key_secret: RAZORPAY_KEY_SECRET
   });
 }
-
-// Email transporter
-const getEmailTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-};
 
 // Permission middleware
 const canManagePayments = async (req, res, next) => {
@@ -132,11 +118,14 @@ router.post('/create-payment-link', authenticate, canManagePayments, paymentLink
     res.json({ success: true, message: result.message, data: result.data });
 
   } catch (error) {
-    console.error('Error creating payment link:', error);
+    // Razorpay SDK errors carry { error: { description } }, not .message — without this the
+    // log read "Error creating payment link: undefined" and the real rejection was hidden.
+    const detail = error?.error?.description || error?.message || JSON.stringify(error);
+    console.error('Error creating payment link:', detail);
     res.status(500).json({
       success: false,
       message: 'Failed to create payment link',
-      error: error.message
+      error: detail
     });
   }
 });
@@ -381,16 +370,18 @@ Note: This payment link is unique and expires in 7 days. Do not share this link 
       `.trim();
     }
 
-    // Send email
-    const transporter = getEmailTransporter();
-    
-    await transporter.sendMail({
-      from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
+    // Send email through the shared transporter (EMAIL_*) — the ad-hoc SMTP-credential
+    // transporter this replaced failed EAUTH where only EMAIL_* is set.
+    const { sendEmail } = require('../services/emailService');
+    const linkMail = await sendEmail({
       to: recipientEmail,
       subject: emailSubject,
       text: emailBody,
       html: emailBody.replace(/\n/g, '<br>')
     });
+    if (!linkMail.success) {
+      throw new Error(linkMail.error || 'Email send failed');
+    }
 
     // Update invoice status
     await pool.execute(`

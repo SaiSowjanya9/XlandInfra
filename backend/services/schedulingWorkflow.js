@@ -25,6 +25,7 @@
 
 const { pool } = require('../config/database');
 const { generateWorkOrderId } = require('../utils/workOrderId');
+const { ensurePendingScheduleSchema } = require('../utils/pendingScheduleColumns');
 
 // ID Generators
 const generateId = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -46,6 +47,7 @@ const FREQUENCY_CONFIG = {
 // STEP 1: MARK PROPERTY AS PAYMENT COMPLETED
 // ============================================
 async function markPaymentCompleted({ propertyId, estimateId, invoiceId, paidAmount, paidBy }) {
+  await ensurePendingScheduleSchema();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

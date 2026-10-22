@@ -5,6 +5,7 @@
 
 const { pool } = require('../config/database');
 const { generateWorkOrderId } = require('../utils/workOrderId');
+const { ensurePendingScheduleSchema } = require('../utils/pendingScheduleColumns');
 const { assignVendorFilter } = require('../utils/estimateScheduling');
 
 // Generate unique IDs
@@ -80,6 +81,7 @@ async function assignVendorToService({
   assignedBy,
   franchisePartnerId
 }) {
+  await ensurePendingScheduleSchema();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
