@@ -31,7 +31,11 @@ const COLUMNS = {
   invoice_number: 'VARCHAR(50) NULL',
   estimate_number: 'VARCHAR(50) NULL',
   // Read by GET /payments and the verify route; never added by any migration
-  customer_email: 'VARCHAR(255) NULL'
+  customer_email: 'VARCHAR(255) NULL',
+  // Read by the payments list filter and written by PUT /payments/:id/archive; that route
+  // used to run a bare ALTER on every request and swallow the error
+  archived: 'TINYINT(1) NOT NULL DEFAULT 0',
+  archived_at: 'DATETIME NULL'
 };
 
 // Members each ENUM must carry for the values the routes write. Existing members are kept;

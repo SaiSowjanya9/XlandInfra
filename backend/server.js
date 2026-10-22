@@ -275,6 +275,13 @@ const startServer = async () => {
     } catch (error) {
       console.error('Could not bring the FP employee tables up to date; creating employees or assigning zones may fail until this is fixed:', error.message);
     }
+    // payment_refunds is the refund ledger (schema_v55) — settled money is payments minus
+    // processed refunds, and every reader that computes it subtracts this table
+    try {
+      await require('./utils/refundLedger').ensureRefundTable();
+    } catch (error) {
+      console.error('Could not ensure payment_refunds; refund processing and settled-money reads may fail until this is fixed:', error.message);
+    }
     console.log('✅ Database mode: Connected');
     console.log('✅ QR Management System initialized');
     // Start work order cleanup scheduler (auto-delete closed/cancelled after 30 days)
