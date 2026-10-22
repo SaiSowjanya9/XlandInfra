@@ -106,8 +106,10 @@ const Layout = ({ children, user, onLogout }) => (
     <div className="min-h-screen bg-warm-page flex flex-col">
       <PortalHeader user={user} onLogout={onLogout} />
 
-      {/* The bottom bar is fixed, so the page keeps its own height clear of it */}
-      <main className="flex-1 pb-24 md:pb-6">
+      {/* The bottom bar is fixed, so the page keeps its own height clear of it: `pb-24` lifts at
+          `lg` with the bar itself, since padding that stopped at `md` would leave a tablet's last
+          card sitting under it. */}
+      <main className="flex-1 pb-24 lg:pb-6">
         {children}
       </main>
 

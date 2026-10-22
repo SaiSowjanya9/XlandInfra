@@ -369,10 +369,23 @@ desktop layout is the user's attached design and is the authority.
   `/invoices` and `/activity` all use; the rule used to be copy-pasted per route. Property **name**
   is never one of the conditions — names are not unique (several communities are called "OHSS") and
   matching on one leaks another household's records.
-- **The bottom bar is `frontend/src/components/BottomNav.jsx`, locked to the bottom and `md:hidden`.**
+- **The bottom bar is `frontend/src/components/BottomNav.jsx`, locked to the bottom and `lg:hidden`.**
   Five tabs: Home, Work Orders, Schedules, Payments and More, where More opens a sheet with the
   signed-in account, Contact / Help and Sign Out. It is rendered by `Layout`, for every customer
-  page and not just the home one, so `main` carries `pb-24 md:pb-6` to keep content clear of it.
+  page and not just the home one, so `main` carries `pb-24 lg:pb-6` to keep content clear of it —
+  padding that lifted at `md` would leave a tablet's last card under the bar.
+- **The bar and Quick Access are one complementary pair on one breakpoint: `lg:hidden` on the bar,
+  `hidden lg:block` on the cards.** They are the same four destinations, so while the bar was
+  `md:hidden` and Quick Access had no breakpoint at all, every phone and small tablet showed the
+  portal's navigation **twice** — a fixed bar across the bottom and a column of cards saying the
+  same thing. Below `lg` the bar is the navigation; at `lg` and above the cards are, because a bar
+  pinned across a 1440px window is a phone pattern wearing a desktop's clothes. Move one of those
+  classes without the other and the duplication returns, or a width is left with no navigation.
+  The More sheet's **overlay** carries `lg:hidden` too, not its card: hiding only the card at a
+  width the bar is already hidden at leaves a transparent `fixed inset-0` swallowing every click.
+  Regression test: `node --test frontend/src/utils/portalNav.test.js`, which also fails if Quick
+  Access gains a destination the bar cannot reach — on a phone the cards are gone, so that
+  destination would be unreachable.
 - **The header's account menu holds the account and Sign Out — no navigation.** It briefly listed
   the four destinations from `md` up, so a desktop page would not be a dead end; the user's call is
   that the menu is for signing out, and the brand link back to Home with its Quick Access cards is

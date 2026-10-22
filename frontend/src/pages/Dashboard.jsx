@@ -15,6 +15,8 @@ const UPLOADS_BASE_URL = '';
 // Four destinations, and nothing but. A card is its icon, its name and an arrow: the summary cards
 // that used to sit under them are gone, and the sentence each card carried explaining itself went
 // with them -- a resident reading "Payments" does not need to be told it is where payments are.
+// The same four destinations the bottom bar carries, which is why this row is `hidden lg:block`
+// and the bar is `lg:hidden` -- see the section below and components/BottomNav.jsx.
 const QUICK_ACCESS = [
   {
     path: '/dashboard/work-order',
@@ -467,8 +469,13 @@ const Dashboard = ({ user }) => {
         </div>
       </section>
 
-      {/* Quick Access */}
-      <section>
+      {/* Quick Access -- desktop only, and that is the whole point.
+          These are the same four destinations as the fixed bottom bar (components/BottomNav.jsx,
+          `lg:hidden`), so on a phone or a tablet the portal was offering its navigation twice: the
+          bar across the bottom and this column of cards saying the same thing. The pair is
+          complementary at one breakpoint -- `hidden lg:block` here, `lg:hidden` there. Change one
+          and the duplication comes back, or a width is left with no navigation at all. */}
+      <section className="hidden lg:block">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Quick Access</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           {QUICK_ACCESS.map((item) => {
