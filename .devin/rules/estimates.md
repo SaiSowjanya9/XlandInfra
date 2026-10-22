@@ -256,8 +256,12 @@ bug, because a colleague reading the estimate on screen is reading what the cust
   figures are `warm.text` `#1F2937`. **The Total sits on the tan accent `#D4A574` in dark text** —
   never white on tan, which does not meet contrast, and no longer the black-and-gold band it was.
   The palette is duplicated as `WARM` in `pdfExport.js`, `pdfService.js` and `emailService.js`
-  because none of the three can read a Tailwind config; keep the three in step. Only the estimate
-  is warm — the package export and the invoice keep their slate and navy.
+  because none of the three can read a Tailwind config; keep the three in step. The generated-invoice
+  **view modal** shares this skin too (the user's call): `GeneratedInvoices.jsx` and the matching
+  modal in `Invoices.jsx` use the warm letterhead, warm table headers, warm metadata cards and the
+  dark-on-tan Total band, guarded by `admin-portal/src/utils/invoiceViewSkin.test.js`. The invoice
+  **PDF and email** keep their own look — only the on-screen modal is warm, and the package export
+  keeps its slate and navy.
 - **A table header is uppercase and takes its column's alignment.** jspdf-autotable applies
   `columnStyles` to the body only, so the estimate table passes a `didParseCell` hook to give each
   header the alignment its column already has; otherwise a centred `SERVICE` sits over a
