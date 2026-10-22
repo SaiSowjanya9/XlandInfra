@@ -296,8 +296,15 @@ headings it has **in that same order**:
 ## Customer Portal Home
 
 `frontend/src/pages/Dashboard.jsx` is the resident's home page (`/dashboard`), and its order is
-fixed: **welcome banner → Quick Access → Recent Activity beside Upcoming Schedules**, with the
-Property panel and any pending Service Renewals under them.
+fixed: **welcome banner → Quick Access → Recent Activity beside Upcoming Schedules**, with any
+pending Service Renewals under them.
+
+- **The property is stated once, on the banner's chip.** A **Property panel** at the foot of the
+  page — a 64px building tile with the community name over `Property ID: …` — was removed on the
+  user's call, because the banner directly above already carried the same ID. The chip is
+  therefore the one place the property appears, so it holds the **name and the ID** (`OHSS ·
+  Property ID: GC-…`) with the copy button; the name exists nowhere else on the page. Do not add
+  the panel back, and do not drop the name from the chip.
 
 - **No summary/stat cards anywhere on it.** The Total Orders / Pending / Completed / Property row
   was removed on the user's call and must not come back in another shape — not as a row of four, not
@@ -305,12 +312,12 @@ Property panel and any pending Service Renewals under them.
   and an arrow, nothing else. The counts live on the page that owns them.
 - **No sentence under a title, anywhere in the customer portal.** Every descriptive sub-line is gone
   on the user's call: the four Quick Access cards' ("Raise and track maintenance requests for your
-  property." and the rest), the Quick Access heading's own, the Recent Activity / Upcoming Schedules
-  / Property panel headers', and the page subtitles on Work Orders, Schedules, Payments and Contact
+  property." and the rest), the Quick Access heading's own, the Recent Activity and Upcoming
+  Schedules headers', and the page subtitles on Work Orders, Schedules, Payments and Contact
   / Help. A resident reading "Payments" does not need to be told it is where payments are. What
   stays: **empty-state copy** (it says what will appear there, which the title cannot), loading and
   error lines, and anything carrying a value. `PanelHeader` therefore takes no `description` —
-  re-adding one puts the pattern back across three panels at once.
+  re-adding one puts the pattern back across both panels at once.
 - **Recent Activity replaced Recent Work Orders**, and it is all three streams: work orders,
   payments and scheduled visits, newest first, each row dated with its own status badge. A
   work-order row opens the **work order modal on this page** — that modal is the only place a
@@ -421,6 +428,58 @@ shapes to avoid, both of which were on the customer portal:
   had been reporting one kind while presenting themselves as the account total.
 - A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
   kinds share one list, and the icon is what tells them apart.
+
+## Billing > Payments and Payment History Are Two Screens
+
+- **`Payments` is the list of payments; `PaymentHistory` is the `payment_history` audit trail.** Every
+  portal used to register both `billing/payments` and `billing/payment-history` as
+  `<Payments />`, so the two URLs rendered byte-identical pages — the same five summary cards, the
+  same table, and the same `title="Payments"` with the same breadcrumb, because the title is a
+  literal on the shared component. The split that was meant to tell them apart was an
+  `online`/`offline` tab read from the path (`getInitialTab`), but the online half sat behind
+  `{false && (` and nothing ever called `setActiveTab`, so the only live difference was a
+  `fetchRazorpayHistory()` request whose result had nowhere to render. All of that is gone.
+- **A Payment History row is an *event*, not a payment**: the same payment appears once per move.
+  That is the point — it answers "who marked this paid, and when", which the Payments list cannot.
+  `GET /api/payments/history` already served it and had **no caller at all**; it now takes `?fpId=`
+  for the admin portal's partner selector, guarded with `/^\d+$/` because `all` is not an id.
+- **Every action the server can write needs a label in `ACTIONS`.** `payment_history.action` is free
+  text on a current database (schema_v27 widened it from an ENUM), so the screen titles an
+  unrecognised value from itself rather than dropping the row — but the eight real ones are spelled
+  out. Resolve what is *written* through `utils/paymentHistoryAction.js`; writing a value the column
+  cannot hold once rolled a customer's payment back.
+- Text filtering is the browser's: the route answers one partner's own audit rows, so re-querying
+  per keystroke would be a request per character for no better answer. Dates are the server's.
+- Regression test: `node --test admin-portal/src/utils/billingRoutes.test.js`, which fails if a
+  portal points `payment-history` back at `Payments`, if the headings stop differing, if the
+  disabled block or its dead fetch returns, or if anything links to `/<portal>/payments/history` —
+  a path that was never a route, and which FPPaymentDashboard's "View All" pointed at.
+- **Four payment methods are real, and a screen may offer no others.**
+  `backend/utils/paymentMethods.js` owns the set: `razorpay` for everything taken online — card,
+  net banking, UPI and wallet all store as `razorpay`, with the instrument in
+  `payment_history.payment_method_details` — plus the offline `cash`, `cheque` and `bank_transfer`
+  (`routes/customers.js` whitelists exactly those three for a customer's offline intent). The
+  Payments method filter offered Debit Card, Credit Card and Net Banking, which nothing writes, so
+  picking one always emptied the table — and omitted Razorpay, the one online method there is. It
+  is now grouped Online / Offline with those four.
+- **`payments.payment_method` is an ENUM, so an unstorable value costs the payment.**
+  `POST /payments` and `/payments/record` checked only that a method was *present* and inserted it
+  straight into the column, inside the payment's own transaction — so a non-member raised
+  `WARN_DATA_TRUNCATED` (errno 1265) and rolled the whole payment back, the same way a truncated
+  `payment_history.action` did. The admin Invoices screen was offering **`debit_credit_card`**,
+  which is not a member and never has been, so every card payment recorded there was lost. Always
+  resolve through `resolvePaymentMethod()` and bind its result, never `req.body.paymentMethod`.
+  `normalizePaymentMethod` also folds the UI spellings (`check` → `cheque`, `bank` →
+  `bank_transfer`, `upi_razorpay` → `razorpay`) so one method is never stored under two names.
+  Retired ENUM members (`upi_manual`, `card_pos`, …) stay **accepted but not offered**: old rows
+  hold them and must still read as themselves. Regression test:
+  `node --test backend/utils/paymentMethods.test.js`, which checks the storable list against the
+  schema's own ENUM and fails if any screen offers a method that would truncate.
+- **The coordinator cannot read either screen.** `PAYMENT_VIEW_ROLES` in `routes/payments.js` is
+  admin, operations manager, franchise partner, manager, supervisor and executive — `coordinator` is
+  absent, so `/coordinator/billing/payments` and `…/payment-history` both answer 403 even though the
+  routes and the sidebar entries exist. That predates this split; do not "fix" it by widening the
+  role list without asking, since it is a permission decision.
 
 ## Half-Yearly Payments
 

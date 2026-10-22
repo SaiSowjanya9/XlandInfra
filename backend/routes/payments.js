@@ -37,6 +37,8 @@ const { ensurePaymentColumns } = require('../utils/paymentColumns');
 // Same for invoices.paid_at, which no schema file ever created (schema_v53)
 const { ensureInvoiceColumns, paidAtAssignment } = require('../utils/invoiceColumns');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
+// What payment_method can hold: an unstorable value truncates inside the payment's transaction
+const { resolvePaymentMethod } = require('../utils/paymentMethods');
 
 /**
  * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
@@ -2348,6 +2350,16 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       });
     }
 
+    // The method has to be one `payments.payment_method` can hold. Inserted unchecked, a value
+    // outside that ENUM truncates (errno 1265) inside this transaction and rolls the payment
+    // back -- the staff member records a payment and nothing is saved.
+    const methodCheck = resolvePaymentMethod(paymentMethod);
+    if (methodCheck.error) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: methodCheck.error });
+    }
+    const storedPaymentMethod = methodCheck.method;
+
     // Transaction reference is optional but recommended for non-cash payments
     // Removed the requirement to make it more flexible
 
@@ -2407,7 +2419,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       fpId || invoice.franchise_partner_id || null,
       customerName || invoice.customer_name || null,
       paymentAmount,
-      paymentMethod,
+      storedPaymentMethod,
       'manual',
       transactionReference || null,
       paymentDate || null,
@@ -2575,6 +2587,14 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
       });
     }
 
+    // Same guard as POST /payments: an unstorable method would truncate inside this transaction
+    const methodCheck = resolvePaymentMethod(paymentMethod);
+    if (methodCheck.error) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: methodCheck.error });
+    }
+    const storedPaymentMethod = methodCheck.method;
+
     // Validate payment amount for security
     const amountValidation = validatePaymentAmount(amount);
     if (!amountValidation.valid) {
@@ -2637,7 +2657,7 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
       fpId || invoice.franchise_partner_id || null,
       invoice.customer_name || null,
       paymentAmount,
-      paymentMethod,
+      storedPaymentMethod,
       'manual',
       transactionReference || null,
       bankName || null,
@@ -3155,11 +3175,20 @@ router.put('/:id', authenticate, canEditPayments, async (req, res) => {
   }
 });
 
-// Get payment history
+// Get payment history -- the payment_history audit trail behind Billing > Payment History.
+//
+// Every row is one thing that happened to a payment: created, status_changed, refunded, a Razorpay
+// capture. The screen reads it as a timeline, so this answers newest first and leaves filtering by
+// text to the browser (the set is one partner's own audit rows, not a whole table).
 router.get('/history', authenticate, canViewPayments, async (req, res) => {
   try {
-    const fpId = getFPScope(req);
-    const { invoiceId, paymentId, startDate, endDate, type } = req.query;
+    const { invoiceId, paymentId, startDate, endDate, type, fpId: queryFpId } = req.query;
+    // An FP (or its staff) is scoped to its own partner by the token. An admin sees every partner
+    // and narrows with ?fpId=, the same way /razorpay-history does -- 'all' is not an id, and a
+    // non-numeric value must not reach the query.
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+    const requestedFpId = isAdmin && /^\d+$/.test(String(queryFpId || '')) ? Number(queryFpId) : null;
+    const fpId = getFPScope(req) || requestedFpId;
 
     let query = `
       SELECT ph.*, p.payment_id as payment_code, i.invoice_id as invoice_code,
