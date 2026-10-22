@@ -127,6 +127,10 @@ test('nothing hard-codes paid_at into an invoice UPDATE; writers go through paid
       if (!file.endsWith('.js') || file.endsWith('.test.js')) continue;
       // invoiceColumns.js is where the assignment is allowed to live
       if (file === path.join(__dirname, 'invoiceColumns.js')) continue;
+      // The repair script clears paid_at when it reverts an inflated 'paid' -- something
+      // paidAtAssignment deliberately never does -- and writes it only after its own
+      // ensureInvoiceColumns() check
+      if (file === path.join(backend, 'scripts', 'repair-invoice-paid-amounts.js')) continue;
       const text = fs.readFileSync(file, 'utf8');
       // A write, not a read: `paid_at =` only ever appears in an UPDATE's SET list
       if (/paid_at\s*=/.test(text)) offenders.push(path.relative(backend, file));

@@ -26,6 +26,8 @@ const {
 const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
+const { ensureRefundTable, recordRefund, findRefund } = require('../utils/refundLedger');
+const { resyncInvoiceSettlement } = require('../utils/invoiceSettlement');
 const { generatePaymentId } = require('../utils/paymentIds');
 
 // Environment variables for Razorpay
@@ -784,10 +786,25 @@ async function handlePaymentLinkPaid(payload, webhookId) {
   }
 
   // The payment entity carries THIS payment; the link's amount_paid is cumulative and would
-  // double-count the first instalment when a second partial payment arrives.
-  const amountPaid = paymentEntity?.amount != null
-    ? paymentEntity.amount / 100
-    : paymentLinkEntity.amount_paid / 100;
+  // double-count the first instalment when a second partial payment arrives. Where the entity
+  // is absent the figure is the cumulative total minus what is already recorded — the delta.
+  let amountPaid;
+  if (paymentEntity?.amount != null) {
+    amountPaid = paymentEntity.amount / 100;
+  } else {
+    // Gross captured, not net of refunds: the link's amount_paid counts money that was later
+    // refunded, so refunded rows still belong in this comparison
+    const [[recorded]] = await pool.execute(
+      `SELECT COALESCE(SUM(amount), 0) AS recorded_total FROM payments
+       WHERE invoice_id = ? AND status IN ('paid', 'completed', 'refunded')`,
+      [internalInvoiceId]
+    );
+    amountPaid = (paymentLinkEntity.amount_paid / 100) - (parseFloat(recorded.recorded_total) || 0);
+    if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
+      console.log(`[Webhook] payment_link.paid with no payment entity and nothing new on the link for invoice ${internalInvoiceId} — skipped`);
+      return;
+    }
+  }
 
   await recordRazorpayPayment({
     invoiceId: internalInvoiceId,
@@ -945,6 +962,24 @@ async function handleRefund(payload, webhookId) {
     if (payments.length > 0) {
       const payment = payments[0];
 
+      // The refund ledger is the dedup: razorpay_refund_id is UNIQUE and Razorpay retries
+      // events, so a second refund.processed for the same id must not decrement twice
+      await ensureRefundTable();
+      const existing = refundEntity.id ? await findRefund(refundEntity.id) : null;
+      if (existing && existing.status === 'processed' && refundStatus === 'processed') {
+        console.log(`[Webhook] Refund ${refundEntity.id} already applied — skipping duplicate delivery`);
+        return;
+      }
+
+      await recordRefund({
+        paymentId: payment.id,
+        invoiceId: payment.invoice_db_id,
+        razorpayRefundId: refundEntity.id,
+        razorpayPaymentId: paymentId,
+        amount: refundAmount,
+        status: refundStatus === 'processed' ? 'processed' : 'created'
+      });
+
       // Log the refund
       // The ENUM's member is 'refunded', not 'refund', so this value truncated as well
       await pool.execute(`
@@ -960,22 +995,22 @@ async function handleRefund(payload, webhookId) {
 
       // Update invoice balance if refund is processed
       if (refundStatus === 'processed') {
-        await pool.execute(`
-          UPDATE invoices SET
-            amount_paid = amount_paid - ?,
-            balance_amount = balance_amount + ?,
-            payment_status = CASE 
-              WHEN balance_amount + ? >= total_amount THEN 'unpaid'
-              WHEN balance_amount + ? > 0 THEN 'partially_paid'
-              ELSE payment_status
-            END,
-            status = CASE 
-              WHEN balance_amount + ? >= total_amount THEN 'sent'
-              WHEN balance_amount + ? > 0 THEN 'partially_paid'
-              ELSE status
-            END
-          WHERE id = ?
-        `, [refundAmount, refundAmount, refundAmount, refundAmount, refundAmount, refundAmount, payment.invoice_db_id]);
+        // A partial refund leaves the payment settled for its remainder: the ledger carries
+        // the returned amount and resync subtracts it — the row flips to 'refunded' only when
+        // every rupee of it came back. (The old path wrote a payment_status outside the ENUM
+        // — errno 1265 — so the whole refund adjustment was silently lost.)
+        const [[refundTotal]] = await pool.execute(
+          `SELECT COALESCE(SUM(amount), 0) AS refunded FROM payment_refunds
+           WHERE payment_id = ? AND status = 'processed'`,
+          [payment.id]
+        );
+        if (parseFloat(refundTotal.refunded) >= parseFloat(payment.amount)) {
+          await pool.execute(
+            "UPDATE payments SET status = 'refunded' WHERE id = ?",
+            [payment.id]
+          );
+        }
+        await resyncInvoiceSettlement(payment.invoice_db_id);
       }
 
       // Update webhook record

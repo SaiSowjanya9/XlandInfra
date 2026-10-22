@@ -1737,7 +1737,8 @@ router.get('/invoices', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')) -
+                COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE invoice_id = i.id AND status = 'processed'), 0),
                 0
               ) as amount_paid
        FROM invoices i
@@ -1872,7 +1873,8 @@ router.get('/invoices/:id', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')) -
+                COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE invoice_id = i.id AND status = 'processed'), 0),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2026,7 +2028,8 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')) -
+                COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE invoice_id = i.id AND status = 'processed'), 0),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2211,7 +2214,8 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')) -
+                COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE invoice_id = i.id AND status = 'processed'), 0),
                 0
               ) as amount_paid
        FROM invoices i
@@ -2351,7 +2355,8 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     const [invoices] = await pool.execute(
       `SELECT i.*,
               COALESCE(
-                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')),
+                (SELECT SUM(amount) FROM payments WHERE invoice_id = i.id AND status IN ('completed', 'paid')) -
+                COALESCE((SELECT SUM(amount) FROM payment_refunds WHERE invoice_id = i.id AND status = 'processed'), 0),
                 0
               ) as amount_paid
        FROM invoices i

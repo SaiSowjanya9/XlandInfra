@@ -39,6 +39,7 @@ const { ensureInvoiceColumns, paidAtAssignment } = require('../utils/invoiceColu
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 // What payment_method can hold: an unstorable value truncates inside the payment's transaction
 const { resolvePaymentMethod } = require('../utils/paymentMethods');
+const { resyncInvoiceSettlement } = require('../utils/invoiceSettlement');
 
 /**
  * A DATE column as the calendar date it holds. mysql2 returns one as a Date at local midnight, so
@@ -481,7 +482,7 @@ router.get('/dashboard', authenticate, canViewPayments, async (req, res) => {
         COUNT(CASE WHEN i.status = 'overdue' THEN 1 END) as overdue_invoices,
         COUNT(*) as total_invoices
       FROM invoices i
-      WHERE 1=1 ${fpCondition}
+      WHERE (i.archived = 0 OR i.archived IS NULL) ${fpCondition}
     `, fpParams);
 
     // Get today's collections
@@ -1734,17 +1735,24 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
     const taxableAmount = sub - discountAmount;
     const taxAmount = taxableAmount * (taxPct / 100);
     const totalAmount = taxableAmount + taxAmount;
-    const balanceAmount = totalAmount - parseFloat(invoice.amount_paid);
+    const amountPaid = parseFloat(invoice.amount_paid) || 0;
+    // Editing the total down past what was paid stored a negative balance — clamp like every
+    // other settlement writer
+    const balanceAmount = Math.max(0, totalAmount - amountPaid);
 
     // Determine payment status based on amounts
-    let paymentStatus = invoice.payment_status;
-    if (balanceAmount <= 0) {
-      paymentStatus = 'paid';
-    } else if (parseFloat(invoice.amount_paid) > 0) {
-      paymentStatus = 'partially_paid';
-    } else {
-      paymentStatus = 'pending';
-    }
+    const paymentStatus = balanceAmount <= 0 ? 'paid' : (amountPaid > 0 ? 'partially_paid' : 'pending');
+
+    // status was passed through COALESCE unchecked: any ENUM member — including 'paid' on an
+    // unpaid invoice — could be asserted over the amounts. A requested money state that
+    // contradicts the computed one is refused; a stored money state follows the money.
+    const VALID_STATUSES = ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled'];
+    let requestedStatus = status && VALID_STATUSES.includes(status) ? status : null;
+    if (requestedStatus === 'paid' && paymentStatus !== 'paid') requestedStatus = null;
+    if (requestedStatus === 'partially_paid' && paymentStatus === 'pending') requestedStatus = null;
+
+    await ensureInvoiceColumns();
+    const paidAt = await paidAtAssignment(paymentStatus);
 
     await pool.execute(`
       UPDATE invoices SET
@@ -1764,14 +1772,21 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
         payment_status = ?,
         notes = COALESCE(?, notes),
         terms_and_conditions = COALESCE(?, terms_and_conditions),
-        status = COALESCE(?, status),
+        status = CASE
+          WHEN ? IS NOT NULL THEN ?
+          WHEN status IN ('paid', 'partially_paid') THEN ?
+          ELSE status
+        END,
+        ${paidAt.sql}
         updated_at = NOW()
       WHERE id = ?
     `, [
       customerName, customerEmail, customerPhone,
       invoiceDate, dueDate, lineItems ? JSON.stringify(lineItems) : null,
       sub, discPct, discountAmount, taxPct, taxAmount, totalAmount, balanceAmount, paymentStatus,
-      notes, termsAndConditions, status,
+      notes, termsAndConditions,
+      requestedStatus, requestedStatus, paymentStatus,
+      ...paidAt.params,
       id
     ]);
 
@@ -1859,16 +1874,33 @@ router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, re
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
     
-    // Update status
-    let updateQuery = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?';
-    const updateParams = [status, id];
-    
+    // A money status written here left payment_status, the amounts and paid_at behind — a
+    // manual 'paid' read paid on one column and pending on the other. Marking paid settles
+    // the row's own figures (the repair audit still flags it: amount_paid with no payment
+    // row is reported for review); 'partially_paid' syncs payment_status only; a non-money
+    // status touches nothing but status.
+    await ensureInvoiceColumns();
+    let updateSql, updateParams;
+
+    if (status === 'paid') {
+      const paidAt = await paidAtAssignment('paid');
+      updateSql = `UPDATE invoices SET status = 'paid', payment_status = 'paid',
+        amount_paid = total_amount, balance_amount = 0, ${paidAt.sql} updated_at = NOW() WHERE id = ?`;
+      updateParams = [...paidAt.params, id];
+    } else if (status === 'partially_paid') {
+      updateSql = `UPDATE invoices SET status = 'partially_paid', payment_status = 'partially_paid', updated_at = NOW() WHERE id = ?`;
+      updateParams = [id];
+    } else {
+      updateSql = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?';
+      updateParams = [status, id];
+    }
+
     if (fpId) {
-      updateQuery = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?';
+      updateSql += ' AND franchise_partner_id = ?';
       updateParams.push(fpId);
     }
-    
-    await pool.execute(updateQuery, updateParams);
+
+    await pool.execute(updateSql, updateParams);
     
     res.json({ 
       success: true, 
@@ -1883,42 +1915,89 @@ router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, re
 
 // Delete invoice permanently
 router.delete('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
-    
-    let query = 'DELETE FROM invoices WHERE id = ?';
-    const params = [id];
-    
+
+    // An invoice that collected money is never destroyed — the payments behind it are the
+    // audit trail and would be left pointing at nothing. Archive is the reversible path.
+    let checkQuery = `SELECT i.amount_paid,
+        (SELECT COUNT(*) FROM payments p WHERE p.invoice_id = i.id AND p.status IN ('paid','completed')) AS settled_payments
+      FROM invoices i WHERE i.id = ?`;
+    const checkParams = [id];
     if (fpId) {
-      query = 'DELETE FROM invoices WHERE id = ? AND franchise_partner_id = ?';
-      params.push(fpId);
+      checkQuery += ' AND i.franchise_partner_id = ?';
+      checkParams.push(fpId);
     }
-    
-    await pool.execute(query, params);
+    const [found] = await pool.execute(checkQuery, checkParams);
+    if (found.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+    if (parseFloat(found[0].amount_paid) > 0 || found[0].settled_payments > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'This invoice has recorded payments and cannot be deleted. Archive it instead.'
+      });
+    }
+
+    await connection.beginTransaction();
+    // Pending/failed intents against the invoice are detached so they keep their audit value
+    // without referencing a row that no longer exists
+    await connection.execute('UPDATE payments SET invoice_id = NULL WHERE invoice_id = ?', [id]);
+    await connection.execute('DELETE FROM invoices WHERE id = ?', [id]);
+    await connection.commit();
+
     res.json({ success: true, message: 'Invoice deleted permanently' });
   } catch (error) {
+    await connection.rollback();
     console.error('Error deleting invoice:', error);
     res.status(500).json({ success: false, message: 'Error deleting invoice', error: error.message });
+  } finally {
+    connection.release();
   }
 });
 
-// Delete all archived invoices
+// Delete all archived invoices — any that collected money are skipped and reported, never
+// destroyed, for the same reason the single delete refuses them
 router.delete('/invoices/archived/delete-all', authenticate, canEditPayments, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const fpId = getFPScope(req);
-    
-    let query = 'DELETE FROM invoices WHERE archived = 1';
+
+    let query = `SELECT i.id,
+        (SELECT COUNT(*) FROM payments p WHERE p.invoice_id = i.id AND p.status IN ('paid','completed')) AS settled_payments
+      FROM invoices i WHERE i.archived = 1`;
     const params = [];
-    
     if (fpId) {
-      query += ' AND franchise_partner_id = ?';
+      query += ' AND i.franchise_partner_id = ?';
       params.push(fpId);
     }
-    
-    const [result] = await pool.execute(query, params);
-    res.json({ success: true, message: 'All archived invoices deleted', deletedCount: result.affectedRows });
+    await ensureInvoiceColumns();
+    const [archived] = await pool.execute(query, params);
+
+    const deletable = archived.filter(i => i.settled_payments === 0);
+    const skipped = archived.length - deletable.length;
+
+    let deleted = 0;
+    await connection.beginTransaction();
+    for (const inv of deletable) {
+      await connection.execute('UPDATE payments SET invoice_id = NULL WHERE invoice_id = ?', [inv.id]);
+      await connection.execute('DELETE FROM invoices WHERE id = ?', [inv.id]);
+      deleted++;
+    }
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: skipped > 0
+        ? `${deleted} archived invoice(s) deleted; ${skipped} skipped because they have recorded payments`
+        : 'All archived invoices deleted',
+      deletedCount: deleted,
+      skippedCount: skipped
+    });
   } catch (error) {
+    await connection.rollback();
     console.error('Error deleting archived invoices:', error);
     res.status(500).json({ success: false, message: 'Error deleting archived invoices', error: error.message });
   }
@@ -1980,10 +2059,12 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     // Always use custom payment page URL (shows payment method selection)
     const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
 
-    // Update invoice status to 'sent' and track email sending
+    // Update invoice status to 'sent' and track email sending. A resend of a paid or
+    // partially-paid invoice must not downgrade its status back to 'sent' — the row would
+    // read sent and paid at once (sent_at/email_sent_at still record that a reminder went out)
     await pool.execute(`
-      UPDATE invoices SET 
-        status = 'sent',
+      UPDATE invoices SET
+        status = CASE WHEN status IN ('paid', 'partially_paid') THEN status ELSE 'sent' END,
         sent_at = NOW(),
         sent_by = ?,
         email_sent_at = NOW()
@@ -2202,8 +2283,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
 router.get('/payments', authenticate, canViewPayments, async (req, res) => {
   try {
     // For admins, allow fpId from query params; for FP users, use their scope
-    const { invoiceId, status, paymentMethod, startDate, endDate, search, fpId: queryFpId } = req.query;
+    const { invoiceId, status, paymentMethod, startDate, endDate, search, archived, fpId: queryFpId } = req.query;
     const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
+    // The archived filter below needs the column to exist — a cached no-op on a current schema
+    await ensurePaymentColumns();
 
     let query = `
       SELECT p.*, 
@@ -2227,6 +2310,14 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
     if (fpId) {
       query += ' AND p.franchise_partner_id = ?';
       params.push(fpId);
+    }
+
+    // An archived payment is soft-deleted: hidden by default, listed only when asked for —
+    // the same contract /invoices already uses. Without this the archive hid nothing.
+    if (archived === 'true') {
+      query += ' AND p.archived = 1';
+    } else {
+      query += ' AND (p.archived = 0 OR p.archived IS NULL)';
     }
 
     if (invoiceId) {
@@ -2350,6 +2441,14 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       });
     }
 
+    // parseFloat('abc') is NaN and a negative figure reaches the ENUM check only later —
+    // the amount is validated to a positive number before anything else is trusted
+    const paymentAmount = Number(amount);
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: 'Payment amount must be a positive number' });
+    }
+
     // The method has to be one `payments.payment_method` can hold. Inserted unchecked, a value
     // outside that ENUM truncates (errno 1265) inside this transaction and rolls the payment
     // back -- the staff member records a payment and nothing is saved.
@@ -2380,12 +2479,12 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     }
 
     const invoice = invoices[0];
-    const paymentAmount = parseFloat(amount);
 
-    // A paid invoice takes no further payment — balance_amount of 0 falls back to
-    // total - amount_paid so a stale zero doesn't block a genuinely unpaid invoice
-    const invoiceBalance = parseFloat(invoice.balance_amount) ||
-      (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    // A paid invoice takes no further payment — a missing balance falls back to
+    // total - amount_paid; a stored zero is honoured only when the fallback agrees
+    const storedBalance = parseFloat(invoice.balance_amount);
+    const computedBalance = (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    const invoiceBalance = !Number.isFinite(storedBalance) || storedBalance === 0 ? computedBalance : storedBalance;
     if (invoiceBalance <= 0) {
       await connection.rollback();
       return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
@@ -2401,9 +2500,18 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
     // Determine received by name - use provided value or default to current user
     const receivedByName = receivedBy || `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
 
-    // Determine payment status - use verification_pending for offline payments, or whatever was sent
+    // paymentStatus was trusted unchecked: 'failed' is a valid ENUM member, so a row sent
+    // with it sailed past `!= verification_pending` and SETTLED the invoice. Only the values
+    // a manual record may legitimately carry are accepted, and the invoice settles only for
+    // the two settled names — 'pending'/'failed' are stored but change nothing.
+    const RECORDABLE_STATUSES = ['completed', 'paid', 'verification_pending', 'pending', 'failed'];
     const finalPaymentStatus = paymentStatus || 'completed';
+    if (!RECORDABLE_STATUSES.includes(finalPaymentStatus)) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: `Unsupported payment status: ${paymentStatus}` });
+    }
     const isVerificationPending = finalPaymentStatus === 'verification_pending';
+    const settlesInvoice = finalPaymentStatus === 'completed' || finalPaymentStatus === 'paid';
 
     // Insert payment record with full linkage
     const insertParams = [
@@ -2459,35 +2567,13 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, insertParams);
 
-    // Only update invoice amounts if payment is NOT verification_pending
-    // For verification_pending payments, invoice will be updated when payment is verified
-    if (!isVerificationPending) {
-      // Update invoice amounts
-      const newAmountPaid = parseFloat(invoice.amount_paid) + paymentAmount;
-      const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
+    // The invoice settles only for a settled payment status — a 'pending'/'failed' row is
+    // stored for the record but moves no money; verification_pending settles on verify.
+    const settled = settlesInvoice ? await resyncInvoiceSettlement(invoiceId, connection) : null;
 
-      // Determine new payment status and invoice status
-      let newPaymentStatus = 'pending';
-      let newStatus = invoice.status;
-      if (newBalance <= 0) {
-        newPaymentStatus = 'paid';
-        newStatus = 'paid';
-      } else if (newAmountPaid > 0) {
-        newPaymentStatus = 'partially_paid';
-        newStatus = 'partially_paid'; // Also update main status
-      }
-
-      await connection.execute(`
-        UPDATE invoices SET
-          amount_paid = ?,
-          balance_amount = ?,
-        payment_status = ?,
-        status = ?
-      WHERE id = ?
-      `, [newAmountPaid, Math.max(0, newBalance), newPaymentStatus, newStatus, invoiceId]);
-
+    if (settled) {
       // If invoice is fully paid and linked to a work order, auto-close the work order
-      if (newPaymentStatus === 'paid' && invoice.work_order_id) {
+      if (settled.paymentStatus === 'paid' && invoice.work_order_id) {
         console.log(`[Payment] Invoice ${invoiceId} fully paid, auto-closing linked work order ${invoice.work_order_id}`);
         
         // Update work order status to 'closed'
@@ -2510,12 +2596,14 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
           console.log('[Payment] Work order status history logging skipped:', historyErr.message);
         }
       }
-    } // End of !isVerificationPending block
+    } // End of settled block
 
     // Record in payment history
-    const historyDescription = isVerificationPending 
+    const historyDescription = isVerificationPending
       ? `Payment recorded via ${paymentMethod} - Awaiting verification${transactionReference ? ` (Ref: ${transactionReference})` : ''}`
-      : `Manual payment recorded via ${paymentMethod}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`;
+      : settlesInvoice
+      ? `Manual payment recorded via ${paymentMethod}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`
+      : `Payment recorded via ${paymentMethod} - Status: ${finalPaymentStatus}${transactionReference ? ` (Ref: ${transactionReference})` : ''}`;
     
     await connection.execute(`
       INSERT INTO payment_history (
@@ -2536,13 +2624,9 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
 
     await connection.commit();
 
-    // Calculate response values
-    const responseBalance = isVerificationPending 
-      ? parseFloat(invoice.balance_amount) // No change for pending
-      : Math.max(0, parseFloat(invoice.total_amount) - (parseFloat(invoice.amount_paid) + paymentAmount));
-    
-    const responseStatus = isVerificationPending ? 'verification_pending' : 
-      (responseBalance <= 0 ? 'paid' : (parseFloat(invoice.amount_paid) + paymentAmount > 0 ? 'partially_paid' : 'pending'));
+    // Calculate response values — a non-settling record leaves the invoice figures untouched
+    const responseBalance = settled ? settled.balanceAmount : invoiceBalance;
+    const responseStatus = settled ? settled.paymentStatus : finalPaymentStatus;
 
     res.status(201).json({
       success: true,
@@ -2621,19 +2705,19 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
     }
 
     const invoice = invoices[0];
-    const paymentAmount = parseFloat(amount);
+    const paymentAmount = amountValidation.sanitizedAmount ?? Number(amount);
 
-    const invoiceBalance = parseFloat(invoice.balance_amount) ||
-      (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    const storedBalance = parseFloat(invoice.balance_amount);
+    const computedBalance = (parseFloat(invoice.total_amount) || 0) - (parseFloat(invoice.amount_paid) || 0);
+    const invoiceBalance = !Number.isFinite(storedBalance) || storedBalance === 0 ? computedBalance : storedBalance;
     if (invoiceBalance <= 0) {
       await connection.rollback();
       return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
     }
 
-    // Generate payment ID
-    const [maxPayment] = await connection.execute('SELECT MAX(id) as maxId FROM payments');
-    const nextId = (maxPayment[0]?.maxId || 0) + 1;
-    const paymentId = `PYMT-${String(nextId).padStart(4, '0')}`;
+    // generatePaymentId, not MAX(id)+1 — two concurrent records read the same max and
+    // collide on the UNIQUE payment_id, and PYMT- is a format nothing else emits
+    const paymentId = await generatePaymentId(fpId);
 
     const paymentProofUrl = req.file ? `/uploads/payments/${req.file.filename}` : null;
     const receivedByName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.username;
@@ -2670,14 +2754,10 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
       remarks || null
     ]);
 
-    // Update invoice
-    const newAmountPaid = parseFloat(invoice.amount_paid || 0) + paymentAmount;
-    const newBalance = parseFloat(invoice.total_amount) - newAmountPaid;
-    const newStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
-
-    await connection.execute(`
-      UPDATE invoices SET amount_paid = ?, balance_amount = ?, payment_status = ?, status = ? WHERE id = ?
-    `, [newAmountPaid, Math.max(0, newBalance), newStatus, newStatus, invoiceId]);
+    // Settle from the payments table — the same resync POST /payments and verify use,
+    // including paid_at, which this route's hand-rolled UPDATE never wrote
+    const settled = await resyncInvoiceSettlement(invoiceId, connection);
+    const newBalance = settled.balanceAmount;
 
     // Audit row so the record shows in Payment History, same as POST /payments writes
     await connection.execute(`
@@ -2708,13 +2788,11 @@ router.put('/:id/archive', authenticate, canEditPayments, async (req, res) => {
   try {
     const { id } = req.params;
     const fpId = getFPScope(req);
-    
-    // Ensure archived column exists
-    try {
-      await pool.execute('ALTER TABLE payments ADD COLUMN archived TINYINT(1) DEFAULT 0');
-      await pool.execute('ALTER TABLE payments ADD COLUMN archived_at TIMESTAMP NULL');
-    } catch (e) { /* Column might exist */ }
-    
+
+    // archived/archived_at come through the same idempotent ensure the writers use; a bare
+    // ALTER per request used to race and swallowed its own failure
+    await ensurePaymentColumns();
+
     let query = 'UPDATE payments SET archived = 1, archived_at = NOW() WHERE id = ?';
     const params = [id];
     
@@ -2857,111 +2935,98 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     }
     
     console.log('[Payment Verify] Updating payment:', {
-      id, status, finalAmount, paymentDateValue, verifierName, verifierId, 
-      transactionRef, paymentLocation, paymentProof: paymentProof ? 'SET' : 'NULL', 
+      id, status, finalAmount, paymentDateValue, verifierName, verifierId,
+      transactionRef, paymentLocation, paymentProof: paymentProof ? 'SET' : 'NULL',
       remarksLength: fullRemarks?.length
     });
-    
-    await pool.execute(`
-      UPDATE payments SET
-        status = ?,
-        amount = ?,
-        payment_date = ?,
-        received_by_name = ?,
-        received_by = ?,
-        received_by_role = ?,
-        transaction_id = COALESCE(?, transaction_id),
-        remarks = COALESCE(?, remarks),
-        cheque_number = COALESCE(?, cheque_number),
-        cheque_date = COALESCE(?, cheque_date),
-        bank_name = COALESCE(?, bank_name),
-        branch_name = COALESCE(?, branch_name),
-        payee_name = COALESCE(?, payee_name),
-        payment_location = COALESCE(?, payment_location),
-        updated_at = NOW()
-      WHERE id = ?
-    `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, req.user?.role || null, transactionRef || null, fullRemarks || null,
-      checkNumber || null, checkDate || null, bankName || null, branchName || null, payeeName || null, paymentLocation || null, id]);
 
-    // Audit the verification so it appears in Payment History — offline intents recorded
-    // by the customer otherwise leave no trail of who verified them.
-    await pool.execute(
-      `INSERT INTO payment_history (invoice_id, payment_id, action, old_status, new_status, amount, description, performed_by_name, performed_by_role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.invoice_id || null, id, await paymentHistoryAction('status_changed'), p.status, status,
-       finalAmount,
-       status === 'paid' ? `Payment verified by ${verifierName || userName || 'staff'}` : `Payment rejected: ${rejectionReason || 'no reason given'}`,
-       verifierName || userName || 'Admin', req.user?.role || 'admin']
-    );
-
-    console.log('[Payment Verify] Payment updated successfully');
-
-    // If payment is marked as paid, update invoice and send receipt
+    // The payment, its audit row and the invoice's settlement used to run as separate
+    // pool.execute calls: a failure mid-way left the payment marked paid while the invoice,
+    // paid_at and history said otherwise. They commit or roll back together now; scheduling
+    // and the receipt are post-commit side effects.
+    const connection = await pool.getConnection();
+    let effectivePropertyId = null;
     let newBalance = 0;
-    if (status === 'paid') {
-      // Update invoice balance and status
-      if (p.invoice_id) {
-        const invoiceAmount = parseFloat(p.invoice_amount) || 0;
-        const paymentAmount = parseFloat(p.amount) || 0;
-        
-        // Get total paid for this invoice
-        const [paidPayments] = await pool.execute(
-          "SELECT SUM(amount) as total_paid FROM payments WHERE invoice_id = ? AND status IN ('paid', 'completed')",
-          [p.invoice_id]
-        );
-        const totalPaid = parseFloat(paidPayments[0]?.total_paid || 0) + paymentAmount;
-        newBalance = Math.max(0, invoiceAmount - totalPaid);
-        const invoiceStatus = newBalance <= 0 ? 'paid' : 'partially_paid';
+    let totalPaid = 0;
+    try {
+      await connection.beginTransaction();
 
-        // Adds paid_at as schema_v53 would, and resolves to empty SQL where it still cannot --
-        // this update threw "Unknown column 'paid_at'" after the payment had already been marked
-        // paid, leaving the invoice stale, unscheduled and with no receipt sent
-        const paidAt = await paidAtAssignment(invoiceStatus);
-        await pool.execute(`
-          UPDATE invoices SET
-            amount_paid = ?,
-            balance_amount = ?,
-            payment_status = ?,
-            status = ?,
-            ${paidAt.sql}
-            updated_at = NOW()
-          WHERE id = ?
-        `, [totalPaid, newBalance, invoiceStatus, invoiceStatus, ...paidAt.params, p.invoice_id]);
+      await connection.execute(`
+        UPDATE payments SET
+          status = ?,
+          amount = ?,
+          payment_date = ?,
+          received_by_name = ?,
+          received_by = ?,
+          received_by_role = ?,
+          transaction_id = COALESCE(?, transaction_id),
+          remarks = COALESCE(?, remarks),
+          cheque_number = COALESCE(?, cheque_number),
+          cheque_date = COALESCE(?, cheque_date),
+          bank_name = COALESCE(?, bank_name),
+          branch_name = COALESCE(?, branch_name),
+          payee_name = COALESCE(?, payee_name),
+          payment_location = COALESCE(?, payment_location),
+          updated_at = NOW()
+        WHERE id = ?
+      `, [status, finalAmount, paymentDateValue, verifierName || null, verifierId || null, req.user?.role || null, transactionRef || null, fullRemarks || null,
+        checkNumber || null, checkDate || null, bankName || null, branchName || null, payeeName || null, paymentLocation || null, id]);
+
+      // Audit the verification so it appears in Payment History — offline intents recorded
+      // by the customer otherwise leave no trail of who verified them.
+      await connection.execute(
+        `INSERT INTO payment_history (invoice_id, payment_id, action, old_status, new_status, amount, description, performed_by_name, performed_by_role)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [p.invoice_id || null, id, await paymentHistoryAction('status_changed'), p.status, status,
+         finalAmount,
+         status === 'paid' ? `Payment verified by ${verifierName || userName || 'staff'}` : `Payment rejected: ${rejectionReason || 'no reason given'}`,
+         verifierName || userName || 'Admin', req.user?.role || 'admin']
+      );
+
+      console.log('[Payment Verify] Payment updated successfully');
+
+      // If payment is marked as paid, settle the invoice from the payments table — the just-
+      // updated row is already inside the SUM, so resyncing from it cannot double-count
+      // (the old SUM-plus-amount did: a ₹1,00,870 verification wrote amount_paid = ₹2,01,740)
+      if (status === 'paid' && p.invoice_id) {
+        const settled = await resyncInvoiceSettlement(p.invoice_id, connection);
+        newBalance = settled.balanceAmount;
+        totalPaid = settled.totalPaid;
 
         // Update fp_estimates payment_status to enable scheduling
         // PROPERTY_ID is the PRIMARY link - all records are linked by property
         // Use payment's property_id OR invoice's property_id as fallback
-        const effectivePropertyId = p.property_id || p.invoice_property_id;
-        
+        effectivePropertyId = p.property_id || p.invoice_property_id;
+
         if (effectivePropertyId) {
           const fpEstimateStatus = newBalance <= 0 ? 'paid' : 'partial';
-          
+
           // Update ALL fp_estimates for this property (regardless of estimate status)
-          const [updateResult] = await pool.execute(`
-            UPDATE fp_estimates SET 
-              payment_status = ?, 
-              updated_at = NOW() 
+          const [updateResult] = await connection.execute(`
+            UPDATE fp_estimates SET
+              payment_status = ?,
+              updated_at = NOW()
             WHERE property_id = ?
           `, [fpEstimateStatus, effectivePropertyId]);
-          
+
           console.log(`[Payment Verify] Updated fp_estimates payment_status to ${fpEstimateStatus} for property_id=${effectivePropertyId}, rows affected: ${updateResult.affectedRows}`);
-          
+
           // Also update onboarded_properties.franchise_partner_id if it's NULL
           // This ensures the property is linked to the FP for scheduling
-          const [propCheck] = await pool.execute(
+          const [propCheck] = await connection.execute(
             `SELECT franchise_partner_id FROM onboarded_properties WHERE id = ?`,
             [effectivePropertyId]
           );
-          
+
           if (propCheck.length > 0 && !propCheck[0].franchise_partner_id) {
             // Get franchise_partner_id from the estimate
-            const [estCheck] = await pool.execute(
+            const [estCheck] = await connection.execute(
               `SELECT franchise_partner_id FROM fp_estimates WHERE property_id = ? AND franchise_partner_id IS NOT NULL LIMIT 1`,
               [effectivePropertyId]
             );
-            
+
             if (estCheck.length > 0 && estCheck[0].franchise_partner_id) {
-              await pool.execute(
+              await connection.execute(
                 `UPDATE onboarded_properties SET franchise_partner_id = ? WHERE id = ?`,
                 [estCheck[0].franchise_partner_id, effectivePropertyId]
               );
@@ -2971,32 +3036,45 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
         } else {
           console.log('[Payment Verify] WARNING: No property_id found - fp_estimates not updated!');
         }
+      }
 
-        // Trigger scheduling workflow when invoice is fully paid
-        // Property ID is required, but estimate ID is optional (can be found by property_id)
-        if (newBalance <= 0 && effectivePropertyId) {
-          try {
-            await markPaymentCompleted({
-              propertyId: effectivePropertyId,
-              estimateId: p.estimate_id || null,
-              invoiceId: p.invoice_id,
-              paidAmount: totalPaid,
-              paidBy: userName
-            });
-            console.log(`Scheduling workflow triggered for property ${effectivePropertyId}`);
-          } catch (scheduleErr) {
-            console.error('Error triggering scheduling workflow:', scheduleErr);
-            // Don't fail payment verification if scheduling fails
-          }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+    connection.release();
+
+    // Post-commit: scheduling and the receipt are side effects — neither rolls the money back
+    if (status === 'paid' && p.invoice_id) {
+      // Trigger scheduling workflow when invoice is fully paid
+      // Property ID is required, but estimate ID is optional (can be found by property_id)
+      if (newBalance <= 0 && effectivePropertyId) {
+        try {
+          await markPaymentCompleted({
+            propertyId: effectivePropertyId,
+            estimateId: p.estimate_id || null,
+            invoiceId: p.invoice_id,
+            paidAmount: totalPaid,
+            paidBy: userName
+          });
+          console.log(`Scheduling workflow triggered for property ${effectivePropertyId}`);
+        } catch (scheduleErr) {
+          console.error('Error triggering scheduling workflow:', scheduleErr);
+          // Don't fail payment verification if scheduling fails
         }
       }
+    }
+
+    if (status === 'paid') {
 
       // Send receipt email automatically
       const customerEmail = p.customer_email || p.invoice_email || p.email;
       console.log(`[Payment Verify] Customer email for receipt: ${customerEmail || 'NOT FOUND'}`);
       if (customerEmail) {
         try {
-          const amountPaid = parseFloat(p.amount) || 0;
+          const amountPaid = parseFloat(finalAmount) || parseFloat(p.amount) || 0;
           const invoiceTotal = parseFloat(p.invoice_amount) || amountPaid;
           const currentBalance = parseFloat(newBalance) || 0;
 
@@ -3144,31 +3222,63 @@ router.put('/:id', authenticate, canEditPayments, async (req, res) => {
     const { id } = req.params;
     const fpId = getFPScope(req);
     const { amount, transactionReference, remarks, bankName, status } = req.body;
-    
-    let query = `UPDATE payments SET 
-      amount = COALESCE(?, amount),
-      transaction_reference = COALESCE(?, transaction_reference),
-      remarks = COALESCE(?, remarks),
-      bank_name = COALESCE(?, bank_name),
-      status = COALESCE(?, status),
-      updated_at = NOW()
-      WHERE id = ?`;
-    const params = [amount, transactionReference, remarks, bankName, status, id];
-    
-    if (fpId) {
-      query = `UPDATE payments SET 
+
+    // amount and status were written unchecked: NaN/-5 or a garbage status truncated inside
+    // the UPDATE, and any change left the invoice's amount_paid/balance as they were — the
+    // row and its invoice disagreed permanently.
+    let parsedAmount = null;
+    if (amount !== undefined && amount !== null && amount !== '') {
+      parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ success: false, message: 'Payment amount must be a positive number' });
+      }
+    }
+    const EDITABLE_STATUSES = ['pending', 'verification_pending', 'completed', 'paid', 'failed', 'refunded'];
+    if (status && !EDITABLE_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: `Unsupported payment status: ${status}` });
+    }
+
+    // The payment row and the invoice it settles must move together — the update used to run
+    // on its own, so an edited amount or a flipped status left amount_paid stale forever.
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      let query = `UPDATE payments SET
         amount = COALESCE(?, amount),
         transaction_reference = COALESCE(?, transaction_reference),
         remarks = COALESCE(?, remarks),
         bank_name = COALESCE(?, bank_name),
         status = COALESCE(?, status),
         updated_at = NOW()
-        WHERE id = ? AND franchise_partner_id = ?`;
-      params.push(fpId);
+        WHERE id = ?`;
+      const params = [parsedAmount, transactionReference, remarks, bankName, status, id];
+
+      if (fpId) {
+        query += ' AND franchise_partner_id = ?';
+        params.push(fpId);
+      }
+
+      const [updated] = await connection.execute(query, params);
+      if (updated.affectedRows === 0) {
+        await connection.rollback();
+        return res.status(404).json({ success: false, message: 'Payment not found' });
+      }
+
+      // Amount or status changed -> recompute the invoice from its payments, in this transaction
+      if (parsedAmount !== null || status) {
+        const [[row]] = await connection.execute('SELECT invoice_id FROM payments WHERE id = ?', [id]);
+        if (row?.invoice_id) await resyncInvoiceSettlement(row.invoice_id, connection);
+      }
+
+      await connection.commit();
+      res.json({ success: true, message: 'Payment updated successfully' });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
-    
-    await pool.execute(query, params);
-    res.json({ success: true, message: 'Payment updated successfully' });
   } catch (error) {
     console.error('Error updating payment:', error);
     res.status(500).json({ success: false, message: 'Error updating payment', error: error.message });

@@ -111,6 +111,51 @@ Mistakes that fail silently and have each already broken live endpoints:
   customer-portal routes used `invoice_db_id`, which nothing reads, so a Checkout payment whose
   browser never reached `/verify-payment` (tab closed, network dropped) was dropped by the
   `payment.captured` safety net with "no internal invoice ID".
+- **Never add a payment to a SUM that already contains it.** `PUT /api/payments/:id/verify` marks
+  the payment `paid` and then settles the invoice from
+  `SUM(amount) WHERE status IN ('paid','completed')` — which the just-verified payment is already
+  inside. The route used to add `p.amount` on top, so a ₹1,00,870 verification wrote
+  `amount_paid` ₹2,01,740 and `balance_amount` 0 (the clamp hid the over-count and the row still
+  showed Paid). `totalPaid` is the sum alone. Rows already inflated are repaired by
+  `node backend/scripts/repair-invoice-paid-amounts.js` (dry run) and `--apply`, which recomputes
+  `amount_paid`/`balance_amount`/`payment_status`/`status`/`paid_at` from the payments table, flags
+  two confirmed payments sharing an amount, method and reference as a possible duplicated insert
+  (reported, not repaired — whether the customer was charged twice is a statement question), and
+  leaves rows with no confirmed payments for manual review. The receipt email states `finalAmount`
+  — the verifier's corrected figure — not `p.amount`. Regression test:
+  `node --test backend/routes/paymentsVerify.test.js`.
+- **An invoice's settlement fields are recomputed, never incremented.** `amount_paid`,
+  `balance_amount`, `payment_status`, `status` and `paid_at` are a cache of the payments rows —
+  every writer that touches them (verify, `POST /payments`, `POST /record`, `PUT /payments/:id`)
+  goes through `utils/invoiceSettlement.js` `resyncInvoiceSettlement(invoiceId, conn)` **inside
+  its own transaction**, so the payment and the invoice commit or roll back together. A stored
+  money `status` (`paid`/`partially_paid`) follows the computed `payment_status`; a caller may
+  assert `sent`/`overdue`/`cancelled`/`draft` but never a money state the amounts contradict.
+  A payment status outside `completed`/`paid` (or `verification_pending` until verified) stores
+  the row but settles nothing — `'failed'` used to settle the invoice because the gate was
+  `!= verification_pending`.
+- **Settled money is payments minus processed refunds, and refunds live in their own ledger.**
+  `payment_refunds` (schema_v55, `utils/refundLedger.js`, ensured at boot) carries one row per
+  Razorpay refund keyed on `razorpay_refund_id` — a partial refund leaves its payment settled
+  for the remainder, which no `payments.status` can express. Every place that computes settled
+  money subtracts `payment_refunds` `status='processed'`: `resyncInvoiceSettlement`, the
+  customer portal's `amount_paid` subqueries, and the repair script. A refund flips its payment
+  to `status='refunded'` only when the refund total reaches the payment amount, and
+  `refund.processed` is deduped on the refund id (Razorpay retries events). The webhook once
+  wrote `payment_status='unpaid'`, which is not an ENUM member — errno 1265 silently lost the
+  whole adjustment; never write a status outside an ENUM's members. Regression test:
+  `node --test backend/routes/razorpayRefund.test.js`.
+- **A paid invoice is never deleted; money-bearing archived invoices survive delete-all.**
+  `DELETE /invoices/:id` returns 409 when the row has confirmed payments or `amount_paid > 0`
+  (archive is the reversible path); an unpaid invoice's pending/failed intents are detached
+  (`invoice_id = NULL`) in the same transaction rather than orphaned.
+  `GET /api/payments/dashboard` excludes archived invoices from every total.
+- **Resending an invoice never downgrades its status.** `POST /api/payments/invoices/:id/send`
+  writes `status = CASE WHEN status IN ('paid','partially_paid') THEN status ELSE 'sent' END` —
+  the bare `status = 'sent'` it used to write turned a paid invoice back into a sent one while
+  `payment_status` stayed `paid`. The resend also reuses the existing Razorpay link (a new one is
+  minted only when the old is missing, expired or cancelled), so a second send is a duplicate
+  email, never duplicate money.
 - **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
   union the global `zones` table, `fp_zones`, and zone text stored on properties
   (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id
