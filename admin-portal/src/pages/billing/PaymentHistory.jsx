@@ -8,7 +8,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_GHOST_CLASS } from '../../components/common/PageHeader';
 import DismissPanel from '../../components/common/DismissPanel';
 import {
-  formatDateTime, maskTypedDate, parseTypedDate, toTypedDate, DATE_PLACEHOLDER
+  formatDate, formatDateTime, formatTime, maskTypedDate, parseTypedDate, toTypedDate, DATE_PLACEHOLDER
 } from '../../utils/dateFormat';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -52,14 +52,73 @@ const actionLook = (action) => ACTIONS[action] || {
   tone: 'bg-gray-50 text-gray-600 border-gray-200'
 };
 
+// Two decimals, always: `maximumFractionDigits` alone rendered ₹99,189.90 as "₹99,189.9", which
+// reads as a mis-keyed amount in a column of money.
 const money = (value) => (
   value === null || value === undefined || value === ''
     ? '-'
-    : `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+    : `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 );
 
 // A status as it reads in a sentence: the column stores 'partially_paid', never 'Partially paid'.
 const statusLabel = (value) => (value ? titleCase(value) : null);
+
+// What a payment status means, at a glance. The transition is the whole point of an audit row, so
+// it carries colour rather than sitting in the same grey as everything else. Keyed on the stored
+// spelling, lower-cased -- an unknown status falls back to neutral rather than to no pill.
+const STATUS_TONES = {
+  paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  partially_paid: 'bg-amber-50 text-amber-700 border-amber-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  verification_pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  failed: 'bg-red-50 text-red-700 border-red-200',
+  rejected: 'bg-red-50 text-red-700 border-red-200',
+  refunded: 'bg-purple-50 text-purple-700 border-purple-200',
+  cancelled: 'bg-gray-100 text-gray-600 border-gray-200'
+};
+
+const statusTone = (value) => STATUS_TONES[String(value || '').toLowerCase().replace(/\s+/g, '_')]
+  || 'bg-gray-100 text-gray-600 border-gray-200';
+
+const StatusPill = ({ status, muted = false }) => (
+  <span
+    className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-medium border whitespace-nowrap ${
+      muted ? 'bg-white text-gray-400 border-gray-200' : statusTone(status)
+    }`}
+  >
+    {statusLabel(status)}
+  </span>
+);
+
+/**
+ * The state this row moved the payment to, and where it came from.
+ *
+ * `from → to` where they differ, the one pill where they do not: a status_changed row whose old and
+ * new status are the same read "Paid → Paid", which says nothing twice.
+ */
+const StatusChange = ({ from, to }) => {
+  if (!to && !from) return <span className="text-gray-300">-</span>;
+  if (!to || from === to) return <StatusPill status={to || from} />;
+  return (
+    <span className="inline-flex items-center gap-1.5 flex-wrap">
+      {from && <StatusPill status={from} muted />}
+      {from && <span className="text-gray-300">→</span>}
+      <StatusPill status={to} />
+    </span>
+  );
+};
+
+const EventBadge = ({ action }) => {
+  const look = actionLook(action);
+  const Icon = look.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${look.tone}`}>
+      <Icon className="w-3 h-3" />
+      {look.label}
+    </span>
+  );
+};
 
 const PaymentHistory = ({ user, portalType = 'admin' }) => {
   const { fpList, selectedFp, selectFp } = useFP();
@@ -269,103 +328,139 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
         )}
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">When</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Activity</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Payment</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Invoice</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Customer</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Change</th>
-                  <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">Amount</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-4 py-3">By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" />
-                    </td>
-                  </tr>
-                ) : visible.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="p-4 bg-gray-100 rounded-full">
-                          <Inbox className="w-6 h-6 text-gray-400" />
-                        </div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {hasFilters ? 'Nothing matches these filters' : 'No payment activity yet'}
-                        </p>
-                        <p className="text-xs text-gray-500 max-w-sm">
-                          {hasFilters
-                            ? 'Clear them to see the whole trail.'
-                            : 'Every payment that is recorded, verified, refunded or paid online is logged here.'}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  visible.map((row) => {
-                    const look = actionLook(row.action);
-                    const Icon = look.icon;
-                    const from = statusLabel(row.oldStatus);
-                    const to = statusLabel(row.newStatus);
-                    return (
-                      <tr key={row.id} className="hover:bg-gray-50 align-top">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                          {formatDateTime(row.createdAt)}
+          {loading ? (
+            <div className="py-16 text-center">
+              <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" />
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="py-16 px-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                <Inbox className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-900">
+                {hasFilters ? 'Nothing matches these filters' : 'No payment activity yet'}
+              </p>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
+                {hasFilters
+                  ? 'Clear them to see the whole trail.'
+                  : 'Every payment that is recorded, verified, refunded or paid online is logged here.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* `table-fixed`, with a width on every column: the eight free-width columns this
+                  replaced were pushed past the card by their own `whitespace-nowrap`, so the last
+                  one -- who did it -- was cut off mid-word. Payment and Invoice share a cell
+                  because they identify the same thing, which is what made room. */}
+              <div className="hidden lg:block">
+                <table className="w-full table-fixed">
+                  {/* Sticky, because this is a log read by scrolling: the column a row's value
+                      belongs to has to stay visible with it. */}
+                  <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                    <tr className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="w-[108px] px-4 py-3">When</th>
+                      <th className="w-[23%] px-4 py-3">Activity</th>
+                      <th className="w-[160px] px-4 py-3">Payment</th>
+                      <th className="w-[15%] px-4 py-3">Customer</th>
+                      <th className="w-[19%] px-4 py-3">Change</th>
+                      <th className="w-[124px] px-4 py-3 text-right">Amount</th>
+                      <th className="w-[136px] px-4 py-3">By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {visible.map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50/80 transition-colors align-top">
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-gray-900 whitespace-nowrap">{formatDate(row.createdAt)}</p>
+                          <p className="text-[11px] text-gray-400 whitespace-nowrap">{formatTime(row.createdAt)}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${look.tone}`}>
-                            <Icon className="w-3 h-3" />
-                            {look.label}
-                          </span>
+                          <EventBadge action={row.action} />
                           {/* The server's own sentence for what happened -- it names the verifier,
-                              the rejection reason or the Razorpay method, which no column does. */}
+                              the rejection reason or the Razorpay method, which no column does.
+                              Clamped, so one long reference cannot make a row three times the
+                              height of its neighbours; the whole text is in the tooltip. */}
                           {row.description && (
-                            <p className="mt-1 text-xs text-gray-500 max-w-[260px]">{row.description}</p>
+                            <p className="mt-1 text-xs text-gray-500 line-clamp-2" title={row.description}>
+                              {row.description}
+                            </p>
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                          {row.paymentCode || '-'}
-                          {row.razorpayPaymentId && (
-                            <span className="block text-[11px] font-normal text-gray-400">{row.razorpayPaymentId}</span>
-                          )}
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-blue-600 truncate" title={row.paymentCode || ''}>
+                            {row.paymentCode || '-'}
+                          </p>
+                          <p className="text-[11px] text-gray-400 truncate" title={row.razorpayPaymentId || row.invoiceCode || ''}>
+                            {row.invoiceCode || '-'}
+                            {row.razorpayPaymentId ? ` · ${row.razorpayPaymentId}` : ''}
+                          </p>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{row.invoiceCode || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {row.customerName || '-'}
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-gray-900 truncate" title={row.customerName || ''}>
+                            {row.customerName || '-'}
+                          </p>
                           {row.propertyName && (
-                            <span className="block text-[11px] text-gray-400">{row.propertyName}</span>
+                            <p className="text-[11px] text-gray-400 truncate" title={row.propertyName}>{row.propertyName}</p>
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                          {to
-                            ? <>{from && <><span className="text-gray-400">{from}</span> <span className="text-gray-300">→</span> </>}<span className="font-medium text-gray-900">{to}</span></>
-                            : '-'}
+                        <td className="px-4 py-3">
+                          <StatusChange from={row.oldStatus} to={row.newStatus} />
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
-                          {money(row.amount)}
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">
+                            {money(row.amount)}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                          {row.performedBy || '-'}
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-gray-900 truncate" title={row.performedBy || ''}>
+                            {row.performedBy || '-'}
+                          </p>
                           {row.performedByRole && (
-                            <span className="block text-[11px] text-gray-400 capitalize">
-                              {titleCase(row.performedByRole)}
-                            </span>
+                            <p className="text-[11px] text-gray-400 truncate">{titleCase(row.performedByRole)}</p>
                           )}
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Below `lg` the same rows read as cards. Seven columns in a horizontal scroller is
+                  a table nobody can follow on a laptop, let alone a tablet. */}
+              <ul className="lg:hidden divide-y divide-gray-100">
+                {visible.map((row) => (
+                  <li key={row.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <EventBadge action={row.action} />
+                      <span className="text-[11px] text-gray-400 whitespace-nowrap">{formatDateTime(row.createdAt)}</span>
+                    </div>
+                    <div className="mt-2 flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-blue-600 truncate">{row.paymentCode || '-'}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {row.invoiceCode || '-'}
+                          {row.customerName ? ` · ${row.customerName}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">
+                        {money(row.amount)}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <StatusChange from={row.oldStatus} to={row.newStatus} />
+                      <span className="text-[11px] text-gray-400">
+                        by {row.performedBy || 'unknown'}
+                        {row.performedByRole ? ` (${titleCase(row.performedByRole)})` : ''}
+                      </span>
+                    </div>
+                    {row.description && (
+                      <p className="mt-2 text-xs text-gray-500">{row.description}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {!loading && filtered.length > 0 && (
             <div className="flex items-center justify-between gap-4 flex-wrap px-4 py-3 border-t border-gray-200">

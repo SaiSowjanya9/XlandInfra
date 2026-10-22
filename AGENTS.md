@@ -296,8 +296,9 @@ headings it has **in that same order**:
 ## Customer Portal Home
 
 `frontend/src/pages/Dashboard.jsx` is the resident's home page (`/dashboard`), and its order is
-fixed: **welcome banner → Quick Access → Recent Activity beside Upcoming Schedules**, with any
-pending Service Renewals under them.
+fixed: **welcome banner → Quick Access → the three panels (Work Orders · Upcoming Schedule ·
+Payments) → Recent Activity full width**, with any pending Service Renewals under them. The
+desktop layout is the user's attached design and is the authority.
 
 - **The property is stated once, on the banner's chip.** A **Property panel** at the foot of the
   page — a 64px building tile with the community name over `Property ID: …` — was removed on the
@@ -306,10 +307,25 @@ pending Service Renewals under them.
   Property ID: GC-…`) with the copy button; the name exists nowhere else on the page. Do not add
   the panel back, and do not drop the name from the chip.
 
-- **No summary/stat cards anywhere on it.** The Total Orders / Pending / Completed / Property row
-  was removed on the user's call and must not come back in another shape — not as a row of four, not
-  as figures inside the Quick Access cards. A **Quick Access card is navigation**: icon tile, title
-  and an arrow, nothing else. The counts live on the page that owns them.
+- **Figures belong to the three panels, never to a card row and never to Quick Access.** An earlier
+  pass removed a four-card Total Orders / Pending / Completed / Property row; the agreed design puts
+  the same kind of count back, but *inside the panel that owns it* — four tiles in **Work Orders**,
+  the next visit in **Upcoming Schedule**, the outstanding total in **Payments**. A **Quick Access
+  card stays pure navigation**: icon tile, title, arrow, nothing else. A standalone stat row above
+  the panels is the shape that must not return.
+- **Work Orders' Pending and In Progress are two different counts**, so each must exclude the other:
+  `stats.awaitingStart` (pending + under_review + assigned) and `stats.inProgress`, both grouped by
+  `GET /api/customers/dashboard`. `stats.pending` is the older "everything unfinished" figure and
+  counts in-progress work *inside* it — using it here reports one work order in two tiles.
+- **Quick Access is the four real routes**: Work Orders, Schedules, Payments, Contact / Help. The
+  design's fifth **Property** card was deliberately not built: there is no `/dashboard/property`,
+  and the property is already named on the banner chip directly above. Do not add a card that opens
+  nothing — a link to a route that does not exist is the bug this repo keeps finding
+  (`/fp/payments/history`, the old `?status=` stat cards).
+- **Work Orders' "View All" filters Recent Activity to work orders**; it does not navigate. The
+  portal has no work-order list — `WorkOrder.jsx` is the raise form — so that table and its modal
+  are where a customer reads their work orders at all. The filter shows as a dismissible chip in
+  the panel header, because a silently filtered table reads as a short one.
 - **No sentence under a title, anywhere in the customer portal.** Every descriptive sub-line is gone
   on the user's call: the four Quick Access cards' ("Raise and track maintenance requests for your
   property." and the rest), the Quick Access heading's own, the Recent Activity and Upcoming
@@ -322,8 +338,15 @@ pending Service Renewals under them.
   payments and scheduled visits, newest first, each row dated with its own status badge. A
   work-order row opens the **work order modal on this page** — that modal is the only place a
   customer can read a work order's detail, since `WorkOrder.jsx` is the raise form and has no list —
-  and the other rows go to Payments or Schedules. "View All" expands the list in place (6 → 25);
-  there is no activity page to send anyone to.
+  and the other rows go to Payments or Schedules. It is a **five-column table (Date · Type ·
+  Details · Status · Action) from `sm` up and the same rows as a list below**, because a
+  five-column table on a phone is a horizontal scroll nobody reads. **"View All" shows the whole
+  history in place** (6 → the route's 100 ceiling), capped at `max-h-[28rem]` so a long history
+  scrolls inside the card rather than burying the page; there is no activity page to send anyone to.
+- **The Payments panel's outstanding total is counted on the server over *every* invoice in scope**
+  (`payments.outstanding` / `pendingCount` on `GET …/activity`), not summed from the activity rows
+  that request also returns — those are a recent slice, so totalling them would under-report what
+  the customer owes, which is worse than showing nothing.
 - **One request serves both panels**: `GET /api/customers/activity`, merged by
   `backend/utils/customerActivity.js`, which owns the rule that splits them — **a visit is activity
   once it is over, and upcoming until then**, so no visit can show in both panels or in neither.
@@ -450,6 +473,22 @@ shapes to avoid, both of which were on the customer portal:
   cannot hold once rolled a customer's payment back.
 - Text filtering is the browser's: the route answers one partner's own audit rows, so re-querying
   per keystroke would be a request per character for no better answer. Dates are the server's.
+- **The trail is seven fixed-width columns, not eight free ones.** Eight columns each holding
+  `whitespace-nowrap` pushed the table past its own card, so **By — who did it — was cut off
+  mid-word** on a 1024px screen. It is `table-fixed` with a width on every column; **Payment and
+  Invoice share one cell** (they identify the same thing, which is what made the room), and long
+  values `truncate` with the whole string in `title`. Below `lg` the same rows render as **cards**:
+  seven columns in a horizontal scroller is a table nobody can follow.
+- **The status transition carries the colour**, because it is what an audit row is *for*:
+  `StatusChange` renders `from → to` as two pills tinted by meaning (paid green, pending amber,
+  failed red, refunded purple), and **one pill where `from === to`** — a status_changed row whose
+  old and new status match used to read "Paid → Paid", which says nothing twice.
+- The action's description is `line-clamp-2` with the full text in `title`: one long payment
+  reference used to make a row three times the height of its neighbours.
+- **Money shows two decimals, always.** `maximumFractionDigits` alone rendered ₹99,189.90 as
+  "₹99,189.9", which reads as a mis-keyed amount in a column of money; the column is
+  `tabular-nums` so the figures line up. `formatTime` in `utils/dateFormat.js` is the shared IST
+  clock the When column's second line uses — do not hand-roll an Intl call in a page.
 - Regression test: `node --test admin-portal/src/utils/billingRoutes.test.js`, which fails if a
   portal points `payment-history` back at `Payments`, if the headings stop differing, if the
   disabled block or its dead fetch returns, or if anything links to `/<portal>/payments/history` —

@@ -79,6 +79,19 @@ export const formatDateTime = (value, fallback = '-') => {
 };
 
 /**
+ * h:mm am/pm, in IST -- for a screen that puts the time on its own line under the date, rather
+ * than in one `dd/mm/yyyy, h:mm am` string. Same clock as `formatDateTime`, same timezone.
+ */
+export const formatTime = (value, fallback = '') => {
+  if (value === null || value === undefined || value === '') return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST_TIME_ZONE, hour: 'numeric', minute: '2-digit', hour12: true
+  }).format(date);
+};
+
+/**
  * 'yyyy-mm-dd' for a date field's value and for the API.
  * This is the wire format everywhere -- the server stores DATE columns and every existing change
  * handler already expects it.
