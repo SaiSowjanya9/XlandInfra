@@ -159,6 +159,22 @@ Mistakes that fail silently and have each already broken live endpoints:
   `payment_status` stayed `paid`. The resend also reuses the existing Razorpay link (a new one is
   minted only when the old is missing, expired or cancelled), so a second send is a duplicate
   email, never duplicate money.
+- **`pending_property_schedules` drifts the way `invoices.paid_at` did.** Its `added_at`,
+  `updated_at`, `notification_sent*` and the `completed`/`cancelled` ENUM members all come from
+  schema_v22's `CREATE TABLE IF NOT EXISTS`, which adds nothing to a table that already exists —
+  a drifted deployment fails `markPaymentCompleted` with "Unknown column 'added_at'" and the
+  property never enters the scheduling pipeline. `utils/pendingScheduleColumns.js`
+  `ensurePendingScheduleSchema()` runs the information_schema check before each writer
+  (`schedulingWorkflow`, `vendorAssignments.syncPendingPropertySchedule`,
+  `schedulingService.assignVendorToService`, the schedules cancel route — always before
+  `beginTransaction`, DDL commits implicitly); `schema_v56_pending_schedules_drift.sql` is the
+  same repair for a privileged user.
+- **Payment emails go through `services/emailService.js` `sendEmail`, never a fresh
+  transporter.** `payments.js` and `razorpay.js` used to build their own `nodemailer`
+  transports on `SMTP_USER`/`SMTP_PASS` while every other mail used `EMAIL_USER`/`EMAIL_PASS`
+  (Hostinger) — a deployment that set only `EMAIL_*` got `EAUTH: Missing credentials for PLAIN`
+  on every receipt and payment-link email. There is one transporter; if mail needs a different
+  sender, change `sendEmail`, don't construct another.
 - **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
   union the global `zones` table, `fp_zones`, and zone text stored on properties
   (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id

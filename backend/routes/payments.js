@@ -3122,17 +3122,9 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
           const { generateReceiptPDF } = require('../services/pdfService');
           const pdfBuffer = await generateReceiptPDF(paymentData);
 
-          // Send email - Simple clean design
-          const nodemailer = require('nodemailer');
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587'),
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS
-            }
-          });
+          // Send email through the shared transporter (EMAIL_*) — the ad-hoc SMTP-credential
+          // transporter this replaced failed EAUTH on deployments that only configure EMAIL_*.
+          const { sendEmail } = require('../services/emailService');
 
           const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
             day: '2-digit', month: '2-digit', year: 'numeric'
@@ -3142,8 +3134,7 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
           const statusText = currentBalance <= 0 ? 'Fully Paid' : 'Partially Paid';
           const methodLabel = paymentData.paymentMethod === 'razorpay' ? 'Card/Net Banking' : paymentData.paymentMethod === 'upi' ? 'UPI' : paymentData.paymentMethod === 'bank_transfer' ? 'Bank Transfer' : paymentData.paymentMethod === 'cash' ? 'Cash' : paymentData.paymentMethod === 'check' ? 'Cheque' : paymentData.paymentMethod || '-';
 
-          await transporter.sendMail({
-            from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
+          const receiptResult = await sendEmail({
             to: customerEmail,
             subject: `Payment Receipt - ₹${amountPaid.toLocaleString('en-IN')} | XLAND INFRA`,
             html: `
@@ -3215,13 +3206,16 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
             }]
           });
 
-          // Mark receipt as sent
-          await pool.execute(
-            'UPDATE payments SET receipt_sent = 1, receipt_sent_at = NOW() WHERE id = ?',
-            [id]
-          );
-
-          console.log(`Receipt sent to ${customerEmail} for payment ${paymentData.paymentId}`);
+          if (receiptResult.success) {
+            // Mark receipt as sent
+            await pool.execute(
+              'UPDATE payments SET receipt_sent = 1, receipt_sent_at = NOW() WHERE id = ?',
+              [id]
+            );
+            console.log(`Receipt sent to ${customerEmail} for payment ${paymentData.paymentId}`);
+          } else {
+            console.error(`Receipt email failed for payment ${paymentData.paymentId}: ${receiptResult.error}`);
+          }
         } catch (emailError) {
           console.error('Error sending receipt email:', emailError);
           // Don't fail the verification if email fails
@@ -3877,17 +3871,9 @@ router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res)
     const { generateReceiptPDF } = require('../services/pdfService');
     const pdfBuffer = await generateReceiptPDF(paymentData);
 
-    // Send email with receipt - Simple clean design like reference image
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+    // Send email with receipt through the shared transporter (EMAIL_*) — the ad-hoc
+    // SMTP-credential transporter this replaced failed EAUTH where only EMAIL_* is set.
+    const { sendEmail } = require('../services/emailService');
 
     const paymentDateFormatted = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', {
       day: '2-digit', month: '2-digit', year: 'numeric'
@@ -3897,7 +3883,6 @@ router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res)
     const statusText = currentBalance <= 0 ? 'Fully Paid' : 'Partially Paid';
 
     const mailOptions = {
-      from: `"XLAND INFRA" <${process.env.SMTP_USER || 'noreply@xlandinfra.com'}>`,
       to: customerEmail,
       subject: `Payment Receipt - ₹${amountPaid.toLocaleString('en-IN')} | XLAND INFRA`,
       html: `
@@ -3969,7 +3954,10 @@ router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res)
       }]
     };
 
-    await transporter.sendMail(mailOptions);
+    const receiptResult = await sendEmail(mailOptions);
+    if (!receiptResult.success) {
+      throw new Error(receiptResult.error || 'Email send failed');
+    }
 
     // Update payment to mark receipt sent
     await pool.execute(

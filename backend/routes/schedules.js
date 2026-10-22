@@ -2114,7 +2114,10 @@ router.put('/property/:propertyId/cancel-all', authenticate, canMakeSchedule, as
       [reason, propertyId]
     );
 
-    // Update pending property schedule status
+    // Update pending property schedule status (ensure repairs added_at/updated_at
+    // and widens scheduling_status for 'cancelled' on drifted deployments)
+    const { ensurePendingScheduleSchema } = require('../utils/pendingScheduleColumns');
+    await ensurePendingScheduleSchema();
     await pool.execute(
       `UPDATE pending_property_schedules 
        SET scheduling_status = 'cancelled',

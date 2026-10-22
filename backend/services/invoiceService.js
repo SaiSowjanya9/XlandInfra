@@ -760,7 +760,10 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
     return paymentLink.short_url;
     
   } catch (error) {
-    console.error('❌ Error creating payment link:', error.message);
+    // The Razorpay SDK rejects with { statusCode, error: { code, description } }, which has
+    // no .message — logging error.message alone printed "undefined" and hid the real cause.
+    console.error('❌ Error creating payment link:',
+      error?.error?.description || error?.message || JSON.stringify(error));
     return null;
   }
 };

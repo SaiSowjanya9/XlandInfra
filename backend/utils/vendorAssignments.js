@@ -12,6 +12,7 @@
  */
 
 const { pool } = require('../config/database');
+const { ensurePendingScheduleSchema } = require('./pendingScheduleColumns');
 
 const LEGACY_UNIQUE_KEY = 'unique_property_vendor';
 const SERVICE_UNIQUE_KEY = 'unique_property_vendor_service';
@@ -74,6 +75,7 @@ const dropBrokenAssignmentTriggers = async () => {
  */
 const syncPendingPropertySchedule = async (propertyId) => {
   try {
+    await ensurePendingScheduleSchema();
     const [[property]] = await pool.execute(
       `SELECT op.id, op.franchise_partner_id,
               fe.id as estimate_id,

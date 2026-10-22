@@ -103,3 +103,24 @@ test('no staff path can record or confirm more than the outstanding balance', ()
   assert.match(recordBlock, /paymentAmount > invoiceBalance/, 'POST /record accepts an overpaying amount');
   assert.match(verifyBlock, /checkAmount > invoiceBalance/, 'a verifier can correct the amount past the balance');
 });
+
+test('payment emails go through the shared EMAIL_* transporter, not ad-hoc SMTP_* creds', () => {
+  // The receipt sends built their own nodemailer transport on SMTP_USER/SMTP_PASS while
+  // emailService uses EMAIL_USER/EMAIL_PASS — a deployment that only sets EMAIL_* got
+  // EAUTH "Missing credentials for PLAIN" on every receipt.
+  assert.doesNotMatch(routes, /SMTP_USER/, 'payments.js still builds a transporter on SMTP_USER');
+  assert.doesNotMatch(routes, /SMTP_PASS/, 'payments.js still builds a transporter on SMTP_PASS');
+  const razorpayRoutes = fs.readFileSync(path.join(__dirname, 'razorpay.js'), 'utf8');
+  assert.doesNotMatch(razorpayRoutes, /SMTP_USER|SMTP_PASS/, 'razorpay.js still uses SMTP_* creds');
+});
+
+test('the scheduling trigger repairs the pending_property_schedules schema first', () => {
+  // added_at/updated_at came from schema_v22's CREATE TABLE IF NOT EXISTS, which never adds
+  // columns to an existing table — drifted deployments failed the whole trigger with
+  // ER_BAD_FIELD_ERROR on 'added_at'.
+  const workflow = fs.readFileSync(path.join(__dirname, '..', 'services', 'schedulingWorkflow.js'), 'utf8');
+  const markIdx = workflow.indexOf('function markPaymentCompleted');
+  const markBlock = workflow.slice(markIdx, markIdx + 4000);
+  assert.match(markBlock, /ensurePendingScheduleSchema\(\)/,
+    'markPaymentCompleted writes added_at/updated_at without the drift ensure');
+});
