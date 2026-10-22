@@ -2489,6 +2489,15 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
       await connection.rollback();
       return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
     }
+    // More than the outstanding balance cannot be recorded — the row used to store the
+    // overage and clamp the balance to 0, inflating amount_paid past the invoice total
+    if (paymentAmount > invoiceBalance) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Amount ₹${paymentAmount} exceeds the outstanding balance ₹${invoiceBalance}`
+      });
+    }
 
     // Generate payment ID and receipt ID
     const paymentId = await generatePaymentId(fpId);
@@ -2714,6 +2723,15 @@ router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, up
       await connection.rollback();
       return res.status(400).json({ success: false, message: 'This invoice is already fully paid' });
     }
+    // A recorded figure cannot exceed what the invoice is still owed — the overage used to
+    // write amount_paid past total_amount while the balance clamped to 0
+    if (paymentAmount > invoiceBalance) {
+      await connection.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Amount ₹${paymentAmount} exceeds the outstanding balance ₹${invoiceBalance}`
+      });
+    }
 
     // generatePaymentId, not MAX(id)+1 — two concurrent records read the same max and
     // collide on the UNIQUE payment_id, and PYMT- is a format nothing else emits
@@ -2880,12 +2898,23 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     // Verifying a second payment onto an already-settled invoice would over-pay it —
     // the money should be rejected or refunded, not confirmed
     if (status === 'paid' && p.invoice_id) {
-      const invoiceBalance = parseFloat(p.invoice_balance_amount) ||
-        (parseFloat(p.invoice_amount) || 0) - (parseFloat(p.invoice_amount_paid) || 0);
+      const storedBalance = parseFloat(p.invoice_balance_amount);
+      const invoiceBalance = !Number.isFinite(storedBalance) || storedBalance === 0
+        ? (parseFloat(p.invoice_amount) || 0) - (parseFloat(p.invoice_amount_paid) || 0)
+        : storedBalance;
       if (invoiceBalance <= 0) {
         return res.status(409).json({
           success: false,
           message: 'This invoice is already fully paid — mark this payment as failed or refund it instead.'
+        });
+      }
+      // The verifier's corrected figure cannot exceed what is still owed either — a raised
+      // amount writes amount_paid past the invoice total
+      const checkAmount = amountReceived ? parseFloat(amountReceived) : parseFloat(p.amount);
+      if (Number.isFinite(checkAmount) && checkAmount > invoiceBalance) {
+        return res.status(409).json({
+          success: false,
+          message: `Amount ₹${checkAmount} exceeds the outstanding balance ₹${invoiceBalance} — reject the excess or refund it.`
         });
       }
     }
@@ -3259,6 +3288,35 @@ router.put('/:id', authenticate, canEditPayments, async (req, res) => {
         params.push(fpId);
       }
 
+      // An edit can overpay too — raising the amount or flipping a status to settled must not
+      // push the invoice past its total. Check before the UPDATE, in this transaction.
+      const [[paymentRow]] = await connection.execute(
+        'SELECT invoice_id, status, amount FROM payments WHERE id = ?', [id]
+      );
+      if (paymentRow?.invoice_id && (parsedAmount !== null || status)) {
+        const newStatus = status || paymentRow.status;
+        if (newStatus === 'paid' || newStatus === 'completed') {
+          const newAmount = parsedAmount !== null ? parsedAmount : parseFloat(paymentRow.amount);
+          const [[others]] = await connection.execute(
+            `SELECT COALESCE(SUM(amount), 0) AS settled FROM payments
+             WHERE invoice_id = ? AND id <> ? AND status IN ('paid', 'completed')`,
+            [paymentRow.invoice_id, id]
+          );
+          const [[inv]] = await connection.execute(
+            'SELECT total_amount FROM invoices WHERE id = ?', [paymentRow.invoice_id]
+          );
+          const wouldBe = (parseFloat(others.settled) || 0) + newAmount;
+          const total = parseFloat(inv?.total_amount) || 0;
+          if (total > 0 && wouldBe > total) {
+            await connection.rollback();
+            return res.status(400).json({
+              success: false,
+              message: `This change would settle ₹${wouldBe} against a ₹${total} invoice — reduce the amount or leave the payment unsettled.`
+            });
+          }
+        }
+      }
+
       const [updated] = await connection.execute(query, params);
       if (updated.affectedRows === 0) {
         await connection.rollback();
@@ -3266,9 +3324,8 @@ router.put('/:id', authenticate, canEditPayments, async (req, res) => {
       }
 
       // Amount or status changed -> recompute the invoice from its payments, in this transaction
-      if (parsedAmount !== null || status) {
-        const [[row]] = await connection.execute('SELECT invoice_id FROM payments WHERE id = ?', [id]);
-        if (row?.invoice_id) await resyncInvoiceSettlement(row.invoice_id, connection);
+      if ((parsedAmount !== null || status) && paymentRow?.invoice_id) {
+        await resyncInvoiceSettlement(paymentRow.invoice_id, connection);
       }
 
       await connection.commit();

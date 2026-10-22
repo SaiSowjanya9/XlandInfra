@@ -64,7 +64,7 @@ test('editing a payment resyncs its invoice in the same transaction', () => {
   const editIdx = routes.indexOf("router.put('/:id', authenticate, canEditPayments");
   const editBlock = routes.slice(editIdx, editIdx + 8000);
   assert.match(editBlock, /beginTransaction\(\)/, 'the payment update is not transactional');
-  assert.match(editBlock, /resyncInvoiceSettlement\(row\.invoice_id, connection\)/,
+  assert.match(editBlock, /resyncInvoiceSettlement\(paymentRow\.invoice_id, connection\)/,
     'a changed amount or status leaves the invoice totals stale again');
 });
 
@@ -80,4 +80,16 @@ test('deleting an invoice with recorded payments is refused', () => {
   const delBlock = routes.slice(delIdx, delIdx + 4000);
   assert.match(delBlock, /status\(409\)/, 'a paid invoice can still be hard-deleted, orphaning its payments');
   assert.match(delBlock, /UPDATE payments SET invoice_id = NULL/, 'pending intents are not detached before the delete');
+});
+
+test('no staff path can record or confirm more than the outstanding balance', () => {
+  // Recording or verifying past the balance used to write amount_paid beyond total_amount —
+  // the balance clamp hid it and the invoice still read Paid
+  const postIdx = routes.indexOf("router.post('/payments'");
+  const postBlock = routes.slice(postIdx, postIdx + 9000);
+  assert.match(postBlock, /paymentAmount > invoiceBalance/, 'POST /payments accepts an overpaying amount');
+  const recordIdx = routes.indexOf("router.post('/record'");
+  const recordBlock = routes.slice(recordIdx, recordIdx + 9000);
+  assert.match(recordBlock, /paymentAmount > invoiceBalance/, 'POST /record accepts an overpaying amount');
+  assert.match(verifyBlock, /checkAmount > invoiceBalance/, 'a verifier can correct the amount past the balance');
 });
