@@ -57,10 +57,12 @@ for (const file of FILES) {
     assert.match(body, /bg-warm-accent-soft[^>]*>[\s\S]{0,200}text-warm-text[^>]*>Total/, `${file}: the Total band is not the cream band`);
   });
 
-  test(`${file} letterhead uses logo.png`, () => {
+  test(`${file} letterhead uses the estimate's logo icon`, () => {
     const body = read(...file.split('/'));
-    assert.match(body, /src="\/logo\.png"/, `${file}: the modal logo is not /logo.png`);
-    assert.doesNotMatch(body, /src="\/logo\.webp"/, `${file}: still on logo.webp`);
+    // Same file the estimate letterhead sets beside the typeset name — logo.png carries the
+    // company name baked into the image, which duplicates the text the modal already prints
+    assert.match(body, /COMPANY_LOGO_ICON/, `${file}: the modal logo is not the shared icon`);
+    assert.doesNotMatch(body, /src="\/logo\.(png|webp)"/, `${file}: a hard-coded logo path is back`);
   });
 }
 

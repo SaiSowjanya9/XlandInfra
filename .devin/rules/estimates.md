@@ -260,7 +260,9 @@ bug, because a colleague reading the estimate on screen is reading what the cust
   **view modal** shares this skin with one deliberate deviation (the user's call): its accent
   bands — the TOTAL AMOUNT DUE banner, the Price Summary Total row and the document buttons —
   sit in the light cream `warm.accent-soft` `#FEF3E2` bordered `warm.border`, never a solid
-  `warm.accent` fill, and its letterhead image is `/logo.png`. `GeneratedInvoices.jsx` and the
+  `warm.accent` fill. Its letterhead image is the shared `COMPANY_LOGO_ICON` (`/logo-icon.png`)
+  — `/logo.png` bakes the company name into the image, which duplicated the typeset name the
+  modal prints beside it. `GeneratedInvoices.jsx` and the
   matching modal in `Invoices.jsx` keep the warm letterhead, warm table headers and warm metadata
   cards, guarded by `admin-portal/src/utils/invoiceViewSkin.test.js`. The invoice
   **PDF and email** keep their own look — only the on-screen modal is warm, and the package export

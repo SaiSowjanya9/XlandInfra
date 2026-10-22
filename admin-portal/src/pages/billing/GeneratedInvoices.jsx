@@ -40,6 +40,7 @@ import DateField from '../../components/common/DateField';
 import { formatDate, formatDateTime } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
 import Modal from '../../components/common/Modal';
+import { COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1219,7 +1220,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </button>
                 {/* Centered logo and text - vertically aligned */}
                 <div className="flex items-center justify-center gap-3">
-                  <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+                  <img src={COMPANY_LOGO_ICON} alt="XLAND INFRA" className="h-14 w-14 object-contain" />
                   <div className="flex flex-col justify-center">
                     <h1 className="text-gray-900 text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                     <div className="flex items-center gap-1 mt-0.5">
