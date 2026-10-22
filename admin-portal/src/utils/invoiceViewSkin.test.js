@@ -47,10 +47,31 @@ for (const file of FILES) {
 
   test(`${file} draws the modal in the estimate's warm palette`, () => {
     const body = read(...file.split('/'));
-    for (const token of ['bg-warm-section', 'border-warm-border', 'bg-warm-accent', 'text-warm-text', 'text-warm-muted']) {
+    for (const token of ['bg-warm-section', 'border-warm-border', 'bg-warm-accent-soft', 'text-warm-text', 'text-warm-muted']) {
       assert.match(body, new RegExp(token), `${file}: missing ${token}`);
     }
-    // The Total sits on the tan accent in dark text, like EstimatePriceSummary
-    assert.match(body, /bg-warm-accent[^>]*>[\s\S]{0,200}text-warm-text[^>]*>Total/, `${file}: the Total band is not the estimate's tan band`);
+    // The bands sit in light cream, dark text — the solid warm-accent (tan) fill was swapped
+    // for accent-soft at the user's request; assert no solid accent fill remains
+    assert.doesNotMatch(body, /bg-warm-accent(?![-\w/])/, `${file}: a solid warm-accent fill is back`);
+    // The Total sits on the cream band in dark text, bordered like the card it ends
+    assert.match(body, /bg-warm-accent-soft[^>]*>[\s\S]{0,200}text-warm-text[^>]*>Total/, `${file}: the Total band is not the cream band`);
+  });
+
+  test(`${file} letterhead uses logo.png`, () => {
+    const body = read(...file.split('/'));
+    assert.match(body, /src="\/logo\.png"/, `${file}: the modal logo is not /logo.png`);
+    assert.doesNotMatch(body, /src="\/logo\.webp"/, `${file}: still on logo.webp`);
   });
 }
+
+// The row-status dropdown in pages/billing/Invoices.jsx (mounted by every portal) once offered
+// 'Paid' and 'Partially Paid' as manual picks — a click asserted a settlement no payment row
+// explains. The menu is workflow states only, and a settled invoice's pill is a label, not a
+// control.
+test('the invoice status menu cannot assert a money state', () => {
+  const body = read('pages', 'billing', 'Invoices.jsx');
+  assert.match(body, /\['sent', 'overdue', 'cancelled'\]/,
+    'the dropdown offers a hand-picked paid/partially_paid again');
+  assert.match(body, /\['paid', 'partially_paid'\]\.includes\(invoice\.status\)/,
+    'a settled invoice\'s status pill is clickable again');
+});

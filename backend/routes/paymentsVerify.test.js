@@ -82,6 +82,16 @@ test('deleting an invoice with recorded payments is refused', () => {
   assert.match(delBlock, /UPDATE payments SET invoice_id = NULL/, 'pending intents are not detached before the delete');
 });
 
+test('the manual status route offers workflow states only — money states need a payment', () => {
+  const statusIdx = routes.indexOf("router.put('/invoices/:id/status'");
+  const block = routes.slice(statusIdx, statusIdx + 3500);
+  // 'paid'/'partially_paid' selected by hand would write a settlement no payment explains
+  assert.match(block, /validStatuses = \['sent', 'overdue', 'cancelled'\]/,
+    'the status route still lets a click mark an invoice paid');
+  assert.match(block, /status\(409\)/,
+    'a paid invoice must refuse a manual status change that rewinds its money state');
+});
+
 test('no staff path can record or confirm more than the outstanding balance', () => {
   // Recording or verifying past the balance used to write amount_paid beyond total_amount —
   // the balance clamp hid it and the invoice still read Paid

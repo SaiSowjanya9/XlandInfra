@@ -1219,7 +1219,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </button>
                 {/* Centered logo and text - vertically aligned */}
                 <div className="flex items-center justify-center gap-3">
-                  <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+                  <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
                   <div className="flex flex-col justify-center">
                     <h1 className="text-gray-900 text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -1231,7 +1231,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 </div>
               </div>
               {/* Warm divider - simple and proportional */}
-              <div className="h-1.5 bg-warm-accent"></div>
+              <div className="h-1.5 bg-warm-border"></div>
             </div>
 
             {/* ===== ID / DATE / DUE ROW - Compact ===== */}
@@ -1262,8 +1262,8 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
             {/* Content - Scrollable with flex-1 */}
             <div className="overflow-y-auto flex-1 px-5 py-4 bg-white space-y-4">
               
-              {/* ===== TOTAL AMOUNT DUE BANNER - the warm-accent band the estimate's Total uses ===== */}
-              <div className="bg-warm-accent rounded-lg px-5 py-3 text-center">
+              {/* ===== TOTAL AMOUNT DUE BANNER - the soft cream band, dark text, a warm-border rule ===== */}
+              <div className="bg-warm-accent-soft border border-warm-border rounded-lg px-5 py-3 text-center">
                 <p className="text-warm-text/70 text-[10px] uppercase tracking-wider mb-0.5">Total Amount Due</p>
                 <p className="text-warm-text text-2xl font-bold">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</p>
               </div>
@@ -1323,7 +1323,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                         href={selectedInvoice.paymentLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-accent text-warm-text text-sm font-semibold rounded-lg hover:bg-warm-accent-hover transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-accent-soft border border-warm-accent/60 text-warm-text text-sm font-semibold rounded-lg hover:bg-warm-accent/40 transition-colors"
                       >
                         <CreditCard className="w-4 h-4" />
                         Pay Now
@@ -1331,7 +1331,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                     )}
                     <button
                       onClick={() => { navigator.clipboard.writeText(selectedInvoice.paymentLink); }}
-                      className="px-3 py-2 border border-warm-accent text-[#8A6D12] text-sm font-medium rounded-lg hover:bg-warm-accent-soft transition-colors flex items-center gap-1"
+                      className="px-3 py-2 border border-warm-border bg-warm-accent-soft text-warm-text text-sm font-medium rounded-lg hover:bg-warm-accent/40 transition-colors flex items-center gap-1"
                       title="Copy Link"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1572,7 +1572,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                         <span className="font-semibold text-warm-text">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between bg-warm-accent px-3 py-2.5">
+                    <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
                       <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
                       <span className="text-base font-bold text-warm-text">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                     </div>

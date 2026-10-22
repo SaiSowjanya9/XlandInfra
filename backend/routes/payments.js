@@ -1852,12 +1852,13 @@ router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, re
     const { status } = req.body;
     const fpId = getFPScope(req);
     
-    // Validate status (exclude 'draft' - invoices start as sent when created)
-    const validStatuses = ['sent', 'paid', 'partially_paid', 'overdue', 'cancelled'];
+    // Workflow states only — 'paid'/'partially_paid' are money states that a payment row must
+    // produce; letting this route assert them writes a settlement no payment explains
+    const validStatuses = ['sent', 'overdue', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
       });
     }
     
@@ -1874,26 +1875,20 @@ router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, re
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
     
-    // A money status written here left payment_status, the amounts and paid_at behind — a
-    // manual 'paid' read paid on one column and pending on the other. Marking paid settles
-    // the row's own figures (the repair audit still flags it: amount_paid with no payment
-    // row is reported for review); 'partially_paid' syncs payment_status only; a non-money
-    // status touches nothing but status.
+    // A workflow status never rewinds a money state — marking a paid invoice 'sent'/'overdue'
+    // by hand would contradict payment_status; cancelled is still allowed on a settled invoice
+    // (a write-off), but it does not move the money fields back.
     await ensureInvoiceColumns();
-    let updateSql, updateParams;
-
-    if (status === 'paid') {
-      const paidAt = await paidAtAssignment('paid');
-      updateSql = `UPDATE invoices SET status = 'paid', payment_status = 'paid',
-        amount_paid = total_amount, balance_amount = 0, ${paidAt.sql} updated_at = NOW() WHERE id = ?`;
-      updateParams = [...paidAt.params, id];
-    } else if (status === 'partially_paid') {
-      updateSql = `UPDATE invoices SET status = 'partially_paid', payment_status = 'partially_paid', updated_at = NOW() WHERE id = ?`;
-      updateParams = [id];
-    } else {
-      updateSql = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?';
-      updateParams = [status, id];
+    const storedStatus = existing[0].status;
+    if (['paid', 'partially_paid'].includes(storedStatus) && status !== 'cancelled') {
+      return res.status(409).json({
+        success: false,
+        message: 'This invoice has recorded payments — its status follows the payments, not a manual change.'
+      });
     }
+
+    let updateSql = 'UPDATE invoices SET status = ?, updated_at = NOW() WHERE id = ?';
+    const updateParams = [status, id];
 
     if (fpId) {
       updateSql += ' AND franchise_partner_id = ?';
