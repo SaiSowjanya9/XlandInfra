@@ -498,7 +498,8 @@ const drawSummaryCard = (doc, y, { rows = [], total, caption = 'Price Summary', 
   });
 
   const totalY = y + capHeight + rows.length * rowHeight + 6;
-  doc.rect(x, totalY, width, totalHeight).fill(WARM.accent);
+  // Soft cream, not the solid tan: the same light-accent treatment the view modals carry
+  doc.rect(x, totalY, width, totalHeight).fillAndStroke(WARM.accentSoft, WARM.accent);
   doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.text)
      .text(String(total[0]).toUpperCase(), x + 10, totalY + 8.5, { characterSpacing: 1.4, lineBreak: false });
   doc.fontSize(10.5).font('Helvetica-Bold').fillColor(WARM.text)
