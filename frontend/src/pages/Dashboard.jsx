@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  AlertCircle, ArrowRight, Building2, Calendar, CalendarDays, Check, ChevronRight, ClipboardList,
+  AlertCircle, ArrowRight, Building2, Calendar, CalendarDays, Check, ClipboardList,
   Clock, Copy, CreditCard, FileText, HelpCircle, History, Image, Loader2, MapPin, Paperclip,
   RotateCcw, ThumbsDown, ThumbsUp, X
 } from 'lucide-react';
@@ -58,10 +58,28 @@ const ACTIVITY_TONES = {
 };
 
 const ACTIVITY_TYPES = {
-  work_order: { icon: ClipboardList, tile: 'bg-blue-50 border-blue-100 text-blue-600' },
-  payment: { icon: CreditCard, tile: 'bg-emerald-50 border-emerald-100 text-emerald-600' },
-  schedule: { icon: Calendar, tile: 'bg-violet-50 border-violet-100 text-violet-600' }
+  work_order: { icon: ClipboardList, tile: 'bg-blue-50 border-blue-100 text-blue-600', label: 'Work Order', action: 'View' },
+  payment: { icon: CreditCard, tile: 'bg-emerald-50 border-emerald-100 text-emerald-600', label: 'Payment', action: 'View Receipt' },
+  schedule: { icon: Calendar, tile: 'bg-violet-50 border-violet-100 text-violet-600', label: 'Schedule', action: 'View' }
 };
+
+/**
+ * The Work Orders panel's four figures.
+ *
+ * Pending and In Progress are separate tiles, so each reads a count that excludes the other --
+ * `stats.awaitingStart` and `stats.inProgress`, both grouped by the server. `stats.pending` is the
+ * older "everything unfinished" figure and counts in-progress work inside it, so using it here
+ * would report the same work order in two tiles.
+ */
+const WORK_ORDER_TILES = [
+  { key: 'total', label: 'Total', tone: 'bg-gray-50 border-gray-200 text-gray-900' },
+  { key: 'awaitingStart', label: 'Pending', tone: 'bg-amber-50 border-amber-200 text-amber-700' },
+  { key: 'inProgress', label: 'In Progress', tone: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { key: 'completed', label: 'Completed', tone: 'bg-green-50 border-green-200 text-green-700' }
+];
+
+// Whole rupees: an outstanding balance is read at a glance, and the paise are noise at this size.
+const formatCurrency = (value) => `₹${Math.round(Number(value) || 0).toLocaleString('en-IN')}`;
 
 /**
  * A `YYYY-MM-DD` value is a stored IST day and is parsed at local midnight, so it is displayed as
@@ -127,6 +145,11 @@ const Dashboard = ({ user }) => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
+  // The Work Orders panel's "View All" narrows the history to work orders rather than opening a
+  // page: WorkOrder.jsx is the raise form, so this table and its modal are where a customer reads
+  // their work orders at all.
+  const [activityType, setActivityType] = useState('all');
+  const [payments, setPayments] = useState({ outstanding: 0, pendingCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -191,6 +214,9 @@ const Dashboard = ({ user }) => {
       if (result.success) {
         setActivity(result.data.activity || []);
         setUpcomingVisits(result.data.upcomingVisits || []);
+        // Counted on the server over every invoice in scope, not totalled here from the slice
+        // above -- see the Payments panel.
+        setPayments(result.data.payments || { outstanding: 0, pendingCount: 0 });
       }
     } catch (err) {
       console.error('Activity fetch error:', err);
@@ -217,7 +243,9 @@ const Dashboard = ({ user }) => {
     fetchRenewals();
   }, [fetchDashboard, fetchRenewals]);
 
-  const activityLimit = activityExpanded ? 25 : 6;
+  // "View All" means the whole history, not a longer page of it: there is no activity page to send
+  // anyone to, so the table grows in place and scrolls. 100 is the route's ceiling.
+  const activityLimit = activityExpanded ? 100 : 6;
   useEffect(() => { fetchActivity(activityLimit); }, [fetchActivity, activityLimit]);
 
   // What the header's Refresh means on this page
@@ -319,6 +347,25 @@ const Dashboard = ({ user }) => {
   };
 
   const recentWorkOrders = dashboardData?.recentWorkOrders || [];
+  const stats = dashboardData?.stats;
+  const workOrderCounts = {
+    total: Number(stats?.total) || 0,
+    awaitingStart: Number(stats?.awaitingStart) || 0,
+    inProgress: Number(stats?.inProgress) || 0,
+    completed: Number(stats?.completed) || 0
+  };
+  const nextVisit = upcomingVisits[0];
+  const visibleActivity = activityType === 'all'
+    ? activity
+    : activity.filter((item) => item.type === activityType);
+
+  // The Work Orders panel's View All: the history table below, narrowed to work orders and showing
+  // all of it rather than the latest six.
+  const showWorkOrderHistory = () => {
+    setActivityType('work_order');
+    setActivityExpanded(true);
+  };
+
   const customer = dashboardData?.customer;
   const firstName = customer?.firstName || user?.firstName || 'Resident';
   const propertyCode = customer?.propertyCode || user?.propertyCode;
@@ -445,127 +492,247 @@ const Dashboard = ({ user }) => {
         </div>
       </section>
 
-      {/* Recent Activity + Upcoming Schedules. `items-start`, so the emptier of the two is only as
-          tall as what it holds -- a stretched panel is a column of white space pretending to be a
-          card, which is what the Contact page's "Need Help?" card used to be. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 items-start gap-4 sm:gap-5">
+      {/* Work Orders, the next visit and what is owed -- the three things a resident opens this
+          page to check. Each states its own figures; none of them restates another's. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-4 sm:gap-5">
         <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={History} title="Recent Activity">
-            {activity.length > 0 && (
+          <PanelHeader icon={ClipboardList} title="Work Orders">
+            {workOrderCounts.total > 0 && (
               <button
                 type="button"
-                onClick={() => setActivityExpanded(!activityExpanded)}
+                onClick={showWorkOrderHistory}
                 className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
               >
-                {activityExpanded ? 'Show Less' : 'View All'}
-                <ChevronRight className="w-3.5 h-3.5" />
+                View All
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </PanelHeader>
-
-          <div className="p-3 sm:p-4">
-            {activityLoading && activity.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
+          <div className="grid grid-cols-4 gap-2 p-3 sm:p-4">
+            {WORK_ORDER_TILES.map(({ key, label, tone }) => (
+              <div key={key} className={`rounded-lg border px-1.5 py-3 text-center ${tone}`}>
+                <span className="block text-xl font-bold leading-none">{workOrderCounts[key]}</span>
+                <span className="block mt-1 text-[11px] font-medium whitespace-nowrap">{label}</span>
               </div>
-            ) : activity.length === 0 ? (
-              <EmptyState
-                icon={ClipboardList}
-                title="No recent activity"
-                description="Your work orders, payments and updates will appear here once you start using the services."
-              />
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {activity.map((item) => {
-                  const type = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.work_order;
-                  const Icon = type.icon;
-                  return (
-                    <li key={item.key}>
-                      <button
-                        type="button"
-                        onClick={() => openActivity(item)}
-                        className="w-full text-left flex items-center gap-2 sm:gap-3 py-2.5 px-1 sm:px-2 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="w-16 sm:w-24 shrink-0 text-[11px] text-gray-500">{formatActivityDate(item.at)}</span>
-                        <span className={`w-8 h-8 shrink-0 rounded-lg border flex items-center justify-center ${type.tile}`}>
-                          <Icon className="w-4 h-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-gray-900 truncate">{item.title}</span>
-                          <span className="block text-xs text-gray-500 truncate">{item.subtitle}</span>
-                        </span>
-                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[item.tone] || ACTIVITY_TONES.neutral}`}>
-                          {item.statusLabel}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            ))}
           </div>
         </section>
 
+        {/* The next visit, and nothing behind it: the rest of the calendar is the Schedules page. */}
         <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
-          <PanelHeader icon={CalendarDays} title="Upcoming Schedules">
+          <PanelHeader icon={CalendarDays} title="Upcoming Schedule">
             <Link
               to="/dashboard/schedule"
               className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
             >
-              View Calendar
-              <ChevronRight className="w-3.5 h-3.5" />
+              View All
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </PanelHeader>
-
-          <div className="p-3 sm:p-4">
-            {activityLoading && upcomingVisits.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
+          <div className="p-3 sm:p-4 space-y-3">
+            {activityLoading && !nextVisit ? (
+              <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
               </div>
-            ) : upcomingVisits.length === 0 ? (
+            ) : !nextVisit ? (
               <EmptyState
                 icon={CalendarDays}
                 title="No upcoming schedules"
                 description="Any scheduled visits, maintenance or service appointments will be shown here."
               />
             ) : (
-              <ul className="divide-y divide-gray-100">
-                {upcomingVisits.map((visit) => {
-                  const day = visit.scheduledDate ? new Date(`${visit.scheduledDate}T00:00:00`) : null;
-                  return (
-                    <li key={visit.id}>
-                      <Link
-                        to="/dashboard/schedule"
-                        className="flex items-center gap-3 py-2.5 px-1 sm:px-2 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="w-12 shrink-0 py-1.5 text-center bg-gold-600/10 border border-gold-500/20 rounded-lg">
-                          <span className="block text-base font-bold leading-none text-gray-900">
-                            {day ? String(day.getDate()).padStart(2, '0') : '--'}
-                          </span>
-                          <span className="block mt-0.5 text-[10px] uppercase text-gray-500">
-                            {day ? day.toLocaleDateString('en-IN', { month: 'short' }) : ''}
-                          </span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-gray-900 truncate">{visit.serviceName}</span>
-                          <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{formatTimeRange(visit.scheduledTimeStart, visit.scheduledTimeEnd)}</span>
-                          </span>
-                        </span>
-                        <span className={`hidden sm:inline-block shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[visit.tone] || ACTIVITY_TONES.neutral}`}>
-                          {visit.statusLabel}
-                        </span>
-                        <ChevronRight className="w-4 h-4 shrink-0 text-gray-400" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3">
+                <span className="w-12 shrink-0 py-1.5 text-center bg-gold-600/10 border border-gold-500/20 rounded-lg">
+                  <span className="block text-base font-bold leading-none text-gray-900">
+                    {nextVisit.scheduledDate
+                      ? String(new Date(`${nextVisit.scheduledDate}T00:00:00`).getDate()).padStart(2, '0')
+                      : '--'}
+                  </span>
+                  <span className="block mt-0.5 text-[10px] uppercase text-gray-500">
+                    {nextVisit.scheduledDate
+                      ? new Date(`${nextVisit.scheduledDate}T00:00:00`).toLocaleDateString('en-IN', { month: 'short' })
+                      : ''}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-900 truncate">{nextVisit.serviceName}</span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{formatTimeRange(nextVisit.scheduledTimeStart, nextVisit.scheduledTimeEnd)}</span>
+                  </span>
+                </span>
+              </div>
             )}
+            <Link
+              to="/dashboard/schedule"
+              className="flex items-center justify-between gap-2 px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+            >
+              View Schedule
+              <ArrowRight className="w-4 h-4 text-gray-400" />
+            </Link>
+          </div>
+        </section>
+
+        {/* What is owed, counted on the server over every invoice in scope -- a total added up from
+            the activity slice above would under-report it, which is worse than showing nothing. */}
+        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
+          <PanelHeader icon={CreditCard} title="Payments">
+            <Link
+              to="/dashboard/payment"
+              className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
+            >
+              View All
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </PanelHeader>
+          <div className="p-3 sm:p-4">
+            <p className="text-sm text-gray-500">Outstanding Amount</p>
+            <p className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(payments.outstanding)}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {payments.pendingCount} Invoice{payments.pendingCount === 1 ? '' : 's'} Pending
+            </p>
+            <Link
+              to="/dashboard/payment"
+              className="mt-4 flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-gold-600/10 border border-gold-500/20 text-sm font-semibold text-gold-700 hover:bg-gold-600/15 transition-colors"
+            >
+              Make Payment
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </section>
       </div>
+
+      {/* Recent Activity. A table from `sm` up, as the agreed design draws it, and the same rows as
+          a list below that -- a five-column table on a phone is a horizontal scroll nobody reads.
+          "View All" shows the whole history in place, because there is no activity page. */}
+      <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
+        <PanelHeader icon={History} title="Recent Activity">
+          <div className="flex items-center gap-3 shrink-0">
+            {activityType !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setActivityType('all')}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-medium text-blue-700"
+                title="Show every kind of activity again"
+              >
+                {ACTIVITY_TYPES[activityType]?.label || activityType} only
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            {activity.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActivityExpanded(!activityExpanded)}
+                className="text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
+              >
+                {activityExpanded ? 'Show Less' : 'View All'}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </PanelHeader>
+
+        {activityLoading && activity.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
+          </div>
+        ) : visibleActivity.length === 0 ? (
+          <div className="p-3 sm:p-4">
+            <EmptyState
+              icon={ClipboardList}
+              title={activityType === 'all' ? 'No recent activity' : 'Nothing of this kind yet'}
+              description={activityType === 'all'
+                ? 'Your work orders, payments and updates will appear here once you start using the services.'
+                : 'Clear the filter above to see everything that has happened on your property.'}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Desktop: the agreed five columns. Capped in height once expanded so a long history
+                scrolls inside the card instead of burying the rest of the page. */}
+            <div className={`hidden sm:block ${activityExpanded ? 'max-h-[28rem] overflow-y-auto' : ''}`}>
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2.5">Date</th>
+                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2.5">Type</th>
+                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2.5">Details</th>
+                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2.5">Status</th>
+                    <th className="text-left text-xs font-medium text-gray-500 px-4 py-2.5">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {visibleActivity.map((item) => {
+                    const type = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.work_order;
+                    const Icon = type.icon;
+                    return (
+                      <tr key={item.key} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatActivityDate(item.at)}</td>
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-2 whitespace-nowrap">
+                            <span className={`w-7 h-7 shrink-0 rounded-md border flex items-center justify-center ${type.tile}`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="text-sm text-gray-700">{type.label}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 min-w-0">
+                          <span className="block text-sm text-gray-900 truncate max-w-[22rem]">{item.title}</span>
+                          {item.subtitle && (
+                            <span className="block text-xs text-gray-500 truncate max-w-[22rem]">{item.subtitle}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[item.tone] || ACTIVITY_TONES.neutral}`}>
+                            {item.statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => openActivity(item)}
+                            className="text-sm font-medium text-gold-600 hover:text-gold-500 whitespace-nowrap"
+                          >
+                            {type.action}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Below sm: the same rows, read as a list */}
+            <ul className={`sm:hidden divide-y divide-gray-100 px-3 ${activityExpanded ? 'max-h-[28rem] overflow-y-auto' : ''}`}>
+              {visibleActivity.map((item) => {
+                const type = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.work_order;
+                const Icon = type.icon;
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => openActivity(item)}
+                      className="w-full text-left flex items-center gap-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <span className={`w-8 h-8 shrink-0 rounded-lg border flex items-center justify-center ${type.tile}`}>
+                        <Icon className="w-4 h-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-gray-900 truncate">{item.title}</span>
+                        <span className="block text-xs text-gray-500">{formatActivityDate(item.at)}</span>
+                      </span>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[item.tone] || ACTIVITY_TONES.neutral}`}>
+                        {item.statusLabel}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </section>
 
       {/* Pending Renewals - the customer's own approval, so it stays on the home page */}
       {renewals.length > 0 && (

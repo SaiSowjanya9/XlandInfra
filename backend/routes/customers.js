@@ -1480,6 +1480,11 @@ router.get('/dashboard', async (req, res) => {
 
     const pendingCount = (stats?.pending || 0) + (stats?.under_review || 0) + (stats?.assigned || 0) + (stats?.in_progress || 0);
     const completedCount = (stats?.completed || 0) + (stats?.closed || 0);
+    // The home page shows Pending and In Progress as two tiles, so it needs "raised but not
+    // started" on its own -- `pending` above counts in_progress inside it, which would report the
+    // same work order twice across the row. Grouped here rather than in the browser so the rule
+    // has one home, like every other count this route answers.
+    const awaitingStartCount = (stats?.pending || 0) + (stats?.under_review || 0) + (stats?.assigned || 0);
 
     res.json({
       success: true,
@@ -1498,6 +1503,10 @@ router.get('/dashboard', async (req, res) => {
           pending: pendingCount,
           completed: completedCount,
           total: stats?.total || 0,
+          // Raised but not yet being worked on, and being worked on -- the home page's own two
+          // tiles. `pending` keeps its old meaning (everything unfinished) for existing callers.
+          awaitingStart: awaitingStartCount,
+          inProgress: stats?.in_progress || 0,
           byStatus: {
             pending: stats?.pending || 0,
             under_review: stats?.under_review || 0,
@@ -2924,8 +2933,11 @@ router.get('/schedules', authenticateCustomer, async (req, res) => {
 // home page fetch the same visits twice.
 router.get('/activity', authenticateCustomer, async (req, res) => {
   try {
-    // LIMIT cannot be bound in a prepared statement, so it is clamped and inlined
-    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 8, 1), 25);
+    // LIMIT cannot be bound in a prepared statement, so it is clamped and inlined. The ceiling is
+    // 100 because the home page's "View All" shows the whole history in place -- there is no
+    // activity page to page through -- and at 25 it was cutting a long-standing property's history
+    // off without saying so.
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 8, 1), 100);
     const customer = req.customer;
 
     const property = await resolveCustomerProperty(customer.propertyId, customer.propertyCode, customer.propertyName);
@@ -2979,11 +2991,30 @@ router.get('/activity', authenticateCustomer, async (req, res) => {
       )
       : [[]];
 
+    // What the home page's Payments panel states. Counted over *every* invoice in scope, not the
+    // recent slice read above -- an outstanding total that only added up the latest few would
+    // under-report what the customer owes, which is worse than showing nothing. Settled invoices
+    // carry no balance, so the sum is the outstanding amount by definition.
+    const [[owed]] = await pool.execute(
+      `SELECT
+         COUNT(*) AS pendingCount,
+         COALESCE(SUM(COALESCE(i.balance_amount, i.total_amount)), 0) AS outstanding
+       FROM invoices i
+       WHERE ${invoiceScope.sql}
+         AND i.status IS NOT NULL AND LOWER(i.status) <> 'draft'
+         AND COALESCE(i.balance_amount, i.total_amount) > 0`,
+      invoiceScope.params
+    );
+
     res.json({
       success: true,
       data: {
         activity: buildCustomerActivity({ workOrders, invoices, visits }, { limit }),
-        upcomingVisits: buildUpcomingVisits(visits, { limit: 4 })
+        upcomingVisits: buildUpcomingVisits(visits, { limit: 4 }),
+        payments: {
+          outstanding: parseFloat(owed?.outstanding) || 0,
+          pendingCount: Number(owed?.pendingCount) || 0
+        }
       }
     });
   } catch (error) {
