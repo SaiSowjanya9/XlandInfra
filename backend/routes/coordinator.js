@@ -15,6 +15,7 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sendCustomerActivationEmail } = require('../services/emailService');
+const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
 // Rate limiting for login endpoints
 const { loginRateLimiter } = require('../middleware/security');
 // Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
@@ -1623,16 +1624,18 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 
       let customerResult = null;
       let emailSent = false;
+      let accountLinked = false;
+      let emailNote = '';
       console.log('📧 [Coordinator] Creating customer - contactEmail:', contactEmail);
       if (contactEmail) {
         const tempPassword = generateTempPassword();
         const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-        
+
         const [existing] = await pool.query('SELECT id, is_activated FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
         console.log('📧 [Coordinator] Existing customer check:', existing.length > 0 ? 'Found' : 'New customer');
-        
+
         if (existing.length === 0) {
           [customerResult] = await pool.query(
             `INSERT INTO customer_accounts (
@@ -1642,7 +1645,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
             [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
               tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'coordinator']
           );
-          
+
           // Send activation email
           const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
           console.log('📧 [Coordinator] Sending activation email to:', contactEmail.toLowerCase());
@@ -1657,36 +1660,56 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
               propertyId: propertyIdGen
             });
             emailSent = emailResult.success;
+            emailNote = emailSent ? 'activation email sent' : 'activation email could not be sent';
             console.log('📧 [Coordinator] Email result:', emailResult);
           } catch (emailError) {
             console.error('📧 [Coordinator] Email sending failed:', emailError.message);
+            emailNote = 'activation email could not be sent';
           }
-        } else if (!existing[0].is_activated) {
-          // Resend activation email for inactive account
-          await pool.query(
-            `UPDATE customer_accounts 
-             SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
-             WHERE id = ?`,
-            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-          );
-          
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName,
-            propertyId: propertyIdGen
+        } else {
+          // The account exists and still points at the property that created it —
+          // attach this one first, then decide what to send.
+          accountLinked = await linkCustomerToProperty(pool, existing[0].id, {
+            propertyId: propertyResult.insertId, propertyCode: propertyIdGen, propertyName: communityName
           });
-          emailSent = emailResult.success;
+          if (!existing[0].is_activated) {
+            // Resend activation email for inactive account
+            await pool.query(
+              `UPDATE customer_accounts
+               SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
+               WHERE id = ?`,
+              [tempPasswordHash, activationToken, activationExpires, existing[0].id]
+            );
+
+            const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+            const emailResult = await sendCustomerActivationEmail({
+              email: contactEmail.toLowerCase(),
+              firstName: contactName,
+              tempPassword,
+              activationLink,
+              propertyName: communityName,
+              propertyId: propertyIdGen
+            });
+            emailSent = emailResult.success;
+            emailNote = emailSent ? 'activation email resent' : 'activation email could not be sent';
+          } else {
+            // Already activated: no credentials to re-issue — notify instead, but
+            // do not claim they were added if the link itself failed.
+            emailSent = accountLinked ? await notifyPropertyAdded({
+              email: contactEmail.toLowerCase(), firstName: contactName,
+              propertyName: communityName, propertyCode: propertyIdGen
+            }) : false;
+            emailNote = accountLinked
+              ? 'existing account linked' + (emailSent ? ' — notification email sent' : ' — notification email could not be sent')
+              : 'existing account could not be linked';
+          }
         }
       }
 
       res.status(201).json({
         success: true,
-        message: 'Property and customer created successfully' + (emailSent ? ', activation email sent' : ''),
-        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent }
+        message: 'Property and customer created successfully' + (emailNote ? ` — ${emailNote}` : ''),
+        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent, accountLinked, emailNote }
       });
     } else {
       const clientId = `CLT-${Date.now()}`;
@@ -1701,12 +1724,13 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
 
       // Create customer account and send activation email if email provided
       let emailSent = false;
+      let emailNote = '';
       if (email) {
         const tempPassword = generateTempPassword();
         const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-        
+
         const [existing] = await pool.query(
           'SELECT id, is_activated FROM customer_accounts WHERE email = ?', [email.toLowerCase()]
         );
@@ -1742,10 +1766,13 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
           } catch (emailError) {
             console.error('📧 Email resend failed:', emailError);
           }
+        } else {
+          // Already activated: no credentials to re-issue and no property to attach.
+          emailNote = 'contact already has a portal account';
         }
       }
 
-      res.json({ success: true, message: 'Customer created' + (emailSent ? ', activation email sent' : ''), data: { id: result.insertId, clientId, emailSent } });
+      res.json({ success: true, message: 'Customer created' + (emailSent ? ', activation email sent' : '') + (emailNote ? ` — ${emailNote}` : ''), data: { id: result.insertId, clientId, emailSent, emailNote } });
     }
   } catch (error) {
     console.error('Customer create error:', error);

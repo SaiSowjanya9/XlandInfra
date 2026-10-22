@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
 const { issueActivation } = require('../utils/customerActivation');
+const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
 const { fetchPartnerName } = require('../utils/franchisePartnerName');
 // Rate limiting for login and password reset endpoints
 const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../middleware/security');
@@ -231,20 +232,46 @@ router.post('/create', async (req, res) => {
 
     // Check if customer already exists
     const [existing] = await conn.execute(
-      'SELECT id, is_activated FROM customer_accounts WHERE email = ?',
+      'SELECT id, customer_id, is_activated FROM customer_accounts WHERE email = ?',
       [email.toLowerCase()]
     );
 
     if (existing.length > 0) {
-      // If already exists and activated, return error
+      // Already activated: this used to be a 400, which left the just-saved property
+      // with no portal access and the contact never told. Link the account to the
+      // property and notify instead -- their own password gets them in.
       if (existing[0].is_activated) {
-        await conn.rollback();
-        return res.status(400).json({
-          success: false,
-          message: 'A customer account with this email already exists and is active.'
+        if (!propertyId && !propertyCode) {
+          // Nothing to attach it to -- blanking property_id would unlink their
+          // current property, so keep the old refusal here.
+          await conn.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'A customer account with this email already exists and is active.'
+          });
+        }
+        const accountLinked = await linkCustomerToProperty(conn, existing[0].id, {
+          propertyId, propertyCode, propertyName
+        });
+        await conn.commit();
+
+        const emailSent = accountLinked ? await notifyPropertyAdded({
+          email: email.toLowerCase(), firstName,
+          propertyName, propertyCode
+        }) : false;
+
+        return res.json({
+          success: true,
+          message: 'Existing customer account linked to the property' + (emailSent ? ' — notification email sent' : ''),
+          data: {
+            customerId: existing[0].customer_id,
+            email: email.toLowerCase(),
+            emailSent,
+            accountLinked
+          }
         });
       }
-      
+
       // If exists but not activated, resend activation email
       const tempPassword = generateTempPassword();
       const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
@@ -252,9 +279,9 @@ router.post('/create', async (req, res) => {
       const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
       await conn.execute(
-        `UPDATE customer_accounts 
-         SET temp_password_hash = ?, 
-             activation_token = ?, 
+        `UPDATE customer_accounts
+         SET temp_password_hash = ?,
+             activation_token = ?,
              activation_expires = ?,
              first_name = COALESCE(?, first_name),
              last_name = COALESCE(?, last_name),
@@ -263,6 +290,12 @@ router.post('/create', async (req, res) => {
          WHERE id = ?`,
         [tempPasswordHash, activationToken, activationExpires, firstName, lastName, phone, existing[0].id]
       );
+
+      // A still-unactivated account found under a new property should activate into
+      // that property, not the stale one it was first created for.
+      if (propertyId || propertyCode) {
+        await linkCustomerToProperty(conn, existing[0].id, { propertyId, propertyCode, propertyName });
+      }
 
       await conn.commit();
 

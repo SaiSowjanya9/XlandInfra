@@ -151,7 +151,8 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
           email: contact.email,
           success: json.success,
           message: json.message,
-          customerId: json.data?.customerId
+          customerId: json.data?.customerId,
+          emailSent: json.data?.emailSent
         });
         
         if (json.success) {
