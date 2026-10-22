@@ -1237,6 +1237,14 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                           </td>
                           <td className="px-4 py-3.5 text-center status-dropdown-container" onClick={(e) => e.stopPropagation()}>
                             <div className="flex flex-col items-center gap-1 relative">
+                              {/* Paid / Partially Paid are money states — only a recorded payment may
+                                  produce them, so on a settled invoice the pill is a label, never a
+                                  control; and the menu itself offers workflow states only */}
+                              {['paid', 'partially_paid'].includes(invoice.status) ? (
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                  {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
+                                </span>
+                              ) : (
                               <button
                                 onClick={() => setShowStatusUpdate(showStatusUpdate === invoice.id ? null : invoice.id)}
                                 className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}
@@ -1245,12 +1253,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                                 {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
                                 <ChevronDown className="w-3 h-3" />
                               </button>
+                              )}
                               {/* Status Update Dropdown */}
                               {showStatusUpdate === invoice.id && (
                                 <div className="absolute top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
-                                  {Object.entries(STATUS_CONFIG)
-                                    .filter(([key]) => key !== 'draft') // Exclude draft - invoices start as sent
-                                    .map(([key, config]) => (
+                                  {['sent', 'overdue', 'cancelled']
+                                    .map((key) => ({ key, config: STATUS_CONFIG[key] }))
+                                    .map(({ key, config }) => (
                                     <button
                                       key={key}
                                       onClick={() => handleUpdateStatus(invoice.id, key)}
@@ -1264,7 +1273,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                                   ))}
                                 </div>
                               )}
-                              
+
                             </div>
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
@@ -1556,7 +1565,7 @@ const InvoiceDetailPanel = ({
             </button>
             {/* Centered logo and text - vertically aligned */}
             <div className="flex items-center justify-center gap-3">
-              <img src="/logo.webp" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
+              <img src="/logo.png" alt="XLAND INFRA" className="h-14 w-14 object-contain" />
               <div className="flex flex-col justify-center">
                 <h1 className="text-gray-900 text-sm font-bold tracking-wider leading-tight">XLAND INFRA</h1>
                 <div className="flex items-center gap-1 mt-0.5">
@@ -1568,7 +1577,7 @@ const InvoiceDetailPanel = ({
             </div>
           </div>
           {/* Warm divider - simple and proportional */}
-          <div className="h-1.5 bg-warm-accent"></div>
+          <div className="h-1.5 bg-warm-border"></div>
         </div>
 
         {/* ===== ID / DATE / DUE ROW - Compact ===== */}
@@ -1599,8 +1608,8 @@ const InvoiceDetailPanel = ({
         {/* Content - Scrollable with flex-1 */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4 bg-white">
           
-          {/* ===== TOTAL AMOUNT DUE BANNER - the warm-accent band the estimate's Total uses ===== */}
-          <div className="bg-warm-accent rounded-lg px-5 py-3 text-center">
+          {/* ===== TOTAL AMOUNT DUE BANNER - the soft cream band, dark text, a warm-border rule ===== */}
+          <div className="bg-warm-accent-soft border border-warm-border rounded-lg px-5 py-3 text-center">
             <p className="text-warm-text/70 text-[10px] uppercase tracking-wider mb-0.5">
               {invoice.status === 'partially_paid' ? 'Balance Due' : 'Total Amount Due'}
             </p>
@@ -1669,7 +1678,7 @@ const InvoiceDetailPanel = ({
                     href={invoice.paymentLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-accent text-warm-text text-sm font-semibold rounded-lg hover:bg-warm-accent-hover transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-accent-soft border border-warm-accent/60 text-warm-text text-sm font-semibold rounded-lg hover:bg-warm-accent/40 transition-colors"
                   >
                     <CreditCard className="w-4 h-4" />
                     Pay Now
@@ -1677,7 +1686,7 @@ const InvoiceDetailPanel = ({
                 )}
                 <button
                   onClick={() => { navigator.clipboard.writeText(invoice.paymentLink); }}
-                  className="px-3 py-2 border border-warm-accent text-[#8A6D12] text-sm font-medium rounded-lg hover:bg-warm-accent-soft transition-colors flex items-center gap-1"
+                  className="px-3 py-2 border border-warm-border bg-warm-accent-soft text-warm-text text-sm font-medium rounded-lg hover:bg-warm-accent/40 transition-colors flex items-center gap-1"
                   title="Copy Link"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -1954,7 +1963,7 @@ const InvoiceDetailPanel = ({
                     <span className="font-semibold text-warm-text">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between bg-warm-accent px-3 py-2.5">
+                <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
                   <span className="text-base font-bold text-warm-text">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
                 </div>
@@ -2005,7 +2014,7 @@ const InvoiceDetailPanel = ({
           <button
             onClick={(e) => { e.stopPropagation(); onRecordPayment(); }}
             disabled={invoice.balanceAmount <= 0}
-            className="px-5 py-2 bg-warm-accent text-warm-text rounded-lg text-sm font-medium hover:bg-warm-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 bg-warm-accent-soft border border-warm-accent/60 text-warm-text rounded-lg text-sm font-medium hover:bg-warm-accent/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Record Payment
           </button>
