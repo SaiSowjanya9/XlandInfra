@@ -643,6 +643,24 @@ shapes to avoid, both of which were on the customer portal:
   absent, so `/coordinator/billing/payments` and `…/payment-history` both answer 403 even though the
   routes and the sidebar entries exist. That predates this split; do not "fix" it by widening the
   role list without asking, since it is a permission decision.
+- **Every receipt email goes through `services/receiptEmail.js`.** The verify route, the manual
+  resend route and `recordRazorpayPayment`'s post-commit block all call `sendReceiptEmail()`, which
+  builds the PDF and HTML in one place — the two routes used to each carry a copy of the same body,
+  and a third ad-hoc nodemailer transport (reading `SMTP_*` where only `EMAIL_*` is set) is what
+  `EAUTH`-failed receipts in production. `sendEmail()` reports `{ success }` rather than throwing:
+  `payments.receipt_sent` is only written after `success: true`, so a failed send is loud in the
+  log and can be retried from the resend button. The Razorpay block sits after `connection.commit()`
+  and after the `alreadyRecorded` early-return — a retried webhook cannot send the receipt twice,
+  and an email failure can never roll back recorded money. `receipt_sent`/`receipt_sent_at` are in
+  `utils/paymentColumns.js`'s drift list because no migration ever created them.
+- **The customer portal has its own receipt routes** — `GET /api/customers/payments/:id/receipt`
+  and `…/receipt/pdf` — because the staff `/api/payments/:id/receipt` requires `canViewPayments`.
+  Ownership is checked through the payment's invoice with the same property/email rule as
+  `GET /customers/invoices/:id`, and only settled rows (`completed`/`paid`/`refunded`) get a
+  receipt: a `verification_pending` intent carries no money yet. The customer invoice modal renders
+  `invoice.payments` with a Receipt button per settled row, opening `CustomerReceiptModal` in
+  `frontend/src/pages/Payment.jsx`. Regression test:
+  `node --test backend/routes/paymentReceiptRoutes.test.js`.
 
 ## Half-Yearly Payments
 

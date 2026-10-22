@@ -35,7 +35,11 @@ const COLUMNS = {
   // Read by the payments list filter and written by PUT /payments/:id/archive; that route
   // used to run a bare ALTER on every request and swallow the error
   archived: 'TINYINT(1) NOT NULL DEFAULT 0',
-  archived_at: 'DATETIME NULL'
+  archived_at: 'DATETIME NULL',
+  // Written after every receipt email (verify, resend, Razorpay post-commit) so a second
+  // trigger can see it; no migration ever created them
+  receipt_sent: 'TINYINT(1) NOT NULL DEFAULT 0',
+  receipt_sent_at: 'DATETIME NULL'
 };
 
 // Members each ENUM must carry for the values the routes write. Existing members are kept;

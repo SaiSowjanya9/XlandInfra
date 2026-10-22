@@ -955,7 +955,165 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 };
 
 // Invoice Detail Modal Component
-const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
+// Stored payment methods as they read on a receipt — same map the staff portal uses
+const RECEIPT_METHOD_LABELS = {
+  razorpay: 'Card / Net Banking / UPI',
+  cash: 'Cash',
+  cheque: 'Cheque',
+  check: 'Cheque',
+  bank_transfer: 'Bank Transfer',
+  upi: 'UPI'
+};
+
+// The receipt lightbox: fetches GET /api/customers/payments/:id/receipt for a recorded payment
+const CustomerReceiptModal = ({ paymentDbId, onClose }) => {
+  const [receipt, setReceipt] = useState(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(true);
+  const [receiptError, setReceiptError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (!paymentDbId) return;
+    const load = async () => {
+      try {
+        const token = localStorage.getItem('customerToken');
+        const response = await fetch(`${API_BASE}/api/customers/payments/${paymentDbId}/receipt`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          setReceipt(result.data);
+        } else {
+          setReceiptError(result.message || 'Could not load the receipt');
+        }
+      } catch (err) {
+        setReceiptError('Could not load the receipt');
+      } finally {
+        setLoadingReceipt(false);
+      }
+    };
+    load();
+  }, [paymentDbId]);
+
+  const downloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`${API_BASE}/api/customers/payments/${paymentDbId}/receipt/pdf`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Receipt_${receipt?.paymentId || paymentDbId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setReceiptError('Could not download the receipt PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const amountPaid = parseFloat(receipt?.amount) || 0;
+  const invoiceTotal = receipt?.invoiceAmount != null ? parseFloat(receipt.invoiceAmount) : amountPaid;
+  const remaining = receipt?.balanceAmount != null ? parseFloat(receipt.balanceAmount) : 0;
+  const fullyPaid = remaining <= 0;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Payment Receipt</h2>
+              <p className="text-gold-600 text-sm">{receipt?.paymentId || ''}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {loadingReceipt ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-6 h-6 animate-spin text-gold-600" />
+            </div>
+          ) : receiptError ? (
+            <div className="text-center py-10 text-gray-500 text-sm">{receiptError}</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center pb-4 border-b border-gray-200">
+                <p className="text-sm text-gray-500">Amount Paid</p>
+                <p className="text-3xl font-bold text-gray-900">{formatCurrency(amountPaid)}</p>
+                <p className="text-xs text-gray-500 mt-1">{formatDate(receipt.paymentDate)}</p>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Invoice</span>
+                  <span className="text-gray-900 font-medium">{receipt.invoiceId || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Invoice Amount</span>
+                  <span className="text-gray-900">{formatCurrency(invoiceTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Remaining Balance</span>
+                  <span className={fullyPaid ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                    {fullyPaid ? '₹0' : formatCurrency(remaining)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment Method</span>
+                  <span className="text-gray-900">{RECEIPT_METHOD_LABELS[receipt.paymentMethod] || receipt.paymentMethod || '-'}</span>
+                </div>
+                {(receipt.transactionReference || receipt.referenceNumber) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Reference</span>
+                    <span className="text-gray-900">{receipt.transactionReference || receipt.referenceNumber}</span>
+                  </div>
+                )}
+                {receipt.status === 'refunded' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className="text-amber-600 font-medium">Refunded</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 bg-warm-page flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 transition-colors">
+            Close
+          </button>
+          {receipt && (
+            <button
+              onClick={downloadPdf}
+              disabled={downloading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 text-gray-900 font-semibold transition-all disabled:opacity-50"
+            >
+              {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              Download PDF
+            </button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
   if (!invoice) return null;
 
   const isPaid = invoice.status === 'paid' || invoice.balanceAmount <= 0;
@@ -1149,6 +1307,51 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay }) => {
               )}
             </div>
           </div>
+
+          {/* Payment History — every recorded payment on this invoice, with its receipt */}
+          {(invoice.payments || []).length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gold-600 mb-3">Payment History</h3>
+              <div className="bg-gray-100 rounded-xl border border-gray-200 divide-y divide-gray-200">
+                {invoice.payments.map(payment => {
+                  const settled = payment.status === 'paid' || payment.status === 'refunded';
+                  return (
+                    <div key={payment.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
+                      <div>
+                        <p className="text-gray-900 font-medium">{formatCurrency(payment.amount)}</p>
+                        <p className="text-gray-500 text-xs">
+                          {formatDate(payment.payment_date)} · {RECEIPT_METHOD_LABELS[payment.payment_method] || payment.payment_method || '-'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          payment.status === 'paid' ? 'bg-green-100 text-green-600'
+                          : payment.status === 'refunded' ? 'bg-amber-100 text-amber-600'
+                          : payment.status === 'verification_pending' ? 'bg-blue-100 text-blue-600'
+                          : 'bg-red-100 text-red-600'
+                        }`}>
+                          {payment.status === 'verification_pending' ? 'Awaiting Verification'
+                            : payment.status === 'refunded' ? 'Refunded'
+                            : payment.status === 'paid' ? 'Paid'
+                            : payment.status}
+                        </span>
+                        {/* Only a settled payment has a receipt — a pending intent is not one */}
+                        {settled && (
+                          <button
+                            onClick={() => onViewReceipt(payment.id)}
+                            className="flex items-center gap-1 text-xs font-medium text-gold-600 hover:text-gold-500 transition-colors"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            Receipt
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer with Actions */}
@@ -1186,6 +1389,8 @@ const Payment = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPaymentFlow, setShowPaymentFlow] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState(null);
+  // A receipt opens for a recorded payment's row id, not the invoice's
+  const [receiptPaymentId, setReceiptPaymentId] = useState(null);
 
   // Fetch invoices
   const fetchInvoices = useCallback(async () => {
@@ -1485,6 +1690,15 @@ const Payment = () => {
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
           onPay={handlePay}
+          onViewReceipt={setReceiptPaymentId}
+        />
+      )}
+
+      {/* Payment receipt lightbox — sits above the invoice modal */}
+      {receiptPaymentId && (
+        <CustomerReceiptModal
+          paymentDbId={receiptPaymentId}
+          onClose={() => setReceiptPaymentId(null)}
         />
       )}
 

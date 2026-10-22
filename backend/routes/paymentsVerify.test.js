@@ -42,7 +42,7 @@ test('the invoice settles through the shared resync — nothing is added to the 
 
 test('the receipt states the amount the verifier confirmed, not the requested amount', () => {
   // A verifier can correct the figure (amountReceived -> finalAmount); the receipt must show it
-  assert.match(routes, /const amountPaid = parseFloat\(finalAmount\)/,
+  assert.match(verifyBlock, /amount:\s*parseFloat\(finalAmount\)/,
     'the receipt still reads p.amount — a corrected verification emails the wrong figure');
 });
 
