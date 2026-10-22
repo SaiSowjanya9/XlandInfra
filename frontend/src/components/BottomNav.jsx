@@ -4,12 +4,18 @@ import { Calendar, ClipboardList, CreditCard, Home, HelpCircle, LogOut, MoreHori
 import Modal from './common/Modal';
 
 /**
- * The customer portal's bottom bar, locked to the bottom of the screen on a phone.
+ * The customer portal's bottom bar, locked to the bottom of the screen on a phone or a tablet.
  *
  * The four destinations a resident actually uses are one thumb-reach away on every page, which is
- * why they are here and not only on the home page. It is `md:hidden` on purpose: a bar pinned
- * across a 1440px window would be a phone pattern wearing a desktop's clothes, where the brand link
- * back to Home and its Quick Access cards are the way around.
+ * why they are here and not only on the home page.
+ *
+ * **It is `lg:hidden`, and the home page's Quick Access is `hidden lg:block` -- one pair, one
+ * breakpoint.** They are the same four destinations, so at any width where both showed the portal
+ * offered its navigation twice: a bar across the bottom and a column of cards saying the same
+ * thing. Below `lg` the bar is the navigation and the cards are gone; at `lg` and above the cards
+ * are, because a bar pinned across a 1440px window is a phone pattern wearing a desktop's clothes.
+ * Moving one of those classes without the other brings the duplication back, or leaves a width
+ * with no navigation at all.
  *
  * "More" is the fifth tab because a bar of five is the most that stays legible at 360px: it opens
  * the account itself -- who is signed in, the property, Contact / Help and Sign Out.
@@ -43,7 +49,7 @@ const BottomNav = ({ user, onLogout }) => {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Primary"
       >
@@ -75,9 +81,9 @@ const BottomNav = ({ user, onLogout }) => {
           onClose={() => setShowMore(false)}
           align="bottom"
           padding="p-3"
-          // `md:hidden` belongs to the overlay, not the card: hiding only the card at a width the
+          // `lg:hidden` belongs to the overlay, not the card: hiding only the card at a width the
           // bar itself is hidden at would leave a transparent `fixed inset-0` swallowing clicks.
-          overlayClassName="md:hidden"
+          overlayClassName="lg:hidden"
           className="max-w-md overflow-hidden"
           ariaLabelledBy="more-sheet-name"
         >
