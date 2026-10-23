@@ -520,15 +520,16 @@ desktop layout is the user's attached design and is the authority.
   slow one. It also bumps the bell, because the unread count is what a customer watches.
 - `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
   stay identical). Existing callers render byte-identically.
-- **The banner's artwork is the brand's own skyline mark, right-aligned, `hidden sm:block`.**
-  `frontend/src/assets/banner-art.webp` (1000×792, ~136KB) was downscaled with sharp from
-  `src/assets/LOGO 2.png` — the 6754×5351, 4.7MB source must never be shipped to the page. It sits
-  beside the greeting in the `flex items-center justify-between` row at `h-28 md:h-32 lg:h-36`, and
-  hides below `sm` where the text and the property chip need the width. It replaced a `Building2`
-  watermark and a slogan card that were removed earlier — the rule that survives from that removal
-  is **no stock photograph**: nothing is stored that depicts the customer's actual property, so the
-  only honest images are the brand's own. The soft blurred gold wash (`bg-gold-500/10 rounded-full
-  blur-3xl`) stays as the ambient decoration.
+- **The banner's image is a stock residential photo, `hidden sm:block`, masked into the right
+  third.** `frontend/src/assets/banner-property.webp` is a house exterior the user picked over the
+  brand mark (which was tried and rejected — do not put `LOGO 2.png` art back there). It renders
+  `absolute inset-y-0 right-0 h-full w-1/3 object-cover` behind the `relative p-5` content, with a
+  `mask-image: linear-gradient(to right, transparent, black 55%)` (plus the `-webkit-` prefix —
+  Tailwind does not auto-prefix arbitrary mask properties) so the photo's left edge melts into the
+  cream gradient rather than ending in a hard line. It hides below `sm` where the greeting and the
+  property chip need the width. An earlier `Building2` watermark and slogan card were removed on a
+  previous call and stay gone; the soft blurred gold wash (`bg-gold-500/10 rounded-full blur-3xl`)
+  stays as the ambient decoration behind the photo.
 
 ## Customer Portal Stat Rows
 
