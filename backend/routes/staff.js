@@ -164,56 +164,41 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 
     // Try database first
     try {
-      // First check users table
+      // One email can live in both tables with different passwords — collect every
+      // candidate and sign into whichever hash matches, instead of letting the
+      // first row found shadow the rest.
       const [users] = await pool.execute(
         `SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = 1`,
         [username, username]
       );
-      if (users.length > 0) {
-        user = users[0];
-        userType = 'user';
-        
-        // Verify password against stored hash
-        const isValidPassword = await bcrypt.compare(password, user.password_hash);
-        if (!isValidPassword) {
-          return res.status(401).json({
-            success: false,
-            message: 'Invalid credentials'
-          });
-        }
+      const [fpUsers] = await pool.execute(
+        `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = 1`,
+        [username, username]
+      );
 
-        // Update last login
+      const candidates = [];
+      if (users.length > 0) candidates.push({ row: users[0], type: 'user' });
+      if (fpUsers.length > 0) candidates.push({ row: fpUsers[0], type: 'franchise_partner' });
+
+      for (const c of candidates) {
+        if (c.row.password_hash && await bcrypt.compare(password, c.row.password_hash)) {
+          user = c.row;
+          userType = c.type;
+          break;
+        }
+      }
+
+      if (user) {
+        // Update last login in the table the matched identity lives in
         await pool.execute(
-          `UPDATE users SET last_login = NOW() WHERE id = ?`,
+          `UPDATE ${userType === 'user' ? 'users' : 'franchise_partners'} SET last_login = NOW() WHERE id = ?`,
           [user.id]
         );
-      }
-      
-      // If not found in users, check franchise_partners table
-      if (!user) {
-        const [fpUsers] = await pool.execute(
-          `SELECT * FROM franchise_partners WHERE (username = ? OR email = ?) AND is_active = 1`,
-          [username, username]
-        );
-        if (fpUsers.length > 0) {
-          user = fpUsers[0];
-          userType = 'franchise_partner';
-          
-          // Verify password against stored hash
-          const isValidPassword = await bcrypt.compare(password, user.password_hash);
-          if (!isValidPassword) {
-            return res.status(401).json({
-              success: false,
-              message: 'Invalid credentials'
-            });
-          }
-
-          // Update last login
-          await pool.execute(
-            `UPDATE franchise_partners SET last_login = NOW() WHERE id = ?`,
-            [user.id]
-          );
-        }
+      } else if (candidates.length > 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
       }
     } catch (dbError) {
       console.log('Database not available, using demo mode:', dbError.message);

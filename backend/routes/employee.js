@@ -34,6 +34,11 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     let user = null;
     let userSource = 'users';
 
+    // One email can exist in several identity tables — users AND franchise_partners
+    // and fp_employees — each with its own password. The first row found must not
+    // shadow the rest: collect every candidate and sign into whichever hash matches.
+    const candidates = [];
+
     // Search for user in users table (all roles) - case insensitive
     const [users] = await pool.query(
       `SELECT * FROM users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = 1`,
@@ -41,53 +46,53 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     );
 
     if (users.length > 0) {
-      user = users[0];
-      userSource = 'users';
-      console.log(`[Employee Login] Found user in users table: ${user.email}, role: ${user.role}`);
-      
+      const u = users[0];
+      console.log(`[Employee Login] Found user in users table: ${u.email}, role: ${u.role}`);
+
       // Also check fp_employees to get franchise_partner_id if not in users table
-      if (!user.franchise_partner_id) {
+      if (!u.franchise_partner_id) {
         const [fpEmpCheck] = await pool.query(
           `SELECT franchise_partner_id FROM fp_employees WHERE user_id = ? OR email = ? OR username = ?`,
-          [user.id, user.email, user.username || '']
+          [u.id, u.email, u.username || '']
         );
         if (fpEmpCheck.length > 0 && fpEmpCheck[0].franchise_partner_id) {
-          user.franchise_partner_id = fpEmpCheck[0].franchise_partner_id;
-          console.log(`[Employee Login] Merged FP ID from fp_employees: ${user.franchise_partner_id}`);
+          u.franchise_partner_id = fpEmpCheck[0].franchise_partner_id;
+          console.log(`[Employee Login] Merged FP ID from fp_employees: ${u.franchise_partner_id}`);
         }
       }
+      candidates.push({ user: u, source: 'users' });
     }
 
-    // If not found in users table, also check fp_employees table as fallback
-    if (!user) {
-      const [fpEmployees] = await pool.query(
-        `SELECT fe.*, fp.company_name as franchise_company_name 
-         FROM fp_employees fe
-         LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
-         WHERE (LOWER(fe.email) = ? OR LOWER(fe.username) = ?) AND fe.is_active = 1`,
-        [normalizedUsername, normalizedUsername]
-      );
+    // fp_employees is another identity source — linked users row and/or its own credentials
+    const [fpEmployees] = await pool.query(
+      `SELECT fe.*, fp.company_name as franchise_company_name 
+       FROM fp_employees fe
+       LEFT JOIN franchise_partners fp ON fe.franchise_partner_id = fp.id
+       WHERE (LOWER(fe.email) = ? OR LOWER(fe.username) = ?) AND fe.is_active = 1`,
+      [normalizedUsername, normalizedUsername]
+    );
 
-      if (fpEmployees.length > 0) {
-        const fpEmp = fpEmployees[0];
-        // Check if there's a corresponding user record via user_id
-        if (fpEmp.user_id) {
-          const [linkedUsers] = await pool.query(
-            `SELECT * FROM users WHERE id = ? AND is_active = 1`,
-            [fpEmp.user_id]
-          );
-          if (linkedUsers.length > 0) {
-            user = linkedUsers[0];
-            // IMPORTANT: Merge franchise_partner_id from fp_employees
-            user.franchise_partner_id = fpEmp.franchise_partner_id;
-            userSource = 'fp_employees_linked';
-            console.log(`[Employee Login] Found user via fp_employees link: ${user.email}, FP ID: ${user.franchise_partner_id}`);
-          }
+    if (fpEmployees.length > 0) {
+      const fpEmp = fpEmployees[0];
+      // Check if there's a corresponding user record via user_id
+      if (fpEmp.user_id) {
+        const [linkedUsers] = await pool.query(
+          `SELECT * FROM users WHERE id = ? AND is_active = 1`,
+          [fpEmp.user_id]
+        );
+        if (linkedUsers.length > 0 && !candidates.some(c => c.user.id === linkedUsers[0].id)) {
+          const linked = linkedUsers[0];
+          // IMPORTANT: Merge franchise_partner_id from fp_employees
+          linked.franchise_partner_id = fpEmp.franchise_partner_id;
+          candidates.push({ user: linked, source: 'fp_employees_linked' });
+          console.log(`[Employee Login] Found user via fp_employees link: ${linked.email}, FP ID: ${linked.franchise_partner_id}`);
         }
-        
-        // If still no user but fp_employee has password_hash, use that
-        if (!user && fpEmp.password_hash) {
-          user = {
+      }
+
+      // fp_employees can also carry its own credentials
+      if (fpEmp.password_hash) {
+        candidates.push({
+          user: {
             id: fpEmp.user_id || fpEmp.id,
             username: fpEmp.username,
             email: fpEmp.email,
@@ -98,14 +103,40 @@ router.post('/login', loginRateLimiter, async (req, res) => {
             franchise_partner_id: fpEmp.franchise_partner_id,
             must_change_password: false, // FP employees table doesn't have this
             is_active: fpEmp.is_active
-          };
-          userSource = 'fp_employees_direct';
-          console.log(`[Employee Login] Using fp_employees credentials directly: ${fpEmp.email}`);
-        }
+          },
+          source: 'fp_employees_direct'
+        });
+        console.log(`[Employee Login] fp_employees credentials candidate: ${fpEmp.email}`);
       }
     }
 
-    if (!user) {
+    // FP owners live in franchise_partners — the auto-detect portal must see them too,
+    // or an owner typing their correct password is told it does not exist.
+    const [fpOwners] = await pool.query(
+      `SELECT * FROM franchise_partners WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND is_active = 1`,
+      [normalizedUsername, normalizedUsername]
+    );
+    for (const fp of fpOwners) {
+      candidates.push({
+        user: {
+          id: fp.id,
+          fpId: fp.id,
+          username: fp.username,
+          email: fp.email,
+          password_hash: fp.password_hash,
+          first_name: fp.contact_person || fp.owner_name || fp.company_name,
+          last_name: '',
+          role: 'franchise_partner',
+          franchise_partner_id: fp.id,
+          must_change_password: fp.must_change_password,
+          is_active: fp.is_active
+        },
+        source: 'franchise_partner'
+      });
+      console.log(`[Employee Login] franchise_partner candidate: ${fp.email}`);
+    }
+
+    if (candidates.length === 0) {
       console.log(`[Employee Login] No user found for: ${normalizedUsername}`);
       return res.status(401).json({
         success: false,
@@ -113,18 +144,25 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // Verify password
-    if (!user.password_hash) {
-      console.log(`[Employee Login] No password hash found for user: ${user.email}`);
+    // Sign into whichever candidate's password actually matches
+    for (const c of candidates) {
+      if (c.user.password_hash && await bcrypt.compare(password, c.user.password_hash)) {
+        user = c.user;
+        userSource = c.source;
+        break;
+      }
+    }
+
+    if (!user && candidates.every(c => !c.user.password_hash)) {
+      console.log(`[Employee Login] No password hash found for: ${normalizedUsername}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials. Please contact your administrator.'
       });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      console.log(`[Employee Login] Invalid password for user: ${user.email}`);
+    if (!user) {
+      console.log(`[Employee Login] Invalid password for: ${normalizedUsername}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -141,9 +179,11 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // Update last login in users table if applicable
+    // Update last login in whichever table the matched identity lives in
     if (userSource === 'users' || userSource === 'fp_employees_linked') {
       await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+    } else if (userSource === 'franchise_partner') {
+      await pool.query('UPDATE franchise_partners SET last_login = NOW() WHERE id = ?', [user.id]);
     }
 
     // Check if user must change password
