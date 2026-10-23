@@ -29,6 +29,7 @@ import { useFP } from '../contexts/FPContext';
 import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -638,184 +639,102 @@ const AssignedVendors = ({ user }) => {
 
       {/* View Assignment Modal */}
       {viewAssignment && (
-        <Modal onClose={() => setViewAssignment(null)} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 bg-gray-50 rounded-t-xl flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">{viewAssignment.vendorName || viewAssignment.vendor_name || 'Vendor Details'}</h2>
-                <p className="text-sm text-gray-500 font-mono">{viewAssignment.vendorId || viewAssignment.vendor_code}</p>
-              </div>
-              <button onClick={() => setViewAssignment(null)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-5 overflow-y-auto">
+        <ViewModal
+          onClose={() => setViewAssignment(null)}
+          id={viewAssignment.vendorId || viewAssignment.vendor_code}
+          title={viewAssignment.vendorName || viewAssignment.vendor_name || 'Vendor Details'}
+          meta={[
+            { label: 'Assigned', value: formatDate(viewAssignment.assigned_at || viewAssignment.assignedDate) },
+          ]}
+          badge={
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+              viewAssignment.is_active !== false && viewAssignment.status !== 'removed'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-200 text-gray-600'
+            }`}>
+              {viewAssignment.is_active !== false && viewAssignment.status !== 'removed' ? 'Active' : 'Removed'}
+            </span>
+          }
+        >
               {/* Service & Location */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">Service Type</p>
+              <ViewSection title="Service Information">
+                <ViewGrid>
+                  <ViewField label="Service Type">
                     <span className="inline-flex items-center px-2 py-0.5 mt-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">
                       {viewAssignment.serviceType || viewAssignment.service_type || '-'}
                     </span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Verified</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.service_verified ? 'Yes' : 'No'}</p>
-                  </div>
-                </div>
-              </div>
+                  </ViewField>
+                  <ViewField label="Verified" value={viewAssignment.service_verified ? 'Yes' : 'No'} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Location */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.zone_name || viewAssignment.zone || viewAssignment.propertyZone || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Area</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.area || viewAssignment.areaName || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Location">
+                <ViewGrid>
+                  <ViewField label="Zone" value={viewAssignment.zone_name || viewAssignment.zone || viewAssignment.propertyZone} />
+                  <ViewField label="Area" value={viewAssignment.area || viewAssignment.areaName} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Vendor Details */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendor Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">Name</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendorName || viewAssignment.vendor_name || viewAssignment.owner_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Mobile</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_phone || viewAssignment.vendorPhone || viewAssignment.owner_mobile || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Email</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.vendor_email || viewAssignment.vendorEmail || viewAssignment.owner_email || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Aadhar</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.owner_aadhar || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Vendor Details">
+                <ViewGrid>
+                  <ViewField label="Name" value={viewAssignment.vendorName || viewAssignment.vendor_name || viewAssignment.owner_name} />
+                  <ViewField label="Mobile" value={viewAssignment.vendor_phone || viewAssignment.vendorPhone || viewAssignment.owner_mobile} />
+                  <ViewField label="Email" value={viewAssignment.vendor_email || viewAssignment.vendorEmail || viewAssignment.owner_email} />
+                  <ViewField label="Aadhar" value={viewAssignment.owner_aadhar} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Rate, Coverage & Working Hours */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate, Coverage & Working Hours</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-400">Rate Per Visit</p>
-                    <p className="text-sm font-medium text-gray-900">₹{viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Coverage Per Day</p>
-                    <p className="text-sm font-medium text-gray-900">{viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Working Hours</p>
-                    <p className="text-sm font-medium text-purple-700">{(viewAssignment.working_hours_from || viewAssignment.workingHoursFrom) && (viewAssignment.working_hours_to || viewAssignment.workingHoursTo) ? `${viewAssignment.working_hours_from || viewAssignment.workingHoursFrom} - ${viewAssignment.working_hours_to || viewAssignment.workingHoursTo}` : '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Rate, Coverage & Working Hours">
+                <ViewGrid cols={3}>
+                  <ViewField label="Rate Per Visit" value={`₹${viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}`} />
+                  <ViewField label="Coverage Per Day" value={viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0} />
+                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={(viewAssignment.working_hours_from || viewAssignment.workingHoursFrom) && (viewAssignment.working_hours_to || viewAssignment.workingHoursTo) ? `${viewAssignment.working_hours_from || viewAssignment.workingHoursFrom} - ${viewAssignment.working_hours_to || viewAssignment.workingHoursTo}` : '-'} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Manager Details */}
               {(viewAssignment.manager_name || viewAssignment.manager_mobile) && (
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div>
-                      <p className="text-xs text-gray-400">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Mobile</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_mobile || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.manager_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Manager / Primary Contact">
+                  <ViewGrid cols={3}>
+                    <ViewField label="Name" value={viewAssignment.manager_name} />
+                    <ViewField label="Mobile" value={viewAssignment.manager_mobile} />
+                    <ViewField label="Email" value={viewAssignment.manager_email} />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* POC Details */}
               {(viewAssignment.poc_name || viewAssignment.poc_mobile) && (
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div>
-                      <p className="text-xs text-gray-400">Name</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Mobile</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_mobile || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{viewAssignment.poc_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Point of Contact">
+                  <ViewGrid cols={3}>
+                    <ViewField label="Name" value={viewAssignment.poc_name} />
+                    <ViewField label="Mobile" value={viewAssignment.poc_mobile} />
+                    <ViewField label="Email" value={viewAssignment.poc_email} />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* Assigned Property */}
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assigned Property</h3>
-                <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+              <ViewSection title="Assigned Property">
+                <div className="bg-white rounded-lg p-3 border border-warm-border space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-blue-600" />
+                      <Building2 className="w-5 h-5 text-warm-accent-hover" />
                       <span className="font-medium text-gray-900">{viewAssignment.property_name || viewAssignment.propertyName || '-'}</span>
                     </div>
-                    <span className="text-xs font-mono bg-blue-100 text-blue-700 px-2 py-1 rounded">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
+                    <span className="text-xs font-mono bg-warm-accent-soft text-warm-text border border-warm-border px-2 py-1 rounded">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
-                    <div>
-                      <p className="text-xs text-gray-400">Property ID</p>
-                      <p className="text-sm font-mono text-gray-700">{viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Type</p>
-                      <p className="text-sm text-gray-700">{viewAssignment.property_type || viewAssignment.propertyType || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">City</p>
-                      <p className="text-sm text-gray-700">{viewAssignment.city || '-'}</p>
-                    </div>
-                  </div>
+                  <ViewGrid cols={3} className="mt-2">
+                    <ViewField label="Property ID" valueClassName="font-mono text-gray-700" value={viewAssignment.property_code || viewAssignment.propertyCode || viewAssignment.property_id || viewAssignment.propertyId} />
+                    <ViewField label="Type" value={viewAssignment.property_type || viewAssignment.propertyType} />
+                    <ViewField label="City" value={viewAssignment.city} />
+                  </ViewGrid>
                 </div>
-              </div>
-
-              {/* Assignment Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-3 border-t border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-400">Assigned Date</p>
-                  <p className="text-sm font-medium text-gray-900">{formatDate(viewAssignment.assigned_at || viewAssignment.assignedDate)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Status</p>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                    viewAssignment.is_active !== false && viewAssignment.status !== 'removed'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {viewAssignment.is_active !== false && viewAssignment.status !== 'removed' ? 'Active' : 'Removed'}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Vendor ID</p>
-                  <p className="text-sm font-mono text-gray-600">{viewAssignment.vendorId || viewAssignment.vendor_code || '-'}</p>
-                </div>
-              </div>
-            </div>
-          </Modal>
+              </ViewSection>
+        </ViewModal>
       )}
 
       {/* Remove Confirmation Modal */}

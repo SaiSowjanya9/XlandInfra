@@ -45,6 +45,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 // Service Type Icons mapping
 const SERVICE_ICONS = {
@@ -833,148 +834,81 @@ const FPVendors = ({ user }) => {
 
       {/* View Vendor Modal */}
       {viewVendor && (
-        <Modal onClose={() => setViewVendor(null)} className="max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="p-6 bg-gray-50 rounded-t-xl flex items-center justify-between flex-shrink-0">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">{viewVendor.ownerName || viewVendor.owner_name}</h2>
-                <p className="text-sm text-gray-500 font-mono">{viewVendor.vendorId || viewVendor.vendor_id}</p>
-              </div>
-              <button onClick={() => setViewVendor(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+        <ViewModal
+          onClose={() => setViewVendor(null)}
+          id={viewVendor.vendorId || viewVendor.vendor_id}
+          title={viewVendor.ownerName || viewVendor.owner_name}
+          meta={[
+            { label: 'Created', value: viewVendor.created_at ? formatDate(new Date(viewVendor.created_at)) : '-' },
+            { label: 'Created By', value: viewVendor.created_by_name || viewVendor.createdBy || '-' },
+          ]}
+          badge={
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+              viewVendor.serviceVerified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {viewVendor.serviceVerified ? 'Verified' : 'Unverified'}
+            </span>
+          }
+        >
               {/* Service Info */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Service Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Service Type</p>
-                    <p className="font-medium">{viewVendor.serviceType || viewVendor.service_type}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Verified</p>
-                    <p className="font-medium">{viewVendor.serviceVerified ? 'Yes' : 'No'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Service Information">
+                <ViewGrid>
+                  <ViewField label="Service Type" value={viewVendor.serviceType || viewVendor.service_type} />
+                  <ViewField label="Verified" value={viewVendor.serviceVerified ? 'Yes' : 'No'} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Location Info */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Zone</p>
-                    <p className="font-medium">{viewVendor.zone_name || viewVendor.zone || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Area</p>
-                    <p className="font-medium">{viewVendor.area || viewVendor.areaName || viewVendor.area_name || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Location">
+                <ViewGrid>
+                  <ViewField label="Zone" value={viewVendor.zone_name || viewVendor.zone} />
+                  <ViewField label="Area" value={viewVendor.area || viewVendor.areaName || viewVendor.area_name} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Rate, Coverage & Working Hours - Hidden for FP Manager */}
               {!isFPManager && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Rate, Coverage & Working Hours</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Rate Per Visit</p>
-                      <p className="font-medium">₹{viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Coverage Per Day</p>
-                      <p className="font-medium">{viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Working Hours</p>
-                      <p className="font-medium text-purple-700">{(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Rate, Coverage & Working Hours">
+                  <ViewGrid cols={3}>
+                    <ViewField label="Rate Per Visit" value={`₹${viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}`} />
+                    <ViewField label="Coverage Per Day" value={viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0} />
+                    <ViewField label="Working Hours" valueClassName="text-purple-700" value={(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'} />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* Vendor Details */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendor Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Name</p>
-                    <p className="font-medium">{viewVendor.ownerName || viewVendor.owner_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Mobile</p>
-                    <p className="font-medium">{viewVendor.owner_country_code || '+91'} {viewVendor.ownerMobile || viewVendor.owner_mobile || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium">{viewVendor.ownerEmail || viewVendor.owner_email || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Aadhar</p>
-                    <p className="font-medium">{viewVendor.ownerAadhar || viewVendor.owner_aadhar || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Vendor Details">
+                <ViewGrid>
+                  <ViewField label="Name" value={viewVendor.ownerName || viewVendor.owner_name} />
+                  <ViewField label="Mobile" value={`${viewVendor.owner_country_code || '+91'} ${viewVendor.ownerMobile || viewVendor.owner_mobile || '-'}`} />
+                  <ViewField label="Email" value={viewVendor.ownerEmail || viewVendor.owner_email} />
+                  <ViewField label="Aadhar" value={viewVendor.ownerAadhar || viewVendor.owner_aadhar} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Manager Details */}
               {(viewVendor.managerName || viewVendor.manager_name || viewVendor.managerMobile || viewVendor.manager_mobile) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Name</p>
-                      <p className="font-medium">{viewVendor.managerName || viewVendor.manager_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Mobile</p>
-                      <p className="font-medium">{viewVendor.manager_country_code || '+91'} {viewVendor.managerMobile || viewVendor.manager_mobile || '-'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Email</p>
-                      <p className="font-medium">{viewVendor.managerEmail || viewVendor.manager_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Manager / Primary Contact">
+                  <ViewGrid>
+                    <ViewField label="Name" value={viewVendor.managerName || viewVendor.manager_name} />
+                    <ViewField label="Mobile" value={`${viewVendor.manager_country_code || '+91'} ${viewVendor.managerMobile || viewVendor.manager_mobile || '-'}`} />
+                    <ViewField label="Email" value={viewVendor.managerEmail || viewVendor.manager_email} className="sm:col-span-2" />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* POC Details */}
               {(viewVendor.pocName || viewVendor.poc_name || viewVendor.pocMobile || viewVendor.poc_mobile) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Name</p>
-                      <p className="font-medium">{viewVendor.pocName || viewVendor.poc_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Mobile</p>
-                      <p className="font-medium">{viewVendor.poc_country_code || '+91'} {viewVendor.pocMobile || viewVendor.poc_mobile || '-'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Email</p>
-                      <p className="font-medium">{viewVendor.pocEmail || viewVendor.poc_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Point of Contact">
+                  <ViewGrid>
+                    <ViewField label="Name" value={viewVendor.pocName || viewVendor.poc_name} />
+                    <ViewField label="Mobile" value={`${viewVendor.poc_country_code || '+91'} ${viewVendor.pocMobile || viewVendor.poc_mobile || '-'}`} />
+                    <ViewField label="Email" value={viewVendor.pocEmail || viewVendor.poc_email} className="sm:col-span-2" />
+                  </ViewGrid>
+                </ViewSection>
               )}
-
-              {/* Created Info */}
-              <div className="pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-400">Created By</p>
-                    <p className="text-gray-600">{viewVendor.created_by_name || viewVendor.createdBy || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Created At</p>
-                    <p className="text-gray-600">{viewVendor.created_at ? formatDate(new Date(viewVendor.created_at)) : '-'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Modal>
+        </ViewModal>
       )}
     </div>
   );
