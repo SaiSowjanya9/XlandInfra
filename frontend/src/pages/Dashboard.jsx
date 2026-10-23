@@ -481,7 +481,7 @@ const Dashboard = ({ user }) => {
         <img
           src={bannerProperty}
           alt=""
-          className="hidden sm:block absolute inset-y-0 right-0 h-full w-1/3 object-cover object-[center_35%] [-webkit-mask-image:linear-gradient(to_right,transparent,black_55%)] [mask-image:linear-gradient(to_right,transparent,black_55%)]"
+          className="hidden sm:block absolute inset-y-0 right-0 h-full w-1/3 object-cover object-[65%_35%] [-webkit-mask-image:linear-gradient(to_right,transparent,black_55%)] [mask-image:linear-gradient(to_right,transparent,black_55%)]"
         />
         <div className="relative p-5">
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">Customer Portal</p>
