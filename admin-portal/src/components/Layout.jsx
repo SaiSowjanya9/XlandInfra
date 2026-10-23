@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { usePortalTitle } from '../utils/pageTitle';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -36,6 +37,7 @@ import {
 import { useState, useEffect } from 'react';
 
 const Layout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Admin Portal');
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

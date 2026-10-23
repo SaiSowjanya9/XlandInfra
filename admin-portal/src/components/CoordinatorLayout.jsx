@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePortalTitle } from '../utils/pageTitle';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ import {
 } from 'lucide-react';
 
 const CoordinatorLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Coordinator Portal');
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);

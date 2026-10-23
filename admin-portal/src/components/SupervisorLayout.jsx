@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePortalTitle } from '../utils/pageTitle';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ import {
 } from 'lucide-react';
 
 const SupervisorLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Supervisor Portal');
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);

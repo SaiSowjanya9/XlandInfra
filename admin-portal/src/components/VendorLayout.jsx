@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { usePortalTitle } from '../utils/pageTitle';
 import {
   LayoutDashboard,
   LogOut,
@@ -14,6 +15,7 @@ import {
 import { useState } from 'react';
 
 const VendorLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Vendor Portal');
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

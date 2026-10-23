@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { usePortalTitle } from '../utils/pageTitle';
 import { getAuthToken, safeStorage } from '../utils/safeStorage';
 import {
   LayoutDashboard,
@@ -48,6 +49,7 @@ import { useState, useEffect } from 'react';
 import { useFP } from '../contexts/FPContext';
 
 const EmployeeLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Employee Portal');
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
