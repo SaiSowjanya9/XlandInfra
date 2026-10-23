@@ -37,6 +37,18 @@ test('the three streams are merged into one list, newest first', () => {
   assert.ok(activity.every((item, i) => i === 0 || Date.parse(item.at) <= Date.parse(activity[i - 1].at)));
 });
 
+test('type narrows the feed to one stream, and filters before the limit is taken', () => {
+  // If the slice ran before the filter, a mixed feed whose newest item is a payment would come
+  // back empty here -- the Work Orders panel's Activity tab would say "no work orders" while one
+  // exists.
+  const activity = buildCustomerActivity({
+    workOrders: [workOrder('2026-10-10T06:00:00.000Z')],
+    invoices: [{ id: 7, invoice_id: 'INV-0021', status: 'paid', paid_at: '2026-10-15T06:00:00.000Z' }]
+  }, { today: TODAY, type: 'work_order', limit: 1 });
+
+  assert.deepEqual(activity.map(item => item.type), ['work_order']);
+});
+
 test('a visit is in exactly one panel: activity once it is over, upcoming until then', () => {
   const visits = [
     { id: 1, service_name: 'AC Maintenance', status: 'completed', scheduled_date: '2026-10-10' },

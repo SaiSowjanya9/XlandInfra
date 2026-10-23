@@ -436,10 +436,15 @@ desktop layout is the user's attached design and is the authority.
   and the property is already named on the banner chip directly above. Do not add a card that opens
   nothing — a link to a route that does not exist is the bug this repo keeps finding
   (`/fp/payments/history`, the old `?status=` stat cards).
-- **Work Orders' "View All" filters Recent Activity to work orders**; it does not navigate. The
-  portal has no work-order list — `WorkOrder.jsx` is the raise form — so that table and its modal
-  are where a customer reads their work orders at all. The filter shows as a dismissible chip in
-  the panel header, because a silently filtered table reads as a short one.
+- **The Work Orders panel is two tabs: Overview (the four tiles) and Activity (the orders
+  themselves).** The portal has no work-order list page — `WorkOrder.jsx` is the raise form — so
+  the Activity tab is where a customer reads their work orders: every work order, fetched on first
+  open from `GET /api/customers/activity?type=work_order&limit=100`, five rows as the preview and
+  the whole list inside a `max-h-72` scroll on "View All". The panel header's **"View All" opens
+  the Activity tab expanded** (and toggles to "Show Less" once there); it does not navigate and it
+  no longer filters Recent Activity — the type-chip filter on that table is gone with it. A row
+  opens the **work order modal on this page**, the same one Recent Activity uses, which remains
+  the only place a customer can read a work order's detail.
 - **No sentence under a title, anywhere in the customer portal.** Every descriptive sub-line is gone
   on the user's call: the four Quick Access cards' ("Raise and track maintenance requests for your
   property." and the rest), the Quick Access heading's own, the Recent Activity and Upcoming
@@ -464,8 +469,11 @@ desktop layout is the user's attached design and is the authority.
 - **One request serves both panels**: `GET /api/customers/activity`, merged by
   `backend/utils/customerActivity.js`, which owns the rule that splits them — **a visit is activity
   once it is over, and upcoming until then**, so no visit can show in both panels or in neither.
-  `node --test backend/utils/customerActivity.test.js` fails if that split stops being
-  complementary.
+  `?type=work_order|payment|schedule` narrows the merged feed to one stream — the Work Orders
+  panel's Activity tab uses it — and the filter runs **before** the limit slice, because a small
+  mixed feed could hold none of the asked-for kind while the record exists. An unknown value is
+  ignored. `node --test backend/utils/customerActivity.test.js` fails if that split stops being
+  complementary or the filter moves after the slice.
   - The route sends a **named tone** (`success`, `warning`, `info`, `danger`, `neutral`), never a
     colour, because Tailwind is scanned statically; `ACTIVITY_TONES` in `Dashboard.jsx` is where
     those five names become classes. A hex from the server renders as nothing.
@@ -512,11 +520,15 @@ desktop layout is the user's attached design and is the authority.
   slow one. It also bumps the bell, because the unread count is what a customer watches.
 - `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
   stay identical). Existing callers render byte-identically.
-- **The banner carries no illustration.** It had a `Building2` watermark and a glass card reading
-  "A better living experience together." — a drawing of somebody else's building, and a slogan, on
-  every resident's home page. Both are gone; the decoration is the **soft blurred gold wash** the
-  rest of the site uses (`bg-gold-500/10 rounded-full blur-3xl`), which is the one decorative idiom
-  this codebase already shares. Do not put a stock photograph there: no property image is stored.
+- **The banner's artwork is the brand's own skyline mark, right-aligned, `hidden sm:block`.**
+  `frontend/src/assets/banner-art.webp` (1000×792, ~136KB) was downscaled with sharp from
+  `src/assets/LOGO 2.png` — the 6754×5351, 4.7MB source must never be shipped to the page. It sits
+  beside the greeting in the `flex items-center justify-between` row at `h-28 md:h-32 lg:h-36`, and
+  hides below `sm` where the text and the property chip need the width. It replaced a `Building2`
+  watermark and a slogan card that were removed earlier — the rule that survives from that removal
+  is **no stock photograph**: nothing is stored that depicts the customer's actual property, so the
+  only honest images are the brand's own. The soft blurred gold wash (`bg-gold-500/10 rounded-full
+  blur-3xl`) stays as the ambient decoration.
 
 ## Customer Portal Stat Rows
 

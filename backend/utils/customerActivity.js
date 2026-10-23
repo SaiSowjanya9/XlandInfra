@@ -147,7 +147,7 @@ const isConcluded = row => CONCLUDED_VISIT.has(String(row.status || '').toLowerC
 
 const buildCustomerActivity = (
   { workOrders = [], invoices = [], visits = [] } = {},
-  { limit = 8, today = istToday() } = {}
+  { limit = 8, today = istToday(), type = null } = {}
 ) => {
   const items = [
     ...workOrders.map(workOrderActivity),
@@ -156,7 +156,11 @@ const buildCustomerActivity = (
     ...visits.filter(row => isConcluded(row) || dayOf(row.scheduled_date) < today).map(visitActivity)
   ];
 
+  // `type` narrows the merged feed to one stream (the Work Orders panel's Activity tab reads work
+  // orders only). It filters before the slice: a limited mixed feed would otherwise hold so few of
+  // the asked-for kind that the tab could come back empty while the order exists.
   return items
+    .filter(item => !type || item.type === type)
     .sort((a, b) => timeValue(b.at) - timeValue(a.at))
     .slice(0, Math.max(0, limit));
 };

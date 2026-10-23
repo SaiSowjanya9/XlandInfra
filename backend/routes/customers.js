@@ -3118,6 +3118,9 @@ router.get('/activity', authenticateCustomer, async (req, res) => {
     // activity page to page through -- and at 25 it was cutting a long-standing property's history
     // off without saying so.
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 8, 1), 100);
+    // `type` narrows the merged feed to one stream -- the Work Orders panel's Activity tab asks
+    // for `work_order`. An unknown value is ignored and the feed stays mixed.
+    const type = ['work_order', 'payment', 'schedule'].includes(req.query.type) ? req.query.type : null;
     const customer = req.customer;
 
     const property = await resolveCustomerProperty(customer.propertyId, customer.propertyCode, customer.propertyName);
@@ -3189,7 +3192,7 @@ router.get('/activity', authenticateCustomer, async (req, res) => {
     res.json({
       success: true,
       data: {
-        activity: buildCustomerActivity({ workOrders, invoices, visits }, { limit }),
+        activity: buildCustomerActivity({ workOrders, invoices, visits }, { limit, type }),
         upcomingVisits: buildUpcomingVisits(visits, { limit: 4 }),
         payments: {
           outstanding: parseFloat(owed?.outstanding) || 0,
