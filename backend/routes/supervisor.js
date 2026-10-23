@@ -110,25 +110,89 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    let user = null;
-    let userSource = null;
-    let franchisePartnerId = null;
-    let fpEmployeeId = null;
-
-    // First, try to find in users table (standalone supervisors)
+    // A supervisor's identity can live in users AND fp_employees, each with its own
+    // hash. Checking users first meant a stale users row rejected a correct
+    // fp_employees password. Collect every candidate — every users row, plus each
+    // fp_employees row's linked users row and own credentials — and sign into
+    // whichever hash matches.
+    const candidates = [];
     const [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'supervisor'`,
       [username, username]
     );
+    for (const u of users) candidates.push({ user: u, fpEmployeeId: null });
 
-    if (users.length > 0) {
-      user = users[0];
-      userSource = 'users';
-      franchisePartnerId = user.franchise_partner_id;
-      
-      // Look up corresponding fp_employees record for fpEmployeeId and franchisePartnerId
+    const [fpSupervisors] = await pool.query(
+      `SELECT fe.*, fe.id as employee_id
+       FROM fp_employees fe
+       WHERE (fe.username = ? OR fe.email = ?) AND fe.role IN ('supervisor', 'fp_supervisor')`,
+      [username, username]
+    );
+    for (const fpSup of fpSupervisors) {
+      if (fpSup.user_id) {
+        const [linkedUsers] = await pool.query(
+          `SELECT * FROM users WHERE id = ?`,
+          [fpSup.user_id]
+        );
+        if (linkedUsers.length > 0 && !candidates.some(c => c.user.id === linkedUsers[0].id)) {
+          linkedUsers[0].franchise_partner_id = linkedUsers[0].franchise_partner_id || fpSup.franchise_partner_id;
+          candidates.push({ user: linkedUsers[0], fpEmployeeId: fpSup.employee_id || fpSup.id });
+        }
+      }
+      if (fpSup.password_hash) {
+        candidates.push({
+          user: {
+            id: fpSup.user_id || fpSup.id,
+            username: fpSup.username,
+            email: fpSup.email,
+            password_hash: fpSup.password_hash,
+            first_name: fpSup.first_name,
+            last_name: fpSup.last_name,
+            role: 'supervisor',
+            franchise_partner_id: fpSup.franchise_partner_id,
+            is_active: fpSup.is_active !== false && fpSup.is_active !== 0
+          },
+          fpEmployeeId: fpSup.employee_id || fpSup.id
+        });
+      }
+    }
+
+    if (candidates.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    let user = null;
+    let fpEmployeeId = null;
+    let matchedInactive = false;
+    for (const c of candidates) {
+      if (c.user.password_hash && await bcrypt.compare(password, c.user.password_hash)) {
+        if (c.user.is_active) {
+          user = c.user;
+          fpEmployeeId = c.fpEmployeeId;
+          break;
+        }
+        matchedInactive = true;
+      }
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: matchedInactive
+          ? 'Account is inactive. Please contact your administrator to activate your account.'
+          : 'Invalid credentials'
+      });
+    }
+
+    let franchisePartnerId = user.franchise_partner_id || null;
+
+    // Look up the corresponding fp_employees record when the match didn't provide it
+    if (!fpEmployeeId) {
       const [fpCheck] = await pool.query(
         `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
         [user.email, user.username]
@@ -139,74 +203,6 @@ router.post('/login', loginRateLimiter, async (req, res) => {
           franchisePartnerId = fpCheck[0].franchise_partner_id;
         }
       }
-    }
-
-    // If not found, try fp_employees table (FP-created supervisors)
-    if (!user) {
-      const [fpSupervisors] = await pool.query(
-        `SELECT fe.*, fe.id as employee_id
-         FROM fp_employees fe
-         WHERE (fe.username = ? OR fe.email = ?) AND fe.role = 'supervisor'`,
-        [username, username]
-      );
-
-      if (fpSupervisors.length > 0) {
-        const fpSup = fpSupervisors[0];
-        fpEmployeeId = fpSup.employee_id || fpSup.id;
-        
-        // Check for linked user record
-        if (fpSup.user_id) {
-          const [linkedUsers] = await pool.query(
-            `SELECT * FROM users WHERE id = ?`,
-            [fpSup.user_id]
-          );
-          if (linkedUsers.length > 0) {
-            user = linkedUsers[0];
-            userSource = 'fp_employees_linked';
-            franchisePartnerId = fpSup.franchise_partner_id;
-          }
-        }
-
-        // If no linked user but fp_employee has password
-        if (!user && (fpSup.password_hash || fpSup.password)) {
-          user = {
-            id: fpSup.user_id || fpSup.id,
-            username: fpSup.username,
-            email: fpSup.email,
-            password_hash: fpSup.password_hash || fpSup.password,
-            first_name: fpSup.first_name,
-            last_name: fpSup.last_name,
-            role: 'supervisor',
-            is_active: fpSup.is_active !== false && fpSup.is_active !== 0
-          };
-          userSource = 'fp_employees_direct';
-          franchisePartnerId = fpSup.franchise_partner_id;
-          console.log('[Supervisor Login] Using fp_employees direct, FP:', franchisePartnerId, 'fpEmployeeId:', fpEmployeeId);
-        }
-      }
-    }
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        message: 'Account is inactive. Please contact your administrator to activate your account.'
-      });
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
     }
 
     console.log('[Supervisor Login] fpEmployeeId:', fpEmployeeId, 'franchisePartnerId:', franchisePartnerId);

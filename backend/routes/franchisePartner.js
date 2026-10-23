@@ -117,10 +117,14 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    const fp = fps[0];
-    const isValidPassword = await bcrypt.compare(password, fp.password_hash);
+    // More than one active row can share a username/email match — try each hash so
+    // an arbitrary first row can't shadow the account whose password was entered.
+    let fp = null;
+    for (const row of fps) {
+      if (row.password_hash && await bcrypt.compare(password, row.password_hash)) { fp = row; break; }
+    }
 
-    if (!isValidPassword) {
+    if (!fp) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'

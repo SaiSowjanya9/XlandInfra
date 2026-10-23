@@ -66,12 +66,14 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    const admin = admins[0];
+    // More than one active row can share a username/email match — try each hash so
+    // an arbitrary first row can't shadow the account whose password was entered.
+    let admin = null;
+    for (const row of admins) {
+      if (row.password_hash && await bcrypt.compare(password, row.password_hash)) { admin = row; break; }
+    }
 
-    // Verify password against stored hash
-    const isValidPassword = await bcrypt.compare(password, admin.password_hash);
-
-    if (!isValidPassword) {
+    if (!admin) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'

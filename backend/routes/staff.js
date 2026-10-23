@@ -177,8 +177,8 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       );
 
       const candidates = [];
-      if (users.length > 0) candidates.push({ row: users[0], type: 'user' });
-      if (fpUsers.length > 0) candidates.push({ row: fpUsers[0], type: 'franchise_partner' });
+      for (const u of users) candidates.push({ row: u, type: 'user' });
+      for (const f of fpUsers) candidates.push({ row: f, type: 'franchise_partner' });
 
       for (const c of candidates) {
         if (c.row.password_hash && await bcrypt.compare(password, c.row.password_hash)) {

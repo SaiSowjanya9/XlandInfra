@@ -45,8 +45,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       [normalizedUsername, normalizedUsername]
     );
 
-    if (users.length > 0) {
-      const u = users[0];
+    for (const u of users) {
       console.log(`[Employee Login] Found user in users table: ${u.email}, role: ${u.role}`);
 
       // Also check fp_employees to get franchise_partner_id if not in users table
@@ -72,8 +71,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       [normalizedUsername, normalizedUsername]
     );
 
-    if (fpEmployees.length > 0) {
-      const fpEmp = fpEmployees[0];
+    for (const fpEmp of fpEmployees) {
       // Check if there's a corresponding user record via user_id
       if (fpEmp.user_id) {
         const [linkedUsers] = await pool.query(

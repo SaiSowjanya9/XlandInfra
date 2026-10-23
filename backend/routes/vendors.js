@@ -64,10 +64,12 @@ router.post('/login', loginRateLimiter, async (req, res) => {
         [username, username, username]
       );
       if (vendors.length > 0) {
-        vendor = vendors[0];
-        
-        const isValidPassword = await bcrypt.compare(password, vendor.password_hash || '');
-        if (!isValidPassword) {
+        // Every row matching username/email/owner_email is a candidate — the first
+        // row MySQL returns must not shadow a sibling row whose hash actually matches.
+        for (const row of vendors) {
+          if (await bcrypt.compare(password, row.password_hash || '')) { vendor = row; break; }
+        }
+        if (!vendor) {
           const demoVendor = DEMO_VENDORS.find(v => v.username === username || v.email === username);
           if (!demoVendor || demoVendor.password !== password) {
             return res.status(401).json({
@@ -75,6 +77,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
               message: 'Invalid credentials'
             });
           }
+          vendor = vendors[0];
         }
 
         await pool.execute(

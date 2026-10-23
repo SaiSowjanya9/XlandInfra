@@ -162,10 +162,14 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    const resident = residents[0];
-    const isValidPassword = await bcrypt.compare(password, resident.password_hash);
+    // Try every matching row — a duplicate registered under the same email must not
+    // shadow the row whose hash actually matches the submitted password.
+    let resident = null;
+    for (const row of residents) {
+      if (row.password_hash && await bcrypt.compare(password, row.password_hash)) { resident = row; break; }
+    }
 
-    if (!isValidPassword) {
+    if (!resident) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
