@@ -137,6 +137,7 @@ function CustomerHome() {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
+    document.title = 'XLAND INFRA | Customer Portal';
   }, []);
 
   // Auto-slide for announcements

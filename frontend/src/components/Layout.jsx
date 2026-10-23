@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, LogOut, RefreshCw, User } from 'lucide-react';
 import DismissPanel from './common/DismissPanel';
@@ -101,7 +101,13 @@ const PortalHeader = ({ user, onLogout }) => {
   );
 };
 
-const Layout = ({ children, user, onLogout }) => (
+const Layout = ({ children, user, onLogout }) => {
+  // The SPA's <title> is the marketing site's — name the tab for what it is
+  useEffect(() => {
+    document.title = 'XLAND INFRA | Customer Portal';
+  }, []);
+
+  return (
   <PortalRefreshProvider>
     <div className="min-h-screen bg-warm-page flex flex-col">
       <PortalHeader user={user} onLogout={onLogout} />
@@ -116,6 +122,7 @@ const Layout = ({ children, user, onLogout }) => (
       <BottomNav user={user} onLogout={onLogout} />
     </div>
   </PortalRefreshProvider>
-);
+  );
+};
 
 export default Layout;

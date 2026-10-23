@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { usePortalTitle } from '../utils/pageTitle';
 import {
   ClipboardList,
   Calendar,
@@ -14,6 +15,7 @@ import {
 import { useState } from 'react';
 
 const CustomerLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Customer Portal');
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

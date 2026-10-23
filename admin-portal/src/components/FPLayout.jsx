@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { usePortalTitle } from '../utils/pageTitle';
 import {
   LayoutDashboard,
   Building2,
@@ -49,6 +50,7 @@ import { getAuthToken } from '../utils/safeStorage';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const FPLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('FP Portal');
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);

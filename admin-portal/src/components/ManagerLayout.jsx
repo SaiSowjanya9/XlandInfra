@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { usePortalTitle } from '../utils/pageTitle';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -48,6 +49,7 @@ import { getAuthToken } from '../utils/safeStorage';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ManagerLayout = ({ admin, onLogout, children }) => {
+  usePortalTitle('Manager Portal');
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
