@@ -661,10 +661,12 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    const customer = customers[0];
-
-    // Check if account is activated
-    if (!customer.is_activated) {
+    // One email can hold accounts on several properties. The row MySQL returns
+    // first is arbitrary, so an unactivated or differently-passworded duplicate
+    // must not shadow the account the user actually set a password on: prefer
+    // activated rows, then try each candidate's hash and sign into the match.
+    const activated = customers.filter(c => c.is_activated);
+    if (activated.length === 0) {
       return res.status(401).json({
         success: false,
         message: 'Your account has not been activated yet. Please check your email for the activation link.',
@@ -672,9 +674,10 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // Check if account is locked
-    if (customer.locked_until && new Date(customer.locked_until) > new Date()) {
-      const minutesLeft = Math.ceil((new Date(customer.locked_until) - new Date()) / 60000);
+    const unlocked = activated.filter(c => !(c.locked_until && new Date(c.locked_until) > new Date()));
+    if (unlocked.length === 0) {
+      const soonestUnlock = Math.min(...activated.map(c => new Date(c.locked_until).getTime()));
+      const minutesLeft = Math.ceil((soonestUnlock - Date.now()) / 60000);
       return res.status(401).json({
         success: false,
         message: `Account is temporarily locked. Please try again in ${minutesLeft} minutes.`,
@@ -682,12 +685,15 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, customer.password_hash);
-    
-    if (!isPasswordValid) {
-      // Increment login attempts
-      const attempts = (customer.login_attempts || 0) + 1;
+    let customer = null;
+    for (const c of unlocked) {
+      if (await bcrypt.compare(password, c.password_hash)) { customer = c; break; }
+    }
+
+    if (!customer) {
+      // Increment login attempts on the primary candidate
+      const primary = unlocked[0];
+      const attempts = (primary.login_attempts || 0) + 1;
       let lockUntil = null;
       
       if (attempts >= 5) {
@@ -698,7 +704,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
         `UPDATE customer_accounts 
          SET login_attempts = ?, locked_until = ?
          WHERE id = ?`,
-        [attempts, lockUntil, customer.id]
+        [attempts, lockUntil, primary.id]
       );
 
       return res.status(401).json({
