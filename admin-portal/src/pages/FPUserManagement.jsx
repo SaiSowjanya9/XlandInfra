@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import Modal from '../components/common/Modal';
@@ -756,18 +757,12 @@ const FPUserManagement = ({ user }) => {
 
       {/* View User Details Modal */}
       {viewingUser && (
-        <Modal className="w-full max-w-xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">User Details</h3>
-              <button
-                onClick={() => setViewingUser(null)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setViewingUser(null)}
+          maxWidth="max-w-xl"
+          title="User Details"
+        >
             
-            <div className="p-6 space-y-5">
+            <div className="space-y-4">
               {/* User Header */}
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-gray-100'} rounded-full flex items-center justify-center`}>
@@ -790,7 +785,7 @@ const FPUserManagement = ({ user }) => {
               </div>
 
               {/* Contact Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-warm-section rounded-lg p-4">
                 <h5 className="text-sm font-medium text-gray-900 mb-3">Contact Information</h5>
                 <div className="space-y-2">
                   <p className="text-sm text-gray-600 flex items-center gap-2">
@@ -807,7 +802,7 @@ const FPUserManagement = ({ user }) => {
               </div>
 
               {/* Role Description */}
-              <div className={`rounded-lg p-4 border ${FP_STAFF_ROLES[viewingUser.role]?.borderColor || 'border-gray-200'} ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-gray-50'}`}>
+              <div className={`rounded-lg p-4 border ${FP_STAFF_ROLES[viewingUser.role]?.borderColor || 'border-warm-border'} ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-warm-section'}`}>
                 <h5 className="text-sm font-medium text-gray-900 mb-2">Role Description</h5>
                 <p className="text-sm text-gray-600">
                   {FP_STAFF_ROLES[viewingUser.role]?.description || 'No description available'}
@@ -815,7 +810,7 @@ const FPUserManagement = ({ user }) => {
               </div>
 
               {/* Status & Actions */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between pt-4 border-t border-warm-border">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">Status:</span>
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
@@ -839,14 +834,15 @@ const FPUserManagement = ({ user }) => {
                   </button>
                   <button
                     onClick={() => setViewingUser(null)}
-                    className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-3 py-1.5 text-sm text-gray-600 border border-warm-border rounded-lg hover:bg-warm-section transition-colors"
                   >
                     Close
                   </button>
                 </div>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { shortDivision } from '../utils/fieldOptionsStore';
@@ -868,31 +869,19 @@ const CoordinatorProperties = ({ user }) => {
 
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
-        <Modal className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gray-900">{selectedProperty.name}</h2>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+        <ViewModal onClose={() => { setShowDetailsModal(false); setSelectedProperty(null); setPropertyEstimates([]); }}
+          maxWidth="max-w-3xl"
+          id={selectedProperty.property_id}
+          title={selectedProperty.name}
+          badge={<span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                     {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">{selectedProperty.property_id}</p>
-              </div>
-              <button
-                onClick={() => { setShowDetailsModal(false); setSelectedProperty(null); setPropertyEstimates([]); }}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+                  </span>}
+        >
 
-            <div className="p-5 space-y-4 overflow-y-auto">
+            <div className="space-y-4">
               {/* Property Information */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Information</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+              <ViewSection title="Property Information">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-warm-border bg-warm-section px-4 py-3">
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Zone</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.zone_name || '-'}</p>
@@ -933,15 +922,14 @@ const CoordinatorProperties = ({ user }) => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Gated Community Block Details */}
               {(['gated_community', 'GC', 'Gated Community'].some(t => 
                 selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
                 selectedProperty.entry_type === 'GC'
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Block Details</h3>
+                <ViewSection title="Block Details">
                   <div className="mb-3">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Blocks</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.number_of_blocks || 1}</p>
@@ -959,7 +947,7 @@ const CoordinatorProperties = ({ user }) => {
                               const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
-                                <div key={blockNum} className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div key={blockNum} className="px-4 py-3 bg-warm-section rounded-lg border border-warm-border">
                                   <div className="flex gap-4 mb-3">
                                     <div>
                                       <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Name</p>
@@ -970,7 +958,7 @@ const CoordinatorProperties = ({ user }) => {
                                       <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
                                     </div>
                                   </div>
-                                  <div className="pt-2 border-t border-gray-200">
+                                  <div className="pt-2 border-t border-warm-border">
                                     <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                                     {hasUnitTypes ? (
                                       <div className="flex flex-wrap gap-2">
@@ -993,7 +981,7 @@ const CoordinatorProperties = ({ user }) => {
                       return null;
                     } catch { return null; }
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Apartment Details */}
@@ -1001,9 +989,8 @@ const CoordinatorProperties = ({ user }) => {
                 selectedProperty.property_type?.toLowerCase() === t.toLowerCase() || 
                 selectedProperty.entry_type === 'APT'
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Apartment Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3 mb-3">
+                <ViewSection title="Apartment Details">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-warm-border bg-warm-section px-4 py-3 mb-3">
                     <div>
                       <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.block_na ? 'N/A' : (selectedProperty.block_info || '-')}</p>
@@ -1019,7 +1006,7 @@ const CoordinatorProperties = ({ user }) => {
                       const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                       return (
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="p-3 bg-warm-section rounded-lg border border-warm-border">
                           <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                           {hasUnitTypes ? (
                             <div className="flex flex-wrap gap-2">
@@ -1036,25 +1023,23 @@ const CoordinatorProperties = ({ user }) => {
                       );
                     } catch { return null; }
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Villa Details */}
               {(selectedProperty.property_type === 'villa' || selectedProperty.property_type === 'VILLA') && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Villa Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                <ViewSection title="Villa Details">
+                  <div className="rounded-lg border border-warm-border bg-warm-section px-4 py-3">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Villa Number</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Flat Details */}
               {(selectedProperty.property_type === 'flat' || selectedProperty.property_type === 'FLAT') && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Flat Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                <ViewSection title="Flat Details">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-warm-border bg-warm-section px-4 py-3">
                     <div>
                       <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Flat Number</p>
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.villa_plot_number || '-'}</p>
@@ -1064,24 +1049,22 @@ const CoordinatorProperties = ({ user }) => {
                       <p className="text-sm font-medium text-gray-900">{selectedProperty.flat_block_na ? 'N/A' : (selectedProperty.flat_block_info || '-')}</p>
                     </div>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Plot Details */}
               {(selectedProperty.property_type === 'plot' || selectedProperty.property_type === 'PLOT') && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Plot Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+                <ViewSection title="Plot Details">
+                  <div className="rounded-lg border border-warm-border bg-warm-section px-4 py-3">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Plot Number</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.plot_na ? 'N/A' : (selectedProperty.villa_plot_number || '-')}</p>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Address */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Address</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
+              <ViewSection title="Address">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-warm-border bg-warm-section px-4 py-3">
                   <div className="col-span-2 sm:col-span-3">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Street Address</p>
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.address || '-'}</p>
@@ -1103,11 +1086,10 @@ const CoordinatorProperties = ({ user }) => {
                     <p className="text-sm font-medium text-gray-900">{selectedProperty.zip_code || '-'}</p>
                   </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Property Location */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Location</h3>
+              <ViewSection title="Property Location">
                 <PropertyLocationDisplay 
                   location={{
                     lat: selectedProperty.mapLocation?.lat || selectedProperty.latitude,
@@ -1116,7 +1098,7 @@ const CoordinatorProperties = ({ user }) => {
                   }}
                   propertyName={selectedProperty.name || selectedProperty.community_name || 'Property'}
                 />
-              </div>
+              </ViewSection>
 
               {/* Contact Information */}
               {(() => {
@@ -1140,11 +1122,10 @@ const CoordinatorProperties = ({ user }) => {
                 if (contacts.length === 0) return null;
                 
                 return (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h3>
+                  <ViewSection title="Contact Information">
                     <div className="space-y-2">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                        <div key={index} className="bg-warm-section rounded-lg border border-warm-border px-4 py-3">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-blue-600">{index + 1}</span>
@@ -1175,16 +1156,15 @@ const CoordinatorProperties = ({ user }) => {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </ViewSection>
                 );
               })()}
 
               {/* Watchman Information - Only for GC and APT */}
               {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.property_type || '').toLowerCase()) ||
                ['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((selectedProperty.entry_type || '').toLowerCase())) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg px-4 py-3 border border-amber-100">
+                <ViewSection title="Watchman Information">
+                  <div className="bg-warm-accent-soft rounded-lg px-4 py-3 border border-warm-border">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       <div>
                         <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Name</p>
@@ -1202,7 +1182,7 @@ const CoordinatorProperties = ({ user }) => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Estimates Section */}
@@ -1212,12 +1192,12 @@ const CoordinatorProperties = ({ user }) => {
                   <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
                 </div>
                 {loadingEstimates ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <div className="bg-warm-section rounded-lg p-8 text-center">
                     <RefreshCw className="w-8 h-8 text-gray-400 mx-auto mb-3 animate-spin" />
                     <p className="text-sm text-gray-500">Loading estimates...</p>
                   </div>
                 ) : propertyEstimates.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <div className="bg-warm-section rounded-lg p-8 text-center">
                     <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No estimates for this property</p>
                     <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
@@ -1225,7 +1205,7 @@ const CoordinatorProperties = ({ user }) => {
                 ) : (
                   <div className="space-y-3">
                     {propertyEstimates.map((est) => (
-                      <div key={est.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div key={est.id} className="bg-white border border-warm-border rounded-lg p-4 hover:shadow-sm transition-shadow">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-mono text-sm text-gray-700">{est.estimate_id}</span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -1266,28 +1246,28 @@ const CoordinatorProperties = ({ user }) => {
                   <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
                 </div>
                 {loadingVendorAssignments ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-warm-section rounded-lg p-6 text-center">
                     <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
                     <p className="text-sm text-gray-500">Loading vendor assignments...</p>
                   </div>
                 ) : propertyVendorAssignments.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-warm-section rounded-lg p-6 text-center">
                     <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">No vendors assigned to this property</p>
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-warm-border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-purple-50 border-b border-purple-100">
+                      <thead className="bg-warm-accent-soft border-b border-purple-100">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Contact</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {propertyVendorAssignments.map((assignment, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
+                          <tr key={idx} className="hover:bg-warm-section">
                             <td className="px-4 py-3">
                               <span className="font-medium text-gray-900">
                                 {assignment.serviceType || assignment.service_type || 'General'}
@@ -1311,7 +1291,8 @@ const CoordinatorProperties = ({ user }) => {
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Assign Modal */}

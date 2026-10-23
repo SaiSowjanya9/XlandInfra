@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -2220,26 +2221,25 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
       {/* View Service Modal */}
       {viewAddon && (
-        <Modal padding="p-2 sm:p-4" className="w-full max-w-md max-h-[95vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Service Details</h3>
-              <button onClick={() => setViewAddon(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 sm:p-6 space-y-4">
+        <ViewModal onClose={() => setViewAddon(null)}
+          maxWidth="max-w-md"
+          title="Service Details"
+        >
+            <div className="space-y-4">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
                 <p className="text-lg font-semibold text-green-900">{decodeHtml(viewAddon.service_name)}</p>
                 <p className="text-sm text-green-600">{getPropertyTypeLabel(viewAddon.property_type)}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="bg-warm-section p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Frequency</p>
                   <p className="font-medium">{viewAddon.frequency_type}</p>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="bg-warm-section p-3 rounded-lg">
                   <p className="text-xs text-gray-500">No. of Visits</p>
                   <p className="font-medium">{viewAddon.frequency_count}</p>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="bg-warm-section p-3 rounded-lg">
                   <p className="text-xs text-gray-500">Billing Cycle</p>
                   <p className="font-medium">{viewAddon.billing_cycle || 'Monthly'}</p>
                 </div>
@@ -2249,13 +2249,14 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                 </div>
               </div>
               {viewAddon.description && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-warm-border pt-4">
                   <p className="text-xs text-gray-500 mb-1">Description</p>
                   <p className="text-sm text-gray-700">{decodeHtml(viewAddon.description)}</p>
                 </div>
               )}
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

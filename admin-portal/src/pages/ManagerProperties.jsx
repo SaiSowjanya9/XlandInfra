@@ -43,6 +43,7 @@ import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 const ManagerProperties = ({ user }) => {
   // Check if this is an FP-created Manager (has franchisePartnerId)

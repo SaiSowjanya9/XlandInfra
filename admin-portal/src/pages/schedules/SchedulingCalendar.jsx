@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -506,15 +507,12 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {showEventModal && selectedSchedule && (
-        <Modal align="top" onClose={() => setShowEventModal(false)} className="w-full max-w-lg overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Schedule Details</h2>
-              <button onClick={() => setShowEventModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setShowEventModal(false)}
+          title="Schedule Details"
+          align="top"
+        >
             
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               {/* Schedule ID & Status */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-blue-600 font-medium">{selectedSchedule.scheduleId}</span>
@@ -526,10 +524,9 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
               </div>
               
               {/* Title */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">{selectedSchedule.title}</h3>
+              <ViewSection title={selectedSchedule.title}>
                 <p className="text-sm text-gray-500 mt-1">{selectedSchedule.frequency}</p>
-              </div>
+              </ViewSection>
               
               {/* Details */}
               <div className="space-y-3 pt-2">
@@ -572,39 +569,18 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={() => setShowEventModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  const basePath = portalType === 'franchise' ? '/fp' : portalType === 'manager' ? '/manager' : '';
-                  navigate(`${basePath}/schedules/${selectedSchedule.id}`);
-                }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              >
-                View Details
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
 
       {/* Day Detail Modal */}
       {showEventModal && selectedDate && !selectedSchedule && (
-        <Modal align="top" onClose={() => { setShowEventModal(false); setSelectedDate(null); }} className="w-full max-w-lg overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Schedules for {formatDate(selectedDate)}
-              </h2>
-              <button onClick={() => { setShowEventModal(false); setSelectedDate(null); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+        <ViewModal onClose={() => { setShowEventModal(false); setSelectedDate(null); }}
+          title="Schedules for {formatDate(selectedDate)}"
+          align="top"
+        >
             
-            <div className="p-6 max-h-96 overflow-y-auto">
+            <div className="space-y-4">
               {getSchedulesForDate(selectedDate.getDate()).length === 0 ? (
                 <div className="text-center py-8">
                   <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -647,7 +623,8 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import {
   MapPin,
@@ -401,28 +402,13 @@ const ZoneManagement = () => {
 
       {/* View Employees Modal */}
       {viewEmployeesZone && (
-        <Modal onClose={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }} className="w-full max-w-lg max-h-[80vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Employees in {viewEmployeesZone.name}</h2>
-                <p className="text-sm text-gray-500">{getEmployeesInZone(viewEmployeesZone.name).length} employees assigned</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setShowAddEmployeeToZone(!showAddEmployeeToZone)} 
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Add Employee
-                </button>
-                <button onClick={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => { setViewEmployeesZone(null); setShowAddEmployeeToZone(false); }}
+          title="Employees in {viewEmployeesZone.name}"
+        >
 
             {/* Add Employee Section */}
             {showAddEmployeeToZone && (
-              <div className="px-4 py-3 border-b border-gray-200 bg-indigo-50">
+              <div className="px-4 py-3 border-b border-warm-border bg-indigo-50">
                 <p className="text-sm font-medium text-gray-700 mb-2">Select employee to add to {viewEmployeesZone.name}:</p>
                 {getEmployeesNotInZone(viewEmployeesZone.name).length === 0 ? (
                   <p className="text-sm text-gray-500">All employees are already assigned to this zone.</p>
@@ -461,7 +447,7 @@ const ZoneManagement = () => {
               ) : (
                 <div className="space-y-2">
                   {getEmployeesInZone(viewEmployeesZone.name).map((emp) => (
-                    <div key={emp.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={emp.id} className="flex items-center gap-3 p-3 bg-warm-section rounded-lg">
                       <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                         <span className="text-indigo-600 font-semibold text-sm">
                           {emp.name.charAt(0).toUpperCase()}
@@ -492,7 +478,8 @@ const ZoneManagement = () => {
                 </div>
               )}
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

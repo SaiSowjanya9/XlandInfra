@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -1463,17 +1464,12 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedSchedule && (
-        <Modal align="top" className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Schedule Details</h2>
-              <button
-                onClick={() => { setShowViewModal(false); setSelectedSchedule(null); }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <ViewModal onClose={() => { setShowViewModal(false); setSelectedSchedule(null); }}
+          maxWidth="max-w-2xl"
+          title="Schedule Details"
+          align="top"
+        >
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <div>
@@ -1534,7 +1530,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+            <div className="flex justify-end gap-3 p-6 border-t bg-warm-section">
               {permissions.canCancel && selectedSchedule.status !== 'completed' && selectedSchedule.status !== 'cancelled' && (
                 <button
                   onClick={() => { setShowViewModal(false); handleCancelClick(selectedSchedule); }}
@@ -1558,7 +1554,8 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 Close
               </button>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Cancel Schedule Modal */}

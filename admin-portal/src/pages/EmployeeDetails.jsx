@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 import {
@@ -547,47 +548,27 @@ const EmployeeDetails = () => {
 
       {/* View Employee Modal */}
       {viewEmployee && (
-        <Modal onClose={() => setViewEmployee(null)} className="w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <span className="text-indigo-600 font-bold text-lg">
-                    {(viewEmployee.fullName || viewEmployee.name)?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">{viewEmployee.fullName || viewEmployee.name}</h2>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-mono text-gray-500">{viewEmployee.employeeId}</p>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      EMPLOYEE_ROLES[viewEmployee.role]?.color || 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {EMPLOYEE_ROLES[viewEmployee.role]?.label || viewEmployee.roleLabel || 'Employee'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setViewEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
+        <ViewModal onClose={() => setViewEmployee(null)}
+          id={viewEmployee.employeeId}
+          title={viewEmployee.fullName || viewEmployee.name}
+        >
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-warm-section rounded-lg">
                   <Mail className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Email</p>
                     <p className="text-sm font-medium text-gray-900 truncate">{viewEmployee.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-warm-section rounded-lg">
                   <Phone className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Phone</p>
                     <p className="text-sm font-medium text-gray-900">{viewEmployee.phone || '-'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-warm-section rounded-lg">
                   <Calendar className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-500">Created</p>
@@ -596,7 +577,7 @@ const EmployeeDetails = () => {
                 </div>
               </div>
               <div className={`p-3 rounded-lg ${
-                hasZonesAssigned(viewEmployee) ? 'bg-emerald-50 border border-emerald-100' : 'bg-amber-50 border border-amber-100'
+                hasZonesAssigned(viewEmployee) ? 'bg-emerald-50 border border-emerald-100' : 'bg-warm-accent-soft border border-warm-border'
               }`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -626,7 +607,7 @@ const EmployeeDetails = () => {
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-warm-section rounded-lg">
                 <span className="text-sm text-gray-600">Status</span>
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                   viewEmployee.status === 'active'
@@ -637,7 +618,8 @@ const EmployeeDetails = () => {
                 </span>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Delete Confirmation Modal */}

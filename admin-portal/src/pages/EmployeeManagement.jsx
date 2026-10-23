@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import Modal from '../components/common/Modal';
@@ -729,17 +730,11 @@ const EmployeeManagement = () => {
 
       {/* View Employee Modal */}
       {viewingEmployee && (
-        <Modal className="w-full max-w-md">
-            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Employee Details</h3>
-              <button
-                onClick={() => setViewingEmployee(null)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
+        <ViewModal onClose={() => setViewingEmployee(null)}
+          maxWidth="max-w-md"
+          title="Employee Details"
+        >
+            <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className={`w-16 h-16 ${EMPLOYEE_ROLES[viewingEmployee.role]?.bgColor || 'bg-gray-100'} rounded-full flex items-center justify-center`}>
                   <span className={`text-xl font-bold ${EMPLOYEE_ROLES[viewingEmployee.role]?.textColor || 'text-gray-600'}`}>
@@ -754,7 +749,7 @@ const EmployeeManagement = () => {
                   </span>
                 </div>
               </div>
-              <div className="space-y-2 pt-4 border-t border-gray-200">
+              <div className="space-y-2 pt-4 border-t border-warm-border">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4 text-gray-400" />
                   <span>{viewingEmployee.email}</span>
@@ -778,7 +773,8 @@ const EmployeeManagement = () => {
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Delete Confirmation Modal */}

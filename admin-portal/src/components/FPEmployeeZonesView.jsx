@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from './common/ViewModal';
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Users, MapPin, Eye, X, RefreshCw, Search } from 'lucide-react';
@@ -163,20 +164,12 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
 
       {/* View Modal */}
       {showModal && selectedEmployee && (
-        <Modal className="max-w-lg w-full">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
-                <button
-                  onClick={() => { setShowModal(false); setSelectedEmployee(null); }}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => { setShowModal(false); setSelectedEmployee(null); }}
+          maxWidth="max-w-lg"
+          title="Employee Details"
+        >
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Name</p>
@@ -217,15 +210,8 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => { setShowModal(false); setSelectedEmployee(null); }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

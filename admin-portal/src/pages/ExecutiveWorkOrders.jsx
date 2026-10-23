@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
@@ -900,15 +901,13 @@ const ExecutiveWorkOrders = ({ user }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedWorkOrder && (
-        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
-                <p className="text-sm text-gray-500">{selectedWorkOrder.work_order_id}</p>
-              </div>
-              <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-4">
+        <ViewModal onClose={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
+          maxWidth="max-w-2xl"
+          id={selectedWorkOrder.work_order_id}
+          title="Work Order Details"
+          align="top"
+        >
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Work Order ID</p>
@@ -1029,7 +1028,7 @@ const ExecutiveWorkOrders = ({ user }) => {
                         <div
                           key={att.id}
                           onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
+                          className="border border-warm-border rounded-lg p-2 hover:bg-warm-section transition-colors group cursor-pointer"
                         >
                           {isImage ? (
                             <img
@@ -1076,12 +1075,8 @@ const ExecutiveWorkOrders = ({ user }) => {
                 </div>
               )}
             </div>
-            <div className="p-6 border-t border-gray-100">
-              <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
 
       {/* Completion Modal with Closing Notes */}

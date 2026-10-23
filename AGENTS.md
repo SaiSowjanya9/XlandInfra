@@ -746,6 +746,13 @@ page takeovers, transparent dropdown dismiss-catchers and sidebar backdrops.
 - A page announces its skin once with `<EstimateThemeProvider value="warm">` (see `FPEstimates`);
   everything below it, including dialogs rendered through portals, picks it up. An explicit `theme`
   prop still wins. Pages with no provider get the original look.
+- **Read-only "view details" dialogs go through `components/common/ViewModal.jsx`** (mirrored at
+  `frontend/src/components/common/ViewModal.jsx`) — the invoice view's chrome: the cream letterhead
+  (`ViewLetterhead`: logo + typeset name + warm rule), a white meta strip (`id`, `title`, right-hand
+  `meta` rows and `badge`), a scrollable white body and a Close footer (`actions` for extra buttons,
+  `footer={null}` to drop it). Sections inside are `ViewSection` cream cards holding `ViewField`
+  label/value pairs in a `ViewGrid`. Never hand-roll a grey `px-6 py-4` header or a `bg-gray-50`
+  detail card in a view modal again; edit and confirm dialogs stay on plain `Modal`.
 - Status and priority tints (`bg-blue-100 text-blue-700` for Sent and so on) stay as they are: they
   are how a state is read at a glance, and the warm palette has a single accent.
 

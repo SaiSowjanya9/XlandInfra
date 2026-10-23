@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -650,28 +651,20 @@ const CoordinatorEmployees = ({ user }) => {
 
       {/* Employee Details Modal */}
       {showDetailsModal && selectedEmployee && (
-        <Modal className="max-w-md w-full">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
-                <button onClick={() => setShowDetailsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => setShowDetailsModal(false)}
+          maxWidth="max-w-md"
+          title="Employee Details"
+        >
 
-            <div className="p-6 space-y-4">
-              <div className="text-center">
-                <h3 className="font-semibold text-lg text-gray-900">
-                  {selectedEmployee.name || selectedEmployee.first_name || ''}
-                </h3>
+            <div className="space-y-4">
+              <ViewSection title={selectedEmployee.name || selectedEmployee.first_name || ''} className="text-center">
                 <p className="text-sm text-gray-500">ID: {selectedEmployee.id}</p>
                 <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>
                   {selectedEmployee.role || 'Employee'}
                 </span>
-              </div>
+              </ViewSection>
 
-              <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="space-y-3 pt-4 border-t border-warm-border">
                 {selectedEmployee.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-400" />
@@ -698,7 +691,7 @@ const CoordinatorEmployees = ({ user }) => {
               </div>
 
               {/* Status */}
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-warm-border">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Status</span>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
@@ -710,27 +703,8 @@ const CoordinatorEmployees = ({ user }) => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-              {/* Zone Management Button - Hidden for FP Coordinator */}
-              {!isFPCoordinator && (
-                <button
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    openEditModal(selectedEmployee);
-                  }}
-                  className="px-4 py-2 text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50"
-                >
-                  Edit Employee
-                </button>
-              )}
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

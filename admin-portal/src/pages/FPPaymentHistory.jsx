@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import {
   Clock,
@@ -437,23 +438,13 @@ const FPPaymentHistory = ({ user }) => {
 
       {/* Payment Details Modal */}
       {viewPayment && (
-        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
-                  <p className="text-gray-500">{viewPayment.paymentId}</p>
-                </div>
-                <button
-                  onClick={() => setViewPayment(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => setViewPayment(null)}
+          maxWidth="max-w-2xl"
+          id={viewPayment.paymentId}
+          title="Payment Details"
+        >
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-4">
               {/* Amount & Status */}
               <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-6 text-white">
                 <p className="text-amber-100 text-sm mb-1">Amount Paid</p>
@@ -469,45 +460,45 @@ const FPPaymentHistory = ({ user }) => {
 
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Payment ID</p>
                   <p className="font-semibold text-gray-900">{viewPayment.paymentId}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Invoice ID</p>
                   <p className="font-semibold text-gray-900">{viewPayment.invoiceCode || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Estimate ID</p>
                   <p className="font-semibold text-gray-900">{viewPayment.estimateId || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Property ID</p>
                   <p className="font-semibold text-gray-900">{viewPayment.propertyCode || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Property Name</p>
                   <p className="font-semibold text-gray-900">{viewPayment.propertyName || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Customer Name</p>
                   <p className="font-semibold text-gray-900">{viewPayment.customerName || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Payment Method</p>
                   <p className="font-semibold text-gray-900">
                     {PAYMENT_METHOD_CONFIG[viewPayment.paymentMethod]?.label || viewPayment.paymentMethod}
                   </p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Transaction Reference</p>
                   <p className="font-semibold text-gray-900 font-mono">{viewPayment.transactionReference || '-'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Payment Date</p>
                   <p className="font-semibold text-gray-900">{formatDate(viewPayment.paymentDate)}</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Received By</p>
                   <p className="font-semibold text-gray-900">{viewPayment.receivedBy || '-'}</p>
                   {viewPayment.receivedByRole && (
@@ -518,7 +509,7 @@ const FPPaymentHistory = ({ user }) => {
 
               {/* Remarks */}
               {viewPayment.remarks && (
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-1">Remarks</p>
                   <p className="text-gray-900">{viewPayment.remarks}</p>
                 </div>
@@ -526,7 +517,7 @@ const FPPaymentHistory = ({ user }) => {
 
               {/* Payment Proof */}
               {viewPayment.paymentProofUrl && (
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="bg-warm-section rounded-xl p-4">
                   <p className="text-xs text-gray-500 uppercase mb-2">Payment Proof</p>
                   <a
                     href={`${API_BASE}${viewPayment.paymentProofUrl}`}
@@ -540,10 +531,10 @@ const FPPaymentHistory = ({ user }) => {
               )}
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <div className="flex gap-3 pt-4 border-t border-warm-border">
                 <button
                   onClick={() => setViewPayment(null)}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2.5 border border-warm-border rounded-xl text-gray-600 hover:bg-warm-section"
                 >
                   Close
                 </button>
@@ -560,7 +551,8 @@ const FPPaymentHistory = ({ user }) => {
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

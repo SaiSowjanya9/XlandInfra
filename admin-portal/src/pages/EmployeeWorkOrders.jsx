@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
 import { safeStorage, getAuthToken } from '../utils/safeStorage';
 import {
@@ -1646,21 +1647,14 @@ const EmployeeWorkOrders = ({ admin }) => {
 
       {/* Work Order Detail Modal */}
       {selectedOrder && !showEditModal && !showAssignModal && (
-        <Modal align="top" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Work Order Details</h2>
-                <p className="text-sm text-gray-500 font-mono">{selectedOrder.work_order_id}</p>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setSelectedOrder(null)}
+          maxWidth="max-w-2xl"
+          id={selectedOrder.work_order_id}
+          title="Work Order Details"
+          align="top"
+        >
 
-            <div className="p-5 space-y-5">
+            <div className="space-y-4">
               {/* Status and Actions */}
               <div className="flex items-center justify-between">
                 <span className={`px-3 py-1.5 text-sm font-semibold rounded-full border ${getStatusColor(selectedOrder.status)}`}>
@@ -1696,11 +1690,11 @@ const EmployeeWorkOrders = ({ admin }) => {
 
               {/* Customer/Resident Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3 min-w-0">
+                <div className="bg-warm-section rounded-lg p-3 min-w-0">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Customer Name</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_name || [selectedOrder.first_name, selectedOrder.last_name].filter(Boolean).join(' ') || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 min-w-0">
+                <div className="bg-warm-section rounded-lg p-3 min-w-0">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Email</p>
                   <p className="font-medium text-gray-900 mt-1 text-sm truncate" title={selectedOrder.customer_email || selectedOrder.email || 'N/A'}>
                     {selectedOrder.customer_email || selectedOrder.email || 'N/A'}
@@ -1709,11 +1703,11 @@ const EmployeeWorkOrders = ({ admin }) => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Phone</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.customer_phone || selectedOrder.phone || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Property ID</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.property_id || 'N/A'}</p>
                 </div>
@@ -1721,22 +1715,22 @@ const EmployeeWorkOrders = ({ admin }) => {
 
               {/* Location Details */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Property/Community</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.onboarded_property_name || selectedOrder.property_name || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Zone / Division</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.zone || 'N/A'} / {selectedOrder.division || 'N/A'}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Block</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.block || 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Flat/Unit</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.flat_number || selectedOrder.unit_number || 'N/A'}</p>
                 </div>
@@ -1744,11 +1738,11 @@ const EmployeeWorkOrders = ({ admin }) => {
 
               {/* Category Details */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Category</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.category_name}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-warm-section rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Subcategory</p>
                   <p className="font-medium text-gray-900 mt-1">{selectedOrder.subcategory_name}</p>
                 </div>
@@ -1757,17 +1751,17 @@ const EmployeeWorkOrders = ({ admin }) => {
               {/* Description */}
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Description</p>
-                <p className="p-3 bg-gray-50 rounded-lg text-gray-700">{selectedOrder.description || 'No description provided'}</p>
+                <p className="p-3 bg-warm-section rounded-lg text-gray-700">{selectedOrder.description || 'No description provided'}</p>
               </div>
 
               {/* Entry Permissions */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2 p-3 bg-warm-section rounded-lg">
                   <span className={`w-3 h-3 rounded-full ${selectedOrder.permission_to_enter === 'yes' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   <span className="text-sm text-gray-700">Permission to Enter: <strong>{selectedOrder.permission_to_enter || 'N/A'}</strong></span>
                 </div>
-                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                  <span className={`w-3 h-3 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-300'}`}></span>
+                <div className="flex items-center space-x-2 p-3 bg-warm-section rounded-lg">
+                  <span className={`w-3 h-3 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-warm-accent-soft0' : 'bg-gray-300'}`}></span>
                   <span className="text-sm text-gray-700">Has Pet: <strong>{selectedOrder.has_pet || 'N/A'}</strong></span>
                 </div>
               </div>
@@ -1776,12 +1770,12 @@ const EmployeeWorkOrders = ({ admin }) => {
               {selectedOrder.entry_notes && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Entry Notes</p>
-                  <p className="p-3 bg-amber-50 rounded-lg text-amber-800 text-sm">{selectedOrder.entry_notes}</p>
+                  <p className="p-3 bg-warm-accent-soft rounded-lg text-amber-800 text-sm">{selectedOrder.entry_notes}</p>
                 </div>
               )}
 
               {/* Timestamps */}
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-warm-border">
                 <div className="text-sm text-gray-500">
                   <span className="text-xs uppercase tracking-wider">Created:</span><br/>
                   {new Date(selectedOrder.created_at).toLocaleString()}
@@ -1817,17 +1811,17 @@ const EmployeeWorkOrders = ({ admin }) => {
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200 flex justify-end space-x-3">
+            <div className="p-5 border-t border-warm-border flex justify-end space-x-3">
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-warm-section transition-colors"
               >
                 Close
               </button>
               {(selectedOrder.status === 'closed' || selectedOrder.status === 'completed') && (
                 <button
                   onClick={() => updateStatus(selectedOrder.id, 'pending')}
-                  className="px-5 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center space-x-2"
+                  className="px-5 py-2.5 bg-warm-accent-soft0 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center space-x-2"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Revert to Pending</span>
@@ -1842,7 +1836,8 @@ const EmployeeWorkOrders = ({ admin }) => {
                 </button>
               )}
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Click outside to close dropdowns */}

@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -1588,21 +1589,16 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
 
       {/* View Schedule Modal */}
       {showScheduleModal && selectedSchedule && (
-        <Modal align="top" className="w-full max-w-lg">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Schedule Details</h2>
-              <button
-                onClick={() => {
+        <ViewModal onClose={() => {
                   setShowScheduleModal(false);
                   setSelectedSchedule(null);
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          maxWidth="max-w-lg"
+          title="Schedule Details"
+          align="top"
+        >
             
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Title</p>
@@ -1654,7 +1650,7 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                   <Edit3 className="w-4 h-4" />
                   Edit Schedule
                 </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-700">
+                <button className="flex items-center justify-center gap-2 px-4 py-2 border border-warm-border rounded-lg hover:bg-warm-section transition-colors text-gray-700">
                   <Copy className="w-4 h-4" />
                   Duplicate
                 </button>
@@ -1663,7 +1659,8 @@ const ScheduleService = ({ user, portalType = 'admin' }) => {
                 </button>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

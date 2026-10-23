@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -1693,22 +1694,16 @@ const FPWorkOrders = ({ user }) => {
 
       {/* Work Order Detail Modal */}
       {showDetailModal && selectedWorkOrder && (
-        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
-                  <p className="text-sm text-gray-500 mt-1">{selectedWorkOrder.work_order_id}</p>
-                </div>
-                <button onClick={() => { setShowDetailModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => { setShowDetailModal(false); setSelectedWorkOrder(null); }}
+          maxWidth="max-w-2xl"
+          id={selectedWorkOrder.work_order_id}
+          title="Work Order Details"
+          align="top"
+        >
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               {/* Customer Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-warm-section rounded-lg p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="min-w-0">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</p>
@@ -1846,7 +1841,7 @@ const FPWorkOrders = ({ user }) => {
                         <div
                           key={att.id}
                           onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
+                          className="border border-warm-border rounded-lg p-2 hover:bg-warm-section transition-colors group cursor-pointer"
                         >
                           {isImage ? (
                             <img
@@ -1893,11 +1888,11 @@ const FPWorkOrders = ({ user }) => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-warm-border">
                 {!selectedWorkOrder.assigned_vendor_id && selectedWorkOrder.status !== 'completed' && selectedWorkOrder.status !== 'cancelled' && (
                   <button
                     onClick={() => { setShowDetailModal(false); setShowAssignModal(true); }}
-                    className="px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50"
+                    className="px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-warm-accent-soft"
                   >
                     Assign Vendor
                   </button>
@@ -1916,14 +1911,15 @@ const FPWorkOrders = ({ user }) => {
                       setShowDetailModal(false);
                       setSelectedWorkOrder(null);
                     }}
-                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                    className="px-4 py-2 bg-warm-accent-soft0 text-white rounded-lg hover:bg-amber-600"
                   >
                     Revert to Pending
                   </button>
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Assign Vendor/Employee Modal */}
