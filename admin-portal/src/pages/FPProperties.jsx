@@ -52,6 +52,7 @@ import StaticMapView from '../components/common/StaticMapView';
 import PropertyLocationDisplay from '../components/common/PropertyLocationDisplay';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 const FPProperties = ({ user }) => {
   // Check if user is FP Manager (restricted access - view only)
@@ -1502,27 +1503,22 @@ const FPProperties = ({ user }) => {
       {/* View Details Modal */}
       {showDetailsModal && selectedProperty && (
         <EstimateThemeProvider value="warm">
-        <Modal align="top" className="max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-warm-section rounded-t-xl">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-warm-text">{selectedProperty.name}</h2>
-                  <span className="px-2.5 py-1 bg-warm-accent-soft text-warm-text rounded-full text-xs font-medium">
-                    {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
-                  </span>
-                </div>
-                <p className="text-sm text-warm-muted mt-1">{selectedProperty.property_id}</p>
-              </div>
-              <button
-                onClick={closeViewModal}
-                className="p-2 hover:bg-warm-accent-soft rounded-[10px] transition-colors"
-              >
-                <X className="w-5 h-5 text-warm-muted" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4 overflow-y-auto">
+        <ViewModal
+          align="top"
+          onClose={closeViewModal}
+          maxWidth="max-w-3xl"
+          id={selectedProperty.property_id}
+          title={selectedProperty.name}
+          meta={[
+            { label: 'Created', value: selectedProperty.created_at ? formatDate(new Date(selectedProperty.created_at)) : '-' },
+          ]}
+          badge={
+            <span className="px-2.5 py-1 bg-warm-accent-soft text-warm-text border border-warm-border rounded-full text-xs font-medium">
+              {selectedProperty.property_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
+            </span>
+          }
+        >
+            <div className="space-y-4">
               {/* Property Information */}
               <div>
                 <h3 className="text-sm font-semibold text-warm-text mb-2">Property Information</h3>
@@ -1984,7 +1980,7 @@ const FPProperties = ({ user }) => {
                 )}
               </div>
             </div>
-          </Modal>
+        </ViewModal>
         </EstimateThemeProvider>
       )}
 

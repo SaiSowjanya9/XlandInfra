@@ -22,6 +22,7 @@ import { useFP } from '../contexts/FPContext';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 // Category options for Properties (same as Onboarding)
 const PROPERTY_CATEGORIES = [
@@ -1047,53 +1048,61 @@ const Properties = () => {
 
       {/* View Property Modal - Clean Single View (FP Style) */}
       {viewProperty && !selectedEstimate && !showEditModal && (
-        <Modal align="top" onClose={handleClosePropertyView} className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gray-900">{viewProperty.name || viewProperty.community_name || 'Property'}</h2>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                    {getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">{viewProperty.property_id || viewProperty.propertyId}</p>
-              </div>
-              <button onClick={handleClosePropertyView} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+        <ViewModal
+          align="top"
+          onClose={handleClosePropertyView}
+          maxWidth="max-w-3xl"
+          id={viewProperty.property_id || viewProperty.propertyId}
+          title={viewProperty.name || viewProperty.community_name || 'Property'}
+          meta={[
+            { label: 'Created', value: formatDate(viewProperty.created_at || viewProperty.createdAt) },
+          ]}
+          badge={
+            <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+              {getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}
+            </span>
+          }
+          actions={
+            <>
+              {hasFullAccess && (
+                <button
+                  onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
+                  className="mr-auto flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+              {hasFullAccess && (
+                <button
+                  onClick={() => handleExportProperty(viewProperty)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" /> Export
+                </button>
+              )}
+              {hasFullAccess && (
+                <button
+                  onClick={() => openEditModal(viewProperty)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" /> Modify
+                </button>
+              )}
+            </>
+          }
+        >
               {/* Property Information */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Information</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Zone</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.zone_name || viewProperty.zone || viewProperty.zoneId || viewProperty.zone_id || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Area Name</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.area || viewProperty.area_name || viewProperty.areaName || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Division</p>
-                    <p className="text-sm font-medium text-gray-900">{shortDivision(viewProperty.division_name || viewProperty.division || viewProperty.division_id) || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Property Type</p>
-                    <p className="text-sm font-medium text-gray-900">{getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {(() => {
+              <ViewSection title="Property Information">
+                <ViewGrid cols={3}>
+                  <ViewField label="Zone" value={viewProperty.zone_name || viewProperty.zone || viewProperty.zoneId || viewProperty.zone_id} />
+                  <ViewField label="Area Name" value={viewProperty.area || viewProperty.area_name || viewProperty.areaName} />
+                  <ViewField label="Division" value={shortDivision(viewProperty.division_name || viewProperty.division || viewProperty.division_id)} />
+                  <ViewField label="Property Type" value={getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)} />
+                  <ViewField label="Total Units" value={(() => {
                         // First check direct total_units fields
                         const directTotal = viewProperty.total_units || viewProperty.totalUnits || viewProperty.number_of_units || viewProperty.numberOfUnits;
                         if (directTotal && parseInt(directTotal) > 0) return parseInt(directTotal);
-                        
+
                         // Fallback to calculating from units_per_block (for GC)
                         let unitsPerBlock = viewProperty.units_per_block || viewProperty.unitsPerBlock;
                         if (typeof unitsPerBlock === 'string') {
@@ -1104,26 +1113,17 @@ const Properties = () => {
                           if (total > 0) return total;
                         }
                         return '-';
-                      })()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Created Date</p>
-                    <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.created_at || viewProperty.createdAt)}</p>
-                  </div>
-                </div>
-              </div>
+                      })()} />
+                  <ViewField label="Created Date" value={formatDate(viewProperty.created_at || viewProperty.createdAt)} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Block Details - For GC */}
-              {(['gated_community', 'GC', 'Gated Community', 'gated community'].some(t => 
+              {(['gated_community', 'GC', 'Gated Community', 'gated community'].some(t =>
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Block Details</h3>
-                  <div className="mb-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Blocks</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_blocks || viewProperty.numberOfBlocks || 1}</p>
-                  </div>
+                <ViewSection title="Block Details">
+                  <ViewField label="Number of Blocks" value={viewProperty.number_of_blocks || viewProperty.numberOfBlocks || 1} className="mb-3" />
                   {(() => {
                     try {
                       const blockNames = typeof viewProperty.block_names === 'string' ? JSON.parse(viewProperty.block_names) : (viewProperty.block_names || viewProperty.blockNames || {});
@@ -1139,18 +1139,12 @@ const Properties = () => {
                               const unitTypes = blockUnitTypes[blockNum] || blockUnitTypes[String(blockNum)] || blockUnitTypes[blockName] || {};
                               const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                               return (
-                                <div key={blockNum} className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div key={blockNum} className="px-4 py-3 bg-white rounded-lg border border-warm-border">
                                   <div className="flex gap-4 mb-3">
-                                    <div>
-                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Name</p>
-                                      <p className="text-sm font-medium text-gray-900">{blockName}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Total Units</p>
-                                      <p className="text-sm font-medium text-gray-900">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0}</p>
-                                    </div>
+                                    <ViewField label="Block Name" value={blockName} />
+                                    <ViewField label="Total Units" value={unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} />
                                   </div>
-                                  <div className="pt-2 border-t border-gray-200">
+                                  <div className="pt-2 border-t border-warm-border">
                                     <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                                     {hasUnitTypes ? (
                                       <div className="flex flex-wrap gap-2">
@@ -1173,32 +1167,25 @@ const Properties = () => {
                       return null;
                     } catch { return null; }
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Apartment Details */}
-              {(['apartment', 'APT', 'Apartment'].some(t => 
+              {(['apartment', 'APT', 'Apartment'].some(t =>
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Apartment Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3 mb-3">
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.block_na ? 'N/A' : (viewProperty.block_info || viewProperty.blockInfo || '-')}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Number of Units</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.number_of_units || viewProperty.numberOfUnits || '-'}</p>
-                    </div>
-                  </div>
+                <ViewSection title="Apartment Details">
+                  <ViewGrid cols={3} className="mb-3">
+                    <ViewField label="Block Information" value={viewProperty.block_na ? 'N/A' : (viewProperty.block_info || viewProperty.blockInfo)} />
+                    <ViewField label="Number of Units" value={viewProperty.number_of_units || viewProperty.numberOfUnits} />
+                  </ViewGrid>
                   {(() => {
                     try {
                       const blockUnitTypes = typeof viewProperty.block_unit_types === 'string' ? JSON.parse(viewProperty.block_unit_types) : (viewProperty.block_unit_types || viewProperty.blockUnitTypes || {});
                       const unitTypes = blockUnitTypes['apt'] || blockUnitTypes['1'] || blockUnitTypes[1] || {};
                       const hasUnitTypes = Object.values(unitTypes).some(v => v > 0);
                       return (
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="p-3 bg-white rounded-lg border border-warm-border">
                           <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                           {hasUnitTypes ? (
                             <div className="flex flex-wrap gap-2">
@@ -1215,81 +1202,52 @@ const Properties = () => {
                       );
                     } catch { return null; }
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Villa Details */}
-              {(['villa', 'VILLA', 'Villa'].some(t => 
+              {(['villa', 'VILLA', 'Villa'].some(t =>
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Villa Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Villa Number</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
-                  </div>
-                </div>
+                <ViewSection title="Villa Details">
+                  <ViewField label="Villa Number" value={viewProperty.villa_plot_number || viewProperty.villaPlotNumber} />
+                </ViewSection>
               )}
 
               {/* Flat Details */}
-              {(['flat', 'FLAT', 'Flat'].some(t => 
+              {(['flat', 'FLAT', 'Flat'].some(t =>
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Flat Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Flat Number</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Block Information</p>
-                      <p className="text-sm font-medium text-gray-900">{viewProperty.flat_block_na ? 'N/A' : (viewProperty.flat_block_info || viewProperty.flatBlockInfo || '-')}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Flat Details">
+                  <ViewGrid cols={3}>
+                    <ViewField label="Flat Number" value={viewProperty.villa_plot_number || viewProperty.villaPlotNumber} />
+                    <ViewField label="Block Information" value={viewProperty.flat_block_na ? 'N/A' : (viewProperty.flat_block_info || viewProperty.flatBlockInfo)} />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* Plot Details */}
-              {(['plot', 'PLOT', 'Plot'].some(t => 
+              {(['plot', 'PLOT', 'Plot'].some(t =>
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase() === t.toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Plot Details</h3>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Plot Number</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.plot_na ? 'N/A' : (viewProperty.villa_plot_number || viewProperty.villaPlotNumber || '-')}</p>
-                  </div>
-                </div>
+                <ViewSection title="Plot Details">
+                  <ViewField label="Plot Number" value={viewProperty.plot_na ? 'N/A' : (viewProperty.villa_plot_number || viewProperty.villaPlotNumber)} />
+                </ViewSection>
               )}
 
               {/* Address */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Address</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 rounded-lg border border-gray-200 bg-gray-50/60 px-4 py-3">
-                  <div className="col-span-2 sm:col-span-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Street Address</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.address || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">City</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.city || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">State/Province</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.state || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">ZIP/Postal Code</p>
-                    <p className="text-sm font-medium text-gray-900">{viewProperty.postalCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Address">
+                <ViewGrid cols={3}>
+                  <ViewField label="Street Address" value={viewProperty.address} className="col-span-2 sm:col-span-3" />
+                  <ViewField label="City" value={viewProperty.city} />
+                  <ViewField label="State/Province" value={viewProperty.state} />
+                  <ViewField label="ZIP/Postal Code" value={viewProperty.postalCode || viewProperty.zip_code || viewProperty.postal_code} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Property Location */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Property Location</h3>
-                <PropertyLocationDisplay 
+              <ViewSection title="Property Location">
+                <PropertyLocationDisplay
                   location={{
                     lat: viewProperty.mapLocation?.lat || viewProperty.latitude,
                     lng: viewProperty.mapLocation?.lng || viewProperty.longitude,
@@ -1297,7 +1255,7 @@ const Properties = () => {
                   }}
                   propertyName={viewProperty.name || viewProperty.community_name || 'Property'}
                 />
-              </div>
+              </ViewSection>
 
               {/* Contact Information */}
               {(() => {
@@ -1305,12 +1263,12 @@ const Properties = () => {
                 let contacts = [];
                 try {
                   if (viewProperty.association_contacts) {
-                    contacts = typeof viewProperty.association_contacts === 'string' 
-                      ? JSON.parse(viewProperty.association_contacts) 
+                    contacts = typeof viewProperty.association_contacts === 'string'
+                      ? JSON.parse(viewProperty.association_contacts)
                       : viewProperty.association_contacts;
                   }
                 } catch { contacts = []; }
-                
+
                 // Fallback to single contact if no association_contacts
                 if (contacts.length === 0 && (viewProperty.contact_person || viewProperty.contact_email || viewProperty.contact_phone)) {
                   contacts = [{
@@ -1319,23 +1277,22 @@ const Properties = () => {
                     phone: viewProperty.contact_phone
                   }];
                 }
-                
+
                 // Also check contacts array directly
                 if (contacts.length === 0 && viewProperty.contacts && viewProperty.contacts.length > 0) {
                   contacts = viewProperty.contacts;
                 }
-                
+
                 if (contacts.length === 0) return null;
-                
+
                 return (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Contact Information</h3>
+                  <ViewSection title="Contact Information">
                     <div className="space-y-2">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg border border-gray-200 px-4 py-3">
+                        <div key={index} className="bg-white rounded-lg border border-warm-border px-4 py-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                            <div className="w-6 h-6 bg-warm-accent-soft rounded-full flex items-center justify-center border border-warm-border">
+                              <span className="text-xs font-medium text-warm-accent-hover">{index + 1}</span>
                             </div>
                             <span className="text-xs text-gray-500">Contact {index + 1}</span>
                           </div>
@@ -1363,7 +1320,7 @@ const Properties = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </ViewSection>
                 );
               })()}
 
@@ -1371,18 +1328,10 @@ const Properties = () => {
               {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes(
                 (viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type || '').toLowerCase()
               )) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg px-4 py-3 border border-amber-100">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                      <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Name</p>
-                        <p className="text-sm font-medium text-gray-900">{viewProperty.watchman_name || viewProperty.watchmanName || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-0.5">Watchman Contact</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {(() => {
+                <ViewSection title="Watchman Information">
+                  <ViewGrid>
+                    <ViewField label="Watchman Name" value={viewProperty.watchman_name || viewProperty.watchmanName || 'N/A'} />
+                    <ViewField label="Watchman Contact" value={(() => {
                             const contact = viewProperty.watchman_contact || viewProperty.watchmanContact;
                             if (!contact) return 'N/A';
                             // Format: +91 followed by space and number
@@ -1390,32 +1339,22 @@ const Properties = () => {
                               return `+91 ${contact.slice(3)}`;
                             }
                             return contact.startsWith('+') ? contact : `+91 ${contact}`;
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                          })()} />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* Additional Notes */}
               {viewProperty.notes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Additional Notes</h3>
-                  <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
-                  </div>
-                </div>
+                <ViewSection title="Additional Notes">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
+                </ViewSection>
               )}
 
               {/* Estimates Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
-                </div>
+              <ViewSection title={`Estimates (${propertyEstimates.length})`} icon={FileText}>
                 {propertyEstimates.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <div className="bg-white rounded-lg p-8 text-center border border-warm-border">
                     <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No estimates for this property</p>
                     <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
@@ -1423,7 +1362,7 @@ const Properties = () => {
                 ) : (
                   <div className="space-y-3">
                     {propertyEstimates.map((estimate) => (
-                      <div key={estimate.estimateId || estimate.estimate_id || estimate.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div key={estimate.estimateId || estimate.estimate_id || estimate.id} className="bg-white border border-warm-border rounded-lg p-4 hover:shadow-sm transition-shadow">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-mono text-sm text-gray-700">{estimate.estimateId || estimate.estimate_id}</span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -1455,37 +1394,33 @@ const Properties = () => {
                     ))}
                   </div>
                 )}
-              </div>
+              </ViewSection>
 
               {/* Assigned Vendors Section - Read Only */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Truck className="w-4 h-4 text-purple-500" />
-                  <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
-                </div>
+              <ViewSection title="Assigned Vendors" icon={Truck}>
                 {loadingVendorAssignments ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-white rounded-lg p-6 text-center border border-warm-border">
                     <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
                     <p className="text-sm text-gray-500">Loading vendor assignments...</p>
                   </div>
                 ) : propertyVendorAssignments.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-white rounded-lg p-6 text-center border border-warm-border">
                     <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">No vendors assigned to this property</p>
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-warm-border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-purple-50 border-b border-purple-100">
+                      <thead className="bg-warm-accent-soft border-b border-warm-border">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Contact</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 bg-white">
                         {propertyVendorAssignments.map((assignment, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
+                          <tr key={idx} className="hover:bg-warm-section">
                             <td className="px-4 py-3">
                               <span className="font-medium text-gray-900">
                                 {assignment.serviceType || assignment.service_type || 'General'}
@@ -1507,110 +1442,45 @@ const Properties = () => {
                     </table>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              {hasFullAccess ? (
-                <button
-                  onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
-                  className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete
-                </button>
-              ) : <div />}
-              <div className="flex items-center gap-2">
-                {hasFullAccess && (
-                  <button
-                    onClick={() => handleExportProperty(viewProperty)}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
-                  >
-                    <Download className="w-4 h-4" /> Export
-                  </button>
-                )}
-                {hasFullAccess && (
-                  <button
-                    onClick={() => openEditModal(viewProperty)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" /> Modify
-                  </button>
-                )}
-                <button
-                  onClick={handleClosePropertyView}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </Modal>
+              </ViewSection>
+        </ViewModal>
       )}
 
       {/* Estimate Detail View Modal (Read-Only) */}
       {selectedEstimate && (
-        <Modal align="top" onClose={() => setSelectedEstimate(null)} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Estimate Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setSelectedEstimate(null)}
-                    className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-white/70" />
-                      <h2 className="text-lg font-semibold text-white">
-                        {selectedEstimate.packageName || 'Estimate Details'}
-                      </h2>
-                    </div>
-                    <p className="text-xs text-white/70 font-mono mt-0.5">{selectedEstimate.estimateId}</p>
-                  </div>
-                </div>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
-                  selectedEstimate.status === 'Draft' ? 'bg-white/20 text-white' :
-                  selectedEstimate.status === 'Sent' ? 'bg-blue-200 text-blue-800' :
-                  selectedEstimate.status === 'Accepted' ? 'bg-green-200 text-green-800' :
-                  'bg-red-200 text-red-800'
-                }`}>
-                  {selectedEstimate.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Estimate Content - Read Only */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-              {/* Metadata */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Created</label>
-                  <p className="text-sm text-gray-900 font-medium">{formatDate(selectedEstimate.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Property ID</label>
-                  <p className="text-sm text-gray-900 font-mono">{selectedEstimate.propertyId}</p>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Estimate Type</label>
-                  <p className="text-sm text-gray-900">{selectedEstimate.estimateType || 'Property-Based'}</p>
-                </div>
-              </div>
-
-              
+        <ViewModal
+          align="top"
+          onClose={() => setSelectedEstimate(null)}
+          id={selectedEstimate.estimateId}
+          title={selectedEstimate.packageName || 'Estimate Details'}
+          meta={[
+            { label: 'Created', value: formatDate(selectedEstimate.createdAt) },
+            { label: 'Property', value: selectedEstimate.propertyId },
+            { label: 'Type', value: selectedEstimate.estimateType || 'Property-Based' },
+          ]}
+          badge={
+            <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium ${
+              selectedEstimate.status === 'Draft' ? 'bg-gray-100 text-gray-700' :
+              selectedEstimate.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+              selectedEstimate.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {selectedEstimate.status}
+            </span>
+          }
+          actions={
+            <span className="mr-auto flex items-center gap-2 text-xs text-gray-500">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Read-only view</span>
+            </span>
+          }
+        >
               {/* Services */}
               {selectedEstimate.addons && selectedEstimate.addons.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-green-600" />
-                    Services ({selectedEstimate.addons.length})
-                  </h3>
+                <ViewSection title={`Services (${selectedEstimate.addons.length})`} icon={Plus}>
                   <div className="space-y-2">
                     {selectedEstimate.addons.map((addon, idx) => (
-                      <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div key={idx} className="p-3 bg-white border border-warm-border rounded-lg">
                         <p className="text-sm font-medium text-gray-800">
                           {getAddonName(addon)}
                         </p>
@@ -1620,21 +1490,17 @@ const Properties = () => {
                         <p className="text-xs text-gray-600 whitespace-pre-line">{getServiceDescription(addon)}</p>
                       </div>
                     ))}
-                    <div className="flex justify-between items-center p-3 bg-green-100 border border-green-300 rounded-lg">
-                      <p className="text-sm font-semibold text-green-800">Total Services Price</p>
-                      <p className="font-bold text-green-700">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0)).toLocaleString()}</p>
+                    <div className="flex justify-between items-center p-3 bg-warm-accent-soft border border-warm-border rounded-lg">
+                      <p className="text-sm font-semibold text-warm-text">Total Services Price</p>
+                      <p className="font-bold text-warm-text">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0)).toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Pricing Breakdown */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-purple-600" />
-                  Pricing Breakdown
-                </h3>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <ViewSection title="Pricing Breakdown" icon={Receipt}>
+                <div className="space-y-3">
                   {(selectedEstimate.packageRate || selectedEstimate.packagePrice || selectedEstimate.package_price) > 0 && <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Yearly Billing</span>
                     <span className="font-medium text-gray-800">₹{Number(selectedEstimate.packageRate ?? selectedEstimate.packagePrice ?? selectedEstimate.package_price ?? 0).toLocaleString()}</span>
@@ -1643,7 +1509,7 @@ const Properties = () => {
                     <span className="text-gray-600">Services Total</span>
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.addonsTotal ?? selectedEstimate.addons?.reduce((sum, addon) => sum + getAddonPrice(addon), 0) ?? 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                  <div className="flex justify-between text-sm border-t border-warm-border pt-2">
                     <span className="text-gray-600">Sub Total</span>
                     <span className="font-medium text-gray-800">₹{(selectedEstimate.subTotal || 0).toLocaleString()}</span>
                   </div>
@@ -1657,63 +1523,37 @@ const Properties = () => {
                       <span className="font-medium text-red-600">-₹{(selectedEstimate.discount || 0).toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-base font-bold border-t border-gray-300 pt-3 mt-2">
+                  <div className="flex justify-between text-base font-bold border-t border-warm-border pt-3 mt-2">
                     <span className="text-gray-800">Final Total</span>
-                    <span className="text-blue-700">₹{(selectedEstimate.totalPrice || 0).toLocaleString()}</span>
+                    <span className="text-warm-accent-hover">₹{(selectedEstimate.totalPrice || 0).toLocaleString()}</span>
                   </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Customer Info if available */}
               {(selectedEstimate.customerName || selectedEstimate.customerEmail || selectedEstimate.customerPhone) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Customer Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                <ViewSection title="Customer Information">
+                  <ViewGrid>
                     {selectedEstimate.customerName && (
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Name</label>
-                        <p className="text-sm text-gray-900">{selectedEstimate.customerName}</p>
-                      </div>
+                      <ViewField label="Name" value={selectedEstimate.customerName} />
                     )}
                     {selectedEstimate.customerEmail && (
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Email</label>
-                        <p className="text-sm text-gray-900">{selectedEstimate.customerEmail}</p>
-                      </div>
+                      <ViewField label="Email" value={selectedEstimate.customerEmail} />
                     )}
                     {selectedEstimate.customerPhone && (
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Phone</label>
-                        <p className="text-sm text-gray-900">{selectedEstimate.customerPhone}</p>
-                      </div>
+                      <ViewField label="Phone" value={selectedEstimate.customerPhone} />
                     )}
-                  </div>
-                </div>
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* Notes */}
               {selectedEstimate.notes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-100">Notes</h3>
-                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">{selectedEstimate.notes}</p>
-                </div>
+                <ViewSection title="Notes">
+                  <p className="text-sm text-gray-700">{selectedEstimate.notes}</p>
+                </ViewSection>
               )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Lock className="w-3.5 h-3.5" />
-                <span>Read-only view</span>
-              </div>
-              <button
-                onClick={() => setSelectedEstimate(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+        </ViewModal>
       )}
 
       {/* Delete Confirmation Modal */}

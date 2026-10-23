@@ -4,6 +4,7 @@ import { Store, Search, RefreshCw, X, AlertCircle, CheckCircle, Eye, Wrench, Zap
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
 import { formatDate } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -267,158 +268,85 @@ const ExecutiveVendors = ({ user }) => {
 
       {/* View Details Modal */}
       {showDetailModal && selectedVendor && (
-        <Modal className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Vendor Details</h2>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
+        <ViewModal
+          onClose={() => setShowDetailModal(false)}
+          id={selectedVendor.vendor_id}
+          title={selectedVendor.owner_name || selectedVendor.company_name || 'Vendor Details'}
+          meta={[
+            { label: 'Created', value: formatDate(selectedVendor.created_at) },
+            { label: 'Created By', value: selectedVendor.created_by_name || selectedVendor.created_by || '-' },
+          ]}
+          badge={
+            <span className="flex items-center gap-1.5">
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
+              </span>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${selectedVendor.is_active || selectedVendor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {selectedVendor.is_active || selectedVendor.status === 'active' ? 'Active' : 'Inactive'}
+              </span>
+            </span>
+          }
+        >
               {/* Basic Info */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Vendor ID</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.vendor_id || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Status</p>
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.is_active || selectedVendor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {selectedVendor.is_active || selectedVendor.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Service Type</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.service_type || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Vendor Type</p>
+              <ViewSection title="Service Information">
+                <ViewGrid>
+                  <ViewField label="Service Type" value={selectedVendor.service_type} />
+                  <ViewField label="Vendor Type">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                       {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
                     </span>
-                  </div>
-                </div>
-              </div>
+                  </ViewField>
+                </ViewGrid>
+              </ViewSection>
 
               {/* Location */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Location</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Zone</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.zone_name || selectedVendor.zone || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Area</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.area || selectedVendor.area_name || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Location">
+                <ViewGrid>
+                  <ViewField label="Zone" value={selectedVendor.zone_name || selectedVendor.zone} />
+                  <ViewField label="Area" value={selectedVendor.area || selectedVendor.area_name} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Coverage & Working Hours */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Coverage & Working Hours</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Coverage Per Day</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.coverage_per_day || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Working Hours</p>
-                    <p className="font-medium text-purple-700">{selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Coverage & Working Hours">
+                <ViewGrid>
+                  <ViewField label="Coverage Per Day" value={selectedVendor.coverage_per_day || 0} />
+                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Vendor Details */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendor Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Name</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.owner_name || selectedVendor.company_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Mobile</p>
-                    <p className="font-medium text-gray-900">{(() => { const mobile = selectedVendor.owner_mobile || selectedVendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${selectedVendor.owner_country_code || '+91'} ${mobile}`; })()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.owner_email || selectedVendor.email || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Aadhar</p>
-                    <p className="font-medium text-gray-900">{selectedVendor.owner_aadhar || '-'}</p>
-                  </div>
-                </div>
-              </div>
+              <ViewSection title="Vendor Details">
+                <ViewGrid>
+                  <ViewField label="Name" value={selectedVendor.owner_name || selectedVendor.company_name} />
+                  <ViewField label="Mobile" value={(() => { const mobile = selectedVendor.owner_mobile || selectedVendor.phone || '-'; return mobile.startsWith('+') ? mobile : `${selectedVendor.owner_country_code || '+91'} ${mobile}`; })()} />
+                  <ViewField label="Email" value={selectedVendor.owner_email || selectedVendor.email} />
+                  <ViewField label="Aadhar" value={selectedVendor.owner_aadhar} />
+                </ViewGrid>
+              </ViewSection>
 
               {/* Manager Details */}
               {(selectedVendor.manager_name || selectedVendor.manager_mobile) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Manager / Primary Contact</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Name</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.manager_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Mobile</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.manager_country_code || '+91'} {selectedVendor.manager_mobile || '-'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Email</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.manager_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Manager / Primary Contact">
+                  <ViewGrid>
+                    <ViewField label="Name" value={selectedVendor.manager_name} />
+                    <ViewField label="Mobile" value={`${selectedVendor.manager_country_code || '+91'} ${selectedVendor.manager_mobile || '-'}`} />
+                    <ViewField label="Email" value={selectedVendor.manager_email} className="sm:col-span-2" />
+                  </ViewGrid>
+                </ViewSection>
               )}
 
               {/* POC Details */}
               {(selectedVendor.poc_name || selectedVendor.poc_mobile) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Point of Contact</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-gray-500">Name</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.poc_name || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Mobile</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.poc_country_code || '+91'} {selectedVendor.poc_mobile || '-'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Email</p>
-                      <p className="font-medium text-gray-900">{selectedVendor.poc_email || '-'}</p>
-                    </div>
-                  </div>
-                </div>
+                <ViewSection title="Point of Contact">
+                  <ViewGrid>
+                    <ViewField label="Name" value={selectedVendor.poc_name} />
+                    <ViewField label="Mobile" value={`${selectedVendor.poc_country_code || '+91'} ${selectedVendor.poc_mobile || '-'}`} />
+                    <ViewField label="Email" value={selectedVendor.poc_email} className="sm:col-span-2" />
+                  </ViewGrid>
+                </ViewSection>
               )}
-
-              {/* Created Info */}
-              <div className="pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-400">Created By</p>
-                    <p className="text-gray-600">{selectedVendor.created_by_name || selectedVendor.created_by || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Created At</p>
-                    <p className="text-gray-600">{formatDate(selectedVendor.created_at)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-gray-100">
-                <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  Close
-                </button>
-              </div>
-            </div>
-          </Modal>
+        </ViewModal>
       )}
     </div>
   );
