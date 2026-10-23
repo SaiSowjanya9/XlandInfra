@@ -129,8 +129,11 @@ Mistakes that fail silently and have each already broken live endpoints:
   every writer that touches them (verify, `POST /payments`, `POST /record`, `PUT /payments/:id`)
   goes through `utils/invoiceSettlement.js` `resyncInvoiceSettlement(invoiceId, conn)` **inside
   its own transaction**, so the payment and the invoice commit or roll back together. A stored
-  money `status` (`paid`/`partially_paid`) follows the computed `payment_status`; a caller may
-  assert `sent`/`overdue`/`cancelled`/`draft` but never a money state the amounts contradict.
+  money `status` (`paid`/`partially_paid`) follows the computed `payment_status`; **no status is
+  hand-picked any more** — `sent` comes from the send action, `overdue` is derived from the due
+  date, and `PUT /invoices/:id/status` now accepts only `cancelled` (a write-off), guarded so a
+  settled invoice cannot be rewound. The Invoices table's status pill is a plain label in every
+  portal; there is no dropdown to revert.
   A payment status outside `completed`/`paid` (or `verification_pending` until verified) stores
   the row but settles nothing — `'failed'` used to settle the invoice because the gate was
   `!= verification_pending`. And no amount may exceed the invoice's outstanding balance:

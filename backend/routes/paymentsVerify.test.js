@@ -82,12 +82,14 @@ test('deleting an invoice with recorded payments is refused', () => {
   assert.match(delBlock, /UPDATE payments SET invoice_id = NULL/, 'pending intents are not detached before the delete');
 });
 
-test('the manual status route offers workflow states only — money states need a payment', () => {
+test('the manual status route accepts only cancellation — every other state is derived', () => {
   const statusIdx = routes.indexOf("router.put('/invoices/:id/status'");
   const block = routes.slice(statusIdx, statusIdx + 3500);
-  // 'paid'/'partially_paid' selected by hand would write a settlement no payment explains
-  assert.match(block, /validStatuses = \['sent', 'overdue', 'cancelled'\]/,
-    'the status route still lets a click mark an invoice paid');
+  // 'sent' comes from the send action, 'overdue' from the due date, and 'paid'/
+  // 'partially_paid' selected by hand would write a settlement no payment explains —
+  // a hand-picked status must not exist for any of them
+  assert.match(block, /validStatuses = \['cancelled'\]/,
+    'the status route still lets a click assert a lifecycle or money state');
   assert.match(block, /status\(409\)/,
     'a paid invoice must refuse a manual status change that rewinds its money state');
 });
