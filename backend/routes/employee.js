@@ -353,6 +353,15 @@ router.post('/set-password', async (req, res) => {
       }
     }
 
+    // Keep a franchise_partners row on the same email in sync — a diverged hash
+    // is how one person ends up with two passwords and gets locked out
+    if (user.email) {
+      await pool.query(
+        `UPDATE franchise_partners SET password_hash = ?, must_change_password = FALSE WHERE LOWER(email) = ?`,
+        [newPasswordHash, user.email.toLowerCase()]
+      );
+    }
+
     // Generate token for auto-login
     const token = generateToken({
       id: user.id,
@@ -528,6 +537,12 @@ router.post('/reset-temp-password', async (req, res) => {
     await pool.query(
       `UPDATE fp_employees SET password_hash = ? WHERE user_id = ? OR LOWER(email) = ?`,
       [passwordHash, user.id, normalizedEmail]
+    );
+
+    // Keep a franchise_partners row on the same email in sync too
+    await pool.query(
+      `UPDATE franchise_partners SET password_hash = ?, must_change_password = TRUE WHERE LOWER(email) = ?`,
+      [passwordHash, normalizedEmail]
     );
 
     console.log(`[Reset Temp Password] New password generated for: ${normalizedEmail}`);

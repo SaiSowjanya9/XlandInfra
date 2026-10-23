@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,17 +14,10 @@ import {
   PawPrint,
   DoorOpen,
   ClipboardList,
-  Clock,
-  Loader,
-  CheckCircle,
   Send,
   ArrowLeft
 } from 'lucide-react';
 import { categories } from '../data/categories';
-import StatCards from '../components/common/StatCards';
-import { useRegisterRefresh } from '../hooks/usePortalRefresh';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const WorkOrder = ({ user }) => {
   const navigate = useNavigate();
@@ -52,52 +45,6 @@ const WorkOrder = ({ user }) => {
   const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
   const [toast, setToast] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
-
-  // Where this property's requests stand. The same counts the dashboard reads, on the page that
-  // owns them -- raising a request is most of what this screen is for, but a resident opening it
-  // wants to know what is already in hand before adding another.
-  const [stats, setStats] = useState(null);
-
-  const fetchStats = useCallback(async () => {
-    const token = localStorage.getItem('customerToken');
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/customers/dashboard`, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
-      const result = await response.json();
-      if (result.success) setStats(result.data?.stats || null);
-    } catch (err) {
-      console.error('Work order stats fetch error:', err);
-    }
-  }, []);
-
-  useEffect(() => { fetchStats(); }, [fetchStats]);
-  useRegisterRefresh(fetchStats);
-
-  // `byStatus` is the stored status, so the four cards are built from it rather than from the
-  // route's own lumped `pending` -- which counts everything that is not finished, In Progress
-  // included, and would double-count it here.
-  const byStatus = stats?.byStatus || {};
-  const statCards = [
-    { key: 'total', label: 'Total Orders', value: stats?.total || 0, icon: ClipboardList, accent: 'blue' },
-    {
-      key: 'pending',
-      label: 'Pending',
-      value: (byStatus.pending || 0) + (byStatus.assigned || 0) + (byStatus.under_review || 0),
-      icon: Clock,
-      accent: 'amber'
-    },
-    { key: 'in_progress', label: 'In Progress', value: byStatus.in_progress || 0, icon: Loader, accent: 'violet' },
-    {
-      key: 'completed',
-      label: 'Completed',
-      value: (byStatus.completed || 0) + (byStatus.closed || 0),
-      icon: CheckCircle,
-      accent: 'green'
-    }
-  ];
 
   // Get selected category
   const selectedCategory = categories.find(c => c.id === parseInt(formData.categoryId));
@@ -408,7 +355,8 @@ const WorkOrder = ({ user }) => {
         </div>
       )}
 
-      {/* Header, with where this property's requests stand in the space beside the title */}
+      {/* Header. The request counts this page used to carry beside the title are gone on the
+          user's call -- the dashboard's Work Orders panel already states the same four figures. */}
       <div className="mb-6">
         <button
           onClick={() => navigate('/dashboard')}
@@ -417,14 +365,11 @@ const WorkOrder = ({ user }) => {
           <ArrowLeft className="w-5 h-5 mr-2" />
           <span>Back to Dashboard</span>
         </button>
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-6">
-          <div className="flex items-center space-x-3 shrink-0">
-            <div className="w-11 h-11 bg-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center">
-              <ClipboardList className="w-6 h-6 text-gold-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">New Work Order</h1>
+        <div className="flex items-center space-x-3">
+          <div className="w-11 h-11 bg-gold-600/20 border border-gold-500/30 rounded-xl flex items-center justify-center">
+            <ClipboardList className="w-6 h-6 text-gold-600" />
           </div>
-          <StatCards cards={statCards} className="lg:flex-1 lg:justify-end" />
+          <h1 className="text-2xl font-bold text-gray-900">New Work Order</h1>
         </div>
       </div>
 

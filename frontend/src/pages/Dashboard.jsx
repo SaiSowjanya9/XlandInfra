@@ -500,9 +500,12 @@ const Dashboard = ({ user }) => {
       </section>
 
       {/* Work Orders, the next visit and what is owed -- the three things a resident opens this
-          page to check. Each states its own figures; none of them restates another's. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-4 sm:gap-5">
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
+          page to check. Each states its own figures; none of them restates another's. This row
+          is the portal's one exception to `items-start`: the cards stretch to a shared height so
+          all three end on the same line, and a `flex-1` spacer inside each shares the extra room
+          out instead of leaving it under one card's content. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
           <PanelHeader icon={ClipboardList} title="Work Orders">
             {workOrderCounts.total > 0 && (
               <button
@@ -515,7 +518,7 @@ const Dashboard = ({ user }) => {
               </button>
             )}
           </PanelHeader>
-          <div className="grid grid-cols-4 gap-2 p-3 sm:p-4">
+          <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
             {WORK_ORDER_TILES.map(({ key, label, tone }) => (
               <div key={key} className={`rounded-lg border px-1.5 py-3 text-center ${tone}`}>
                 <span className="block text-xl font-bold leading-none">{workOrderCounts[key]}</span>
@@ -526,7 +529,7 @@ const Dashboard = ({ user }) => {
         </section>
 
         {/* The next visit, and nothing behind it: the rest of the calendar is the Schedules page. */}
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
+        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
           <PanelHeader icon={CalendarDays} title="Upcoming Schedule">
             <Link
               to="/dashboard/schedule"
@@ -536,7 +539,8 @@ const Dashboard = ({ user }) => {
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </PanelHeader>
-          <div className="p-3 sm:p-4 space-y-3">
+          <div className="flex-1 flex flex-col p-3 sm:p-4">
+            <div className="flex-1 flex flex-col justify-center">
             {activityLoading && !nextVisit ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
@@ -570,9 +574,10 @@ const Dashboard = ({ user }) => {
                 </span>
               </div>
             )}
+            </div>
             <Link
               to="/dashboard/schedule"
-              className="flex items-center justify-between gap-2 px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+              className="mt-3 flex items-center justify-between gap-2 px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
             >
               View Schedule
               <ArrowRight className="w-4 h-4 text-gray-400" />
@@ -582,7 +587,7 @@ const Dashboard = ({ user }) => {
 
         {/* What is owed, counted on the server over every invoice in scope -- a total added up from
             the activity slice above would under-report it, which is worse than showing nothing. */}
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
+        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
           <PanelHeader icon={CreditCard} title="Payments">
             <Link
               to="/dashboard/payment"
@@ -592,12 +597,14 @@ const Dashboard = ({ user }) => {
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </PanelHeader>
-          <div className="p-3 sm:p-4">
-            <p className="text-sm text-gray-500">Outstanding Amount</p>
-            <p className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(payments.outstanding)}</p>
-            <p className="mt-1 text-sm text-gray-500">
-              {payments.pendingCount} Invoice{payments.pendingCount === 1 ? '' : 's'} Pending
-            </p>
+          <div className="flex-1 flex flex-col p-3 sm:p-4">
+            <div className="flex-1">
+              <p className="text-sm text-gray-500">Outstanding Amount</p>
+              <p className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(payments.outstanding)}</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {payments.pendingCount} Invoice{payments.pendingCount === 1 ? '' : 's'} Pending
+              </p>
+            </div>
             <Link
               to="/dashboard/payment"
               className="mt-4 flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-gold-600/10 border border-gold-500/20 text-sm font-semibold text-gold-700 hover:bg-gold-600/15 transition-colors"
