@@ -520,9 +520,11 @@ desktop layout is the user's attached design and is the authority.
   slow one. It also bumps the bell, because the unread count is what a customer watches.
 - `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
   stay identical). Existing callers render byte-identically.
-- **The banner's image is a stock residential photo, `hidden sm:block`, masked into the right
-  third.** `frontend/src/assets/banner-property.webp` is a house exterior the user picked over the
-  brand mark (which was tried and rejected — do not put `LOGO 2.png` art back there). It renders
+- **The banner's image is a stock Indian residential photo, `hidden sm:block`, masked into the
+  right third.** `frontend/src/assets/banner-property.webp` is a Hiranandani township tower at
+  golden hour (Unsplash, Mumbai) — the user's call was an Indian-style property image, not a
+  western house exterior and not the brand mark (`LOGO 2.png` art was tried and rejected — do not
+  put it back). It renders
   `absolute inset-y-0 right-0 h-full w-1/3 object-cover` behind the `relative p-5` content, with a
   `mask-image: linear-gradient(to right, transparent, black 55%)` (plus the `-webkit-` prefix —
   Tailwind does not auto-prefix arbitrary mask properties) so the photo's left edge melts into the
