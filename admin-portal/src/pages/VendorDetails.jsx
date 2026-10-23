@@ -129,7 +129,7 @@ const VendorDetails = () => {
       setActiveTab('all');
       
       loadData();
-      const interval = setInterval(loadData, 10000);
+      const interval = setInterval(loadData, 30000);
       return () => clearInterval(interval);
     }
   }, [selectedFp?.id]);

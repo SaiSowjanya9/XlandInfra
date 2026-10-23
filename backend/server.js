@@ -145,7 +145,7 @@ app.use(hpp);
 // 5. XSS Sanitization
 app.use(xssSanitizer);
 
-// 6. Rate Limiting - General API limiter (100 requests per 15 minutes per IP)
+// 6. Rate Limiting - General API limiter (1000 requests per 15 minutes per IP)
 app.use('/api/', apiRateLimiter);
 
 // Serve uploaded files with security headers

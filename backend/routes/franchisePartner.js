@@ -3226,6 +3226,21 @@ router.post('/employees', requireFPScope, async (req, res) => {
       });
     }
 
+    // An FP owner's email must never become an employee login — one email, one
+    // identity, or the two hashes diverge and the owner gets locked out
+    const [existingFp] = await pool.execute(
+      'SELECT id FROM franchise_partners WHERE email = ?',
+      [email.trim().toLowerCase()]
+    );
+
+    if (existingFp.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This email belongs to a franchise partner account and cannot be used for an employee',
+        field: 'email'
+      });
+    }
+
     // Parse name into first and last name
     const nameParts = name.trim().split(' ');
     const firstName = nameParts[0];
@@ -3851,6 +3866,30 @@ router.post('/staff', requireFPScope, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Username or email already exists'
+      });
+    }
+
+    // An FP owner's email must never become a second identity here, and an email
+    // already on an fp_employees record belongs to that employee
+    const [fpConflict] = await pool.execute(
+      `SELECT id FROM franchise_partners WHERE email = ? OR username = ?`,
+      [email.toLowerCase(), username]
+    );
+    if (fpConflict.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username or email already exists in franchise partners'
+      });
+    }
+
+    const [empConflict] = await pool.execute(
+      `SELECT id FROM fp_employees WHERE email = ? AND is_active = 1`,
+      [email.toLowerCase()]
+    );
+    if (empConflict.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists in employee records'
       });
     }
 

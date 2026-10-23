@@ -53,15 +53,18 @@ const helmetConfig = helmet({
 // RATE LIMITING CONFIGURATIONS
 // =============================================================================
 
-// General API Rate Limiter - 500 requests per 15 minutes per IP
+// General API Rate Limiter - 1000 requests per 15 minutes per IP
 const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per window
+  max: 1000, // Dashboards poll several endpoints on a 30s interval; a few open portals must not exhaust the budget
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes.',
     retryAfter: 15 * 60
   },
+  // CORS preflights are browser-generated, not real API calls. Every authorized
+  // fetch sends OPTIONS + the actual request — counting both halved the budget.
+  skip: (req) => req.method === 'OPTIONS',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   // Uses req.ip by default (works with trust proxy setting)

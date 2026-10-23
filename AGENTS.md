@@ -520,10 +520,12 @@ desktop layout is the user's attached design and is the authority.
 
 ## Customer Portal Stat Rows
 
-**The home page has no figures; every other page states its own**, through one component —
+**The home page has no figures; Schedules and Payments state their own**, through one component —
 `frontend/src/components/common/StatCards.jsx`. Work Orders, Schedules and Payments each had their
 own markup for the same row, which is how three radii, two icon sizes and a currency total set at a
-count's size got in.
+count's size got in. **The New Work Order page carries no stat strip at all** — the user's call,
+because the dashboard's Work Orders panel already states the same four figures, so the strip there
+was a repetition.
 
 - **The figures ride in the page header, beside the title — never in a band of their own.** They
   were full cards (48px icon tile, label, figure, four across) costing ~90px of height on every
@@ -549,9 +551,15 @@ shapes to avoid, both of which were on the customer portal:
   and compose rather than being read out.
 - **A two-column grid without `items-start`.** Grid items stretch by default, so the Dashboard's
   Upcoming Schedules panel grew to match Recent Activity beside it and ended in a column of white
-  space pretending to be a card. Every side-by-side panel row in the portal carries `items-start`.
-- **Work Orders** (the raise form) builds its four from the dashboard route's **`byStatus`**, never
-  from its lumped `pending` — that figure counts everything unfinished, In Progress included, so
+  space pretending to be a card. Every side-by-side panel row in the portal carries `items-start`
+  — **except the home page's Work Orders / Upcoming Schedule / Payments row**, where the user's
+  call is that all three cards end on the same line: the row stretches, each card is
+  `flex flex-col`, and a `flex-1` spacer (Work Orders centres its tiles with `content-center`,
+  the other two pin their bottom action link) shares the extra height out instead of leaving it
+  under one card's content.
+- **Work Orders** (the raise form) shows no figures — see above. Where counts of this customer's
+  work orders are needed (the dashboard panel), they come from the dashboard route's **`byStatus`**,
+  never its lumped `pending` — that figure counts everything unfinished, In Progress included, so
   using it would double-count. Pending is `pending + assigned + under_review`; Completed is
   `completed + closed`.
 - **Payments** counts the **displayed** invoices, so the figures follow the AMC / Work Order filter

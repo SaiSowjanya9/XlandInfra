@@ -1201,18 +1201,18 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
       });
     }
     
-    // Also check franchise_partners table for FP roles
-    if (role === 'franchise_partner' || role === 'franchise') {
-      const [fpExisting] = await pool.execute(
-        `SELECT id FROM franchise_partners WHERE username = ? OR email = ?`,
-        [username, email]
-      );
-      if (fpExisting.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Username or email already exists in franchise partners'
-        });
-      }
+    // Also check franchise_partners — for every role, not just FP roles. An
+    // FP owner's email must never get a second users identity with a different
+    // password: that is exactly the split that locked rsbhavani1 out.
+    const [fpExisting] = await pool.execute(
+      `SELECT id FROM franchise_partners WHERE username = ? OR email = ?`,
+      [username, email]
+    );
+    if (fpExisting.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username or email already exists in franchise partners'
+      });
     }
     
     // Also check fp_employees table
