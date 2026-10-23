@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
@@ -1682,17 +1683,13 @@ const CoordinatorWorkOrders = ({ user }) => {
 
       {/* View Details Modal */}
       {showViewModal && selectedWorkOrder && (
-        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
-                <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
+          maxWidth="max-w-2xl"
+          title="Work Order Details"
+          align="top"
+        >
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-4">
               {/* Work Order Info Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
@@ -1789,15 +1786,14 @@ const CoordinatorWorkOrders = ({ user }) => {
 
               {/* Description */}
               {selectedWorkOrder.description && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-warm-border pt-4">
                   <p className="text-sm text-gray-500 mb-2">Description</p>
                   <p className="text-gray-700">{selectedWorkOrder.description}</p>
                 </div>
               )}
 
               {/* Additional Info */}
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Additional Information</h3>
+              <ViewSection title="Additional Information" className="border-t border-warm-border pt-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Permission to Enter</p>
@@ -1812,11 +1808,11 @@ const CoordinatorWorkOrders = ({ user }) => {
                       <p className="text-gray-900">{selectedWorkOrder.vendor_name || 'Not Assigned'}</p>
                     </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Attachments Section */}
               {selectedWorkOrder.attachments && selectedWorkOrder.attachments.length > 0 && (
-                <div className="border-t border-gray-100 pt-4">
+                <div className="border-t border-warm-border pt-4">
                   <p className="text-sm text-gray-500 mb-2">Attachments ({selectedWorkOrder.attachments.length})</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedWorkOrder.attachments.map((att) => {
@@ -1833,7 +1829,7 @@ const CoordinatorWorkOrders = ({ user }) => {
                         <div
                           key={att.id}
                           onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
+                          className="border border-warm-border rounded-lg p-2 hover:bg-warm-section transition-colors group cursor-pointer"
                         >
                           {isImage ? (
                             <img
@@ -1881,15 +1877,8 @@ const CoordinatorWorkOrders = ({ user }) => {
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
-                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
 
       {/* Cancelled Note Modal */}

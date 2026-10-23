@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -470,15 +471,11 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
 
       {/* Details Modal */}
       {showDetailsModal && selectedSchedule && (
-        <Modal align="top" className="w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Cancellation Details</h3>
-              <button onClick={() => setShowDetailsModal(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-5 space-y-3">
+        <ViewModal align="top" onClose={() => setShowDetailsModal(false)} maxWidth="max-w-lg"
+          title="Cancellation Details"
+          id={selectedSchedule.property_id}
+        >
+            <div className="space-y-3">
               {/* Property Info */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -502,10 +499,10 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
                 </div>
               </div>
 
-              <hr className="border-gray-200" />
+              <hr className="border-warm-border" />
 
               {/* Original Schedule */}
-              <div className="bg-gray-50 rounded-lg p-3">
+              <div className="bg-warm-section rounded-lg p-3">
                 <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-wide font-semibold">Original Schedule</p>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 text-xs">
@@ -543,14 +540,14 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
               {/* Reason */}
               <div>
                 <p className="text-xs text-gray-500 mb-1">Cancellation Reason</p>
-                <p className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3">{selectedSchedule.reason}</p>
+                <p className="text-sm text-gray-900 bg-warm-section rounded-lg p-3">{selectedSchedule.reason}</p>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
+            <div className="px-6 py-4 border-t border-warm-border flex gap-3">
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-warm-section"
               >
                 Close
               </button>
@@ -564,7 +561,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
                 </button>
               )}
             </div>
-          </Modal>
+        </ViewModal>
       )}
 
       {/* Restore Confirmation Modal */}

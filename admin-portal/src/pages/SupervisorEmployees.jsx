@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Users, Plus, Search, Edit, Trash2, Download, RefreshCw, X, Save, AlertCircle, CheckCircle, Phone, Mail, Eye, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -271,23 +272,23 @@ const SupervisorEmployees = ({ user }) => {
       )}
 
       {showDetailModal && selectedEmployee && (
-        <Modal className="max-w-md w-full">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Employee Details</h2>
-              <button onClick={() => { setShowDetailModal(false); setSelectedEmployee(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-4">
+        <ViewModal onClose={() => { setShowDetailModal(false); setSelectedEmployee(null); }}
+          maxWidth="max-w-md"
+          title="Employee Details"
+        >
+            <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center"><Users className="w-8 h-8 text-amber-600" /></div>
                 <div><p className="text-xl font-semibold text-gray-900">{selectedEmployee.first_name}</p><p className="text-sm text-gray-500">{selectedEmployee.employee_code}</p><span className="inline-block mt-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium capitalize">{selectedEmployee.role?.replace('sup_', '')}</span></div>
               </div>
-              <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="space-y-3 pt-4 border-t border-warm-border">
                 {selectedEmployee.email && <div className="flex items-center gap-3"><Mail className="w-5 h-5 text-gray-400" /><span className="text-gray-600">{selectedEmployee.email}</span></div>}
                 {selectedEmployee.phone && <div className="flex items-center gap-3"><Phone className="w-5 h-5 text-gray-400" /><span className="text-gray-600">{selectedEmployee.phone}</span></div>}
                 <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-gray-400 mt-0.5" /><div><p className="text-sm font-medium text-gray-700">Assigned Zones</p><p className="text-gray-600">{selectedEmployee.zone_names || 'No zones assigned'}</p></div></div>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

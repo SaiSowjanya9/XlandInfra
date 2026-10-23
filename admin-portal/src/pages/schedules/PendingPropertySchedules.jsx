@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -928,17 +929,11 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
 
       {/* Services Modal - Simple compact lightbox */}
       {showServicesModal && selectedProperty && (
-        <Modal onClose={() => setShowServicesModal(false)} className="w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">Services</h2>
-                <p className="text-xs text-gray-500">{selectedProperty.propertyName}</p>
-              </div>
-              <button onClick={() => setShowServicesModal(false)} className="p-1.5 hover:bg-white rounded-lg transition-colors">
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
+        <ViewModal onClose={() => setShowServicesModal(false)}
+          id={selectedProperty.propertyName}
+          title="Services"
+        >
+            <div className="space-y-4">
               {selectedProperty.services && selectedProperty.services.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedProperty.services.map((service, index) => (
@@ -961,18 +956,8 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-              <p className="text-xs text-gray-500">
-                <span className="font-medium text-green-600">{selectedProperty.assignedVendors}</span>/{selectedProperty.totalServices} assigned
-              </p>
-              <button
-                onClick={() => setShowServicesModal(false)}
-                className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
 
       {/* Vendor Assignment Modal */}

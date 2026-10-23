@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone, Target, Plus, X, Loader2, AlertCircle, ArrowLeft,
@@ -845,19 +846,11 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
       {/* Edit modal. Backdrop covers the viewport, but the card centers in the content
           area -- the expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
       {editing && (
-        <Modal overlayClassName="lg:pl-72" className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            {/* Modal header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
-              <div>
-                <h3 className="text-base font-semibold text-warm-text">Track Estimate</h3>
-                <p className="text-xs text-warm-muted">{editing.estimate_id} · {decodeEntities(editing.client_name) || '-'}</p>
-              </div>
-              <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
-                <X className="w-5 h-5 text-warm-muted" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setEditing(null)}
+          maxWidth="max-w-5xl"
+        >
 
-            <div className="p-5 space-y-4">
+            <div className="space-y-4">
               {/* Automated estimate details */}
               <div className="bg-warm-section/60 border border-warm-border rounded-[10px] p-3.5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2.5">
@@ -1024,7 +1017,8 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
                 </button>}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* The note lightbox. z-[60] lifts it over the Track Estimate modal, which is one of the

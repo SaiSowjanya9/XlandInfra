@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
@@ -513,17 +514,12 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedLink && (
-        <Modal className="w-full max-w-lg">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Payment Link Details</h2>
-                <p className="text-sm text-gray-500">{selectedLink.invoice_id}</p>
-              </div>
-              <button onClick={() => setShowDetailModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
+        <ViewModal onClose={() => setShowDetailModal(false)}
+          maxWidth="max-w-lg"
+          id={selectedLink.invoice_id}
+          title="Payment Link Details"
+        >
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Customer</label>
@@ -564,14 +560,14 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
               </div>
               
               {selectedLink.payment_link && (
-                <div className="pt-4 border-t border-gray-100">
+                <div className="pt-4 border-t border-warm-border">
                   <label className="text-xs text-gray-500 font-medium">Payment Link</label>
                   <div className="mt-2 flex items-center gap-2">
                     <input
                       type="text"
                       value={selectedLink.payment_link}
                       readOnly
-                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700"
+                      className="flex-1 px-3 py-2 bg-warm-section border border-warm-border rounded-lg text-sm text-gray-700"
                     />
                     <button
                       onClick={() => copyToClipboard(selectedLink.payment_link, selectedLink.invoice_db_id)}
@@ -587,24 +583,8 @@ const PaymentLinks = ({ portalType = 'admin' }) => {
                 </div>
               )}
             </div>
-            <div className="p-5 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
-              >
-                Close
-              </button>
-              {selectedLink.payment_link_status !== 'paid' && !isExpired(selectedLink.payment_link_expires_at) && (
-                <button
-                  onClick={() => { sendPaymentLinkEmail(selectedLink.invoice_db_id); setShowDetailModal(false); }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Mail className="w-4 h-4" />
-                  Send via Email
-                </button>
-              )}
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

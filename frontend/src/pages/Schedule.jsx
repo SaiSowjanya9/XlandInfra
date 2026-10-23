@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import StatCards from '../components/common/StatCards';
 import { istToday } from '../utils/ist';
 import { useRegisterRefresh } from '../hooks/usePortalRefresh';
@@ -160,27 +161,13 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
   // an ancestor with transform/filter/backdrop-filter would otherwise capture
   // position:fixed and centre the modal on the whole page instead.
   return createPortal(
-    <Modal onClose={onClose} className="max-w-lg overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gold-600/20 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-gold-600" />
-            </div>
-            <div>
-              <h2 className="text-gray-900 font-semibold">Visit Details</h2>
-              {visit.visitId && <p className="text-xs text-gray-500">{visit.visitId}</p>}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <ViewModal onClose={onClose}
+          maxWidth="max-w-lg"
+          id={visit.visitId}
+          title="Visit Details"
+        >
 
-        <div className="p-5 space-y-4">
+        <div className="space-y-4">
           <StatusBadge status={displayStatus(visit, today)} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -193,7 +180,7 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-200">
+        <div className="px-5 py-4 border-t border-warm-border">
           <p className="text-xs text-gray-500">
             Need a change to this visit?{' '}
             <Link to="/dashboard/contact" className="text-gold-600 hover:text-gold-500">
@@ -202,7 +189,8 @@ const VisitDetailModal = ({ visit, today, onClose }) => {
             .
           </p>
         </div>
-    </Modal>,
+    
+        </ViewModal>,
     document.body
   );
 };

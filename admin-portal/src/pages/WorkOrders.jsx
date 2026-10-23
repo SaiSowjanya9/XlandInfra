@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { Search, Eye, X, XCircle, Check, Clock, AlertCircle, AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Shield, RefreshCw, ClipboardList, CheckCircle, CheckCircle2, Pencil, Plus, Building2, User, List, Download, Lock } from 'lucide-react';
@@ -1143,22 +1144,15 @@ const WorkOrders = ({ admin }) => {
       )}
 
       {selectedOrder && (
-        <Modal align="top" onClose={() => setSelectedOrder(null)} className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
-                  <p className="text-sm text-gray-500 mt-1">{selectedOrder.work_order_id}</p>
-                </div>
-                <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => setSelectedOrder(null)}
+          id={selectedOrder.work_order_id}
+          title="Work Order Details"
+          align="top"
+        >
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               {/* Customer Information */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-warm-section rounded-lg p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="min-w-0">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</p>
@@ -1273,7 +1267,7 @@ const WorkOrders = ({ admin }) => {
               )}
 
               {selectedOrder.description && (
-                <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                <div className="bg-warm-accent-soft rounded-lg p-3 border border-warm-border">
                   <p className="text-sm font-medium text-amber-800 mb-1">Description</p>
                   <p className="text-gray-700">{selectedOrder.description}</p>
                 </div>
@@ -1286,7 +1280,7 @@ const WorkOrders = ({ admin }) => {
                   <span className="text-sm text-gray-600">Permission to Enter: <span className="font-medium">{selectedOrder.permission_to_enter || 'N/A'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-amber-500' : 'bg-gray-400'}`}></span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${selectedOrder.has_pet === 'yes' ? 'bg-warm-accent-soft0' : 'bg-gray-400'}`}></span>
                   <span className="text-sm text-gray-600">Has Pet: <span className="font-medium">{selectedOrder.has_pet || 'N/A'}</span></span>
                 </div>
               </div>
@@ -1317,7 +1311,7 @@ const WorkOrders = ({ admin }) => {
                         <div
                           key={att.id}
                           onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
+                          className="border border-warm-border rounded-lg p-2 hover:bg-warm-section transition-colors group cursor-pointer"
                         >
                           {isImage ? (
                             <img
@@ -1364,12 +1358,13 @@ const WorkOrders = ({ admin }) => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-warm-border">
                 <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
                 <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Edit Work Order Modal */}

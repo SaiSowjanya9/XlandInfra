@@ -32,6 +32,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import StatCards from '../components/common/StatCards';
+import ViewModal from '../components/common/ViewModal';
 import { istDay, istToday } from '../utils/ist';
 import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 
@@ -1025,24 +1026,24 @@ const CustomerReceiptModal = ({ paymentDbId, onClose }) => {
   const fullyPaid = remaining <= 0;
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Payment Receipt</h2>
-              <p className="text-gold-600 text-sm">{receipt?.paymentId || ''}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
+    <ViewModal
+      onClose={onClose}
+      id={receipt?.paymentId}
+      title="Payment Receipt"
+      maxWidth="max-w-lg"
+      zIndex="z-[60]"
+      actions={receipt && !loadingReceipt && !receiptError && (
+        <button
+          onClick={downloadPdf}
+          disabled={downloading}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 text-gray-900 font-semibold transition-all disabled:opacity-50"
+        >
+          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          Download PDF
+        </button>
+      )}
+    >
+        <div>
           {loadingReceipt ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 animate-spin text-gold-600" />
@@ -1091,24 +1092,7 @@ const CustomerReceiptModal = ({ paymentDbId, onClose }) => {
             </div>
           )}
         </div>
-
-        <div className="px-6 py-4 border-t border-gray-200 bg-warm-page flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 transition-colors">
-            Close
-          </button>
-          {receipt && (
-            <button
-              onClick={downloadPdf}
-              disabled={downloading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 text-gray-900 font-semibold transition-all disabled:opacity-50"
-            >
-              {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-              Download PDF
-            </button>
-          )}
-        </div>
-      </div>
-    </div>,
+    </ViewModal>,
     document.body
   );
 };
@@ -1124,50 +1108,39 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
   const addons = (invoice.lineItems || []).filter(item => item.type === 'addon');
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gold-600/20 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-gold-600/20 to-gold-500/10 px-6 py-4 border-b border-gold-600/20 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Invoice Details</h2>
-            <p className="text-gold-600 text-sm">{invoice.invoiceId}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Status & Dates Row */}
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${STATUS_CONFIG[invoice.status]?.color || STATUS_CONFIG.draft.color}`}>
-              {(() => {
-                const Icon = STATUS_CONFIG[invoice.status]?.icon || FileText;
-                return <Icon className="w-4 h-4" />;
-              })()}
-              {STATUS_CONFIG[invoice.status]?.label || invoice.status}
-              {invoice.status === 'partially_paid' && (() => {
-                const pct = Math.round(((parseFloat(invoice.amountPaid) || 0) / (parseFloat(invoice.totalAmount) || 1)) * 100);
-                return pct > 0 ? ` (${pct}%)` : '';
-              })()}
-            </div>
-            <div className="flex gap-6 text-sm">
-              <div>
-                <span className="text-gray-500">Invoice Date:</span>
-                <span className="ml-2 text-gray-900 font-medium">{formatDate(invoice.invoiceDate)}</span>
-              </div>
-              <div>
-                <span className={isOverdue && !isPaid ? 'text-red-600' : 'text-gray-500'}>Due Date:</span>
-                <span className={`ml-2 font-medium ${isOverdue && !isPaid ? 'text-red-600' : 'text-gray-900'}`}>
-                  {formatDate(invoice.dueDate)}
-                </span>
-              </div>
-            </div>
-          </div>
+    <ViewModal
+      onClose={onClose}
+      id={invoice.invoiceId}
+      title="Invoice Details"
+      maxWidth="max-w-2xl"
+      meta={[
+        { label: 'Date', value: formatDate(invoice.invoiceDate) },
+        { label: 'Due', value: formatDate(invoice.dueDate) },
+      ]}
+      badge={
+        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${STATUS_CONFIG[invoice.status]?.color || STATUS_CONFIG.draft.color}`}>
+          {(() => {
+            const Icon = STATUS_CONFIG[invoice.status]?.icon || FileText;
+            return <Icon className="w-3.5 h-3.5" />;
+          })()}
+          {STATUS_CONFIG[invoice.status]?.label || invoice.status}
+          {invoice.status === 'partially_paid' && (() => {
+            const pct = Math.round(((parseFloat(invoice.amountPaid) || 0) / (parseFloat(invoice.totalAmount) || 1)) * 100);
+            return pct > 0 ? ` (${pct}%)` : '';
+          })()}
+        </span>
+      }
+      actions={!isPaid && invoice.balanceAmount > 0 && (
+        <button
+          onClick={() => onPay(invoice)}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-500 text-gray-900 font-semibold transition-all"
+        >
+          <CreditCard className="w-4 h-4" />
+          Pay Now
+        </button>
+      )}
+    >
+        <div className="space-y-6">
 
           {/* Customer & Property Info - Combined */}
           <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
@@ -1353,28 +1326,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
             </div>
           )}
         </div>
-
-        {/* Footer with Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-warm-page flex items-center justify-between gap-4">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-200 transition-colors"
-          >
-            Close
-          </button>
-          
-          {!isPaid && invoice.balanceAmount > 0 && (
-            <button
-              onClick={() => onPay(invoice)}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-500 text-gray-900 font-semibold transition-all"
-            >
-              <CreditCard className="w-5 h-5" />
-              Pay Now
-            </button>
-          )}
-        </div>
-      </div>
-    </div>,
+    </ViewModal>,
     document.body
   );
 };

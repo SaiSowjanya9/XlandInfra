@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
 import DismissPanel from '../components/common/DismissPanel';
 import Modal from '../components/common/Modal';
@@ -1045,28 +1046,20 @@ const CustomerWorkOrder = ({ user }) => {
 
       {/* Work Order Detail Modal */}
       {selectedOrder && (
-        <Modal className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Work Order Details</h2>
-                <p className="text-sm text-gray-500 font-mono">{selectedOrder.work_order_id}</p>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setSelectedOrder(null)}
+          maxWidth="max-w-lg"
+          id={selectedOrder.work_order_id}
+          title="Work Order Details"
+        >
 
-            <div className="p-5 space-y-4">
+            <div className="space-y-4">
               <div className="flex justify-center">
                 <span className={`px-4 py-2 text-sm font-semibold rounded-full border ${getStatusColor(selectedOrder.status)}`}>
                   {selectedOrder.status?.replace('_', ' ')}
                 </span>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4">
+              <div className="bg-warm-section rounded-xl p-4">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Category</p>
                 <p className="font-semibold text-gray-900">{selectedOrder.category_name}</p>
                 <p className="text-gray-600">{selectedOrder.subcategory_name}</p>
@@ -1075,7 +1068,7 @@ const CustomerWorkOrder = ({ user }) => {
               {selectedOrder.description && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Description</p>
-                  <p className="p-3 bg-gray-50 rounded-lg text-gray-700">{selectedOrder.description}</p>
+                  <p className="p-3 bg-warm-section rounded-lg text-gray-700">{selectedOrder.description}</p>
                 </div>
               )}
 
@@ -1084,7 +1077,7 @@ const CustomerWorkOrder = ({ user }) => {
                   <p className="text-xs text-indigo-600 uppercase tracking-wider">Permission to Enter</p>
                   <p className="font-semibold text-indigo-900 mt-1">{selectedOrder.permission_to_enter}</p>
                 </div>
-                <div className="bg-amber-50 rounded-lg p-3">
+                <div className="bg-warm-accent-soft rounded-lg p-3">
                   <p className="text-xs text-amber-600 uppercase tracking-wider">Has Pet</p>
                   <p className="font-semibold text-amber-900 mt-1">{selectedOrder.has_pet}</p>
                 </div>
@@ -1093,11 +1086,11 @@ const CustomerWorkOrder = ({ user }) => {
               {selectedOrder.entry_notes && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Entry Notes</p>
-                  <p className="p-3 bg-amber-50 rounded-lg text-amber-800 text-sm">{selectedOrder.entry_notes}</p>
+                  <p className="p-3 bg-warm-accent-soft rounded-lg text-amber-800 text-sm">{selectedOrder.entry_notes}</p>
                 </div>
               )}
 
-              <div className="pt-3 border-t border-gray-100">
+              <div className="pt-3 border-t border-warm-border">
                 <p className="text-sm text-gray-500">
                   Submitted: {new Date(selectedOrder.created_at).toLocaleString()}
                 </p>
@@ -1126,15 +1119,8 @@ const CustomerWorkOrder = ({ user }) => {
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200">
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
 
       {/* Click outside to close dropdowns */}

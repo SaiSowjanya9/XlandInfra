@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   FileWarning, Megaphone, Plus, X, Loader2, AlertCircle, Pencil, Trash2, Search, Building2,
@@ -870,21 +871,9 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
       {/* Create / edit / view modal. Backdrop covers the viewport, but the card centers in the
           content area -- the expanded FP sidebar is 288px (lg:w-72), so pad the flex row by that much. */}
       {modal && (
-        <Modal overlayClassName="lg:pl-72" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            {/* Modal header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-warm-border bg-warm-section rounded-t-xl">
-              <div>
-                <h3 className="text-base font-semibold text-warm-text">
-                  {modal.mode === 'create' ? 'New Complaint' : modal.mode === 'edit' ? 'Edit Complaint' : 'Complaint Details'}
-                </h3>
-                {modal.row && (
-                  <p className="text-xs text-warm-muted">{decodeEntities(modal.row.property_id) || '-'} · logged {formatDate(modal.row.created_at)}</p>
-                )}
-              </div>
-              <button onClick={() => setModal(null)} className="p-1.5 rounded-lg hover:bg-warm-border/60 transition-colors" title="Close">
-                <X className="w-5 h-5 text-warm-muted" />
-              </button>
-            </div>
+        <ViewModal onClose={() => setModal(null)}
+          maxWidth="max-w-2xl"
+        >
 
             {modal.mode === 'view' ? (
               <div className="p-5 space-y-3">
@@ -1102,7 +1091,8 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
                 </div>
               </div>
             )}
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Archive confirmation -- same backdrop offset as the form modal so the card

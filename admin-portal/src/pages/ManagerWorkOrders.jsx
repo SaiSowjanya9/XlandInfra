@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import {
@@ -1435,17 +1436,13 @@ const ManagerWorkOrders = ({ user }) => {
 
       {/* View Work Order Modal */}
       {showViewModal && selectedWorkOrder && (
-        <Modal align="top" className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Work Order Details</h2>
-                <button onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
+          maxWidth="max-w-2xl"
+          title="Work Order Details"
+          align="top"
+        >
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Work Order ID</p>
@@ -1592,7 +1589,7 @@ const ManagerWorkOrders = ({ user }) => {
                         <div
                           key={att.id}
                           onClick={() => isImage ? setViewingImage({ url: fileUrl, name: att.original_name || att.file_name }) : window.open(fileUrl, '_blank')}
-                          className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors group cursor-pointer"
+                          className="border border-warm-border rounded-lg p-2 hover:bg-warm-section transition-colors group cursor-pointer"
                         >
                           {isImage ? (
                             <img
@@ -1639,10 +1636,10 @@ const ManagerWorkOrders = ({ user }) => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-warm-border">
                 <button
                   onClick={() => { setShowViewModal(false); setSelectedWorkOrder(null); }}
-                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-warm-border rounded-lg hover:bg-warm-section"
                 >
                   Close
                 </button>
@@ -1654,7 +1651,7 @@ const ManagerWorkOrders = ({ user }) => {
                       setShowViewModal(false);
                       setSelectedWorkOrder(null);
                     }}
-                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+                    className="px-4 py-2 bg-warm-accent-soft0 text-white rounded-lg hover:bg-amber-600"
                   >
                     Revert to Pending
                   </button>
@@ -1673,7 +1670,8 @@ const ManagerWorkOrders = ({ user }) => {
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Cancel Modal - Requires Note */}

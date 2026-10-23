@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, AlertCircle, FileWarning } from 'lucide-react';
 import { getAuthToken } from '../utils/safeStorage';
@@ -146,20 +147,9 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
 
       {/* Read-only detail modal */}
       {viewing && (
-        <Modal onClose={() => setViewing(null)} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Complaint Details</h3>
-                <p className="text-xs text-gray-500">
-                  {decodeEntities(viewing.property_id) || '-'} · logged {formatDate(viewing.created_at)}
-                  {viewing.archived_at ? ` · archived ${formatDate(viewing.archived_at)}` : ''}
-                </p>
-              </div>
-              <button onClick={() => setViewing(null)} className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors" title="Close">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
+        <ViewModal onClose={() => setViewing(null)}
+        >
+            <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${complaintStatusStyle(statusOf(viewing))}`}>
                   {statusOf(viewing)}
@@ -196,7 +186,8 @@ const ComplaintsInbox = ({ endpoint, title = 'Customer Complaints', showPartner 
                 )}
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
     </div>
   );

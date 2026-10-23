@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../../components/common/ViewModal';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -916,30 +917,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
       {/* Schedule Detail Modal */}
       {selectedSchedule && (
-        <Modal align="top" className="w-full max-w-lg overflow-hidden">
-            {/* Modal Header */}
-            <div className={`px-6 py-4 border-b ${
-              selectedSchedule.status === 'completed' ? 'bg-green-50' :
-              selectedSchedule.status === 'pending' ? 'bg-amber-50' :
-              selectedSchedule.status === 'cancelled' ? 'bg-red-50' :
-              selectedSchedule.status === 'rescheduled' ? 'bg-orange-50' :
-              'bg-blue-50'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">{selectedSchedule.service}</h2>
-                  <p className="text-sm text-gray-600 mt-0.5">
-                    {formatDate(selectedSchedule.date)}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setSelectedSchedule(null)}
-                  className="p-2 hover:bg-white/50 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => setSelectedSchedule(null)}
+          maxWidth="max-w-lg"
+          title={selectedSchedule.service}
+          align="top"
+        >
 
             {/* Modal Body */}
             <div className="p-6 space-y-4">
@@ -968,7 +950,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
 
               {/* Schedule Details */}
               <div className="space-y-2 pt-2">
-                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
                   <Clock className="w-4 h-4 text-blue-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Scheduled Time</p>
@@ -976,7 +958,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
                   <Building2 className="w-4 h-4 text-purple-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property</p>
@@ -985,7 +967,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
                   <MapPin className="w-4 h-4 text-green-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Zone</p>
@@ -993,7 +975,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
                   <Truck className="w-4 h-4 text-orange-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Assigned Vendor</p>
@@ -1001,7 +983,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-2.5 bg-gray-50 rounded-lg">
+                <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
                   <Wrench className="w-4 h-4 text-red-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Service Type</p>
@@ -1012,29 +994,8 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t flex items-center justify-between">
-              <button 
-                onClick={() => setSelectedSchedule(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              <button 
-                onClick={() => {
-                  setSelectedSchedule(null);
-                  const woId = selectedSchedule.workOrderId || selectedSchedule.work_order_id;
-                  if (woId) {
-                    navigate(`${getBasePath()}/work-orders/${woId}`);
-                  } else {
-                    navigate(`${getBasePath()}/work-orders`);
-                  }
-                }}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              >
-                View Work Order
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

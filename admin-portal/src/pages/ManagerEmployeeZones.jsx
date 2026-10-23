@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import {
@@ -668,19 +669,10 @@ const ManagerEmployeeZones = ({ user }) => {
 
       {/* View All Zones Popup */}
       {viewZonesEmployee && (
-        <Modal onClose={() => setViewZonesEmployee(null)} className="w-full max-w-md overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-green-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Assigned Zones</h3>
-                  <p className="text-sm text-gray-500">{viewZonesEmployee.name || `${viewZonesEmployee.first_name || ''} ${viewZonesEmployee.last_name || ''}`.trim()}</p>
-                </div>
-                <button onClick={() => setViewZonesEmployee(null)} className="p-2 hover:bg-white/50 rounded-lg transition-colors">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-            <div className="p-5 max-h-80 overflow-y-auto">
+        <ViewModal onClose={() => setViewZonesEmployee(null)}
+          title="Assigned Zones"
+        >
+            <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {(() => {
                   const empZones = viewZonesEmployee.assignedZones || viewZonesEmployee.assigned_zones || [];
@@ -705,15 +697,8 @@ const ManagerEmployeeZones = ({ user }) => {
                 })()}
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <button
-                onClick={() => setViewZonesEmployee(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

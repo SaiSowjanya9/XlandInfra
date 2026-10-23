@@ -1,3 +1,4 @@
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAuthToken } from '../utils/safeStorage';
 import { 
@@ -1355,28 +1356,18 @@ const CustomerSubmissions = () => {
 
       {/* View Property Modal */}
       {viewProperty && (
-        <Modal onClose={() => { setViewProperty(null); setPropertyVendorAssignments([]); }} className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-t-xl">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-gray-900">{viewProperty.name}</h2>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+        <ViewModal onClose={() => { setViewProperty(null); setPropertyVendorAssignments([]); }}
+          id={viewProperty.propertyId}
+          title={viewProperty.name}
+          badge={<span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                     {TYPE_LABELS[viewProperty.entryType] || viewProperty.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">{viewProperty.propertyId}</p>
-              </div>
-              <button onClick={() => { setViewProperty(null); setPropertyVendorAssignments([]); }} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+                  </span>}
+        >
 
             {/* Scrollable Content */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Property Information */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Information</h3>
+              <ViewSection title="Property Information">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Zone</p>
@@ -1417,12 +1408,11 @@ const CustomerSubmissions = () => {
                     <p className="text-sm font-medium text-gray-900">{formatDate(viewProperty.createdAt)}</p>
                   </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Gated Community Block Details */}
               {viewProperty.entryType === 'GC' && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Block Details</h3>
+                <ViewSection title="Block Details">
                   <div className="mb-4">
                     <p className="text-xs text-gray-500 mb-1">Number of Blocks</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.numberOfBlocks || 1}</p>
@@ -1456,7 +1446,7 @@ const CustomerSubmissions = () => {
                             };
                             
                             return (
-                              <div key={blockNum} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div key={blockNum} className="p-4 bg-warm-section rounded-lg border border-warm-border">
                                 <div className="flex justify-between items-center mb-3">
                                   <p className="text-sm font-semibold text-blue-600">{blockName}</p>
                                   <p className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</p>
@@ -1478,13 +1468,12 @@ const CustomerSubmissions = () => {
                     }
                     return null;
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Apartment Details */}
               {viewProperty.entryType === 'APT' && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Apartment Details</h3>
+                <ViewSection title="Apartment Details">
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Block Information</p>
@@ -1515,7 +1504,7 @@ const CustomerSubmissions = () => {
                     
                     if (!hasUnitTypes) return null;
                     return (
-                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="p-3 bg-warm-section rounded-lg border border-warm-border">
                         <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                         <div className="flex flex-wrap gap-2">
                           {unitTypeEntries.map(([key, count]) => (
@@ -1527,24 +1516,22 @@ const CustomerSubmissions = () => {
                       </div>
                     );
                   })()}
-                </div>
+                </ViewSection>
               )}
 
               {/* Villa Details */}
               {viewProperty.entryType === 'VILLA' && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Villa Details</h3>
+                <ViewSection title="Villa Details">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Villa Number</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.villaPlotNumber || '-'}</p>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Flat Details */}
               {viewProperty.entryType === 'FLAT' && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Flat Details</h3>
+                <ViewSection title="Flat Details">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Flat Number</p>
@@ -1555,23 +1542,21 @@ const CustomerSubmissions = () => {
                       <p className="text-sm font-medium text-gray-900">{viewProperty.flatBlockNA ? 'N/A' : (viewProperty.flatBlockInfo || '-')}</p>
                     </div>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Plot Details */}
               {viewProperty.entryType === 'PLOT' && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Plot Details</h3>
+                <ViewSection title="Plot Details">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Plot Number</p>
                     <p className="text-sm font-medium text-gray-900">{viewProperty.plotNA ? 'N/A' : (viewProperty.villaPlotNumber || '-')}</p>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Address */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Address</h3>
+              <ViewSection title="Address">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <p className="text-xs text-gray-500 mb-1">Street Address</p>
@@ -1590,11 +1575,10 @@ const CustomerSubmissions = () => {
                     <p className="text-sm font-medium text-gray-900">{viewProperty.zipCode || viewProperty.zip_code || viewProperty.postal_code || '-'}</p>
                   </div>
                 </div>
-              </div>
+              </ViewSection>
 
               {/* Property Location with GPS Coordinates */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">Property Location</h3>
+              <ViewSection title="Property Location">
                 <PropertyLocationDisplay 
                   location={{
                     lat: viewProperty.mapLocation?.lat || viewProperty.latitude,
@@ -1603,7 +1587,7 @@ const CustomerSubmissions = () => {
                   }}
                   propertyName={viewProperty.name || 'Property'}
                 />
-              </div>
+              </ViewSection>
 
               {/* Contact Information */}
               {(() => {
@@ -1619,11 +1603,10 @@ const CustomerSubmissions = () => {
                 if (contacts.length === 0) return null;
                 
                 return (
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-4">Contact Information</h3>
+                  <ViewSection title="Contact Information">
                     <div className="space-y-3">
                       {contacts.map((contact, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                        <div key={index} className="bg-warm-section rounded-lg p-4">
                           <div className="flex items-center gap-2 mb-3">
                             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-blue-600">{index + 1}</span>
@@ -1654,15 +1637,14 @@ const CustomerSubmissions = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </ViewSection>
                 );
               })()}
 
               {/* Watchman Information - Only for GC and APT */}
               {(['gc', 'apt', 'gated_community', 'apartment', 'gated community'].includes((viewProperty.entryType || viewProperty.propertyType || '').toLowerCase())) && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Watchman Information</h3>
-                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                <ViewSection title="Watchman Information">
+                  <div className="bg-warm-accent-soft rounded-lg p-4 border border-warm-border">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Watchman Name</p>
@@ -1683,17 +1665,16 @@ const CustomerSubmissions = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Additional Notes */}
               {viewProperty.notes && (
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Notes</h3>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                <ViewSection title="Additional Notes">
+                  <div className="bg-warm-section rounded-lg p-4 border border-warm-border">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProperty.notes}</p>
                   </div>
-                </div>
+                </ViewSection>
               )}
 
               {/* Estimates View Section */}
@@ -1703,7 +1684,7 @@ const CustomerSubmissions = () => {
                   <h3 className="text-base font-semibold text-gray-900">Estimates ({propertyEstimates.length})</h3>
                 </div>
                 {propertyEstimates.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <div className="bg-warm-section rounded-lg p-8 text-center">
                     <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm text-gray-500">No estimates for this property</p>
                     <p className="text-xs text-gray-400 mt-1">Create an estimate from the Estimates section</p>
@@ -1766,28 +1747,28 @@ const CustomerSubmissions = () => {
                   <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
                 </div>
                 {loadingVendorAssignments ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-warm-section rounded-lg p-6 text-center">
                     <RefreshCw className="w-6 h-6 text-gray-400 mx-auto mb-2 animate-spin" />
                     <p className="text-sm text-gray-500">Loading vendor assignments...</p>
                   </div>
                 ) : propertyVendorAssignments.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="bg-warm-section rounded-lg p-6 text-center">
                     <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">No vendors assigned to this property</p>
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-warm-border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-purple-50 border-b border-purple-100">
+                      <thead className="bg-warm-accent-soft border-b border-purple-100">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Service Type</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Vendor Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-purple-800">Contact</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Service Type</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Vendor Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-warm-text">Contact</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {propertyVendorAssignments.map((assignment, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
+                          <tr key={idx} className="hover:bg-warm-section">
                             <td className="px-4 py-3">
                               <span className="font-medium text-gray-900">
                                 {assignment.serviceType || assignment.service_type || 'General'}
@@ -1813,7 +1794,7 @@ const CustomerSubmissions = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center sticky bottom-0">
+            <div className="px-6 py-4 bg-warm-section border-t border-warm-border flex justify-between items-center sticky bottom-0">
               {viewProperty.status === 'inactive' ? (
                 <div className="flex items-center gap-2">
                   <button
@@ -1852,7 +1833,8 @@ const CustomerSubmissions = () => {
                 </button>
               </div>
             </div>
-          </Modal>
+          
+        </ViewModal>
       )}
 
       {/* Edit Property Modal */}
@@ -2118,38 +2100,19 @@ const CustomerSubmissions = () => {
 
       {/* AMC Details Modal */}
       {viewAMCDetails && (
-        <Modal className="w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Package className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold">AMC Package Details</h3>
-                    <p className="text-sm text-indigo-100">
-                      {viewAMCDetails.amcPackage.packageId}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewAMCDetails(null)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+        <ViewModal onClose={() => setViewAMCDetails(null)}
+          maxWidth="max-w-3xl"
+          title="AMC Package Details"
+        >
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-4">
               {/* Property Info Section */}
               <div className="mb-6">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <Building2 className="w-4 h-4" />
                   Property Information
                 </h4>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-warm-section rounded-lg p-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Property ID</p>
@@ -2225,9 +2188,9 @@ const CustomerSubmissions = () => {
                   <Layers className="w-4 h-4" />
                   Services ({viewAMCDetails.amcPackage.services?.length || 0})
                 </h4>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="border border-warm-border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-warm-section">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium text-gray-600">#</th>
                         <th className="px-4 py-3 text-left font-medium text-gray-600">Service Name</th>
@@ -2238,7 +2201,7 @@ const CustomerSubmissions = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {viewAMCDetails.amcPackage.services?.map((service, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className="hover:bg-warm-section">
                           <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
                           <td className="px-4 py-3 font-medium text-gray-900">{service.name}</td>
                           <td className="px-4 py-3 text-center text-gray-700">
@@ -2286,15 +2249,8 @@ const CustomerSubmissions = () => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <button
-                onClick={() => setViewAMCDetails(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </Modal>
+            
+        </ViewModal>
       )}
     </div>
   );

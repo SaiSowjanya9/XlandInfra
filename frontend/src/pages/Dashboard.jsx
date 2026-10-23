@@ -7,6 +7,7 @@ import {
   RotateCcw, ThumbsDown, ThumbsUp, X
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
+import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 import bannerProperty from '../assets/banner-property.webp';
 
@@ -551,7 +552,7 @@ const Dashboard = ({ user }) => {
           all three end on the same line, and a `flex-1` spacer inside each shares the extra room
           out instead of leaving it under one card's content. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
+        <section className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
           <PanelHeader icon={ClipboardList} title="Work Orders">
             {workOrderCounts.total > 0 && (
               <button
@@ -634,7 +635,7 @@ const Dashboard = ({ user }) => {
         </section>
 
         {/* The next visit, and nothing behind it: the rest of the calendar is the Schedules page. */}
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
+        <section className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
           <PanelHeader icon={CalendarDays} title="Upcoming Schedule">
             <Link
               to="/dashboard/schedule"
@@ -692,7 +693,7 @@ const Dashboard = ({ user }) => {
 
         {/* What is owed, counted on the server over every invoice in scope -- a total added up from
             the activity slice above would under-report it, which is worse than showing nothing. */}
-        <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden flex flex-col">
+        <section className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
           <PanelHeader icon={CreditCard} title="Payments">
             <Link
               to="/dashboard/payment"
@@ -907,37 +908,11 @@ const Dashboard = ({ user }) => {
       {/* Work Order Detail Modal — portalled so fixed positioning always
           resolves against the viewport, not a transformed ancestor */}
       {selectedWorkOrder && createPortal(
-        <Modal
-          overlayRef={overlayRef}
-          cardRef={modalRef}
+        <ViewModal onClose={() => setSelectedWorkOrder(null)}
+          id={selectedWorkOrder.work_order_id}
+          title={selectedWorkOrder.category_name}
           align="top"
-          top=""
-          padding="py-8 px-4"
-          onClose={() => setSelectedWorkOrder(null)}
-          className="max-w-2xl overflow-hidden my-auto"
         >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-gold-600/20 to-gold-600/20 border-b border-gray-200 p-4 sm:p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-gold-600 text-sm font-medium">{selectedWorkOrder.work_order_id}</p>
-                  <h3 className="text-xl font-bold text-gray-900 mt-1">{selectedWorkOrder.category_name}</h3>
-                  {selectedWorkOrder.subcategory_name && (
-                    <p className="text-gray-500 text-sm mt-0.5">{selectedWorkOrder.subcategory_name}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setSelectedWorkOrder(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 mt-4">
-                {getStatusBadge(selectedWorkOrder.status)}
-                {selectedWorkOrder.priority && getPriorityBadge(selectedWorkOrder.priority)}
-              </div>
-            </div>
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 space-y-6 max-h-[60vh] overflow-y-auto">
@@ -1034,7 +1009,8 @@ const Dashboard = ({ user }) => {
                 </div>
               )}
             </div>
-        </Modal>,
+        
+        </ViewModal>,
         document.body
       )}
     </div>
