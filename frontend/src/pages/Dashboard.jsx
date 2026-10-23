@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/common/Modal';
 import { useRegisterRefresh } from '../hooks/usePortalRefresh';
+import bannerArt from '../assets/banner-art.webp';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const UPLOADS_BASE_URL = '';
@@ -147,10 +148,14 @@ const Dashboard = ({ user }) => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
-  // The Work Orders panel's "View All" narrows the history to work orders rather than opening a
-  // page: WorkOrder.jsx is the raise form, so this table and its modal are where a customer reads
-  // their work orders at all.
-  const [activityType, setActivityType] = useState('all');
+  // The Work Orders panel's Activity tab: the whole work-order history, read on demand so the
+  // panel's default face stays the four tiles. `?type=work_order` asks the activity route to
+  // narrow its merged feed to the one stream, decoded server-side like the rest of the feed.
+  const [workOrderTab, setWorkOrderTab] = useState('overview');
+  const [workOrderActivity, setWorkOrderActivity] = useState([]);
+  const [workOrderActivityLoading, setWorkOrderActivityLoading] = useState(false);
+  const [workOrderActivityExpanded, setWorkOrderActivityExpanded] = useState(false);
+  const [workOrderActivityFetched, setWorkOrderActivityFetched] = useState(false);
   const [payments, setPayments] = useState({ outstanding: 0, pendingCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -227,6 +232,30 @@ const Dashboard = ({ user }) => {
     }
   }, []);
 
+  // The panel tab's own fetch at the route's ceiling: the shared feed's six-item slice could hold
+  // no work order at all even while the tiles count several, and an "all work orders" tab that
+  // shows none is a lie. Rows open the same modal Recent Activity uses.
+  const fetchWorkOrderActivity = useCallback(async () => {
+    const headers = authHeaders();
+    if (!headers) {
+      setWorkOrderActivityLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/customers/activity?limit=100&type=work_order`, { headers });
+      const result = await response.json();
+      if (result.success) {
+        setWorkOrderActivity(result.data.activity || []);
+        setWorkOrderActivityFetched(true);
+      }
+    } catch (err) {
+      console.error('Work order activity fetch error:', err);
+    } finally {
+      setWorkOrderActivityLoading(false);
+    }
+  }, []);
+
   const fetchRenewals = useCallback(async () => {
     const headers = authHeaders();
     if (!headers) return;
@@ -250,11 +279,17 @@ const Dashboard = ({ user }) => {
   const activityLimit = activityExpanded ? 100 : 6;
   useEffect(() => { fetchActivity(activityLimit); }, [fetchActivity, activityLimit]);
 
+  // The panel's Activity tab reads its list the first time it is opened, not on page load.
+  useEffect(() => {
+    if (workOrderTab === 'activity' && !workOrderActivityFetched) fetchWorkOrderActivity();
+  }, [workOrderTab, workOrderActivityFetched, fetchWorkOrderActivity]);
+
   // What the header's Refresh means on this page
   useRegisterRefresh(() => {
     fetchDashboard();
     fetchActivity(activityLimit);
     fetchRenewals();
+    if (workOrderActivityFetched) fetchWorkOrderActivity();
   });
 
   const handleApproveRenewal = async (renewalId) => {
@@ -357,15 +392,19 @@ const Dashboard = ({ user }) => {
     completed: Number(stats?.completed) || 0
   };
   const nextVisit = upcomingVisits[0];
-  const visibleActivity = activityType === 'all'
-    ? activity
-    : activity.filter((item) => item.type === activityType);
+  const visibleWorkOrderActivity = workOrderActivityExpanded
+    ? workOrderActivity
+    : workOrderActivity.slice(0, 5);
 
-  // The Work Orders panel's View All: the history table below, narrowed to work orders and showing
-  // all of it rather than the latest six.
+  // The Work Orders panel's View All: the panel's own Activity tab, expanded to the whole list.
+  // On the tab already it toggles between the five-row preview and everything.
   const showWorkOrderHistory = () => {
-    setActivityType('work_order');
-    setActivityExpanded(true);
+    if (workOrderTab === 'activity') {
+      setWorkOrderActivityExpanded(expanded => !expanded);
+    } else {
+      setWorkOrderTab('activity');
+      setWorkOrderActivityExpanded(true);
+    }
   };
 
   const customer = dashboardData?.customer;
@@ -431,41 +470,50 @@ const Dashboard = ({ user }) => {
         </div>
       )}
 
-      {/* Welcome banner. The decoration is the soft gold wash the rest of the site uses -- not an
-          illustration of a building, which was a picture of somebody else's property on every
-          customer's home page. */}
+      {/* Welcome banner. The decoration is the soft gold wash the rest of the site uses, plus the
+          brand's own skyline mark on the right (`banner-art.webp`, downscaled from the 6754px
+          `LOGO 2.png` -- the 4.7MB source has no place on a page load). It is the brand's own
+          artwork, not a stock photograph of somebody else's property, and it hides below `sm`
+          where the greeting and the property chip need the width. */}
       <section className="relative overflow-hidden rounded-2xl border border-warm-border bg-gradient-to-r from-warm-section via-warm-accent-soft to-gold-100">
         <div className="pointer-events-none absolute -top-16 -right-12 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 right-28 w-56 h-56 bg-gold-600/10 rounded-full blur-3xl" />
-        <div className="relative p-5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">Customer Portal</p>
-          <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900">
-            Welcome back, <span className="text-gold-600">{firstName}!</span>
-          </h1>
-          <p className="mt-1 text-sm sm:text-base text-gray-500">Here's what's happening with your property today.</p>
-          {/* The property, in the one place it is stated. The panel that used to carry its name
-              and ID again at the foot of the page is gone, so the name rides on this chip. */}
-          {propertyCode && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2 max-w-full">
-              <Building2 className="w-4 h-4 text-gold-600 shrink-0" />
-              {propertyName && (
-                <>
-                  <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{propertyName}</span>
-                  <span className="text-gray-300" aria-hidden="true">·</span>
-                </>
-              )}
-              <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">Property ID:</span>
-              <span className="text-xs sm:text-sm font-semibold text-gold-600 truncate">{propertyCode}</span>
-              <button
-                type="button"
-                onClick={copyPropertyId}
-                className="p-1 rounded hover:bg-gold-600/10 transition-colors"
-                title={copied ? 'Copied' : 'Copy Property ID'}
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
-              </button>
-            </div>
-          )}
+        <div className="relative p-5 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">Customer Portal</p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900">
+              Welcome back, <span className="text-gold-600">{firstName}!</span>
+            </h1>
+            <p className="mt-1 text-sm sm:text-base text-gray-500">Here's what's happening with your property today.</p>
+            {/* The property, in the one place it is stated. The panel that used to carry its name
+                and ID again at the foot of the page is gone, so the name rides on this chip. */}
+            {propertyCode && (
+              <div className="mt-4 inline-flex items-center gap-2 bg-white/80 border border-warm-border rounded-lg pl-3 pr-2 py-2 max-w-full">
+                <Building2 className="w-4 h-4 text-gold-600 shrink-0" />
+                {propertyName && (
+                  <>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{propertyName}</span>
+                    <span className="text-gray-300" aria-hidden="true">·</span>
+                  </>
+                )}
+                <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">Property ID:</span>
+                <span className="text-xs sm:text-sm font-semibold text-gold-600 truncate">{propertyCode}</span>
+                <button
+                  type="button"
+                  onClick={copyPropertyId}
+                  className="p-1 rounded hover:bg-gold-600/10 transition-colors"
+                  title={copied ? 'Copied' : 'Copy Property ID'}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-gray-500" />}
+                </button>
+              </div>
+            )}
+          </div>
+          <img
+            src={bannerArt}
+            alt=""
+            className="hidden sm:block h-28 md:h-32 lg:h-36 w-auto shrink-0 object-contain"
+          />
         </div>
       </section>
 
@@ -513,19 +561,78 @@ const Dashboard = ({ user }) => {
                 onClick={showWorkOrderHistory}
                 className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
               >
-                View All
+                {workOrderTab === 'activity' && workOrderActivityExpanded ? 'Show Less' : 'View All'}
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </PanelHeader>
-          <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
-            {WORK_ORDER_TILES.map(({ key, label, tone }) => (
-              <div key={key} className={`rounded-lg border px-1.5 py-3 text-center ${tone}`}>
-                <span className="block text-xl font-bold leading-none">{workOrderCounts[key]}</span>
-                <span className="block mt-1 text-[11px] font-medium whitespace-nowrap">{label}</span>
-              </div>
+          {/* The counts are the panel's first tab; the second reads the work orders themselves. */}
+          <div className="flex border-b border-gray-100 px-3 sm:px-4">
+            {[['overview', 'Overview'], ['activity', 'Activity']].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setWorkOrderTab(key)}
+                className={`px-1 py-2 mr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                  workOrderTab === key
+                    ? 'border-gold-500 text-gold-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {label}
+              </button>
             ))}
           </div>
+          {workOrderTab === 'overview' ? (
+            <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
+              {WORK_ORDER_TILES.map(({ key, label, tone }) => (
+                <div key={key} className={`rounded-lg border px-1.5 py-3 text-center ${tone}`}>
+                  <span className="block text-xl font-bold leading-none">{workOrderCounts[key]}</span>
+                  <span className="block mt-1 text-[11px] font-medium whitespace-nowrap">{label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col p-3 sm:p-4">
+              {workOrderActivityLoading && workOrderActivity.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
+                </div>
+              ) : workOrderActivity.length === 0 ? (
+                <div className="flex-1 flex flex-col justify-center">
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="No work orders yet"
+                    description="Requests raised for your property will appear here."
+                  />
+                </div>
+              ) : (
+                // The expanded list scrolls inside its cap rather than stretching this card (and
+                // the row it sits in) for every order the property has ever raised.
+                <ul className={`divide-y divide-gray-100 ${workOrderActivityExpanded ? 'max-h-72 overflow-y-auto' : ''}`}>
+                  {visibleWorkOrderActivity.map((item) => (
+                    <li key={item.key}>
+                      <button
+                        type="button"
+                        onClick={() => openActivity(item)}
+                        className="w-full text-left flex items-center gap-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-gray-900 truncate">{item.subtitle || item.title}</span>
+                          <span className="block text-xs text-gray-500 truncate">
+                            {item.reference ? `${item.reference} · ` : ''}{formatActivityDate(item.at)}
+                          </span>
+                        </span>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[item.tone] || ACTIVITY_TONES.neutral}`}>
+                          {item.statusLabel}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
 
         {/* The next visit, and nothing behind it: the rest of the calendar is the Schedules page. */}
@@ -622,17 +729,6 @@ const Dashboard = ({ user }) => {
       <section className="bg-white border border-gray-200 rounded-xl shadow-warm overflow-hidden">
         <PanelHeader icon={History} title="Recent Activity">
           <div className="flex items-center gap-3 shrink-0">
-            {activityType !== 'all' && (
-              <button
-                type="button"
-                onClick={() => setActivityType('all')}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-medium text-blue-700"
-                title="Show every kind of activity again"
-              >
-                {ACTIVITY_TYPES[activityType]?.label || activityType} only
-                <X className="w-3 h-3" />
-              </button>
-            )}
             {activity.length > 0 && (
               <button
                 type="button"
@@ -650,14 +746,12 @@ const Dashboard = ({ user }) => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
           </div>
-        ) : visibleActivity.length === 0 ? (
+        ) : activity.length === 0 ? (
           <div className="p-3 sm:p-4">
             <EmptyState
               icon={ClipboardList}
-              title={activityType === 'all' ? 'No recent activity' : 'Nothing of this kind yet'}
-              description={activityType === 'all'
-                ? 'Your work orders, payments and updates will appear here once you start using the services.'
-                : 'Clear the filter above to see everything that has happened on your property.'}
+              title="No recent activity"
+              description="Your work orders, payments and updates will appear here once you start using the services."
             />
           </div>
         ) : (
@@ -676,7 +770,7 @@ const Dashboard = ({ user }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {visibleActivity.map((item) => {
+                  {activity.map((item) => {
                     const type = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.work_order;
                     const Icon = type.icon;
                     return (
@@ -719,7 +813,7 @@ const Dashboard = ({ user }) => {
 
             {/* Below sm: the same rows, read as a list */}
             <ul className={`sm:hidden divide-y divide-gray-100 px-3 ${activityExpanded ? 'max-h-[28rem] overflow-y-auto' : ''}`}>
-              {visibleActivity.map((item) => {
+              {activity.map((item) => {
                 const type = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.work_order;
                 const Icon = type.icon;
                 return (
