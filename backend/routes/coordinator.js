@@ -77,52 +77,96 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // Find coordinator user - include franchise_partner_id for FP-created coordinators
+    // Find coordinator user - include franchise_partner_id for FP-created coordinators.
+    // The same person can have rows in users AND fp_employees with different hashes;
+    // whichever row MySQL returned first must not shadow the password that actually
+    // matches, so every candidate is tried (same fix as /api/employee/login).
+    const candidates = [];
     const [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'coordinator'`,
       [username, username]
     );
+    for (const u of users) candidates.push({ user: u, fpEmployeeId: null });
 
-    if (users.length === 0) {
+    // fp_employees rows carry their own credentials too — an FP-created coordinator
+    // whose account lives only there used to get 'Invalid credentials' outright.
+    const [fpEmployees] = await pool.query(
+      `SELECT * FROM fp_employees
+       WHERE (username = ? OR email = ?) AND role IN ('coordinator', 'fp_coordinator')`,
+      [username, username]
+    );
+    for (const fe of fpEmployees) {
+      if (fe.user_id) {
+        const [linked] = await pool.query(
+          `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
+           FROM users WHERE id = ?`,
+          [fe.user_id]
+        );
+        if (linked.length > 0 && !candidates.some(c => c.user.id === linked[0].id)) {
+          linked[0].franchise_partner_id = linked[0].franchise_partner_id || fe.franchise_partner_id;
+          candidates.push({ user: linked[0], fpEmployeeId: fe.id });
+        }
+      }
+      if (fe.password_hash) {
+        candidates.push({
+          user: {
+            id: fe.user_id || fe.id,
+            username: fe.username,
+            email: fe.email,
+            password_hash: fe.password_hash,
+            first_name: fe.first_name,
+            last_name: fe.last_name,
+            role: 'coordinator',
+            franchise_partner_id: fe.franchise_partner_id,
+            is_active: fe.is_active
+          },
+          fpEmployeeId: fe.id
+        });
+      }
+    }
+
+    if (candidates.length === 0) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    const user = users[0];
+    let match = null;
+    let matchedInactive = false;
+    for (const c of candidates) {
+      if (c.user.password_hash && await bcrypt.compare(password, c.user.password_hash)) {
+        if (c.user.is_active) { match = c; break; }
+        matchedInactive = true;
+      }
+    }
 
-    if (!user.is_active) {
+    if (!match) {
       return res.status(401).json({
         success: false,
-        message: 'Account is inactive'
+        message: matchedInactive ? 'Account is inactive' : 'Invalid credentials'
       });
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+    const user = match.user;
 
     // Get franchise_partner_id and fp_employee_id - needed for zone lookup
     let franchisePartnerId = user.franchise_partner_id || null;
-    let fpEmployeeId = null;
+    let fpEmployeeId = match.fpEmployeeId;
     
-    // Look up corresponding fp_employees record
-    const [fpEmployee] = await pool.query(
-      `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
-      [user.email, user.username]
-    );
-    if (fpEmployee.length > 0) {
-      fpEmployeeId = fpEmployee[0].id;
-      if (!franchisePartnerId && fpEmployee[0].franchise_partner_id) {
-        franchisePartnerId = fpEmployee[0].franchise_partner_id;
+    // Look up corresponding fp_employees record when the match didn't already provide it
+    if (!fpEmployeeId) {
+      const [fpEmployee] = await pool.query(
+        `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
+        [user.email, user.username]
+      );
+      if (fpEmployee.length > 0) {
+        fpEmployeeId = fpEmployee[0].id;
+        if (!franchisePartnerId && fpEmployee[0].franchise_partner_id) {
+          franchisePartnerId = fpEmployee[0].franchise_partner_id;
+        }
       }
     }
     

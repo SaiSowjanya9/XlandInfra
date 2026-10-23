@@ -73,59 +73,93 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       });
     }
 
-    // First check users table
-    let [users] = await pool.query(
+    // An executive's identity can live in users AND fp_employees, each with its own
+    // hash. Checking users first meant a stale users row rejected a correct
+    // fp_employees password — and the old fallback selected a `password` column that
+    // doesn't exist, so fp_employees-only accounts 500'd instead of logging in.
+    // Collect every candidate and sign into whichever hash matches.
+    const candidates = [];
+
+    const [users] = await pool.query(
       `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
        FROM users 
        WHERE (username = ? OR email = ?) AND role = 'executive'`,
       [username, username]
     );
+    for (const u of users) candidates.push({ user: u, source: 'users', fpEmployeeId: null });
 
+    const [fpEmployees] = await pool.query(
+      `SELECT * FROM fp_employees 
+       WHERE (username = ? OR email = ?) AND role IN ('executive', 'fp_executive')`,
+      [username, username]
+    );
+    for (const fe of fpEmployees) {
+      if (fe.user_id) {
+        const [linked] = await pool.query(
+          `SELECT id, username, email, password_hash, first_name, last_name, role, is_active, franchise_partner_id
+           FROM users WHERE id = ?`,
+          [fe.user_id]
+        );
+        if (linked.length > 0 && !candidates.some(c => c.user.id === linked[0].id)) {
+          linked[0].franchise_partner_id = linked[0].franchise_partner_id || fe.franchise_partner_id;
+          candidates.push({ user: linked[0], source: 'users', fpEmployeeId: fe.id });
+        }
+      }
+      if (fe.password_hash) {
+        candidates.push({
+          user: {
+            id: fe.user_id || fe.id,
+            username: fe.username,
+            email: fe.email,
+            password_hash: fe.password_hash,
+            first_name: fe.first_name,
+            last_name: fe.last_name,
+            role: 'executive',
+            franchise_partner_id: fe.franchise_partner_id,
+            is_active: fe.is_active
+          },
+          source: 'fp_employees',
+          fpEmployeeId: fe.id
+        });
+      }
+    }
+
+    if (candidates.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    let user = null;
     let userSource = 'users';
-
-    // If not found in users, check fp_employees table
-    if (users.length === 0) {
-      [users] = await pool.query(
-        `SELECT id, username, email, password as password_hash, first_name, last_name, role, is_active, franchise_partner_id
-         FROM fp_employees 
-         WHERE (username = ? OR email = ?) AND role = 'executive'`,
-        [username, username]
-      );
-      userSource = 'fp_employees';
+    let fpEmployeeId = null;
+    let matchedInactive = false;
+    for (const c of candidates) {
+      if (c.user.password_hash && await bcrypt.compare(password, c.user.password_hash)) {
+        if (c.user.is_active || c.user.is_active === undefined) {
+          user = c.user;
+          userSource = c.source;
+          fpEmployeeId = c.fpEmployeeId;
+          break;
+        }
+        matchedInactive = true;
+      }
     }
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: matchedInactive ? 'Account is inactive' : 'Invalid credentials'
       });
     }
-
-    const user = users[0];
     console.log('[Executive Login] Found user in:', userSource, 'ID:', user.id, 'FP:', user.franchise_partner_id);
-
-    if (!user.is_active && user.is_active !== undefined) {
-      return res.status(401).json({
-        success: false,
-        message: 'Account is inactive'
-      });
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
 
     // Get franchise_partner_id and fp_employee_id - needed for zone lookup
     let franchisePartnerId = user.franchise_partner_id || null;
-    let fpEmployeeId = userSource === 'fp_employees' ? user.id : null;
-    
+
     // If logged in via users table, look up corresponding fp_employees record
-    if (userSource === 'users') {
+    if (!fpEmployeeId) {
       const [fpCheck] = await pool.query(
         `SELECT id, franchise_partner_id FROM fp_employees WHERE (email = ? OR username = ?) AND is_active = 1`,
         [user.email, user.username]
