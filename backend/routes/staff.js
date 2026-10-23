@@ -978,32 +978,11 @@ router.get('/', authenticate, async (req, res) => {
         console.log('FP owner fetch error:', e.message);
       }
       
-      // 2. Fetch Admin users (operations manager and admin)
-      const [admins] = await pool.execute(`
-        SELECT id, user_id, username, email, first_name, last_name, phone, role, is_active, created_at
-        FROM users
-        WHERE role IN ('admin', 'operations_manager') AND is_active = 1
-        ORDER BY role ASC, first_name ASC
-      `);
+      // An fpId-scoped list is that FP's own team only — owner plus fp_employees.
+      // Company admins are deliberately excluded: they are not the FP's staff and
+      // must not appear in pickers like a payment's "Received By" dropdown.
       
-      admins.forEach(s => {
-        allStaff.push({
-          id: s.id,
-          orderId: 2,
-          userId: s.user_id || `ADM-${String(s.id).padStart(3, '0')}`,
-          username: s.username,
-          email: s.email,
-          firstName: s.first_name,
-          lastName: s.last_name,
-          phone: s.phone,
-          role: s.role,
-          roleName: ROLE_NAMES[s.role] || s.role,
-          isActive: true,
-          source: 'admin'
-        });
-      });
-      
-      // 3. Fetch FP Employees
+      // 2. Fetch FP Employees
       let fpQuery = `
         SELECT 
           e.id, e.employee_code as user_id, e.username, e.email,
