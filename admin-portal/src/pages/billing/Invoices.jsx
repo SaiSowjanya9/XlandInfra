@@ -184,8 +184,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
   const [actionLoading, setActionLoading] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
-  const [showStatusUpdate, setShowStatusUpdate] = useState(null); // Invoice being updated
-  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  // No manual status picker: every invoice state is produced by the lifecycle, not chosen
   const [showPdfPreview, setShowPdfPreview] = useState(null); // Invoice for PDF preview
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -272,17 +271,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }, 300);
     return () => clearTimeout(debounce);
   }, [searchTerm]);
-
-  // Close status dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (showStatusUpdate && !e.target.closest('.status-dropdown-container')) {
-        setShowStatusUpdate(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [showStatusUpdate]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -405,33 +393,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       showToast('Failed to restore invoice', 'error');
     } finally {
       setActionLoading(null);
-    }
-  };
-
-  // Update invoice status manually
-  const handleUpdateStatus = async (invoiceId, newStatus) => {
-    try {
-      setStatusUpdateLoading(true);
-      const response = await fetch(`${API_BASE}/api/payments/invoices/${invoiceId}/status`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      const result = await response.json();
-      if (result.success) {
-        showToast(`Invoice status updated to ${STATUS_CONFIG[newStatus]?.label || newStatus}`);
-        setShowStatusUpdate(null);
-        fetchInvoices();
-      } else {
-        showToast(result.message || 'Failed to update status', 'error');
-      }
-    } catch (err) {
-      showToast('Failed to update invoice status', 'error');
-    } finally {
-      setStatusUpdateLoading(false);
     }
   };
 
@@ -1236,46 +1197,14 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
                               {formatCurrency(invoice.balanceAmount)}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-center status-dropdown-container" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-col items-center gap-1 relative">
-                              {/* Paid / Partially Paid are money states — only a recorded payment may
-                                  produce them, so on a settled invoice the pill is a label, never a
-                                  control; and the menu itself offers workflow states only */}
-                              {['paid', 'partially_paid'].includes(invoice.status) ? (
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
-                                  {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
-                                </span>
-                              ) : (
-                              <button
-                                onClick={() => setShowStatusUpdate(showStatusUpdate === invoice.id ? null : invoice.id)}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}
-                                title="Click to update status"
-                              >
-                                {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
-                                <ChevronDown className="w-3 h-3" />
-                              </button>
-                              )}
-                              {/* Status Update Dropdown */}
-                              {showStatusUpdate === invoice.id && (
-                                <div className="absolute top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
-                                  {['sent', 'overdue', 'cancelled']
-                                    .map((key) => ({ key, config: STATUS_CONFIG[key] }))
-                                    .map(({ key, config }) => (
-                                    <button
-                                      key={key}
-                                      onClick={() => handleUpdateStatus(invoice.id, key)}
-                                      disabled={statusUpdateLoading || invoice.status === key}
-                                      className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 ${invoice.status === key ? 'bg-gray-100 font-medium' : ''}`}
-                                    >
-                                      <span className={`w-2 h-2 rounded-full ${config.color.split(' ')[0]}`}></span>
-                                      {config.label}
-                                      {invoice.status === key && <CheckCircle className="w-3 h-3 ml-auto text-green-500" />}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-
-                            </div>
+                          <td className="px-4 py-3.5 text-center">
+                            {/* The status pill is a label, never a control — every state on it is
+                                produced by the lifecycle (sent by the send action, overdue by the
+                                due date, paid/partially_paid by a recorded payment), so there is
+                                no manual picker to mislead it with */}
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                              {statusLabel(invoice, STATUS_CONFIG[invoice.status]?.label || invoice.status)}
+                            </span>
                           </td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">

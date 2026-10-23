@@ -66,14 +66,13 @@ for (const file of FILES) {
   });
 }
 
-// The row-status dropdown in pages/billing/Invoices.jsx (mounted by every portal) once offered
-// 'Paid' and 'Partially Paid' as manual picks — a click asserted a settlement no payment row
-// explains. The menu is workflow states only, and a settled invoice's pill is a label, not a
-// control.
-test('the invoice status menu cannot assert a money state', () => {
+// The row-status pill in pages/billing/Invoices.jsx (mounted by every portal) is a label, not
+// a control: 'sent' comes from the send action, 'overdue' from the due date, 'paid'/
+// 'partially_paid' from a recorded payment. No dropdown exists to mislead any of them.
+test('the invoice status pill is never a picker', () => {
   const body = read('pages', 'billing', 'Invoices.jsx');
-  assert.match(body, /\['sent', 'overdue', 'cancelled'\]/,
-    'the dropdown offers a hand-picked paid/partially_paid again');
-  assert.match(body, /\['paid', 'partially_paid'\]\.includes\(invoice\.status\)/,
-    'a settled invoice\'s status pill is clickable again');
+  assert.doesNotMatch(body, /showStatusUpdate|handleUpdateStatus|status-dropdown-container/,
+    'the invoice status dropdown is back');
+  assert.doesNotMatch(body, /invoices\/\$\{invoiceId?\}\/status|invoices\/\$\{invoice\.id\}\/status/,
+    'a frontend caller still PUTs a hand-picked invoice status');
 });

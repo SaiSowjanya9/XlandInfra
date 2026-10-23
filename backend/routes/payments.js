@@ -629,9 +629,14 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
         const settledPaid = parseFloat(i.settled_paid) || 0;
         const totalAmount = parseFloat(i.total_amount) || 0;
         const balanceAmount = Math.max(0, totalAmount - settledPaid);
-        const settledStatus = balanceAmount <= 0 && totalAmount > 0 ? 'paid'
+        let settledStatus = balanceAmount <= 0 && totalAmount > 0 ? 'paid'
           : settledPaid > 0 ? 'partially_paid'
           : (i.status === 'paid' || i.status === 'partially_paid' ? 'sent' : i.status);
+        // Overdue is a fact about the date, not a state anyone sets: a sent invoice past its
+        // due date is overdue even though nothing ever wrote 'overdue' to the row
+        if (settledStatus === 'sent' && i.due_date && new Date(i.due_date) < new Date()) {
+          settledStatus = 'overdue';
+        }
         return {
         id: i.id,
         invoiceId: i.invoice_id,
@@ -911,9 +916,12 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
     const settledPaid = parseFloat(i.settled_paid) || 0;
     const detailTotal = parseFloat(i.total_amount) || 0;
     const detailBalance = Math.max(0, detailTotal - settledPaid);
-    const detailSettledStatus = detailBalance <= 0 && detailTotal > 0 ? 'paid'
+    let detailSettledStatus = detailBalance <= 0 && detailTotal > 0 ? 'paid'
       : settledPaid > 0 ? 'partially_paid'
       : (i.status === 'paid' || i.status === 'partially_paid' ? 'sent' : i.status);
+    if (detailSettledStatus === 'sent' && i.due_date && new Date(i.due_date) < new Date()) {
+      detailSettledStatus = 'overdue';
+    }
 
     res.json({
       success: true,
@@ -1885,13 +1893,14 @@ router.put('/invoices/:id/status', authenticate, canEditPayments, async (req, re
     const { status } = req.body;
     const fpId = getFPScope(req);
     
-    // Workflow states only — 'paid'/'partially_paid' are money states that a payment row must
-    // produce; letting this route assert them writes a settlement no payment explains
-    const validStatuses = ['sent', 'overdue', 'cancelled'];
+    // 'cancelled' is the only manual state left: 'sent' is written by the send action,
+    // 'overdue' is computed from the due date, and 'paid'/'partially_paid' are money states
+    // only a payment row may produce. Nothing a user picks may assert the rest.
+    const validStatuses = ['cancelled'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+        message: 'Invoice status is set by its lifecycle — only cancellation can be applied manually.'
       });
     }
     
