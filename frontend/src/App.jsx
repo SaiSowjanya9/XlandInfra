@@ -289,7 +289,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-warm-page">
         <div className="text-center">
           <div className="flex justify-center mb-6 animate-pulse">
-            <BrandLogo variant="contract" size="lg" />
+            <img src="/logo-full.png" alt="XLAND INFRA PVT LTD" className="h-32 sm:h-40 w-auto" fetchPriority="high" />
           </div>
           <div className="w-12 h-12 border-2 border-gold-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
