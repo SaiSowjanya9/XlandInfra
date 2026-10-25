@@ -119,24 +119,24 @@ const formatTimeRange = (start, end) => {
 };
 
 const EmptyState = ({ icon: Icon, title, description }) => (
-  <div className="border border-dashed border-gray-200 rounded-xl py-10 px-6 text-center">
-    <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gray-100 flex items-center justify-center">
-      <Icon className="w-5 h-5 text-gray-400" />
+  <div className="border border-dashed border-gray-200 rounded-xl py-5 px-4 text-center">
+    <div className="w-9 h-9 mx-auto mb-2 rounded-lg bg-gray-100 flex items-center justify-center">
+      <Icon className="w-4 h-4 text-gray-400" />
     </div>
-    <p className="font-medium text-gray-900">{title}</p>
-    <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto leading-relaxed">{description}</p>
+    <p className="text-sm font-medium text-gray-900">{title}</p>
+    <p className="text-xs text-gray-500 mt-0.5 max-w-xs mx-auto leading-relaxed">{description}</p>
   </div>
 );
 
 // A panel states its name and nothing else: the line of description under each title went the same
 // way as the Quick Access cards' sentences.
 const PanelHeader = ({ icon: Icon, title, children }) => (
-  <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100">
-    <div className="flex items-center gap-3 min-w-0">
-      <span className="w-9 h-9 shrink-0 rounded-lg bg-gold-600/10 border border-gold-500/20 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-gold-600" />
+  <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-gray-100">
+    <div className="flex items-center gap-2.5 min-w-0">
+      <span className="w-7 h-7 shrink-0 rounded-lg bg-gold-600/10 border border-gold-500/20 flex items-center justify-center">
+        <Icon className="w-3.5 h-3.5 text-gold-600" />
       </span>
-      <h2 className="font-semibold text-gray-900 leading-tight truncate">{title}</h2>
+      <h2 className="text-sm font-semibold text-gray-900 leading-tight truncate">{title}</h2>
     </div>
     {children}
   </div>
@@ -572,7 +572,7 @@ const Dashboard = ({ user }) => {
                 key={key}
                 type="button"
                 onClick={() => setWorkOrderTab(key)}
-                className={`px-1 py-2 mr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
+                className={`px-1 py-1.5 mr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
                   workOrderTab === key
                     ? 'border-gold-500 text-gold-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -585,9 +585,9 @@ const Dashboard = ({ user }) => {
           {workOrderTab === 'overview' ? (
             <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
               {WORK_ORDER_TILES.map(({ key, label, tone }) => (
-                <div key={key} className={`rounded-lg border px-1.5 py-3 text-center ${tone}`}>
-                  <span className="block text-xl font-bold leading-none">{workOrderCounts[key]}</span>
-                  <span className="block mt-1 text-[11px] font-medium whitespace-nowrap">{label}</span>
+                <div key={key} className={`rounded-lg border px-1.5 py-2 text-center ${tone}`}>
+                  <span className="block text-lg font-bold leading-none">{workOrderCounts[key]}</span>
+                  <span className="block mt-0.5 text-[11px] font-medium whitespace-nowrap">{label}</span>
                 </div>
               ))}
             </div>
@@ -648,7 +648,7 @@ const Dashboard = ({ user }) => {
           <div className="flex-1 flex flex-col p-3 sm:p-4">
             <div className="flex-1 flex flex-col justify-center">
             {activityLoading && !nextVisit ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-6">
                 <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
               </div>
             ) : !nextVisit ? (
@@ -658,9 +658,9 @@ const Dashboard = ({ user }) => {
                 description="Any scheduled visits, maintenance or service appointments will be shown here."
               />
             ) : (
-              <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3">
-                <span className="w-12 shrink-0 py-1.5 text-center bg-gold-600/10 border border-gold-500/20 rounded-lg">
-                  <span className="block text-base font-bold leading-none text-gray-900">
+              <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-2.5">
+                <span className="w-10 shrink-0 py-1 text-center bg-gold-600/10 border border-gold-500/20 rounded-lg">
+                  <span className="block text-sm font-bold leading-none text-gray-900">
                     {nextVisit.scheduledDate
                       ? String(new Date(`${nextVisit.scheduledDate}T00:00:00`).getDate()).padStart(2, '0')
                       : '--'}
@@ -683,7 +683,7 @@ const Dashboard = ({ user }) => {
             </div>
             <Link
               to="/dashboard/schedule"
-              className="mt-3 flex items-center justify-between gap-2 px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+              className="mt-2.5 flex items-center justify-between gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
             >
               View Schedule
               <ArrowRight className="w-4 h-4 text-gray-400" />
@@ -706,14 +706,14 @@ const Dashboard = ({ user }) => {
           <div className="flex-1 flex flex-col p-3 sm:p-4">
             <div className="flex-1">
               <p className="text-sm text-gray-500">Outstanding Amount</p>
-              <p className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(payments.outstanding)}</p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-0.5 text-2xl font-bold text-gray-900">{formatCurrency(payments.outstanding)}</p>
+              <p className="mt-0.5 text-sm text-gray-500">
                 {payments.pendingCount} Invoice{payments.pendingCount === 1 ? '' : 's'} Pending
               </p>
             </div>
             <Link
               to="/dashboard/payment"
-              className="mt-4 flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-gold-600/10 border border-gold-500/20 text-sm font-semibold text-gold-700 hover:bg-gold-600/15 transition-colors"
+              className="mt-3 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gold-600/10 border border-gold-500/20 text-sm font-semibold text-gold-700 hover:bg-gold-600/15 transition-colors"
             >
               Make Payment
               <ArrowRight className="w-4 h-4" />
