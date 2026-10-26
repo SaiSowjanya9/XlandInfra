@@ -96,8 +96,10 @@ const DonutCard = ({ title, filter, data, total, items, className = '' }) => (
         <div className="flex-shrink-0">
           <DonutChart data={data} size={144} centerValue={total} centerLabel="Total" />
         </div>
-        {/* The legend takes the rest of the card, which is the same width in all three */}
-        <ChartLegend items={items} className="xl:flex-1 max-h-60 overflow-y-auto pr-1" />
+        {/* The legend takes the rest of the card, which is the same width in all three. It is not
+            capped and does not scroll: a card is as tall as its legend needs, and a cut-off row
+            ("To Assign Vendor" was below the fold) is a status the reader cannot see at all. */}
+        <ChartLegend items={items} className="xl:flex-1" />
       </div>
     ) : (
       <p className="text-xs text-gray-400 text-center py-16">No data</p>

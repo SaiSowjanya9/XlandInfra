@@ -124,7 +124,10 @@ export const PAYMENT_STATUS_COLORS = {
 export const ESTIMATE_TYPE_COLORS = {
   'Direct Estimates': '#8B5CF6',  // Purple
   'Property-Based': '#06B6D4',    // Cyan
-  'Work Order': '#F97316'         // Orange
+  'Work Order': '#F97316',        // Orange
+  // Anything outside the three: fp_estimates.estimate_type also allows 'custom', written by the
+  // service-catalog estimate builder. Stone, as "Other" is everywhere else in this file.
+  'Other': '#78716C'
 };
 
 // Bar chart colors - used for horizontal bar charts (categories)

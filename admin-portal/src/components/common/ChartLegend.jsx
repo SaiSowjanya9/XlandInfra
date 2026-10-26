@@ -16,16 +16,20 @@
  * own legend will not do -- recharts orders its legend by the order the shapes are painted and
  * floats it over the plot, where a data point can be drawn straight through it.
  */
-export default function ChartLegend({ items = [], className = '', size = 'sm', layout = 'list' }) {
+// Every legend of every chart on every dashboard is this size, and there is no prop to change it.
+// It was a `size` with three values -- 11px, 12/14px and a flat 14px -- so a single row of cards
+// could hold three different legends; and at 14px a label and its figure stopped sharing a line in
+// a legend column a third of a row wide, the figure dropping under its own label where it reads as
+// a second entry. 12px is the size the hand-written legends on the Work Orders, Estimates and
+// staff dashboards already use, and what recharts' own legends are given, so 12px is the one size.
+const TEXT = 'text-xs';
+
+export default function ChartLegend({ items = [], className = '', layout = 'list' }) {
   const rows = items.filter(Boolean);
   if (!rows.length) return null;
-  // 'md' is 14px flat rather than 14/16: at 16px a label and its figure -- "Verification Pending"
-  // beside "₹2,07,348 (76.1%)" -- no longer share a line in a 176px legend column, and the figure
-  // wrapping under its own label reads as a second entry.
-  const text = size === 'xs' ? 'text-[11px]' : size === 'md' ? 'text-sm' : 'text-xs sm:text-sm';
   if (layout === 'row') {
     return (
-      <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${text} ${className}`}>
+      <ul className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${TEXT} ${className}`}>
         {rows.map((item, index) => (
           <li key={item.key ?? item.label ?? index} className="flex items-center gap-1.5">
             <span className={`shrink-0 ${item.line ? 'h-0.5 w-4 rounded' : 'h-2.5 w-2.5 rounded-sm'}`}
@@ -40,16 +44,16 @@ export default function ChartLegend({ items = [], className = '', size = 'sm', l
     );
   }
   return (
-    <ul className={`w-full space-y-2 ${className}`}>
+    <ul className={`w-full space-y-1.5 ${className}`}>
       {rows.map((item, index) => (
         // The row wraps as a whole: where the label and its figure will not share a line, the figure
         // drops to the next one and the label keeps the full width. Holding them on one line squeezed
         // the label into a column too narrow for its own words -- "Bank Transfer" came out as
         // "Ba / nk / Tra / nsf / er" -- so the label wraps between words and never inside one.
-        <li key={item.key ?? item.label ?? index} className={`flex flex-wrap items-baseline gap-x-3 gap-y-0.5 ${text}`}>
+        <li key={item.key ?? item.label ?? index} className={`flex flex-wrap items-baseline gap-x-3 gap-y-0.5 ${TEXT}`}>
           <span className="flex min-w-0 items-start gap-2">
             {/* Nudged down to sit on the first line of a label that wraps to two */}
-            <span className="mt-[0.3em] h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="mt-[0.3em] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
             <span className="leading-snug text-gray-700" title={item.label}>{item.label}</span>
           </span>
           {item.value !== undefined && item.value !== null && item.value !== '' && (

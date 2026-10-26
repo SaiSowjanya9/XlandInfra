@@ -25,3 +25,15 @@ export const trendSpanLabel = (rows = [], key = 'name') => {
 
 /** XAxis props for a trend chart: the axis line stays, the per-bucket labels go. */
 export const TREND_X_AXIS = { tick: false, tickLine: false, height: 8 };
+
+/**
+ * The `dot` a trend series draws — `false` as the rule above asks, except where the whole window
+ * is one bucket.
+ *
+ * A line needs two points. One point is a path that moves the pen and closes ("M10,20Z"), which
+ * strokes nothing, so a single-bucket window with dots off is an empty frame over a correct axis:
+ * the Estimate Trend did that for "This Week" and "This Month", and every trend still can on the
+ * 1st of a month, or on a deployment whose first record is today. The dot comes back for that one
+ * case, so the figure can be read; every longer span keeps the clean line.
+ */
+export const trendDot = (rows) => (rows?.length === 1 ? { r: 3 } : false);

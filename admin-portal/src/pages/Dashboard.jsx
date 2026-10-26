@@ -1108,11 +1108,11 @@ const Dashboard = () => {
                       </div>
                       <div className="w-full sm:flex-1 min-w-0 space-y-2">
                         {invoiceStatusData.map((item, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
+                          <div key={index} className="flex items-center gap-2 text-xs">
                             <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
                             <span className="text-gray-600">{item.name}</span>
                             <span className="font-semibold text-gray-900 ml-auto">{item.value}</span>
-                            <span className="text-gray-400 text-xs">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                            <span className="text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
                           </div>
                         ))}
                       </div>

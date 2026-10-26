@@ -1037,11 +1037,11 @@ const FPDashboard = ({ user }) => {
                       </div>
                       <div className="w-full min-w-0 space-y-3 sm:flex-1">
                         {invoiceStatusData.map((item, index) => (
-                          <div key={index} className="grid grid-cols-[12px_minmax(0,1fr)_auto_52px] items-center gap-2 text-sm">
+                          <div key={index} className="grid grid-cols-[12px_minmax(0,1fr)_auto_52px] items-center gap-2 text-xs">
                             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }}></span>
                             <span className="text-gray-600">{item.name}</span>
                             <span className="text-right font-semibold tabular-nums text-gray-900">{item.value}</span>
-                            <span className="text-right text-xs tabular-nums text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
+                            <span className="text-right tabular-nums text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
                           </div>
                         ))}
                       </div>
