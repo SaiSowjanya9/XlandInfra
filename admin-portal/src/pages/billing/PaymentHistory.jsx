@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   History, Search, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Loader2,
-  PlusCircle, RefreshCcw, RotateCcw, Trash2, Pencil, CreditCard, Inbox
+  PlusCircle, RefreshCcw, RotateCcw, Trash2, Pencil, CreditCard, Inbox, Download, X
 } from 'lucide-react';
 import { useFP } from '../../contexts/FPContext';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_GHOST_CLASS } from '../../components/common/PageHeader';
 import DismissPanel from '../../components/common/DismissPanel';
-import ReceiptModal from '../../components/billing/ReceiptModal';
+import Modal from '../../components/common/Modal';
 import {
   formatDate, formatDateTime, formatTime, maskTypedDate, parseTypedDate, toTypedDate, DATE_PLACEHOLDER
 } from '../../utils/dateFormat';
@@ -138,7 +138,6 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [receipt, setReceipt] = useState(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
-  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   const token = getAuthToken();
 
@@ -171,21 +170,18 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  // The payment code opens its receipt in a lightbox. The audit row only carries ids, so the
-  // receipt shape is fetched from /:id/receipt -- the same payload the Payments screen holds.
+  // The payment code opens the receipt PDF itself -- the document the customer was emailed --
+  // rather than a summary card. It needs the bearer token, so it is fetched as a blob.
   const openReceipt = async (row) => {
     if (!row.paymentId || receiptLoading) return;
     setReceiptLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/payments/${row.paymentId}/receipt`, {
+      const response = await fetch(`${API_BASE}/api/payments/${row.paymentId}/receipt/pdf`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const result = await response.json();
-      if (result.success) {
-        setReceipt(result.data);
-      } else {
-        setError(result.message || 'Could not load the receipt.');
-      }
+      if (!response.ok) throw new Error('Failed to generate receipt');
+      const blob = await response.blob();
+      setReceipt({ code: row.paymentCode || row.paymentId, url: window.URL.createObjectURL(blob) });
     } catch (err) {
       setError('Could not load the receipt. Please try again.');
     } finally {
@@ -193,27 +189,20 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
     }
   };
 
-  const downloadReceipt = async (payment) => {
-    setDownloadingReceipt(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/payments/${payment.id}/receipt/pdf`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to generate receipt');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Receipt_${payment.paymentId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      setError('Failed to download the receipt.');
-    } finally {
-      setDownloadingReceipt(false);
-    }
+  const closeReceipt = useCallback(() => {
+    setReceipt(current => {
+      if (current) window.URL.revokeObjectURL(current.url);
+      return null;
+    });
+  }, []);
+
+  const downloadReceipt = () => {
+    const a = document.createElement('a');
+    a.href = receipt.url;
+    a.download = `Receipt_${receipt.code}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // The actions actually present, so the filter never offers one that would empty the table.
@@ -576,13 +565,22 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
 
       {/* A click on a payment code opens its receipt here — a history row carries no Send
           action: this is an audit view, so download and close only. */}
-      <ReceiptModal
-        isOpen={!!receipt}
-        onClose={() => setReceipt(null)}
-        payment={receipt}
-        onDownload={downloadReceipt}
-        downloading={downloadingReceipt}
-      />
+      {receipt && (
+        <Modal onClose={closeReceipt} className="max-w-3xl h-[90vh] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-warm-border">
+            <h3 className="text-sm font-semibold text-gray-900">Receipt {receipt.code}</h3>
+            <div className="flex items-center gap-2">
+              <button onClick={downloadReceipt} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors" title="Download PDF">
+                <Download className="w-4 h-4 text-gray-600" />
+              </button>
+              <button onClick={closeReceipt} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors" title="Close">
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          </div>
+          <iframe src={receipt.url} title={`Receipt ${receipt.code}`} className="flex-1 w-full border-0" />
+        </Modal>
+      )}
     </div>
   );
 };
