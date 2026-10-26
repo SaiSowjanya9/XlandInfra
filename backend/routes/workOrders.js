@@ -22,6 +22,7 @@ const {
   ROLES
 } = require('../middleware/rbac');
 const { WORK_ORDER_STATUS } = require('../config/roles');
+const { requireCustomer } = require('../middleware/customerAuth');
 
 // Secure file upload configuration
 // SECURITY: Whitelist both MIME types AND file extensions to prevent upload attacks
@@ -84,9 +85,11 @@ router.get('/categories', async (req, res) => {
 });
 
 // ============================================
-// CREATE WORK ORDER (Customer Portal - No Auth Required)
+// CREATE WORK ORDER (Customer Portal - customer login required)
+// The account is checked before multer runs, so an anonymous upload never reaches the disk, and
+// who raised it and for which property come from the account -- never from the form.
 // ============================================
-router.post('/', (req, res, next) => {
+router.post('/', requireCustomer, (req, res, next) => {
   upload.array('attachments', 5)(req, res, (err) => {
     if (err) {
       console.error('Multer upload error:', err);
@@ -111,17 +114,20 @@ router.post('/', (req, res, next) => {
       entryNotes,
       hasPet,
       priority,
-      residentId,
-      propertyId,
       unitId,
       block,
-      flatNumber,
-      customerName,
-      customerEmail,
-      customerPhone,
-      propertyName,
-      propertyType
+      flatNumber
     } = req.body;
+
+    // The raiser and the property are the logged-in account's own
+    const account = req.customerAccount;
+    const residentId = String(account.id);
+    const propertyId = account.property_id || account.property_code || null;
+    const customerName = [account.first_name, account.last_name].filter(Boolean).join(' ') || null;
+    const customerEmail = account.email || null;
+    const customerPhone = account.phone || null;
+    const propertyName = account.property_name || null;
+    const propertyType = null;
 
     // Get category details first to check if it's "Other" category
     const category = categoriesConfig.find(c => c.id === parseInt(categoryId));

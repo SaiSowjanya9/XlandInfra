@@ -263,8 +263,11 @@ const WorkOrder = ({ user }) => {
         submitData.append('attachments', attachment.file);
       });
 
+      // The server takes the raiser and the property from this login, not from the form
+      const token = localStorage.getItem('customerToken');
       const response = await fetch('/api/work-orders', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: submitData
       });
 

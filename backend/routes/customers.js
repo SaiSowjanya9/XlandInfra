@@ -24,12 +24,13 @@ const { buildCustomerActivity, buildUpcomingVisits } = require('../utils/custome
 // mark-read routes, because they have to agree
 const { customerNotificationScope } = require('../utils/customerNotificationScope');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
-const { verifyToken, generateToken: authGenerateToken } = require('../middleware/auth');
+const { verifyToken, authenticate, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
 const { recordRazorpayPayment } = require('../services/razorpayPayment');
 const { generatePaymentId } = require('../utils/paymentIds');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
+const { notifyOfflinePaymentSubmitted } = require('../services/paymentNotifications');
 
 const round2 = value => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -198,10 +199,27 @@ const initializeDatabase = async () => {
 // Run initialization on module load
 initializeDatabase();
 
+// The seven staff portals that carry Add Customer. FP staff tokens may carry schema_v8's
+// `fp_` prefix (fp_manager), which names the same role.
+const CUSTOMER_CREATOR_ROLES = new Set([
+  'admin', 'operations_manager', 'franchise_partner', 'franchise',
+  'manager', 'coordinator', 'supervisor', 'executive'
+]);
+
+// Creating an account sends an activation email and grants portal access to a property, so it
+// must come from a signed-in staff member -- a customer or vendor token is refused.
+const requireCustomerCreator = (req, res, next) => {
+  const role = String(req.user?.role || '').replace(/^fp_/, '');
+  if (!CUSTOMER_CREATOR_ROLES.has(role)) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to add customers' });
+  }
+  next();
+};
+
 // ============================================
-// POST /api/customers/create - Create customer account (called by admin)
+// POST /api/customers/create - Create customer account (staff portals' Add Customer)
 // ============================================
-router.post('/create', async (req, res) => {
+router.post('/create', authenticate, requireCustomerCreator, async (req, res) => {
   console.log('📧 /api/customers/create endpoint hit');
   console.log('📧 Request body:', req.body);
   
@@ -349,7 +367,7 @@ router.post('/create', async (req, res) => {
         propertyContactId || null,
         propertyName || null,
         propertyCode || null,
-        createdBy || 'admin'
+        String(req.user.username || req.user.email || createdBy || req.user.role).slice(0, 100)
       ]
     );
 
@@ -2739,6 +2757,16 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
        `Offline payment intent recorded via Customer Portal (${normalizedMethod}) - Ref: ${referenceId}`,
        customerName]
     );
+
+    // Tell the partner it is waiting for them -- after the write, never awaited, never thrown
+    notifyOfflinePaymentSubmitted({
+      invoice: inv,
+      paymentId: paymentResult.insertId,
+      method: normalizedMethod,
+      amount: charge.amount,
+      referenceId,
+      customerName
+    }).catch(err => console.error('Offline payment alert failed:', err.message));
 
     res.json({
       success: true,
