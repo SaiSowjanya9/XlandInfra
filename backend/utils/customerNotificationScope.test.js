@@ -20,15 +20,22 @@ const customer = { id: 55, propertyId: 12, propertyCode: 'GC-1' };
 test('a complaint is scoped to the account that raised it, never to the partner', () => {
   const { sql } = customerNotificationScope(customer);
   // Matched by its own account...
-  assert.match(sql, /pn\.reference_type = 'complaint' AND pn\.user_id = \?/);
+  assert.match(sql, /pn\.reference_type IN \('complaint', 'payment'\) AND pn\.user_id = \?/);
   // ...and kept out of the partner-wide branch, which is where the leak would be.
-  assert.match(sql, /\(pn\.reference_type IS NULL OR pn\.reference_type <> 'complaint'\)/);
+  assert.match(sql, /\(pn\.reference_type IS NULL OR pn\.reference_type NOT IN \('complaint', 'payment'\)\)/);
   // That exclusion belongs to the partner-wide branch and nothing else: it sits before the first
   // OR, so a complaint can only ever arrive through its own account.
   assert.ok(
-    sql.indexOf("pn.reference_type <> 'complaint'") < sql.indexOf('OR (pn.role_type'),
+    sql.indexOf("NOT IN ('complaint', 'payment')") < sql.indexOf('OR (pn.role_type'),
     'the exclusion guards the partner-wide branch'
   );
+});
+
+test('a payment notification is scoped to its own account, like a complaint', () => {
+  const { sql } = customerNotificationScope(customer);
+  // One household's verified payment must never reach every customer of the partner
+  assert.match(sql, /NOT IN \('complaint', 'payment'\)/);
+  assert.match(sql, /IN \('complaint', 'payment'\) AND pn\.user_id = \?/);
 });
 
 test('the work order branch is untouched, and the property is still what scopes it', () => {

@@ -25,9 +25,11 @@
  * Regression test: `node --test backend/utils/customerNotificationScope.test.js`.
  */
 
+// A payment, like a complaint, concerns one household, so it travels on user_id (the
+// customer_accounts.id it is for) and never on the partner-wide first branch.
 const CUSTOMER_NOTIFICATION_SCOPE_SQL = `(
         (pn.role_type = 'customer'
-          AND (pn.reference_type IS NULL OR pn.reference_type <> 'complaint')
+          AND (pn.reference_type IS NULL OR pn.reference_type NOT IN ('complaint', 'payment'))
           AND EXISTS (
             SELECT 1 FROM onboarded_properties op
              WHERE op.franchise_partner_id = pn.franchise_partner_id AND op.id = ?
@@ -35,7 +37,7 @@ const CUSTOMER_NOTIFICATION_SCOPE_SQL = `(
         OR (pn.role_type = 'customer' AND pn.reference_type = 'work_order' AND EXISTS (
           SELECT 1 FROM work_orders wo WHERE wo.id = pn.reference_id AND wo.property_id = ?
         ))
-        OR (pn.role_type = 'customer' AND pn.reference_type = 'complaint' AND pn.user_id = ?)
+        OR (pn.role_type = 'customer' AND pn.reference_type IN ('complaint', 'payment') AND pn.user_id = ?)
       )`;
 
 /**

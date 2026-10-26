@@ -146,6 +146,8 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null, 'processing', 'success', 'failed', 'submitted'
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
+  // Why the last attempt failed, shown on the failure screen
+  const [paymentError, setPaymentError] = useState(null);
   // The customer gets exactly one alternative to the full balance: pay half now, the rest before
   // the next service period. Off by default — the full amount is what the invoice is for.
   const [payHalf, setPayHalf] = useState(false);
@@ -324,33 +326,24 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
 
       const result = await response.json();
 
-      if (result.success) {
+      // Only a payment the server actually recorded is "submitted": staff verify from that row, so
+      // showing a made-up reference after a failure told the customer it was done when it was not.
+      if (response.ok && result.success && result.data?.referenceId) {
         setPaymentStatus('submitted');
         setPaymentDetails({
-          referenceId: result.data?.referenceId || `REF-${Date.now()}`,
-          amount: result.data?.amount ?? amountToPay,
+          referenceId: result.data.referenceId,
+          amount: result.data.amount ?? amountToPay,
           invoiceId: invoice.invoiceId,
-          method: selectedMethodData?.label
+          method: selectedMethodData?.label,
+          alreadyPending: !!result.data.alreadyPending
         });
       } else {
-        // Even if API fails, show submitted for offline - admin will verify
-        setPaymentStatus('submitted');
-        setPaymentDetails({
-          referenceId: `REF-${Date.now()}`,
-          amount: amountToPay,
-          invoiceId: invoice.invoiceId,
-          method: selectedMethodData?.label
-        });
+        setPaymentError(result.message || 'We could not record your payment. Please try again.');
+        setPaymentStatus('failed');
       }
     } catch (err) {
-      // For offline payments, still show as submitted
-      setPaymentStatus('submitted');
-      setPaymentDetails({
-        referenceId: `REF-${Date.now()}`,
-        amount: amountToPay,
-        invoiceId: invoice.invoiceId,
-        method: selectedMethodData?.label
-      });
+      setPaymentError('We could not reach the server. Please check your connection and try again.');
+      setPaymentStatus('failed');
     } finally {
       setLoading(false);
     }
@@ -924,8 +917,10 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                   <div className="w-20 h-20 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-6">
                     <X className="w-10 h-10 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Failed</h3>
-                  <p className="text-gray-500 mb-6">Something went wrong. Please try again.</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {isOnlineMethod ? 'Payment Failed' : 'Payment Not Recorded'}
+                  </h3>
+                  <p className="text-gray-500 mb-6">{paymentError || 'Something went wrong. Please try again.'}</p>
                   
                   <div className="flex gap-3">
                     <button
@@ -938,6 +933,7 @@ const PaymentFlow = ({ invoice, onClose, onPaymentSuccess }) => {
                       onClick={() => {
                         setStep(1);
                         setPaymentStatus(null);
+                        setPaymentError(null);
                       }}
                       className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-500 text-gray-900 font-semibold transition-all"
                     >

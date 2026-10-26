@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
+import useViewportClamp from '../../hooks/useViewportClamp';
 
 // Get current date in IST timezone
 const getISTDate = () => {
@@ -64,6 +65,7 @@ const DateRangeFilter = ({
   const [tempStartDate, setTempStartDate] = useState(startDate || '');
   const [tempEndDate, setTempEndDate] = useState(endDate || '');
   const datePickerRef = useRef(null);
+  const panelRef = useViewportClamp(showDatePicker);
 
   // Update display when props change
   useEffect(() => {
@@ -159,17 +161,17 @@ const DateRangeFilter = ({
       <div className="relative" ref={datePickerRef}>
         <button
           onClick={() => setShowDatePicker(!showDatePicker)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 shadow-sm"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 shadow-sm"
         >
-          <Calendar className="w-4 h-4 text-blue-600" />
-          <span className="text-gray-700 font-medium">
+          <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
+          <span className="text-gray-700 font-medium whitespace-nowrap">
             {getDisplayLabel()}
           </span>
-          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${showDatePicker ? 'rotate-180' : ''}`} />
         </button>
         
         {showDatePicker && (
-          <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
+          <div ref={panelRef} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
             <div className="space-y-4">
               {/* Start Date */}
               <div>
@@ -236,7 +238,7 @@ const DateRangeFilter = ({
               </div>
 
               {/* Quick Select Buttons */}
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={handleLast7Days}
                   className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50"

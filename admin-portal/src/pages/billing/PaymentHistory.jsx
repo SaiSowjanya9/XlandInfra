@@ -275,7 +275,7 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                   </span>
                   <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                   <button
                     onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
                     className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!selectedFp || selectedFp.id === 'all' ? 'bg-blue-50' : ''}`}

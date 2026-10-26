@@ -27,6 +27,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
 import useChartTooltip, { ChartTooltipContent } from '../../components/common/ChartTooltip';
 import { collectionTrendBuckets } from '../../utils/collectionTrend';
+import { trendSpanLabel, TREND_X_AXIS } from '../../utils/trendSpan';
 import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
@@ -115,8 +116,8 @@ const shortEstimateId = (id = '') => (id.length > 13 ? `${id.slice(0, 4)}…${id
 // Price first, Margin % in the middle of the costs -- and floated over the plot, where a 100%
 // margin point ran straight through it. Ours states the series in the order the reader meets them.
 const COLLECTION_TREND_SERIES = [
-  { label: 'Invoice Amount', color: '#93C5FD' },
-  { label: 'Collected Amount', color: '#4ADE80' }
+  { label: 'Invoice Amount', color: '#3B82F6', line: true },
+  { label: 'Collected Amount', color: '#22C55E', line: true }
 ];
 const MARGIN_CHART_SERIES = [
   { label: 'Vendor Cost', color: '#A5B4FC' },
@@ -631,7 +632,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                   {/* Admin (All FPs) Option */}
                   <button
                     onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
@@ -704,7 +705,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Collection Trend */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900">Collection Trend</h3>
                 <Info className="w-4 h-4 text-gray-400 hidden sm:block" />
@@ -723,35 +724,26 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
               </div>
             </div>
             <ChartLegend layout="row" size="md" items={COLLECTION_TREND_SERIES} />
-            {/* Drawn by the chart library rather than by hand: the bars had no axis, no gridline
-                and no figure on them, so a tall blue bar beside a short green one said only
-                "more than" -- how much more was unanswerable without hovering. The invoiced and
-                the collected bar stand side by side per period, against a money axis. */}
+            {/* A trend line from the first activity to today: no per-period labels on the axis, the
+                span stated once underneath, and the hover naming the period and both figures. */}
             {collectionTrend.some(day => day.invoiceAmount > 0 || day.collectedAmount > 0) ? (
-              <div className="mt-3 overflow-x-auto">
-                <div style={{ minWidth: Math.max(280, collectionTrend.length * 44) }} className="h-44 sm:h-48">
+              <div className="mt-3">
+                <div className="h-44 sm:h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={collectionTrend} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}
-                      barGap={2} barCategoryGap="20%">
+                    <ComposedChart data={collectionTrend} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                      <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: '#E2E8F0' }} interval="preserveStartEnd"
-                        tick={{ fontSize: 12, fill: '#475569' }} />
+                      <XAxis dataKey="label" axisLine={{ stroke: '#E2E8F0' }} {...TREND_X_AXIS} />
                       <YAxis tick={{ fontSize: 12, fill: '#475569' }} tickLine={false} axisLine={false} width={56}
                         tickFormatter={value => formatCurrencyCompact(value)} />
-                      <Tooltip cursor={{ fill: '#F8FAFC' }} content={<ChartTooltipContent formatValue={formatCurrency} />} />
-                      {/* A figure over every bar is unreadable across thirty days, so they appear
-                          only where the range is short enough for them to stand apart */}
-                      <Bar dataKey="invoiceAmount" name="Invoice Amount" fill="#93C5FD" radius={[3, 3, 0, 0]} maxBarSize={28}>
-                        {collectionTrend.length <= 8 && <LabelList dataKey="invoiceAmount" position="top"
-                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 11, fill: '#334155' }} />}
-                      </Bar>
-                      <Bar dataKey="collectedAmount" name="Collected Amount" fill="#4ADE80" radius={[3, 3, 0, 0]} maxBarSize={28}>
-                        {collectionTrend.length <= 8 && <LabelList dataKey="collectedAmount" position="top"
-                          formatter={value => (value ? formatCurrencyCompact(value) : '')} style={{ fontSize: 11, fill: '#334155' }} />}
-                      </Bar>
+                      <Tooltip cursor={{ stroke: '#CBD5E1' }} content={<ChartTooltipContent formatValue={formatCurrency} />} />
+                      <Line type="monotone" dataKey="invoiceAmount" name="Invoice Amount" stroke="#3B82F6" strokeWidth={2}
+                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                      <Line type="monotone" dataKey="collectedAmount" name="Collected Amount" stroke="#22C55E" strokeWidth={2}
+                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="mt-2 text-center text-xs text-gray-500">{trendSpanLabel(collectionTrend, 'label')}</p>
               </div>
             ) : (
               /* A range with nothing in it says so, rather than drawing an empty frame that reads
@@ -764,7 +756,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
           {/* Payments by Mode */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Mode</h3>
               <div className="relative">
                 <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
@@ -793,7 +785,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
           {/* Payments by Status - spans the row below xl */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0 md:col-span-2 xl:col-span-1">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Payments by Status</h3>
               <div className="relative">
                 <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
@@ -858,7 +850,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
           {/* Top 5 Customers by Collection */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Top 5 Customers</h3>
               <div className="relative">
                 <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
@@ -899,7 +891,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
 
           {/* Invoices by Payment Status - spans the row below xl */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 min-w-0 md:col-span-2 xl:col-span-1">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900">Invoices by Status</h3>
               <div className="relative">
                 <select className="appearance-none text-xs sm:text-sm text-gray-700 border border-gray-200 rounded-lg pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 bg-white hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">

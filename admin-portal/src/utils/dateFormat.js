@@ -61,6 +61,21 @@ export const formatDate = (value, fallback = '-') => {
   return `${pad(parts.day)}/${pad(parts.month)}/${parts.year}`;
 };
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * "May 2026" -- the label of a month on every chart axis and tooltip.
+ * A Date is read in local time, because the charts build their month buckets with
+ * `new Date(year, month, 1)`; a string goes through the same IST rule as `formatDate`.
+ */
+export const formatMonthYear = (value, fallback = '-') => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? fallback : `${MONTHS_SHORT[value.getMonth()]} ${value.getFullYear()}`;
+  }
+  const parts = istParts(value);
+  return parts ? `${MONTHS_SHORT[parts.month - 1]} ${parts.year}` : fallback;
+};
+
 /**
  * dd/mm/yyyy, h:mm am/pm -- for the screens that show a time as well. Always IST.
  *

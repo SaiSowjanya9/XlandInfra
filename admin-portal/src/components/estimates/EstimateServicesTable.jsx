@@ -174,6 +174,71 @@ export function TotalsCells({ columns, label, totals, internal, cell, strong = f
   );
 }
 
+// Below xl (phones, tablets, and a laptop with the sidebar open) eleven fixed-share columns are a
+// few characters wide each, and their words split mid-letter -- "Monthl/y", "Capaci/ty Slab",
+// "₹1,989./9". There each service reads as a card instead: the name and price on top, then every
+// other column as a label over its value. Same column definitions as the table, so the two can
+// never disagree; the table itself stays for wide screens and for print.
+const CARD_HEADLINE = new Set(['#', 'Service', 'Description', 'Customer Price']);
+// Spelled out in full: Tailwind only generates classes it finds written in the source
+const TABLE_ONLY = 'hidden xl:table print:table';
+const CARDS_ONLY = 'xl:hidden print:hidden';
+
+function ServiceCards({ columns, services }) {
+  const byLabel = Object.fromEntries(columns.map(column => [column.label, column]));
+  const details = columns.filter(column => !CARD_HEADLINE.has(column.label));
+  return (
+    <ul className="divide-y divide-warm-border/60 bg-white">
+      {services.map((row, index) => (
+        <li key={index} className="px-3 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2">
+              <span className="pt-0.5">{byLabel['#'].render(row, index)}</span>
+              <div className="min-w-0">{byLabel.Service.render(row, index)}</div>
+            </div>
+            <div className="shrink-0 text-right whitespace-nowrap">{byLabel['Customer Price'].render(row, index)}</div>
+          </div>
+          <div className="mt-1.5 pl-5">{byLabel.Description.render(row, index)}</div>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 pl-5 sm:grid-cols-3 md:grid-cols-4">
+            {details.map(column => (
+              <div key={column.label} className="min-w-0">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-warm-muted">{column.label}</dt>
+                <dd className="mt-0.5 text-left [&_p]:text-left">{column.render(row, index)}</dd>
+              </div>
+            ))}
+          </dl>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// A totals line for the cards: the label, then each figure labelled, wrapping onto a second line
+// on a phone instead of squeezing
+function TotalsCard({ label, totals, internal, strong = false }) {
+  const known = !totals.uncosted?.length;
+  const xland = known ? Math.round((totals.price - totals.vendor - (totals.operating || 0)) * 100) / 100 : null;
+  const margin = known && totals.price ? Math.round((xland / totals.price) * 10000) / 100 : null;
+  const figures = [
+    ...(internal ? [['Vendor Cost', known ? formatCurrency(totals.vendor) : '—'], ['XLAND Cost', known ? formatCurrency(xland) : '—']] : []),
+    ['Customer Price', formatCurrency(totals.price)],
+    ...(internal ? [['Margin %', margin == null ? '—' : `${margin}%`]] : [])
+  ];
+  return (
+    <div className={`bg-warm-section px-3 py-2.5 ${strong ? '' : 'border-t border-warm-border'}`}>
+      <p className={`font-semibold text-warm-text ${strong ? 'text-sm' : 'text-xs'}`}>{label}</p>
+      <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
+        {figures.map(([name, value]) => (
+          <div key={name} className="min-w-0">
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-warm-muted">{name}</dt>
+            <dd className={`whitespace-nowrap tabular-nums font-semibold ${name === 'Customer Price' ? 'text-warm-text' : name === 'Margin %' ? 'text-warm-accent-hover' : 'text-gray-700'} ${strong ? 'text-sm' : 'text-xs'}`}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 // The Total Services Price line across every block, on the same columns as the tables above it so
 // its figures sit under theirs
 export function EstimateGrandTotal({ rows, price, internal = false, label = 'Total Services Price' }) {
@@ -182,7 +247,10 @@ export function EstimateGrandTotal({ rows, price, internal = false, label = 'Tot
   const totals = { ...serviceTotals(rows), price };
   return (
     <div className="overflow-hidden rounded-lg border border-warm-border">
-      <table className="w-full table-fixed border-collapse">
+      <div className={CARDS_ONLY}>
+        <TotalsCard label={label} totals={totals} internal={internal} strong />
+      </div>
+      <table className={`w-full table-fixed border-collapse ${TABLE_ONLY}`}>
         <colgroup className="print:hidden">{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
         <PrintColgroup columns={columns} internal={internal} />
         <tbody className="bg-warm-section">
@@ -212,7 +280,12 @@ export default function EstimateServicesTable({ rows, total, note = null, totalL
     // The table fits its card: every column has a fixed share of the width and its text wraps, so
     // there is no sideways scroller and nothing is cut off (the user asked for the scroller to go)
     <div className={`overflow-hidden border border-warm-border ${topRadius} ${bottomRadius}`}>
-      <table className="w-full table-fixed border-collapse">
+      <div className={CARDS_ONLY}>
+        <ServiceCards columns={columns} services={services} />
+        <TotalsCard label={totalLabel} totals={{ ...serviceTotals(services), price: sum }} internal={internal} />
+        {note && <p className="bg-warm-section px-3 pb-2 text-right text-[11px] text-warm-muted">{note}</p>}
+      </div>
+      <table className={`w-full table-fixed border-collapse ${TABLE_ONLY}`}>
         <colgroup className="print:hidden">{columns.map(column => <col key={column.label} style={{ width: `${COLUMN_SHARE[internal ? 'internal' : 'plain'][column.label] || 8}%` }} />)}</colgroup>
         <PrintColgroup columns={columns} internal={internal} />
         <thead className="bg-warm-section">

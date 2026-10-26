@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatDate, formatDateTime, toDateInputValue, maskTypedDate, parseTypedDate, toTypedDate,
-  istTodayValue, DATE_PLACEHOLDER
+  istTodayValue, DATE_PLACEHOLDER, formatMonthYear
 } from './dateFormat.js';
 
 test('every date reads dd/mm/yyyy', () => {
@@ -98,4 +98,12 @@ test('today is the Indian today', () => {
     timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
   }).format(new Date());
   assert.equal(istTodayValue(), istNow);
+});
+
+test('a chart month reads "May 2026", never 01/05/2026', () => {
+  assert.equal(formatMonthYear(new Date(2026, 4, 1)), 'May 2026');
+  assert.equal(formatMonthYear(new Date(2026, 11, 31)), 'Dec 2026');
+  assert.equal(formatMonthYear('2026-10-01'), 'Oct 2026');
+  assert.equal(formatMonthYear(''), '-');
+  assert.equal(formatMonthYear(new Date('nope')), '-');
 });

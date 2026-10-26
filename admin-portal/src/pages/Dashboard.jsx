@@ -20,6 +20,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import PendingPaymentAlerts, { usePendingPaymentAlerts } from '../components/common/PendingPaymentAlerts';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { useFP } from '../contexts/FPContext';
@@ -29,6 +30,7 @@ import DonutChart from '../components/common/DonutChart';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PRIORITY_COLORS, PROPERTY_TYPE_COLORS, PAYMENT_STATUS_COLORS } from '../utils/chartColors';
 import DismissPanel from '../components/common/DismissPanel';
+import { clampToViewport } from '../hooks/useViewportClamp';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -40,6 +42,8 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Customer offline payments waiting to be verified, live from the payments rows
+  const { alerts: paymentAlerts } = usePendingPaymentAlerts();
   const [estimates, setEstimates] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -589,8 +593,8 @@ const Dashboard = () => {
       <div className="p-4 lg:p-6 space-y-5">
         {/* FP Info Banner - Light Theme */}
         <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {/* Back/Switch Button */}
               <button
                 onClick={() => selectFp(null)}
@@ -646,7 +650,7 @@ const Dashboard = () => {
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
+              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute top-full right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-72 overflow-y-auto">
                   {/* Admin option */}
                   <button
                     onClick={() => {
@@ -711,16 +715,16 @@ const Dashboard = () => {
                 className="relative p-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <Bell className="w-4 h-4 text-gray-500" />
-                {unreadCount > 0 && (
+                {unreadCount + paymentAlerts.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadCount + paymentAlerts.length > 9 ? '9+' : unreadCount + paymentAlerts.length}
                   </span>
                 )}
               </button>
               
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                <div ref={clampToViewport} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                     <h3 className="font-medium text-gray-800 text-sm">Notifications</h3>
                     {unreadCount > 0 && (
@@ -733,7 +737,13 @@ const Dashboard = () => {
                     )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
+                    <PendingPaymentAlerts
+                      alerts={paymentAlerts}
+                      paymentsPath="/employee/billing/payments"
+                      onNavigate={() => setShowNotifications(false)}
+                    />
                     {notifications.length === 0 ? (
+                      paymentAlerts.length > 0 ? null :
                       <div className="py-8 text-center text-gray-400">
                         <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No notifications</p>
@@ -772,12 +782,12 @@ const Dashboard = () => {
           </div>
         </PageHeader>
 
-        {/* First Stats Row - 5 KPI Cards with Real-Time Data. One row; it scrolls
-            sideways on narrow screens instead of wrapping or squeezing the cards. */}
-        <div className="flex flex-nowrap gap-3 overflow-x-auto py-1">
+        {/* First Stats Row - 5 KPI Cards with Real-Time Data. They wrap to the screen and
+            share each row's width, so no card is cut off on a phone or tablet. */}
+        <div className="flex flex-wrap gap-3 py-1">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
-            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -793,7 +803,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/assigned-vendors')}
-            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -809,7 +819,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/employee-details')}
-            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -825,7 +835,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/work-orders')}
-            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -841,7 +851,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/estimates/list')}
-            className="shrink-0 bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -857,12 +867,12 @@ const Dashboard = () => {
         </div>
 
         {/* Combined Work Orders + Estimates Overview Box */}
-        <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 space-y-6">
           {/* Work Orders Overview Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-              <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <button onClick={() => navigate('/employee/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -871,7 +881,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {/* Work Orders by Status */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-                <div className="flex justify-between items-center mb-4 gap-2">
+                <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Status</h3>
                   <PeriodDropdown value={woStatusFilter} onChange={setWoStatusFilter} />
                 </div>
@@ -898,7 +908,7 @@ const Dashboard = () => {
 
               {/* Work Orders by Priority */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-                <div className="flex justify-between items-center mb-4 gap-2">
+                <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Priority</h3>
                   <PeriodDropdown value={woPriorityFilter} onChange={setWoPriorityFilter} />
                 </div>
@@ -925,7 +935,7 @@ const Dashboard = () => {
 
               {/* Work Orders by Property Type */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-                <div className="flex justify-between items-center mb-4 gap-2">
+                <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
                   <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
                 </div>
@@ -996,9 +1006,9 @@ const Dashboard = () => {
 
           {/* Estimates Overview Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-              <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <button onClick={() => navigate('/employee/estimates/list')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1010,16 +1020,16 @@ const Dashboard = () => {
 
           {/* Payments Overview Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
-              <button onClick={() => navigate('/employee/billing/invoices')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <button onClick={() => navigate('/employee/billing/invoices')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
             
             {/* Invoices by Payment Status Chart */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 max-w-md">
-              <div className="flex justify-between items-center mb-4 gap-2">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 w-full max-w-md">
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                 <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Invoices by Payment Status</h3>
                 <div className="relative">
                   <select 
@@ -1037,7 +1047,7 @@ const Dashboard = () => {
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                 {(() => {
                   // Filter out cancelled invoices - they shouldn't appear in payment status chart
                   // Use dateFilteredInvoices for real-time accuracy
@@ -1087,7 +1097,7 @@ const Dashboard = () => {
                           strokeWidth={18}
                         />
                       </div>
-                      <div className="flex-1 min-w-0 space-y-2">
+                      <div className="w-full sm:flex-1 min-w-0 space-y-2">
                         {invoiceStatusData.map((item, index) => (
                           <div key={index} className="flex items-center gap-2 text-sm">
                             <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
@@ -1107,7 +1117,7 @@ const Dashboard = () => {
 
         {/* Quick Access QR Codes */}
         <div className="bg-white rounded-xl p-5 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <QrCode className="w-5 h-5 text-amber-500" />
               <h3 className="font-medium text-gray-800">Quick Access QR Codes</h3>

@@ -226,8 +226,8 @@ const ExecutiveDashboard = ({ user }) => {
       <PageHeader icon={LayoutDashboard}
         title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Executive'}!`}
         subtitle="Here's what's happening with your assigned areas today.">
-          <div className="flex min-w-0 items-center gap-3 flex-nowrap overflow-x-auto">
-            <button onClick={() => navigate('/executive/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:gap-3">
+            <button onClick={() => navigate('/executive/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Building2 className="w-5 h-5 text-blue-600" />
@@ -239,7 +239,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Store className="w-5 h-5 text-purple-600" />
@@ -251,7 +251,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-orange-600" />
@@ -263,7 +263,7 @@ const ExecutiveDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/executive/work-orders')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 shrink-0 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
+            <button onClick={() => navigate('/executive/work-orders')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-indigo-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <ClipboardList className="w-5 h-5 text-indigo-600" />
@@ -289,8 +289,8 @@ const ExecutiveDashboard = ({ user }) => {
       </PageHeader>
 
       {/* Properties Overview Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Properties Overview</h2>
             <p className="text-sm text-gray-500 mt-1">Distribution by property type</p>
@@ -304,7 +304,7 @@ const ExecutiveDashboard = ({ user }) => {
               <option value="sixmonths">Last 6 Months</option>
               <option value="year">This Year</option>
             </select>
-            <button onClick={() => navigate('/executive/properties')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <button onClick={() => navigate('/executive/properties')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -313,7 +313,7 @@ const ExecutiveDashboard = ({ user }) => {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={propertyTypeData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={{ stroke: '#E5E7EB' }} tickLine={false} angle={-15} textAnchor="end" height={50} interval={0} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={{ stroke: '#E5E7EB' }} tickLine={false} angle={-35} textAnchor="end" height={70} interval={0} />
                 <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', fontSize: '12px' }} formatter={(value) => [`${value} properties`, 'Count']} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} fillOpacity={0.85} isAnimationActive={false}>
@@ -352,12 +352,12 @@ const ExecutiveDashboard = ({ user }) => {
       </div>
 
       {/* Combined Estimates + Work Orders Overview Box */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 space-y-6">
         {/* Estimates Overview Section */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-            <button onClick={() => navigate('/executive/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <button onClick={() => navigate('/executive/estimates')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -369,14 +369,14 @@ const ExecutiveDashboard = ({ user }) => {
 
         {/* Work Orders Overview Section */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-            <button onClick={() => navigate('/executive/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <button onClick={() => navigate('/executive/work-orders')} className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           
-          <div className="flex items-center justify-center gap-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
             <div className="relative w-56 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>

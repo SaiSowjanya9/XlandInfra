@@ -14,6 +14,7 @@ import { formatDate } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
 import Modal from '../components/common/Modal';
 import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
+import { clampToViewport } from '../hooks/useViewportClamp';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 // Service Types - shared with Add Vendor section
@@ -572,7 +573,7 @@ const VendorDetails = () => {
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div ref={clampToViewport} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-800">Notifications</span>
                     {unreadCount > 0 && (
