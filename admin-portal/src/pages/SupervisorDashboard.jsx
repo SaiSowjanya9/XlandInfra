@@ -350,7 +350,8 @@ const SupervisorDashboard = ({ user }) => {
               View All <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          <EstimatesOverviewBlocks estimates={estimates} />
+          {/* The header's date range, as the Estimates summary card above already uses */}
+          <EstimatesOverviewBlocks estimates={dateFilteredEstimates} />
         </div>
 
         {/* Divider */}

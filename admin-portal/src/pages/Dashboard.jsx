@@ -1021,7 +1021,10 @@ const Dashboard = () => {
                 View All <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            <EstimatesOverviewBlocks estimates={estimates} />
+            {/* The date range the header sets, as the Estimates summary card above already uses:
+                handed the raw list, the breakdown counted every estimate ever while the card
+                counted the range, and the parts stopped adding up to the whole */}
+            <EstimatesOverviewBlocks estimates={dateFilteredEstimates} />
           </div>
 
           {/* Divider */}
