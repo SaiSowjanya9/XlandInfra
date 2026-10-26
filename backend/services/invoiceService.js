@@ -7,6 +7,7 @@ const { pool } = require('../config/database');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { billToParty } = require('../utils/estimateData');
 const { generateInvoicePDF } = require('./pdfService');
+const { firstFreeNumber } = require('../utils/paymentIds');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
 // GST Rate (fixed at 18%)
@@ -44,9 +45,12 @@ const generateInvoiceId = async (fpId = null) => {
       [fpId]
     );
     
+    // invoices.invoice_id is UNIQUE system-wide while this counter is per FP, and the manual
+    // Create Invoice path numbers from MAX(invoice_id); skip to the first code nobody holds
+    const format = (n) => `${prefix}-${String(n).padStart(5, '0')}`;
     let nextNumber;
     if (existing.length > 0 && existing[0].max_number) {
-      nextNumber = existing[0].max_number + 1;
+      nextNumber = await firstFreeNumber('invoices', 'invoice_id', existing[0].max_number + 1, format);
       await pool.execute(
         'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
         [nextNumber, fpId]
@@ -58,7 +62,7 @@ const generateInvoiceId = async (fpId = null) => {
         [fpId]
       );
       
-      nextNumber = 1;
+      nextNumber = await firstFreeNumber('invoices', 'invoice_id', 1, format);
       if (seqExists.length > 0) {
         await pool.execute(
           'UPDATE invoice_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
@@ -73,7 +77,7 @@ const generateInvoiceId = async (fpId = null) => {
     }
     
     // Format: INV-00001
-    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
+    return format(nextNumber);
   } catch (error) {
     console.error('Error generating invoice ID:', error);
     // Fallback with timestamp

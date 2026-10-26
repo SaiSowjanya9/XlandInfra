@@ -705,12 +705,13 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
     if (sourceTable === 'onboarded_properties') {
       tableName = 'onboarded_properties';
     } else {
-      // Check if property exists in properties table (use fp_estimates to verify FP ownership)
+      // A properties row is this FP's when it is stamped with the FP or carries one of its estimates;
+      // requiring an estimate alone made every property added through Add Customer uneditable
       const [propCheck] = await pool.execute(
-        `SELECT p.id FROM properties p 
-         INNER JOIN fp_estimates fe ON fe.property_id = p.id 
-         WHERE p.id = ? AND fe.franchise_partner_id = ?`,
-        [id, req.fpId]
+        `SELECT p.id FROM properties p
+         WHERE p.id = ? AND (p.franchise_partner_id = ? OR EXISTS (
+           SELECT 1 FROM fp_estimates fe WHERE fe.property_id = p.id AND fe.franchise_partner_id = ?))`,
+        [id, req.fpId, req.fpId]
       );
       
       if (propCheck.length === 0) {
@@ -2677,10 +2678,10 @@ router.post('/vendors/assignments', requireFPScope, async (req, res) => {
     const [property] = await pool.execute(
       `SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?
        UNION
-       SELECT p.id FROM properties p 
-       INNER JOIN fp_estimates fe ON fe.property_id = p.id 
-       WHERE p.id = ? AND fe.franchise_partner_id = ?`,
-      [propertyId, fpId, propertyId, fpId]
+       SELECT p.id FROM properties p
+       WHERE p.id = ? AND (p.franchise_partner_id = ? OR EXISTS (
+         SELECT 1 FROM fp_estimates fe WHERE fe.property_id = p.id AND fe.franchise_partner_id = ?))`,
+      [propertyId, fpId, propertyId, fpId, fpId]
     );
 
     if (property.length === 0) {

@@ -1,4 +1,5 @@
 import { safeSessionStorage } from '../utils/safeStorage';
+import { API_BASE_URL } from '../config/api';
 import { useState } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, CheckCircle2, Lock, Shield, ArrowRight, Loader2
@@ -82,8 +83,8 @@ const SetPassword = ({ user, onPasswordSet, onCancel }) => {
       // Use correct endpoint based on portal type
       const staffPortals = ['admin', 'manager', 'coordinator', 'supervisor', 'executive'];
       const endpoint = staffPortals.includes(user.portal) 
-        ? '/api/staff/set-password' 
-        : '/api/employee/set-password';
+        ? `${API_BASE_URL}/api/staff/set-password`
+        : `${API_BASE_URL}/api/employee/set-password`;
 
       const response = await fetch(endpoint, {
         method: 'POST',

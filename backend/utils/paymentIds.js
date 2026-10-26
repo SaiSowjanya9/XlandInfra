@@ -9,6 +9,22 @@
 
 const { pool } = require('../config/database');
 
+/**
+ * The sequences are counted per franchise partner (and NULL for head office), but the codes
+ * they produce are unique system-wide -- payments.payment_id is a UNIQUE key. A second counter
+ * therefore re-issued a code the first had already used and the insert failed with
+ * ER_DUP_ENTRY: a recorded payment returned a 500, and a Razorpay payment, written inside its
+ * transaction, was rolled back. Walk forward from the counter to the first unused code.
+ */
+const firstFreeNumber = async (table, column, start, format) => {
+  let n = start;
+  for (let i = 0; i < 10000; i++, n++) {
+    const [taken] = await pool.execute(`SELECT 1 FROM ${table} WHERE ${column} = ? LIMIT 1`, [format(n)]);
+    if (taken.length === 0) return n;
+  }
+  return n;
+};
+
 // Generate unique payment ID (Format: PAY-2025-00001)
 const generatePaymentId = async (fpId = null) => {
   const year = new Date().getFullYear();
@@ -20,22 +36,21 @@ const generatePaymentId = async (fpId = null) => {
       [fpId, year]
     );
 
-    let nextNumber;
+    const format = (n) => `${prefix}-${year}-${String(n).padStart(5, '0')}`;
+    const nextNumber = await firstFreeNumber('payments', 'payment_id', existing.length > 0 ? existing[0].current_number + 1 : 1, format);
     if (existing.length > 0) {
-      nextNumber = existing[0].current_number + 1;
       await pool.execute(
         'UPDATE payment_sequence SET current_number = ? WHERE franchise_partner_id <=> ? AND year = ?',
         [nextNumber, fpId, year]
       );
     } else {
-      nextNumber = 1;
       await pool.execute(
         'INSERT INTO payment_sequence (franchise_partner_id, year, current_number, prefix) VALUES (?, ?, ?, ?)',
         [fpId, year, nextNumber, prefix]
       );
     }
 
-    return `${prefix}-${year}-${String(nextNumber).padStart(5, '0')}`;
+    return format(nextNumber);
   } catch (error) {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -54,9 +69,10 @@ const generateReceiptId = async (fpId = null) => {
       [fpId]
     );
 
+    const format = (n) => `${prefix}-${String(n).padStart(5, '0')}`;
     let nextNumber;
     if (existing.length > 0 && existing[0].max_number) {
-      nextNumber = existing[0].max_number + 1;
+      nextNumber = await firstFreeNumber('payments', 'receipt_id', existing[0].max_number + 1, format);
       await pool.execute(
         'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
         [nextNumber, fpId]
@@ -68,7 +84,7 @@ const generateReceiptId = async (fpId = null) => {
         [fpId]
       );
 
-      nextNumber = 1;
+      nextNumber = await firstFreeNumber('payments', 'receipt_id', 1, format);
       if (seqExists.length > 0) {
         await pool.execute(
           'UPDATE receipt_sequence SET current_number = ? WHERE franchise_partner_id <=> ?',
@@ -83,7 +99,7 @@ const generateReceiptId = async (fpId = null) => {
     }
 
     // Format: RCP-00001
-    return `${prefix}-${String(nextNumber).padStart(5, '0')}`;
+    return format(nextNumber);
   } catch (error) {
     console.error('Error generating receipt ID:', error);
     const timestamp = Date.now().toString(36).toUpperCase();
@@ -123,4 +139,4 @@ const assignMissingReceiptIds = async (invoiceId, conn = pool) => {
   }
 };
 
-module.exports = { generatePaymentId, generateReceiptId, assignMissingReceiptIds, CONFIRMED_STATUSES };
+module.exports = { generatePaymentId, generateReceiptId, assignMissingReceiptIds, firstFreeNumber, CONFIRMED_STATUSES };

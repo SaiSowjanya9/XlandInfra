@@ -851,7 +851,12 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
     fp_admin: 'FP Admin',
     fp_manager: 'FP Manager',
     fp_supervisor: 'FP Supervisor',
-    fp_executive: 'FP Executive'
+    fp_executive: 'FP Executive',
+    // The FP Add Employee form sends the plain role names
+    manager: 'Manager',
+    coordinator: 'Coordinator',
+    supervisor: 'Supervisor',
+    executive: 'Executive'
   };
   
   const roleLabel = roleLabels[role] || 'Employee';

@@ -1556,8 +1556,8 @@ router.post('/vendors/assignments', authenticate, async (req, res) => {
   }
 });
 
-// Delete work order (Admin only)
-router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) => {
+// Delete work order (Admin only) - the Ops Manager is view-only here and a delete is irreversible
+router.delete('/work-orders/:id', authenticate, managerOrAdmin, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     console.log('Delete work order request - ID:', id, 'User:', req.user?.role, req.user?.email);

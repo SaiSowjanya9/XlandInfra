@@ -2937,7 +2937,8 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
     fpZones.forEach(z => {
       if (!allZoneNames.has(z.name)) {
         allZoneNames.add(z.name);
-        combinedZones.push({ id: z.id, name: z.name });
+        // 'fp-' marks an fp_zones row for utils/zoneDelete; a bare number is a company-wide zone
+        combinedZones.push({ id: `fp-${z.id}`, name: z.name });
       }
     });
 

@@ -175,3 +175,22 @@ test('no route writes the payment link columns schema_v18 never created', () => 
   }
   assert.deepEqual(offenders, [], 'use razorpay_payment_link_id / razorpay_short_url');
 });
+
+test('paidAtAssignment is never the last assignment before WHERE', () => {
+  // Its SQL ends in a comma, so it must be followed by another assignment. invoiceSettlement
+  // spliced it last, and every payment verification failed with ER_PARSE_ERROR near 'WHERE id = ?'.
+  const { paidAtAssignment } = loadWithColumns(['paid_at']);
+  assert.ok(typeof paidAtAssignment === 'function');
+  const offenders = [];
+  for (const dir of ['routes', 'utils', 'services']) {
+    for (const name of fs.readdirSync(path.join(backend, dir)).filter(f => f.endsWith('.js') && !f.endsWith('.test.js'))) {
+      const lines = fs.readFileSync(path.join(backend, dir, name), 'utf8').split('\n');
+      lines.forEach((line, i) => {
+        if (!/\$\{paidAt\w*\.sql\}/.test(line)) return;
+        const next = lines.slice(i + 1).find(l => l.trim());
+        if (!next || /^\s*WHERE\b/i.test(next)) offenders.push(`${dir}/${name}:${i + 1}`);
+      });
+    }
+  }
+  assert.deepEqual(offenders, []);
+});

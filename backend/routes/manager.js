@@ -2167,9 +2167,9 @@ router.post('/vendors/assignments', requireManagerScope, async (req, res) => {
       `SELECT id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?
        UNION
        SELECT p.id FROM properties p
-       INNER JOIN fp_estimates fe ON fe.property_id = p.id
-       WHERE p.id = ? AND fe.franchise_partner_id = ?`,
-      [propertyId, franchisePartnerId, propertyId, franchisePartnerId]
+       WHERE p.id = ? AND (p.franchise_partner_id = ? OR EXISTS (
+         SELECT 1 FROM fp_estimates fe WHERE fe.property_id = p.id AND fe.franchise_partner_id = ?))`,
+      [propertyId, franchisePartnerId, propertyId, franchisePartnerId, franchisePartnerId]
     );
 
     if (property.length === 0) {
@@ -2343,7 +2343,7 @@ router.get('/vendors/assignments', requireManagerScope, async (req, res) => {
 router.post('/vendors', requireManagerScope, async (req, res) => {
   try {
     const { 
-      serviceType, serviceVerified, zone, areaName, division,
+      companyName, serviceType, serviceVerified, zone, areaName, division,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
@@ -2364,16 +2364,16 @@ router.post('/vendors', requireManagerScope, async (req, res) => {
     
     const [result] = await pool.execute(
       `INSERT INTO onboarded_vendors (
-        vendor_id, username, service_type, service_verified, zone, area_name, division,
+        vendor_id, username, company_name, service_type, service_verified, zone, area_name, division,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         gst_number, pan_number, license_number,
         rate_per_visit, coverage_per_day, working_hours_from, working_hours_to, rating, total_jobs_completed,
         franchise_partner_id, manager_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
       [
-        vendorId, username, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        vendorId, username, companyName || ownerName || '', serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
