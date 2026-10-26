@@ -771,6 +771,7 @@ const ManagerDashboard = ({ user }) => {
                   stroke="#E5E7EB" 
                   axisLine={false}
                   tickLine={false}
+                  allowDecimals={false}
                 />
                 <Tooltip 
                   contentStyle={{ 

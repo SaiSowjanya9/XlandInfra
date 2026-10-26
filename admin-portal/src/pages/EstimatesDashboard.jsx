@@ -1127,7 +1127,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <LineChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" {...TREND_X_AXIS} />
-                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} />
+                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                 <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 500 }} />
                 <Line 

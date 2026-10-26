@@ -1127,7 +1127,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" stroke="#9CA3AF" {...TREND_X_AXIS} />
-                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" allowDecimals={false} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
