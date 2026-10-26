@@ -2,14 +2,14 @@ import { Link } from 'react-router-dom';
 
 /**
  * Shared dashboard summary card row.
- * Cards wrap to the screen: two per row on a phone, four on a tablet, one row on a wide desktop.
- * Cards in a row share its width equally, so a short last row stretches instead of leaving a gap.
+ * Cards wrap on phones and tablets (two per row on a phone, about four on a tablet, a short last
+ * row stretching to fill it) and sit on one line from lg up, each an equal share of the width.
  */
 export default function DashboardStatCards({ cards = [] }) {
-  return <div className="flex flex-wrap gap-2">
+  return <div className="flex flex-wrap gap-2 lg:flex-nowrap">
     {cards.map(({ key, label, value, to, icon: Icon, iconBg, iconColor, accent, hoverBorder }) =>
       <Link key={key || label} to={to}
-        className={`group flex h-16 min-w-0 flex-[1_1_9.5rem] items-center gap-2.5 rounded-lg border bg-white px-3 transition-all duration-200 hover:shadow-md ${accent ? 'border-orange-200 hover:border-orange-300' : `border-gray-100 ${hoverBorder || 'hover:border-gray-200'}`}`}>
+        className={`group flex h-16 min-w-0 flex-[1_1_9.5rem] lg:flex-[1_1_0%] items-center gap-2.5 rounded-lg border bg-white px-3 transition-all duration-200 hover:shadow-md ${accent ? 'border-orange-200 hover:border-orange-300' : `border-gray-100 ${hoverBorder || 'hover:border-gray-200'}`}`}>
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-110 ${iconBg}`}>
           <Icon className={`h-4 w-4 ${iconColor}`} aria-hidden="true" />
         </span>
