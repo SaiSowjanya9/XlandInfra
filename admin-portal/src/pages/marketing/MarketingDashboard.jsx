@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
-import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../../utils/trendSpan';
+import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS, trendDot } from '../../utils/trendSpan';
 import EmptyState from '../../components/common/EmptyState';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
@@ -571,11 +571,11 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
                   <YAxis allowDecimals={false} {...axisProps} />
                   <Tooltip content={<ChartTip />} />
                   <Area type="monotone" dataKey="leads" name="Leads" stroke="#9B8AA6" strokeWidth={2}
-                        fill="url(#fpMktLeads)" isAnimationActive={false} />
+                        fill="url(#fpMktLeads)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
                   <Area type="monotone" dataKey="estimates" name="Estimates" stroke="#BFA56B" strokeWidth={2}
-                        fill="url(#fpMktEstimates)" isAnimationActive={false} />
+                        fill="url(#fpMktEstimates)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
                   <Line type="monotone" dataKey="approved" name="Approved" stroke="#7FA7A3" strokeWidth={2}
-                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                        dot={trendDot(cTrend.trend)} activeDot={{ r: 4 }} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
               <div className="flex items-center gap-4 mt-2 text-xs text-warm-muted">

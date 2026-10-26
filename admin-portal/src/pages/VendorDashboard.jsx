@@ -230,11 +230,11 @@ const VendorDashboard = ({ user }) => {
             <div className="flex items-center justify-between min-w-[200px]">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span className="text-sm text-slate-300">Assigned</span>
+                <span className="text-xs text-slate-300">Assigned</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{workOrdersByStatus.assigned || 0}</span>
-                <span className="text-sm text-slate-400 w-12 text-right">
+                <span className="text-xs font-semibold text-white">{workOrdersByStatus.assigned || 0}</span>
+                <span className="text-xs text-slate-400 w-12 text-right">
                   {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.assigned || 0) / totalForPercentage) * 100) : 0}%
                 </span>
               </div>
@@ -242,11 +242,11 @@ const VendorDashboard = ({ user }) => {
             <div className="flex items-center justify-between min-w-[200px]">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span className="text-sm text-slate-300">In Progress</span>
+                <span className="text-xs text-slate-300">In Progress</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{workOrdersByStatus.in_progress || 0}</span>
-                <span className="text-sm text-slate-400 w-12 text-right">
+                <span className="text-xs font-semibold text-white">{workOrdersByStatus.in_progress || 0}</span>
+                <span className="text-xs text-slate-400 w-12 text-right">
                   {totalForPercentage > 0 ? Math.round(((workOrdersByStatus.in_progress || 0) / totalForPercentage) * 100) : 0}%
                 </span>
               </div>
@@ -254,11 +254,11 @@ const VendorDashboard = ({ user }) => {
             <div className="flex items-center justify-between min-w-[200px]">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-sm text-slate-300">Completed</span>
+                <span className="text-xs text-slate-300">Completed</span>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-white">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) + (workOrdersByStatus.verified || 0)}</span>
-                <span className="text-sm text-slate-400 w-12 text-right">
+                <span className="text-xs font-semibold text-white">{(workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) + (workOrdersByStatus.verified || 0)}</span>
+                <span className="text-xs text-slate-400 w-12 text-right">
                   {totalForPercentage > 0 ? Math.round((((workOrdersByStatus.completed || 0) + (workOrdersByStatus.closed || 0) + (workOrdersByStatus.verified || 0)) / totalForPercentage) * 100) : 0}%
                 </span>
               </div>

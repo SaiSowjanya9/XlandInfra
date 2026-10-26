@@ -35,8 +35,8 @@ import DateRangeFilter from '../components/common/DateRangeFilter';
 import { getAuthToken } from '../utils/safeStorage';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 import { estimateProfitSummary } from '../utils/estimateProfitSummary';
-import { formatMonthYear } from '../utils/dateFormat';
-import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../utils/trendSpan';
+import { trendSpanLabel, TREND_X_AXIS, trendDot } from '../utils/trendSpan';
+import { estimateTrendBuckets, periodStart } from '../utils/estimateTrend';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -75,6 +75,10 @@ const getApiPath = (portalType) => {
   };
   return portalMap[portalType] || 'fp';
 };
+
+// getEstimateType's answer -> the trend line that carries it. Anything else -- a catalog estimate
+// answers 'custom' -- falls to 'other', which is drawn only when something lands in it.
+const TREND_SERIES_BY_TYPE = { direct: 'direct', property: 'property', workorder: 'workOrder' };
 
 const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
@@ -191,36 +195,12 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
   // Helper function to apply period filter to a dataset (IST timezone aware)
   const applyPeriodFilter = (data, periodFilter) => {
-    if (periodFilter === 'all') return data;
-    
     const now = new Date();
-    let filterDate = new Date();
-    
-    switch (periodFilter) {
-      case 'week':
-        // This week (last 7 days)
-        filterDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        // This month (from 1st of current month)
-        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'quarter':
-        // This quarter (last 3 months from 1st)
-        filterDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-        break;
-      case 'half':
-        // This half-year (last 6 months from 1st)
-        filterDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        break;
-      case 'year':
-        // This calendar year (from Jan 1 of current year)
-        filterDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        return data;
-    }
-    
+    // One definition of where a period starts, shared with the trend's buckets: a window the two
+    // disagreed about would admit an estimate here and then have no bucket to count it in
+    const filterDate = periodStart(periodFilter, now);
+    if (!filterDate) return data;
+
     return data.filter(est => {
       const estDate = new Date(est.created_at || est.createdAt);
       return estDate >= filterDate && estDate <= now;
@@ -392,10 +372,14 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const block3Direct = block3Data.filter(e => getEstimateType(e) === 'direct').length;
   const block3PropertyBased = block3Data.filter(e => getEstimateType(e) === 'property').length;
   const block3WorkOrder = block3Data.filter(e => getEstimateType(e) === 'workorder').length;
+  // Whatever the three named types leave over -- a 'custom' catalog estimate, say. The donut's
+  // centre counts every row, so a type with no slice would leave the parts short of the whole.
+  const block3Other = block3Data.length - block3Direct - block3PropertyBased - block3WorkOrder;
   const typeDataAll = [
     { name: 'Direct Estimates', value: block3Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
     { name: 'Property-Based', value: block3PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
-    { name: 'Work Order', value: block3WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] }
+    { name: 'Work Order', value: block3WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] },
+    ...(block3Other > 0 ? [{ name: 'Other', value: block3Other, color: ESTIMATE_TYPE_COLORS['Other'] }] : [])
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
@@ -499,47 +483,20 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const propertyBasedOnly = block1Data;
   const directOnly = block4Data;
 
-  // Calculate trend data for line chart (uses trendPeriod filter)
+  // Trend data for the line chart (uses trendPeriod filter). The window decides the bucket -- by
+  // day where it spans a month or less, by month beyond it -- so "This Week" is a week of points
+  // rather than the one month-long point it used to draw as nothing. See utils/estimateTrend.js.
   const getTrendData = () => {
-    const trendFilteredData = applyPeriodFilter(mainFilteredEstimates, trendPeriod);
-    const monthlyData = {};
-    const now = new Date();
-    
-    // Determine how many months to show based on filter
-    let monthsToShow = trendPeriod === 'all' ? monthsSinceEarliest(trendFilteredData.map(est => est.created_at || est.createdAt), now) : 6;
-    if (trendPeriod === 'week') monthsToShow = 1;
-    else if (trendPeriod === 'month') monthsToShow = 1;
-    else if (trendPeriod === 'quarter') monthsToShow = 3;
-    else if (trendPeriod === 'half') monthsToShow = 6;
-    else if (trendPeriod === 'year') monthsToShow = 12;
-    
-    // Initialize months
-    for (let i = monthsToShow - 1; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = formatMonthYear(date);
-      monthlyData[key] = { name: key, direct: 0, property: 0, workOrder: 0, sortDate: date };
-    }
-    
-    trendFilteredData.forEach(est => {
-      const date = new Date(est.created_at || est.createdAt);
-      const key = formatMonthYear(date);
-      
-      if (monthlyData[key]) {
-        const estType = est.estimate_type || est.estimateType || '';
-        if (estType === 'direct') {
-          monthlyData[key].direct++;
-        } else if (estType === 'property_based' || estType === 'property-based') {
-          monthlyData[key].property++;
-        } else if (estType === 'work_order') {
-          monthlyData[key].workOrder++;
-        }
-      }
-    });
-    
-    return Object.values(monthlyData).sort((a, b) => a.sortDate - b.sortDate);
+    const rows = applyPeriodFilter(mainFilteredEstimates, trendPeriod).map(est => ({
+      at: est.created_at || est.createdAt,
+      series: TREND_SERIES_BY_TYPE[getEstimateType(est)] ?? 'other'
+    }));
+    return estimateTrendBuckets(rows, trendPeriod);
   };
 
   const trendData = getTrendData();
+  // Drawn only when an estimate of no named type exists, so the three-line chart stays three lines
+  const trendHasOther = trendData.some(bucket => bucket.other > 0);
 
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -667,10 +624,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
               <DonutChart data={typeData} centerValue={block3Data.length} size={130} strokeWidth={18} />
             </div>
             <div className="w-1/2 space-y-2 pl-3">
-              {[
-                { name: 'Direct Estimates', value: block3Direct, color: '#8B5CF6' },
-                { name: 'Property-Based', value: block3PropertyBased, color: '#06B6D4' }
-              ].map((item, index) => (
+              {/* The entries the donut draws, read from the same array it is drawn from: the
+                  hard-coded pair that used to be here named two of its three slices, so a Work
+                  Order arc sat in the ring with nothing to say what it was */}
+              {typeDataAll.map((item, index) => (
                 <div key={index} className="flex flex-wrap items-start gap-x-1.5 gap-y-0.5 text-xs">
                   <span 
                     className="mt-[0.3em] inline-block w-2 h-2 rounded-full flex-shrink-0"
@@ -1136,7 +1093,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Direct Estimates"
                   stroke="#5B8DEF" 
                   strokeWidth={2}
-                  dot={false}
+                  dot={trendDot(trendData)}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
@@ -1146,7 +1103,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Property-Based Estimates"
                   stroke="#14B8A6" 
                   strokeWidth={2}
-                  dot={false}
+                  dot={trendDot(trendData)}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
@@ -1156,10 +1113,25 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Work Order Estimates"
                   stroke="#F97316" 
                   strokeWidth={2}
-                  dot={false}
+                  dot={trendDot(trendData)}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
+                {/* Only where an estimate belongs to none of the three. The Total card counts it,
+                    so a line has to, or the card and the chart disagree with nothing on screen to
+                    explain why. */}
+                {trendHasOther && (
+                  <Line
+                    type="monotone"
+                    dataKey="other"
+                    name="Other Estimates"
+                    stroke={ESTIMATE_TYPE_COLORS['Other']}
+                    strokeWidth={2}
+                    dot={trendDot(trendData)}
+                    activeDot={{ r: 6 }}
+                    isAnimationActive={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
             <p className="-mt-1 text-center text-xs text-gray-500">{trendSpanLabel(trendData)}</p>

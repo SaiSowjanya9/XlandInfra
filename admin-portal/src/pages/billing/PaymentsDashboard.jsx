@@ -27,7 +27,7 @@ import { getAuthToken } from '../../utils/safeStorage';
 import ChartLegend from '../../components/common/ChartLegend';
 import useChartTooltip, { ChartTooltipContent } from '../../components/common/ChartTooltip';
 import { collectionTrendBuckets } from '../../utils/collectionTrend';
-import { trendSpanLabel, TREND_X_AXIS } from '../../utils/trendSpan';
+import { trendSpanLabel, TREND_X_AXIS, trendDot } from '../../utils/trendSpan';
 import { estimateMarginChartRows, estimateMarginSummary, estimatesInRange } from '../../utils/estimateMarginTrend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
@@ -723,7 +723,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                 <ChevronDown className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-            <ChartLegend layout="row" size="md" items={COLLECTION_TREND_SERIES} />
+            <ChartLegend layout="row" items={COLLECTION_TREND_SERIES} />
             {/* A trend line from the first activity to today: no per-period labels on the axis, the
                 span stated once underneath, and the hover naming the period and both figures. */}
             {collectionTrend.some(day => day.invoiceAmount > 0 || day.collectedAmount > 0) ? (
@@ -737,9 +737,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                         tickFormatter={value => formatCurrencyCompact(value)} />
                       <Tooltip cursor={{ stroke: '#CBD5E1' }} content={<ChartTooltipContent formatValue={formatCurrency} />} />
                       <Line type="monotone" dataKey="invoiceAmount" name="Invoice Amount" stroke="#3B82F6" strokeWidth={2}
-                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                        dot={trendDot(collectionTrend)} activeDot={{ r: 4 }} isAnimationActive={false} />
                       <Line type="monotone" dataKey="collectedAmount" name="Collected Amount" stroke="#22C55E" strokeWidth={2}
-                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                        dot={trendDot(collectionTrend)} activeDot={{ r: 4 }} isAnimationActive={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -779,7 +779,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={144}
                 />
               </div>
-              <ChartLegend size="md" className="2xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.paymentsByMode.slice(0, 5).map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
 
@@ -808,7 +808,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={144}
                 />
               </div>
-              <ChartLegend size="md" className="2xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.paymentsByStatus.map(item => ({ label: item.label, color: item.color, value: formatCurrencyShort(item.value) + ` (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>
@@ -913,7 +913,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                   size={144}
                 />
               </div>
-              <ChartLegend size="md" className="2xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
+              <ChartLegend className="2xl:w-44" items={dashboardData.invoicesByStatus.map(item => ({ label: item.label, color: item.color, value: `${item.value} (${item.percentage}%)` }))} />
             </div>
           </div>
         </div>
@@ -972,7 +972,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
             {marginChart.length > 0 ? (
               <>
               {/* Above the plot and outside it, so nothing the chart draws can cross it */}
-              <ChartLegend layout="row" size="md" className="mt-5 justify-end" items={MARGIN_CHART_SERIES} />
+              <ChartLegend layout="row" className="mt-5 justify-end" items={MARGIN_CHART_SERIES} />
               <div className="mt-2 overflow-x-auto">
                 <div style={{ minWidth: Math.max(560, marginChart.length * 190) }} className="h-80 sm:h-[22rem]">
                   <ResponsiveContainer width="100%" height="100%">

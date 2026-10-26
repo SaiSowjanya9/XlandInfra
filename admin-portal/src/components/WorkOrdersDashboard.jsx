@@ -47,7 +47,7 @@ import { getAuthToken } from '../utils/safeStorage';
 import { formatDate, formatMonthYear } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
 import { clampToViewport } from '../hooks/useViewportClamp';
-import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../utils/trendSpan';
+import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS, trendDot } from '../utils/trendSpan';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -1086,7 +1086,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                         dataKey={cat}
                         stroke={categoryColors[index % categoryColors.length]}
                         strokeWidth={2}
-                        dot={false}
+                        dot={trendDot(categoryTrend.data)}
                         activeDot={{ r: 4 }}
                         isAnimationActive={false}
                       />
@@ -1136,9 +1136,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                   }}
                 />
-                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={trendDot(trendData)} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={trendDot(trendData)} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={trendDot(trendData)} activeDot={{ r: 4 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

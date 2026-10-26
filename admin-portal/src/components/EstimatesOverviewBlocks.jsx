@@ -297,10 +297,15 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     e.estimateType === 'property_based' || e.estimateType === 'property-based'
   ).length;
   const block1WorkOrder = block1Filtered.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
+  // What the three named types leave over -- estimate_type also allows 'custom', which the
+  // service-catalog builder writes. The donut's centre counts every row, so without this the
+  // slices would not add up to the figure in the middle of them.
+  const block1Other = block1Filtered.length - block1Direct - block1PropertyBased - block1WorkOrder;
   const typeDataAll = [
     { name: 'Direct Estimates', value: block1Direct, color: ESTIMATE_TYPE_COLORS['Direct Estimates'] },
     { name: 'Property-Based', value: block1PropertyBased, color: ESTIMATE_TYPE_COLORS['Property-Based'] },
-    { name: 'Work Order', value: block1WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] }
+    { name: 'Work Order', value: block1WorkOrder, color: ESTIMATE_TYPE_COLORS['Work Order'] },
+    ...(block1Other > 0 ? [{ name: 'Other', value: block1Other, color: ESTIMATE_TYPE_COLORS['Other'] }] : [])
   ];
   const typeData = typeDataAll.filter(item => item.value > 0);
 
