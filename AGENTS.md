@@ -436,15 +436,10 @@ desktop layout is the user's attached design and is the authority.
   and the property is already named on the banner chip directly above. Do not add a card that opens
   nothing — a link to a route that does not exist is the bug this repo keeps finding
   (`/fp/payments/history`, the old `?status=` stat cards).
-- **The Work Orders panel is two tabs: Overview (the four tiles) and Activity (the orders
-  themselves).** The portal has no work-order list page — `WorkOrder.jsx` is the raise form — so
-  the Activity tab is where a customer reads their work orders: every work order, fetched on first
-  open from `GET /api/customers/activity?type=work_order&limit=100`, five rows as the preview and
-  the whole list inside a `max-h-72` scroll on "View All". The panel header's **"View All" opens
-  the Activity tab expanded** (and toggles to "Show Less" once there); it does not navigate and it
-  no longer filters Recent Activity — the type-chip filter on that table is gone with it. A row
-  opens the **work order modal on this page**, the same one Recent Activity uses, which remains
-  the only place a customer can read a work order's detail.
+- **The Work Orders panel is the four tiles and nothing else — no tabs.** It had an Activity tab
+  listing the work orders themselves; the user removed it because the Work Orders page already
+  carries that information. The header's "View All" is a link to `/dashboard/work-order`, like
+  the other two panels' links. Do not add the tab back.
 - **No sentence under a title, anywhere in the customer portal.** Every descriptive sub-line is gone
   on the user's call: the four Quick Access cards' ("Raise and track maintenance requests for your
   property." and the rest), the Quick Access heading's own, the Recent Activity and Upcoming

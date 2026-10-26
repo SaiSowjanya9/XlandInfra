@@ -124,7 +124,7 @@ const EmptyState = ({ icon: Icon, title, description }) => (
       <Icon className="w-4 h-4 text-gray-400" />
     </div>
     <p className="text-sm font-medium text-gray-900">{title}</p>
-    <p className="text-xs text-gray-500 mt-0.5 max-w-xs mx-auto leading-relaxed">{description}</p>
+    {description && <p className="text-xs text-gray-500 mt-0.5 max-w-xs mx-auto leading-relaxed">{description}</p>}
   </div>
 );
 
@@ -149,14 +149,6 @@ const Dashboard = ({ user }) => {
   const [upcomingVisits, setUpcomingVisits] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
-  // The Work Orders panel's Activity tab: the whole work-order history, read on demand so the
-  // panel's default face stays the four tiles. `?type=work_order` asks the activity route to
-  // narrow its merged feed to the one stream, decoded server-side like the rest of the feed.
-  const [workOrderTab, setWorkOrderTab] = useState('overview');
-  const [workOrderActivity, setWorkOrderActivity] = useState([]);
-  const [workOrderActivityLoading, setWorkOrderActivityLoading] = useState(false);
-  const [workOrderActivityExpanded, setWorkOrderActivityExpanded] = useState(false);
-  const [workOrderActivityFetched, setWorkOrderActivityFetched] = useState(false);
   const [payments, setPayments] = useState({ outstanding: 0, pendingCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -233,30 +225,6 @@ const Dashboard = ({ user }) => {
     }
   }, []);
 
-  // The panel tab's own fetch at the route's ceiling: the shared feed's six-item slice could hold
-  // no work order at all even while the tiles count several, and an "all work orders" tab that
-  // shows none is a lie. Rows open the same modal Recent Activity uses.
-  const fetchWorkOrderActivity = useCallback(async () => {
-    const headers = authHeaders();
-    if (!headers) {
-      setWorkOrderActivityLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/customers/activity?limit=100&type=work_order`, { headers });
-      const result = await response.json();
-      if (result.success) {
-        setWorkOrderActivity(result.data.activity || []);
-        setWorkOrderActivityFetched(true);
-      }
-    } catch (err) {
-      console.error('Work order activity fetch error:', err);
-    } finally {
-      setWorkOrderActivityLoading(false);
-    }
-  }, []);
-
   const fetchRenewals = useCallback(async () => {
     const headers = authHeaders();
     if (!headers) return;
@@ -280,17 +248,11 @@ const Dashboard = ({ user }) => {
   const activityLimit = activityExpanded ? 100 : 6;
   useEffect(() => { fetchActivity(activityLimit); }, [fetchActivity, activityLimit]);
 
-  // The panel's Activity tab reads its list the first time it is opened, not on page load.
-  useEffect(() => {
-    if (workOrderTab === 'activity' && !workOrderActivityFetched) fetchWorkOrderActivity();
-  }, [workOrderTab, workOrderActivityFetched, fetchWorkOrderActivity]);
-
   // What the header's Refresh means on this page
   useRegisterRefresh(() => {
     fetchDashboard();
     fetchActivity(activityLimit);
     fetchRenewals();
-    if (workOrderActivityFetched) fetchWorkOrderActivity();
   });
 
   const handleApproveRenewal = async (renewalId) => {
@@ -393,20 +355,6 @@ const Dashboard = ({ user }) => {
     completed: Number(stats?.completed) || 0
   };
   const nextVisit = upcomingVisits[0];
-  const visibleWorkOrderActivity = workOrderActivityExpanded
-    ? workOrderActivity
-    : workOrderActivity.slice(0, 5);
-
-  // The Work Orders panel's View All: the panel's own Activity tab, expanded to the whole list.
-  // On the tab already it toggles between the five-row preview and everything.
-  const showWorkOrderHistory = () => {
-    if (workOrderTab === 'activity') {
-      setWorkOrderActivityExpanded(expanded => !expanded);
-    } else {
-      setWorkOrderTab('activity');
-      setWorkOrderActivityExpanded(true);
-    }
-  };
 
   const customer = dashboardData?.customer;
   const firstName = customer?.firstName || user?.firstName || 'Resident';
@@ -554,84 +502,22 @@ const Dashboard = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <section className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
           <PanelHeader icon={ClipboardList} title="Work Orders">
-            {workOrderCounts.total > 0 && (
-              <button
-                type="button"
-                onClick={showWorkOrderHistory}
-                className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
-              >
-                {workOrderTab === 'activity' && workOrderActivityExpanded ? 'Show Less' : 'View All'}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <Link
+              to="/dashboard/work-order"
+              className="shrink-0 text-xs font-medium text-gold-600 hover:text-gold-500 flex items-center gap-1"
+            >
+              View All
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </PanelHeader>
-          {/* The counts are the panel's first tab; the second reads the work orders themselves. */}
-          <div className="flex border-b border-gray-100 px-3 sm:px-4">
-            {[['overview', 'Overview'], ['activity', 'Activity']].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setWorkOrderTab(key)}
-                className={`px-1 py-1.5 mr-4 text-xs font-medium border-b-2 -mb-px transition-colors ${
-                  workOrderTab === key
-                    ? 'border-gold-500 text-gold-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {label}
-              </button>
+          <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
+            {WORK_ORDER_TILES.map(({ key, label, tone }) => (
+              <div key={key} className={`rounded-lg border px-1.5 py-2 text-center ${tone}`}>
+                <span className="block text-lg font-bold leading-none">{workOrderCounts[key]}</span>
+                <span className="block mt-0.5 text-[11px] font-medium whitespace-nowrap">{label}</span>
+              </div>
             ))}
           </div>
-          {workOrderTab === 'overview' ? (
-            <div className="grid flex-1 grid-cols-4 content-center gap-2 p-3 sm:p-4">
-              {WORK_ORDER_TILES.map(({ key, label, tone }) => (
-                <div key={key} className={`rounded-lg border px-1.5 py-2 text-center ${tone}`}>
-                  <span className="block text-lg font-bold leading-none">{workOrderCounts[key]}</span>
-                  <span className="block mt-0.5 text-[11px] font-medium whitespace-nowrap">{label}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col p-3 sm:p-4">
-              {workOrderActivityLoading && workOrderActivity.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-gold-600 animate-spin" />
-                </div>
-              ) : workOrderActivity.length === 0 ? (
-                <div className="flex-1 flex flex-col justify-center">
-                  <EmptyState
-                    icon={ClipboardList}
-                    title="No work orders yet"
-                    description="Requests raised for your property will appear here."
-                  />
-                </div>
-              ) : (
-                // The expanded list scrolls inside its cap rather than stretching this card (and
-                // the row it sits in) for every order the property has ever raised.
-                <ul className={`divide-y divide-gray-100 ${workOrderActivityExpanded ? 'max-h-72 overflow-y-auto' : ''}`}>
-                  {visibleWorkOrderActivity.map((item) => (
-                    <li key={item.key}>
-                      <button
-                        type="button"
-                        onClick={() => openActivity(item)}
-                        className="w-full text-left flex items-center gap-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-gray-900 truncate">{item.subtitle || item.title}</span>
-                          <span className="block text-xs text-gray-500 truncate">
-                            {item.reference ? `${item.reference} · ` : ''}{formatActivityDate(item.at)}
-                          </span>
-                        </span>
-                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${ACTIVITY_TONES[item.tone] || ACTIVITY_TONES.neutral}`}>
-                          {item.statusLabel}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
         </section>
 
         {/* The next visit, and nothing behind it: the rest of the calendar is the Schedules page. */}
@@ -655,7 +541,6 @@ const Dashboard = ({ user }) => {
               <EmptyState
                 icon={CalendarDays}
                 title="No upcoming schedules"
-                description="Any scheduled visits, maintenance or service appointments will be shown here."
               />
             ) : (
               <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-2.5">
