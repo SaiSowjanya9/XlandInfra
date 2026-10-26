@@ -450,10 +450,12 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                               {row.paymentCode || '-'}
                             </p>
                           )}
-                          <p className="text-[11px] text-gray-400 truncate" title={row.razorpayPaymentId || row.invoiceCode || ''}>
+                          <p className="text-[11px] text-gray-400 truncate" title={row.invoiceCode || ''}>
                             {row.invoiceCode || '-'}
-                            {row.razorpayPaymentId ? ` · ${row.razorpayPaymentId}` : ''}
                           </p>
+                          {row.razorpayPaymentId && (
+                            <p className="text-[11px] text-gray-400 break-all">{row.razorpayPaymentId}</p>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm text-gray-900 truncate" title={row.customerName || ''}>
