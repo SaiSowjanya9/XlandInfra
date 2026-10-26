@@ -91,6 +91,49 @@ const presentCustomerComplaint = (complaint) => ({
   closed_at: complaint.closed_at
 });
 
+/**
+ * Whether an invoice belongs to a customer account: its property (by id or code, through
+ * onboarded_properties then properties) or its email matches. The same rule the offline-payment
+ * intent route applies.
+ */
+const customerOwnsInvoice = async (account, inv) => {
+  let numericPropertyId = account.property_id;
+  let propertyCode = account.property_code;
+  const lookupId = account.property_id || account.property_code;
+  if (lookupId) {
+    const [opData] = await pool.execute(
+      'SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?',
+      [lookupId, lookupId]
+    );
+    if (opData.length > 0) {
+      numericPropertyId = opData[0].id;
+      propertyCode = propertyCode || opData[0].property_id;
+    } else {
+      const [pData] = await pool.execute(
+        'SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?',
+        [lookupId, lookupId]
+      );
+      if (pData.length > 0) {
+        numericPropertyId = pData[0].id;
+        propertyCode = propertyCode || pData[0].property_id;
+      }
+    }
+  }
+  const invoicePropertyId = String(inv.property_id || '');
+  const invoicePropertyCode = String(inv.property_code || '');
+  const invoiceEmail = String(inv.customer_email || '').toLowerCase();
+  const custPropertyId = String(numericPropertyId || '');
+  const custPropertyCode = String(propertyCode || '');
+  const custEmail = String(account.email || '').toLowerCase();
+  return Boolean(
+    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+    (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
+    (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
+    (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
+    (custEmail && invoiceEmail && custEmail === invoiceEmail)
+  );
+};
+
 // Customer authentication middleware
 const authenticateCustomer = async (req, res, next) => {
   try {
@@ -2532,6 +2575,15 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     const amountPaid = parseFloat(inv.amount_paid) || 0;
     const totalAmount = parseFloat(inv.total_amount) || 0;
 
+    // SECURITY: the caller must own this invoice -- the same property/email rule as
+    // GET /invoices/:id. A valid signature only proves Razorpay issued the payment.
+    const [accountRows] = decoded?.id
+      ? await pool.execute('SELECT * FROM customer_accounts WHERE id = ?', [decoded.id])
+      : [[]];
+    if (!accountRows.length || !(await customerOwnsInvoice(accountRows[0], inv))) {
+      return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
+    }
+
     // Record what Razorpay actually captured — with a part payment this is less than the
     // balance, and writing the balance here would mark a half-paid invoice fully paid.
     const Razorpay = require('razorpay');
@@ -2540,6 +2592,20 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
       key_secret: process.env.RAZORPAY_KEY_SECRET
     });
     const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    // SECURITY: the payment must belong to the order that was signed, and that order must have
+    // been created for THIS invoice. create-order stamps internal_invoice_id on every order, so a
+    // genuine payment for invoice A can no longer be replayed against invoice B's URL.
+    if (rzpPayment.order_id !== razorpay_order_id) {
+      return res.status(400).json({ success: false, message: 'Payment does not match the order' });
+    }
+    const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+    if (String(rzpOrder?.notes?.internal_invoice_id || '') !== String(inv.id)) {
+      return res.status(400).json({ success: false, message: 'This payment was not made for this invoice' });
+    }
+    if (!['captured', 'authorized'].includes(rzpPayment.status)) {
+      return res.status(400).json({ success: false, message: 'Payment has not been completed' });
+    }
     const paidAmount = round2(((rzpPayment.amount || 0) / 100));
     if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
       return res.status(400).json({ success: false, message: 'Could not confirm the paid amount' });
@@ -2910,14 +2976,66 @@ router.put('/notifications/mark-all-read', authenticateCustomer, async (req, res
 const { approveRenewal, declineRenewal } = require('../services/autoRenewalService');
 
 // Get pending renewals for customer's property
+/**
+ * schedule_renewals.property_id is always onboarded_properties.id (schema_v28's foreign key),
+ * while a customer account can hold that id, the property code (GC-...), or a `properties` row's
+ * id or code. Every form is tried, the code first because it is unique and an id is not --
+ * properties.id 5 and onboarded_properties.id 5 are different properties. One id is returned, so a
+ * customer is never shown another household's renewals. Null when the property is not onboarded.
+ */
+const resolveRenewalPropertyId = async (customer) => {
+  const code = customer.propertyCode ? String(customer.propertyCode) : null;
+  const stored = customer.propertyId != null && customer.propertyId !== '' ? String(customer.propertyId) : null;
+  const numeric = (value) => (value && /^\d+$/.test(value) ? Number(value) : null);
+
+  const byCode = async (value) => {
+    if (!value) return null;
+    const [[row]] = await pool.execute('SELECT id FROM onboarded_properties WHERE property_id = ? LIMIT 1', [value]);
+    return row ? row.id : null;
+  };
+
+  // 1. the property code, or a code stored in property_id
+  for (const value of [code, stored]) {
+    const id = await byCode(value);
+    if (id) return id;
+  }
+  // 2. property_id as the onboarded id itself
+  if (numeric(stored)) {
+    const [[row]] = await pool.execute('SELECT id FROM onboarded_properties WHERE id = ? LIMIT 1', [numeric(stored)]);
+    if (row) return row.id;
+  }
+  // 3. a `properties` row, matched back to its onboarded twin through the shared code
+  for (const value of [stored, code]) {
+    if (!value) continue;
+    try {
+      const [[prop]] = await pool.execute(
+        'SELECT property_id FROM properties WHERE id = ? OR property_id = ? LIMIT 1',
+        [numeric(value) || 0, value]
+      );
+      const id = await byCode(prop?.property_id);
+      if (id) return id;
+    } catch (e) {
+      // a deployment without the properties table still resolves through steps 1 and 2
+    }
+  }
+  return null;
+};
+
+// The statuses a renewal can have (schema_v28); anything else is ignored rather than queried
+const RENEWAL_STATUSES = new Set(['pending_approval', 'approved', 'declined', 'auto_approved', 'expired', 'completed', 'cancelled']);
+
 router.get('/renewals', authenticateCustomer, async (req, res) => {
   try {
-    const propertyId = req.customer.propertyId;
-    const { status } = req.query;
+    const propertyId = await resolveRenewalPropertyId(req.customer);
+    if (!propertyId) return res.json({ success: true, data: [] });
 
+    // SECURITY: the status is bound as a parameter -- it used to be pasted into the SQL
+    const status = typeof req.query.status === 'string' ? req.query.status.trim() : '';
+    const params = [propertyId];
     let statusFilter = '';
-    if (status) {
-      statusFilter = `AND sr.status = '${status}'`;
+    if (status && RENEWAL_STATUSES.has(status)) {
+      statusFilter = 'AND sr.status = ?';
+      params.push(status);
     }
 
     const [renewals] = await pool.execute(`
@@ -2936,7 +3054,7 @@ router.get('/renewals', authenticateCustomer, async (req, res) => {
       WHERE sr.property_id = ? ${statusFilter}
       ORDER BY sr.created_at DESC
       LIMIT 20
-    `, [propertyId]);
+    `, params);
 
     res.json({
       success: true,
@@ -2971,13 +3089,13 @@ router.get('/renewals', authenticateCustomer, async (req, res) => {
 router.post('/renewals/:id/approve', authenticateCustomer, async (req, res) => {
   try {
     const { id } = req.params;
-    const propertyId = req.customer.propertyId;
+    const propertyId = await resolveRenewalPropertyId(req.customer);
 
     // Verify renewal belongs to this customer's property
-    const [renewal] = await pool.execute(
+    const [renewal] = propertyId ? await pool.execute(
       `SELECT id FROM schedule_renewals WHERE (id = ? OR renewal_id = ?) AND property_id = ?`,
       [id, id, propertyId]
-    );
+    ) : [[]];
 
     if (renewal.length === 0) {
       return res.status(404).json({ success: false, message: 'Renewal not found' });
@@ -3004,13 +3122,13 @@ router.post('/renewals/:id/decline', authenticateCustomer, async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const propertyId = req.customer.propertyId;
+    const propertyId = await resolveRenewalPropertyId(req.customer);
 
     // Verify renewal belongs to this customer's property
-    const [renewal] = await pool.execute(
+    const [renewal] = propertyId ? await pool.execute(
       `SELECT id FROM schedule_renewals WHERE (id = ? OR renewal_id = ?) AND property_id = ?`,
       [id, id, propertyId]
-    );
+    ) : [[]];
 
     if (renewal.length === 0) {
       return res.status(404).json({ success: false, message: 'Renewal not found' });

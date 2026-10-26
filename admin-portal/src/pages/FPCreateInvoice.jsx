@@ -68,7 +68,7 @@ const FPCreateInvoice = ({ user }) => {
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     discountPercentage: 0,
-    taxPercentage: 18,
+    taxPercentage: 0,
     notes: '',
     termsAndConditions: 'Payment is due within 15 days of invoice date.\nLate payments may incur additional charges.'
   });

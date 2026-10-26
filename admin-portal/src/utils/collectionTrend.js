@@ -1,3 +1,5 @@
+import { formatMonthYear } from './dateFormat.js';
+
 /**
  * The Collection Trend series: invoiced and collected amounts, bucketed over the range its dropdown
  * asks for.
@@ -52,7 +54,7 @@ export const bucketScale = (start, end) => {
   const keyOf = byDay ? dayKey : monthKey;
   const labelOf = date => (byDay
     ? date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-    : date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }));
+    : formatMonthYear(date));
   const keys = [];
   let cursor = byDay ? new Date(start) : startOfMonth(start);
   while (cursor <= end) {

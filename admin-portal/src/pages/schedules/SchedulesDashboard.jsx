@@ -20,6 +20,8 @@ import {
   PROPERTY_TYPE_COLORS, 
   getServiceColor 
 } from '../../utils/chartColors';
+import { clampToViewport } from '../../hooks/useViewportClamp';
+import { trendSpanLabel, TREND_X_AXIS } from '../../utils/trendSpan';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -447,7 +449,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
             </button>
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-xl z-50 max-h-96 overflow-hidden">
+              <div ref={clampToViewport} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-200 shadow-xl z-50 max-h-96 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <h4 className="font-semibold text-gray-900">Notifications</h4>
                   <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
@@ -539,7 +541,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Status Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Status</h3>
             <PeriodFilter value={statusFilter} onChange={setStatusFilter} />
           </div>
@@ -562,7 +564,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Service Donut Chart - expanded, grows with the number of services */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden sm:col-span-2">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
             <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
           </div>
@@ -589,7 +591,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Property Type Donut */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
             <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
@@ -617,7 +619,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {/* Schedule Trend */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Schedule Trend</h3>
             <PeriodFilter value={trendFilter} onChange={setTrendFilter} />
           </div>
@@ -628,7 +630,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={trendData}>
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+              <XAxis dataKey="date" axisLine={false} {...TREND_X_AXIS} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} allowDecimals={false} domain={[0, 'auto']} />
               <Tooltip 
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
@@ -639,11 +641,12 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
               <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4, fill: '#F59E0B' }} activeDot={{ r: 6 }} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
+          <p className="mt-1 text-center text-xs text-gray-500">{trendSpanLabel(trendData, 'date')}</p>
         </div>
 
         {/* Upcoming Schedules */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Upcoming Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={upcomingFilter} onChange={setUpcomingFilter} />
@@ -672,7 +675,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Pending Property Schedules - spans the row below xl so its table gets full width */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Pending Property Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={pendingFilter} onChange={setPendingFilter} />
@@ -716,7 +719,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
         {/* Recently Created */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Recently Created</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={recentFilter} onChange={setRecentFilter} />
@@ -754,7 +757,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Reschedule Requests */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Reschedule Requests</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={rescheduleFilter} onChange={setRescheduleFilter} />
@@ -795,7 +798,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Overdue Schedules - spans the row below xl */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Overdue Schedules</h3>
             <div className="flex items-center gap-2">
               <PeriodFilter value={overdueFilter} onChange={setOverdueFilter} />

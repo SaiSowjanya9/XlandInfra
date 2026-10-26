@@ -316,7 +316,10 @@ fetch('/api/manager/dashboard', { ... });
 
 ## Dashboard UI
 
-- Keep dashboard summary cards equal in width and height in a single row, with consistent icon sizing, spacing, and label/count alignment. On narrow screens, scroll the card row instead of wrapping cards or overflowing the page. Keep date, notification, and refresh controls compact on the row below.
+- Keep dashboard summary cards equal in height, with consistent icon sizing, spacing, and label/count alignment. **On phones and tablets the cards wrap** (`flex flex-wrap`, each card `flex-[1_1_10rem]` / `9.5rem`): two per row on a phone, about four on a tablet, and the cards of a short last row stretch to fill it — never a sideways-scrolling row that cuts a card off at the screen edge (the user's call; it replaced the earlier scroll rule). Keep date, notification, and refresh controls compact on the row below.
+- **A floating panel stays on screen.** `DismissPanel` clamps itself through `hooks/useViewportClamp.js`; a plain `{open && <div className="absolute right-0 w-80 …">}` takes `ref={clampToViewport}` and `max-w-[calc(100vw-1rem)]`. A `right-0 w-80` panel opened mid-row on a phone otherwise runs off the left edge (the dashboard date filter did).
+- **A chart's month reads "May 2026"** — `formatMonthYear` from `utils/dateFormat.js`, never `formatDate` (which gave `01/05/2026` on the Work Orders trends) or a two-digit year. Day buckets stay "09 Sep".
+- **A trend chart is one continuous line, not a row of labelled months** (the user's call). Every trend — Work Orders Trend, Work Orders by Category Trend, Estimate Trend, Collection Trend, Lead Trend, Schedule Trend — is drawn as lines (no bars, no per-point dots, `activeDot` on hover), its XAxis spreads `TREND_X_AXIS` from `utils/trendSpan.js` (axis line only, no ticks), and the span is stated once underneath with `trendSpanLabel` ("May 2026 – Oct 2026"). The hover still names the bucket. "All Time" runs from the earliest record's month to the current month (`monthsSinceEarliest`), not a fixed six. Regression test: `node --test admin-portal/src/utils/trendSpan.test.js`.
 - **A dashboard's summary row is `components/common/DashboardSummaryCards.jsx`, never a copy.** Four
   dashboards had four designs for the same row: Payments (white card, coloured `border-l-4` edge,
   icon tile, label over a sublabel, the figure, "View All →"), Estimates (top border over a
@@ -597,6 +600,29 @@ shapes to avoid, both of which were on the customer portal:
   had been reporting one kind while presenting themselves as the account total.
 - A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
   kinds share one list, and the icon is what tells them apart.
+
+## Invoice GST Is Not the Estimate's GST
+
+- **The estimate's GST and the invoice's GST are unlinked, on the user's call.** When an estimate
+  is approved, `generateInvoiceFromEstimate` raises the draft invoice from the estimate's
+  **pre-GST** subtotal with `tax_percentage = NULL` (blank) and `tax_amount = 0`. The estimate's
+  `gst_percent` / `tax_percentage` is never copied, and when an estimate has no subtotal its GST is
+  taken back out of its total so it cannot ride in through the base amount.
+- An employee enters the GST % on the draft in **Generated Invoices** (detail modal → GST field →
+  Save → `PUT /api/payments/invoices/:id { taxPercentage }`). `POST /invoices/:id/send` refuses an
+  invoice whose `tax_percentage` is NULL (`code: 'GST_NOT_SET'`); `0` is a valid, entered rate.
+  The rate is locked once the invoice leaves `draft` (409).
+- `POST /invoices/create-from-estimate` follows the same rule: pre-GST subtotal, GST only from the
+  request's `gstPercent` (blank if absent). It used to tax the estimate's GST-inclusive total.
+- The manual **Create Invoice** forms (`billing/CreateInvoice.jsx`, `FPCreateInvoice.jsx`) default
+  GST to **0%**, not 18%; "Add from Estimate" does not copy the estimate's GST either.
+- **The estimate's discount always reaches its invoice.** `invoiceAmountsFromEstimate` uses the
+  estimate's stored `discount_amount` (a fixed-amount discount has no percentage), else its
+  percentage. Editing an FP estimate (FP, Admin, Manager, Coordinator, Executive `PUT …/estimates/:id`)
+  calls `refreshDraftInvoiceFromEstimate`, and re-approving one refreshes its existing invoice, so the
+  draft's line items, subtotal, discount and total follow the estimate while keeping the GST the
+  employee entered. A sent invoice, or one with money against it, is never rewritten.
+- Regression test: `node --test backend/services/invoiceGstDelink.test.js`.
 
 ## Billing > Payments and Payment History Are Two Screens
 
@@ -1300,15 +1326,11 @@ from `server.js` on boot) does the same thing at runtime.
 
 ## Collection Trend
 
-- **It is a charted trend, not a row of bare `div`s.** The bars had no axis, no gridline and no
-  figure on them, so a tall blue bar beside a short green one said only "more than" — by how much
-  was unanswerable without hovering, and an "All Time" range of two months looked like two random
-  blocks. It is a recharts `ComposedChart` now: invoiced and collected side by side per period,
-  against a money axis in `₹K`/`₹L`, with a grid and the shared hover card. The period buckets
-  still come from `utils/collectionTrend.js` — by day up to a month, by month beyond it.
-- **A figure is drawn over a bar only where the range is short enough** (eight buckets or fewer).
-  Thirty days of labelled bars is an unreadable smear; the hover answers the rest. The plot scrolls
-  sideways at ~44px a bucket rather than compressing a month into a 300px card.
+- **It is a charted trend, not a row of bare `div`s.** It is a recharts `ComposedChart` of two
+  lines — invoiced and collected — against a money axis in `₹K`/`₹L`, with a grid and the shared
+  hover card. Per the trend-chart rule above it carries no per-period axis labels and no figures
+  over points; the span is stated underneath and the hover gives each period's two figures. The
+  period buckets still come from `utils/collectionTrend.js` — by day up to a month, by month beyond.
 
 ## Chart Hover
 

@@ -50,6 +50,14 @@ const TABS = [
   { id: 'work_order', label: 'Work Order Invoices', icon: Briefcase, description: 'Invoices from work order submissions' }
 ];
 
+// An invoice raised from an estimate starts with its GST blank (null) until an employee enters it
+const isGstSet = (invoice) => invoice?.taxPercentage !== null && invoice?.taxPercentage !== undefined && invoice?.taxPercentage !== '';
+
+// Shown under a draft's amount while its GST is still blank
+const GstNotSetLabel = ({ invoice }) => (isGstSet(invoice) ? null : (
+  <span className="block text-[11px] font-medium text-amber-600">GST not set</span>
+));
+
 // Status config
 const STATUS_CONFIG = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-600' },
@@ -164,7 +172,7 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
   const [approvedEstimates, setApprovedEstimates] = useState([]);
   const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [gstPercent, setGstPercent] = useState(18);
+  const [gstPercent, setGstPercent] = useState(0);
   const [dueDate, setDueDate] = useState('');
   const [dueDateDisplay, setDueDateDisplay] = useState('');
   const [notes, setNotes] = useState('');
@@ -757,6 +765,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                         <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(invoice.invoiceDate)}</td>
                         <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">
                           {formatCurrency(invoice.totalAmount)}
+                          <GstNotSetLabel invoice={invoice} />
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
@@ -830,6 +839,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
                     <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(invoice.invoiceDate)}</td>
                     <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">
                       {formatCurrency(invoice.totalAmount)}
+                      <GstNotSetLabel invoice={invoice} />
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${STATUS_CONFIG[invoice.status]?.color || 'bg-gray-100 text-gray-600'}`}>
@@ -920,6 +930,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const [toast, setToast] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  // The invoice's GST is entered here on the draft -- it is not taken from the estimate
+  const [gstInput, setGstInput] = useState('');
+  const [savingGst, setSavingGst] = useState(false);
 
   const token = getAuthToken();
   
@@ -1015,6 +1028,11 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   };
 
   const handleSend = async (invoice) => {
+    if (!isGstSet(invoice)) {
+      showToast('Enter the GST % on this invoice before sending it', 'error');
+      handleView(invoice);
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}/send`, {
         method: 'POST',
@@ -1056,22 +1074,48 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
 
   const handleView = async (invoice) => {
     // Fetch full invoice details with enriched descriptions
+    let loaded = invoice;
     try {
       const response = await fetch(`${API_BASE}/api/payments/invoices/${invoice.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      if (result.success && result.data) {
-        setSelectedInvoice(result.data);
-      } else {
-        // Fallback to list data
-        setSelectedInvoice(invoice);
-      }
+      // Fallback to list data
+      if (result.success && result.data) loaded = result.data;
     } catch (err) {
       console.error('Error fetching invoice details:', err);
-      setSelectedInvoice(invoice);
     }
+    setSelectedInvoice(loaded);
+    setGstInput(isGstSet(loaded) ? String(parseFloat(loaded.taxPercentage)) : '');
     setShowDetailPanel(true);
+  };
+
+  const handleSaveGst = async () => {
+    const rate = parseFloat(gstInput);
+    if (gstInput === '' || !Number.isFinite(rate) || rate < 0 || rate > 100) {
+      showToast('Enter a GST % between 0 and 100', 'error');
+      return;
+    }
+    setSavingGst(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/payments/invoices/${selectedInvoice.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taxPercentage: rate })
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast('GST saved');
+        fetchInvoices();
+        await handleView(selectedInvoice);
+      } else {
+        showToast(result.message || 'Failed to save GST', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to save GST', 'error');
+    } finally {
+      setSavingGst(false);
+    }
   };
 
   const handleCreateSuccess = (data) => {
@@ -1114,7 +1158,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                   </span>
                   <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+                <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                     {/* Admin (All FPs) Option */}
                     <button
                       onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
@@ -1568,10 +1612,48 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                           <span className="font-semibold text-emerald-700">-Rs. {Math.round(selectedInvoice.discountAmount).toLocaleString('en-IN')}</span>
                         </div>
                       )}
-                      <div className="flex justify-between px-3 py-1.5 text-xs">
-                        <span className="text-warm-muted">GST ({(parseFloat(selectedInvoice.taxPercentage) || 0).toFixed(2)}%)</span>
-                        <span className="font-semibold text-warm-text">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
-                      </div>
+                      {(!selectedInvoice.status || selectedInvoice.status === 'draft') ? (
+                        <div className="px-3 py-2 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <label htmlFor="invoice-gst" className="text-warm-muted">GST (%)</label>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                id="invoice-gst"
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={gstInput}
+                                onChange={(e) => setGstInput(e.target.value)}
+                                placeholder="Enter"
+                                className="w-20 px-2 py-1 border border-warm-border rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleSaveGst}
+                                disabled={savingGst || gstInput === ''}
+                                className="px-2.5 py-1 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {savingGst ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-warm-muted">GST amount</span>
+                            <span className="font-semibold text-warm-text">
+                              {isGstSet(selectedInvoice) ? `Rs. ${Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}` : <span className="text-amber-600">Not set</span>}
+                            </span>
+                          </div>
+                          {!isGstSet(selectedInvoice) && (
+                            <p className="text-[11px] text-amber-600">Enter and save the GST % before sending this invoice.</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex justify-between px-3 py-1.5 text-xs">
+                          <span className="text-warm-muted">GST ({(parseFloat(selectedInvoice.taxPercentage) || 0).toFixed(2)}%)</span>
+                          <span className="font-semibold text-warm-text">Rs. {Math.round(selectedInvoice.taxAmount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
                       <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>

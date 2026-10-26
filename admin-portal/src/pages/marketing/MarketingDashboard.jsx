@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { getAuthToken } from '../../utils/safeStorage';
 import { decodeEntities } from '../../utils/text';
+import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../../utils/trendSpan';
 import EmptyState from '../../components/common/EmptyState';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { useFP } from '../../contexts/FPContext';
@@ -114,7 +115,7 @@ const buildTrendFrom = (rows, months = 6) => {
   const index = new Map();
   for (let offset = months - 1; offset >= 0; offset -= 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const bucket = { month: MONTHS_SHORT[d.getMonth()], year: d.getFullYear(), leads: 0, estimates: 0, approved: 0 };
+    const bucket = { month: `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`, year: d.getFullYear(), leads: 0, estimates: 0, approved: 0 };
     index.set(`${d.getFullYear()}-${d.getMonth()}`, bucket);
     buckets.push(bucket);
   }
@@ -161,7 +162,7 @@ const chartsFromRows = (rows) => {
       .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
     priorities: byField('priority', PRIORITY_ORDER)
       .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
-    trend: buildTrendFrom(rows),
+    trend: buildTrendFrom(rows, monthsSinceEarliest(rows.map(r => r.created_at))),
     nextActions: byField('next_action')
       .sort((a, b) => b.value - a.value)
       .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator }))
@@ -344,7 +345,9 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
         .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
       priorities: orderMerge(data.byPriority, PRIORITY_ORDER)
         .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
-      trend: data.trend || [],
+      trend: Array.isArray(data.rows)
+        ? buildTrendFrom(data.rows, monthsSinceEarliest(data.rows.map(r => r.created_at)))
+        : (data.trend || []).map(t => (t.year && !/\d{4}$/.test(t.month) ? { ...t, month: `${t.month} ${t.year}` } : t)),
       nextActions: (data.byNextAction || [])
         .slice()
         .sort((a, b) => b.value - a.value)
@@ -550,7 +553,7 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
 
           {/* Trend and the day's workload */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card title="Lead Trend" subtitle="Leads, estimates and approvals by month" right={periodSelect('trend')}>
+            <Card title="Lead Trend" subtitle={trendSpanLabel(cTrend.trend, 'month') || 'Leads, estimates and approvals over time'} right={periodSelect('trend')}>
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={cTrend.trend} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
                   <defs>
@@ -564,7 +567,7 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3EDE3" />
-                  <XAxis dataKey="month" {...axisProps} />
+                  <XAxis dataKey="month" stroke={axisProps.stroke} {...TREND_X_AXIS} />
                   <YAxis allowDecimals={false} {...axisProps} />
                   <Tooltip content={<ChartTip />} />
                   <Area type="monotone" dataKey="leads" name="Leads" stroke="#9B8AA6" strokeWidth={2}
@@ -572,7 +575,7 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
                   <Area type="monotone" dataKey="estimates" name="Estimates" stroke="#BFA56B" strokeWidth={2}
                         fill="url(#fpMktEstimates)" isAnimationActive={false} />
                   <Line type="monotone" dataKey="approved" name="Approved" stroke="#7FA7A3" strokeWidth={2}
-                        dot={{ r: 3 }} isAnimationActive={false} />
+                        dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
               <div className="flex items-center gap-4 mt-2 text-xs text-warm-muted">

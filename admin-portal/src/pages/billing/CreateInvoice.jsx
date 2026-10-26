@@ -131,7 +131,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   
   // Section 2: Items & Services
   const [lineItems, setLineItems] = useState([
-    { id: 1, serviceName: '', description: '', uom: 'Visit', qty: 1, rate: 0, discount: 0, taxPercent: 18, amount: 0 }
+    { id: 1, serviceName: '', description: '', uom: 'Visit', qty: 1, rate: 0, discount: 0, taxPercent: 0, amount: 0 }
   ]);
   const [showEstimateModal, setShowEstimateModal] = useState(false);
   const [estimates, setEstimates] = useState([]);
@@ -292,9 +292,19 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         qty: parseFloat(item.qty || item.quantity || 1),
         rate: parseFloat(item.rate || item.unitPrice || item.price || 0),
         discount: parseFloat(item.discount || 0),
-        taxPercent: parseFloat(item.taxPercent ?? item.gstPercent) || 0,
+        // The invoice's GST is entered here, never taken from the estimate
+        taxPercent: 0,
         amount: 0
       }));
+
+      // The estimate's overall discount comes over too, spread across the items by value
+      const gross = importedItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+      const estimateDiscount = parseFloat(estimate.discountAmount) || (gross * (parseFloat(estimate.discountPercentage) || 0) / 100);
+      if (estimateDiscount > 0 && gross > 0) {
+        importedItems.forEach(item => {
+          item.discount += Math.round((item.qty * item.rate / gross) * estimateDiscount * 100) / 100;
+        });
+      }
       
       // Calculate amounts
       importedItems.forEach(item => {
@@ -319,7 +329,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       qty: 1,
       rate: 0,
       discount: 0,
-      taxPercent: 18,
+      taxPercent: 0,
       amount: 0
     }]);
   };

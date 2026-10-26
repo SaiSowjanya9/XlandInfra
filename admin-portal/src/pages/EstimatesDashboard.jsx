@@ -35,6 +35,8 @@ import DateRangeFilter from '../components/common/DateRangeFilter';
 import { getAuthToken } from '../utils/safeStorage';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 import { estimateProfitSummary } from '../utils/estimateProfitSummary';
+import { formatMonthYear } from '../utils/dateFormat';
+import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../utils/trendSpan';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -501,7 +503,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     const now = new Date();
     
     // Determine how many months to show based on filter
-    let monthsToShow = 6;
+    let monthsToShow = trendPeriod === 'all' ? monthsSinceEarliest(trendFilteredData.map(est => est.created_at || est.createdAt), now) : 6;
     if (trendPeriod === 'week') monthsToShow = 1;
     else if (trendPeriod === 'month') monthsToShow = 1;
     else if (trendPeriod === 'quarter') monthsToShow = 3;
@@ -511,13 +513,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     // Initialize months
     for (let i = monthsToShow - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
+      const key = formatMonthYear(date);
       monthlyData[key] = { name: key, direct: 0, property: 0, workOrder: 0, sortDate: date };
     }
     
     trendFilteredData.forEach(est => {
       const date = new Date(est.created_at || est.createdAt);
-      const key = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
+      const key = formatMonthYear(date);
       
       if (monthlyData[key]) {
         const estType = est.estimate_type || est.estimateType || '';
@@ -641,7 +643,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 1. Estimates by Estimate Type (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Estimate Type</h3>
             <select
               value={filter3}
@@ -685,7 +687,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* 2. Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimate Status</h3>
             <select
               value={filter2}
@@ -727,7 +729,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 3. Property-Based Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Property-Based Status</h3>
             <select
               value={filter6}
@@ -766,7 +768,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* 4. Estimates by Property Type (Property-Based) - Horizontal Bar */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Property-Based)</h3>
             <select
               value={filter1}
@@ -842,7 +844,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 5. Direct Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Direct Estimate Status</h3>
             <select
               value={filter5}
@@ -881,7 +883,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* 6. Estimates by Property Type (Direct) - Horizontal Bar */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates by Property Type (Direct)</h3>
             <select
               value={filter4}
@@ -957,7 +959,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 7. Work Order Estimate Status (Donut) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimate Status</h3>
             <select
               value={filter7}
@@ -996,7 +998,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* 8. Work Orders: Category by Property Type (Grouped Bar) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Work Orders: Category by Property Type</h3>
             <select
               value={filter8}
@@ -1101,7 +1103,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-2 gap-4">
         {/* Estimate Trend (Line Chart) */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimate Trend</h3>
             <select
               value={trendPeriod}
@@ -1117,11 +1119,11 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </select>
           </div>
           
-          {trendData.length > 0 ? (
+          {trendData.length > 0 ? (<>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} interval={0} />
+                <XAxis dataKey="name" {...TREND_X_AXIS} />
                 <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} />
                 <Tooltip content={<CustomTooltip />} position={{ x: 0, y: -10 }} />
                 <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 500 }} />
@@ -1131,7 +1133,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Direct Estimates"
                   stroke="#5B8DEF" 
                   strokeWidth={2}
-                  dot={{ fill: '#5B8DEF', r: 4 }}
+                  dot={false}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
@@ -1141,7 +1143,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Property-Based Estimates"
                   stroke="#14B8A6" 
                   strokeWidth={2}
-                  dot={{ fill: '#14B8A6', r: 4 }}
+                  dot={false}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
@@ -1151,13 +1153,14 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   name="Work Order Estimates"
                   stroke="#F97316" 
                   strokeWidth={2}
-                  dot={{ fill: '#F97316', r: 4 }}
+                  dot={false}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>
-          ) : (
+            <p className="-mt-1 text-center text-xs text-gray-500">{trendSpanLabel(trendData)}</p>
+          </>) : (
             <div className="h-64 flex flex-col items-center justify-center text-gray-400">
               <div className="text-4xl font-bold text-gray-300 mb-2">0</div>
               <div className="text-sm">No data available</div>
@@ -1167,7 +1170,7 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Estimates Funnel */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Estimates Funnel</h3>
             <select
               value={funnelFilter}

@@ -15,6 +15,8 @@ const { authenticate } = require('../middleware/auth');
 const { estimateMarginTotals } = require('../utils/estimateMargins');
 const { COMPANY } = require('../utils/companyInfo');
 const { ROLES } = require('../config/roles');
+const { decodeEntities } = require('../utils/htmlEntities');
+const { notifyCustomerPaymentVerified } = require('../services/paymentNotifications');
 
 // Payment Security Middleware
 const {
@@ -1274,7 +1276,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
         SELECT e.*, 
                e.customer_name as customerName, e.customer_email as customerEmail, e.customer_phone as customerPhone,
                p.name as propertyName, p.property_id as propertyCode,
-               e.total, e.subtotal
+               e.total_amount as total, e.subtotal
         FROM estimates e
         LEFT JOIN properties p ON e.property_id = p.id
         WHERE e.estimate_id = ? AND LOWER(e.status) = 'approved'
@@ -1302,14 +1304,23 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
       });
     }
 
-    // Calculate amounts
-    const subtotal = parseFloat(estimate.total) || parseFloat(estimate.subtotal) || 0;
-    const discPct = parseFloat(discountPercent) || 0;
-    const taxPct = parseFloat(gstPercent) || 0;
-    const discountAmount = subtotal * (discPct / 100);
-    const taxableAmount = subtotal - discountAmount;
-    const taxAmount = taxableAmount * (taxPct / 100);
-    const totalAmount = taxableAmount + taxAmount;
+    // Calculate amounts from the estimate's pre-GST subtotal. Its total already contains the
+    // estimate's GST, and charging the invoice's GST on top of it taxed the tax. The invoice's GST
+    // is only what the employee entered; none entered leaves it blank for the draft. The
+    // estimate's own discount is carried over unless the employee entered one here.
+    const gstEntered = gstPercent !== undefined && gstPercent !== null && gstPercent !== '';
+    const taxPct = gstEntered ? parseFloat(gstPercent) : null;
+    if (gstEntered && (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 100)) {
+      return res.status(400).json({ success: false, message: 'GST % must be a number between 0 and 100.' });
+    }
+    const { invoiceAmountsFromEstimate } = require('../services/invoiceService');
+    const discountEntered = discountPercent !== undefined && discountPercent !== null && discountPercent !== '';
+    const amounts = invoiceAmountsFromEstimate(
+      discountEntered ? { ...estimate, discount_amount: 0, discount: 0, discount_percent: parseFloat(discountPercent) || 0, discount_percentage: 0 } : estimate,
+      taxPct
+    );
+    const { subtotal, discountAmount, taxAmount, totalAmount } = amounts;
+    const discPct = amounts.discountPercentage;
 
     // Parse line items from estimate - capture full service details
     let lineItems = [];
@@ -1768,13 +1779,27 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
 
     const invoice = existing[0];
 
+    // GST is entered by an employee on the draft and is locked once the invoice has been sent.
+    // A stored NULL means "not entered yet" and stays NULL until someone enters a rate.
+    const storedTax = invoice.tax_percentage === null || invoice.tax_percentage === undefined ? null : parseFloat(invoice.tax_percentage);
+    let taxPct = storedTax;
+    if (taxPercentage !== undefined && taxPercentage !== null && taxPercentage !== '') {
+      const requestedTax = parseFloat(taxPercentage);
+      if (!Number.isFinite(requestedTax) || requestedTax < 0 || requestedTax > 100) {
+        return res.status(400).json({ success: false, message: 'GST % must be a number between 0 and 100.' });
+      }
+      if (requestedTax !== storedTax && invoice.status && invoice.status !== 'draft') {
+        return res.status(409).json({ success: false, message: 'GST can only be changed before the invoice is sent.' });
+      }
+      taxPct = requestedTax;
+    }
+
     // Calculate amounts
     const sub = parseFloat(subtotal) || parseFloat(invoice.subtotal);
     const discPct = discountPercentage !== undefined ? parseFloat(discountPercentage) : parseFloat(invoice.discount_percentage);
-    const taxPct = taxPercentage !== undefined ? parseFloat(taxPercentage) : parseFloat(invoice.tax_percentage);
     const discountAmount = sub * (discPct / 100);
     const taxableAmount = sub - discountAmount;
-    const taxAmount = taxableAmount * (taxPct / 100);
+    const taxAmount = taxableAmount * ((taxPct || 0) / 100);
     const totalAmount = taxableAmount + taxAmount;
     const amountPaid = parseFloat(invoice.amount_paid) || 0;
     // Editing the total down past what was paid stored a negative balance — clamp like every
@@ -2081,6 +2106,12 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     
     if (!invoice.customer_email) {
       return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
+    }
+
+    // An invoice raised from an estimate starts with its GST blank: it is not the estimate's, an
+    // employee enters it on the draft. Nothing goes to the customer until they have.
+    if (invoice.tax_percentage === null || invoice.tax_percentage === undefined) {
+      return res.status(400).json({ success: false, code: 'GST_NOT_SET', message: 'Enter the GST % on this invoice before sending it.' });
     }
     
     // Create Razorpay payment link if needed (stored in DB for later use)
@@ -3112,6 +3143,11 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
     }
     connection.release();
 
+    // Post-commit: tell the customer in their own portal that staff verified (or rejected) it --
+    // the other half of "successful at both ends". Never awaited into the response's fate.
+    notifyCustomerPaymentVerified({ ...p, amount: finalAmount ?? p.amount }, status)
+      .catch(err => console.error('Customer payment notification failed:', err.message));
+
     // Post-commit: scheduling and the receipt are side effects — neither rolls the money back
     if (status === 'paid' && p.invoice_id) {
       // Trigger scheduling workflow when invoice is fully paid
@@ -3281,6 +3317,53 @@ router.put('/:id', authenticate, canEditPayments, async (req, res) => {
   } catch (error) {
     console.error('Error updating payment:', error);
     res.status(500).json({ success: false, message: 'Error updating payment', error: error.message });
+  }
+});
+
+// Customer offline payments (cash, cheque, bank transfer) still awaiting a staff verification --
+// the alerts in the Admin, Operations Manager, Franchise Partner and Manager portals' bells.
+// Read straight from the payments rows, so an alert disappears the moment the payment is verified
+// or rejected and can never disagree with Billing > Payments. Admin and Ops see every partner's;
+// a partner and its managers see their own.
+router.get('/pending-offline-alerts', authenticate, canEditPayments, async (req, res) => {
+  try {
+    const fpId = req.fpId || getFPScope(req);
+    const params = [];
+    let scope = '';
+    if (fpId) {
+      scope = 'AND p.franchise_partner_id = ?';
+      params.push(fpId);
+    } else if (![ROLES.ADMIN, ROLES.OPERATIONS_MANAGER].includes(req.user.role)) {
+      // A partner-side login with no partner behind it sees nothing rather than everything
+      return res.json({ success: true, data: [] });
+    }
+    const [rows] = await pool.execute(
+      `SELECT p.id, p.payment_id, p.amount, p.payment_method, p.transaction_reference,
+              p.customer_name, p.property_code, p.created_at, i.invoice_id AS invoice_code
+       FROM payments p
+       LEFT JOIN invoices i ON i.id = p.invoice_id
+       WHERE p.status = 'verification_pending' AND p.received_by_role = 'customer' ${scope}
+       ORDER BY p.created_at DESC
+       LIMIT 50`,
+      params
+    );
+    res.json({
+      success: true,
+      data: rows.map(r => ({
+        id: r.id,
+        paymentId: r.payment_id,
+        amount: parseFloat(r.amount) || 0,
+        method: r.payment_method,
+        reference: r.transaction_reference,
+        customerName: decodeEntities(r.customer_name || ''),
+        propertyCode: decodeEntities(r.property_code || ''),
+        invoiceCode: r.invoice_code,
+        createdAt: r.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching pending offline payment alerts:', error);
+    res.status(500).json({ success: false, message: 'Error fetching payment alerts' });
   }
 });
 

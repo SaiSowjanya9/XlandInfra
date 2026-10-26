@@ -55,14 +55,14 @@ export const PageHeaderStat = ({ icon: Icon = FileText, tone = 'primary', label,
  * had — this component owns the bar, not what a section does on it.
  */
 const PageHeader = ({ icon: Icon = FileText, title, subtitle, stats = [], children = null, className = '' }) => (
-  <div className={`bg-[#FFFAF0] border border-[#E8DFC9] rounded-xl px-5 py-4 ${className}`}>
-    <div className="flex items-center gap-4 flex-wrap">
-      <div className="flex items-center gap-3 min-w-0 shrink-0">
+  <div className={`bg-[#FFFAF0] border border-[#E8DFC9] rounded-xl px-4 py-3 sm:px-5 sm:py-4 ${className}`}>
+    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0 max-w-full">
         <span className="w-10 h-10 rounded-full bg-[#F6EBD1] flex items-center justify-center shrink-0">
           <Icon className="w-5 h-5 text-[#B5812A]" />
         </span>
         <span className="min-w-0">
-          <span className="block text-2xl font-semibold leading-tight text-[#111827] truncate">{title}</span>
+          <span className="block text-xl sm:text-2xl font-semibold leading-tight text-[#111827] truncate">{title}</span>
           {subtitle && <span className="block text-sm text-[#6B7280] truncate">{subtitle}</span>}
         </span>
       </div>
@@ -70,14 +70,14 @@ const PageHeader = ({ icon: Icon = FileText, title, subtitle, stats = [], childr
       {stats.length > 0 && (
         <>
           {/* The rule separates the page's name from its figures, as the design draws it */}
-          <span className="shrink-0 self-stretch w-px bg-[#E8DFC9]" aria-hidden="true" />
-          <div className="flex min-w-0 items-center gap-6 overflow-x-auto">
+          <span className="hidden sm:block shrink-0 self-stretch w-px bg-[#E8DFC9]" aria-hidden="true" />
+          <div className="flex min-w-0 max-w-full items-center gap-4 sm:gap-6 overflow-x-auto">
             {stats.map(stat => <PageHeaderStat key={stat.label} {...stat} />)}
           </div>
         </>
       )}
 
-      {children && <div className="ml-auto flex min-w-0 items-center gap-3">{children}</div>}
+      {children && <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">{children}</div>}
     </div>
   </div>
 );

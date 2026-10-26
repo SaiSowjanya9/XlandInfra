@@ -33,7 +33,7 @@ const ACCENTS = {
   gray: { edge: 'border-l-gray-400', tile: 'bg-gray-100', icon: 'text-gray-600', link: 'text-gray-600 hover:text-gray-700' }
 };
 
-// Spelled out for the same reason. Beyond nine the row keeps scrolling rather than fitting a
+// Spelled out for the same reason. Beyond nine the row keeps wrapping rather than fitting a
 // tenth column into a width where no label would survive.
 const COLUMNS = {
   3: '2xl:grid-cols-3', 4: '2xl:grid-cols-4', 5: '2xl:grid-cols-5', 6: '2xl:grid-cols-6',
@@ -59,10 +59,11 @@ export default function DashboardSummaryCards({ cards = [], className = '' }) {
   const columns = COLUMNS[rows.length] || '';
 
   return (
-    // One row, always. Below 2xl it scrolls sideways so every label shows in full; squeezed
-    // columns is what truncated them, and wrapping left a lonely card on a second line.
-    <div className={`-mx-1 overflow-x-auto px-1 py-1 ${className}`}>
-      <div className={`grid min-w-full grid-flow-col auto-cols-[minmax(11rem,1fr)] gap-3 ${columns ? `2xl:grid-flow-row ${columns}` : ''}`}>
+    // Below 2xl the cards wrap to the screen -- two per row on a phone, four on a tablet -- and
+    // grow to share their row, so a short last row stretches instead of leaving a lonely card.
+    // At 2xl they are one row of equal columns.
+    <div className={className}>
+      <div className={`flex flex-wrap gap-3 ${columns ? `2xl:grid ${columns}` : ''}`}>
         {rows.map(({ key, label, sublabel, value, title, icon: Icon, color, linkText = 'View All', to, onClick }, index) => {
           const accent = ACCENTS[color] || ACCENTS.blue;
           const actionClass = `mt-1 flex items-center gap-1 text-[10px] font-medium sm:text-[11px] ${accent.link}`;
@@ -70,7 +71,7 @@ export default function DashboardSummaryCards({ cards = [], className = '' }) {
 
           return (
             <div key={key ?? label ?? index}
-              className={`flex min-h-[110px] min-w-0 flex-col rounded-xl border-l-4 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:min-h-[125px] sm:p-4 ${accent.edge}`}>
+              className={`flex min-h-[110px] min-w-0 flex-[1_1_10rem] flex-col rounded-xl border-l-4 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:min-h-[125px] sm:p-4 ${accent.edge}`}>
               <div className="mb-auto flex items-center gap-2">
                 <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8 ${accent.tile}`}>
                   {Icon && <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${accent.icon}`} aria-hidden="true" />}

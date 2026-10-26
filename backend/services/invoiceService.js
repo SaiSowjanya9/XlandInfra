@@ -108,6 +108,333 @@ const calculateInvoiceAmounts = (subtotal, discountPercentage = 0, taxPercentage
   };
 };
 
+/** Read an estimate (and the property/contact fields its invoice needs) from either estimate table. */
+const loadEstimateForInvoice = async (connection, estimateId, source) => {
+  let estimates;
+  
+  if (source === 'fp') {
+    // Query fp_estimates table for FP estimates
+    // FP estimates use client_name, client_email, client_phone (not customer_*)
+    // Note: FP estimates store property_id as the property code string (e.g., "APT-1782187354586")
+    // Also fetch estimate_type to determine if this is a work order estimate
+    [estimates] = await connection.execute(`
+      SELECT fe.*, 
+             fe.client_email as estimate_email, fe.client_name as estimate_customer_name,
+             fe.client_phone as customer_phone,
+             fe.property_name, 
+             COALESCE(fe.property_code, fe.property_id) as property_code,
+             fe.total_amount as total,
+             fe.estimate_type,
+             fe.work_order_id,
+             op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
+             op.contact_email as op_email, op.contact_phone as op_phone,
+             fe.franchise_partner_id
+      FROM fp_estimates fe
+      LEFT JOIN onboarded_properties op ON fe.property_id = op.id
+      WHERE fe.id = ?
+    `, [estimateId]);
+  } else {
+    // Query regular estimates table
+    [estimates] = await connection.execute(`
+      SELECT e.*, 
+             e.customer_email as estimate_email, e.customer_name as estimate_customer_name,
+             c.name as client_name, c.email as client_email, c.phone as client_phone, c.client_id as client_code,
+             p.name as property_name, p.property_id as property_code,
+             op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
+             op.contact_email as op_email, op.contact_phone as op_phone,
+             op.franchise_partner_id
+      FROM estimates e
+      LEFT JOIN clients c ON e.client_id = c.id
+      LEFT JOIN properties p ON e.property_id = p.id
+      LEFT JOIN onboarded_properties op ON e.property_id = op.id
+      WHERE e.id = ?
+    `, [estimateId]);
+  }
+  
+  console.log(`📋 Querying ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
+  console.log(`📋 Query result: Found ${estimates.length} estimate(s)`);
+  
+  if (estimates.length === 0) {
+    console.error(`❌ Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
+    throw new Error(`Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table`);
+  }
+  
+  return estimates[0];
+};
+
+/** The invoice line items for an estimate: shared by invoice generation and the draft refresh. */
+const buildEstimateLineItems = async (connection, estimate, estimateId, source) => {
+  // Get estimate line items (only for regular estimates, FP estimates store items in JSON)
+  let items = [];
+  if (source === 'fp') {
+    // FP estimates store:
+    // - package_name, package_price: Main AMC package
+    // - package_services: Services included in the package (JSON array with descriptions)
+    // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
+    
+    // Parse package_services - check multiple possible field names and structures
+    // For work order estimates, use work_order_services field
+    const isWorkOrderEstimate = estimate.estimate_type === 'work_order';
+    let packageServices = [];
+    try {
+      // For work order estimates, check work_order_services first
+      const rawPkgServices = isWorkOrderEstimate 
+        ? (estimate.work_order_services || estimate.package_services)
+        : (estimate.package_services || estimate.service_rows || estimate.serviceRows);
+      
+      if (rawPkgServices) {
+        const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
+        if (Array.isArray(parsed)) {
+          packageServices = parsed;
+        } else if (parsed?.serviceRows) {
+          packageServices = parsed.serviceRows;
+        } else if (parsed?.services) {
+          packageServices = parsed.services;
+        } else if (parsed?.rows) {
+          packageServices = parsed.rows;
+        }
+      }
+      
+      // For work order estimates with no services, create one from work order data
+      if (isWorkOrderEstimate && (!packageServices || packageServices.length === 0)) {
+        console.log(`📦 Creating service from work order data for estimate ${estimate.estimate_id}`);
+        const subtotalVal = parseFloat(estimate.subtotal) || parseFloat(estimate.total_amount) || 0;
+        packageServices = [{
+          name: estimate.work_order_subcategory || estimate.work_order_category || 'Work Order Service',
+          description: estimate.work_order_description || estimate.description || `Work Order: ${estimate.work_order_id}`,
+          price: subtotalVal,
+          frequencyType: 'One-time',
+          frequencyCount: 1
+        }];
+      }
+      
+      console.log(`📦 Raw package_services parsed: ${packageServices.length} services (isWorkOrder: ${isWorkOrderEstimate})`);
+      if (packageServices.length > 0) {
+        console.log(`📦 First service sample:`, JSON.stringify(packageServices[0]));
+      }
+    } catch (e) { 
+      console.log(`⚠️ Error parsing package_services:`, e.message);
+      packageServices = []; 
+    }
+    
+    // Parse addons_data
+    let addonsData = [];
+    try {
+      const rawAddons = estimate.addons_data || estimate.addons || estimate.addon_services;
+      addonsData = rawAddons ? 
+        (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons) : [];
+      if (!Array.isArray(addonsData)) {
+        addonsData = addonsData?.addons || addonsData?.rows || [];
+      }
+      console.log(`📦 Raw addons_data parsed: ${addonsData.length} addons`);
+      if (addonsData.length > 0) {
+        console.log(`📦 First addon sample:`, JSON.stringify(addonsData[0]));
+      }
+    } catch (e) { 
+      console.log(`⚠️ Error parsing addons_data:`, e.message);
+      addonsData = []; 
+    }
+    
+    console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}, isWorkOrder: ${isWorkOrderEstimate}`);
+    
+    // Calculate package price per service (distribute evenly if services exist)
+    // For work order estimates, use the service's own price
+    const packagePrice = parseFloat(estimate.package_price) || 0;
+    const numServices = packageServices.length || 1;
+    const pricePerService = packagePrice / numServices;
+    
+    // Add package services with their descriptions (NOT the package name)
+    if (Array.isArray(packageServices) && packageServices.length > 0) {
+      console.log(`📦 Processing ${packageServices.length} services for invoice creation`);
+      packageServices.forEach((service, idx) => {
+        console.log(`📦 Service ${idx + 1} raw data:`, JSON.stringify(service));
+        const serviceName = decodeHtmlEntities(service.name || service.serviceName || service.service_name || service.service || 'Service');
+        const serviceDesc = decodeHtmlEntities(service.description || '');
+        console.log(`📦 Service ${idx + 1}: name="${serviceName}", description="${serviceDesc?.substring(0, 100)}"`);
+        const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
+        const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
+        
+        // For work order services, use service's own price; otherwise distribute package price
+        const servicePrice = isWorkOrderEstimate 
+          ? (parseFloat(service.price) || parseFloat(service.totalPrice) || parseFloat(estimate.subtotal) || 0)
+          : pricePerService;
+        
+        const lineItem = {
+          description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc : ''}`,
+          name: serviceName,
+          details: serviceDesc,
+          quantity: 1,
+          unit_price: Math.round(servicePrice),
+          total_price: Math.round(servicePrice),
+          type: 'service',
+          frequency: frequency,
+          visits: visits
+        };
+        
+        // For work order invoices, include category and subcategory
+        if (isWorkOrderEstimate) {
+          lineItem.category = estimate.work_order_category || service.category || '';
+          lineItem.subcategory = estimate.work_order_subcategory || service.subcategory || '';
+          lineItem.serviceCategory = estimate.work_order_category || '';
+          lineItem.serviceSubcategory = estimate.work_order_subcategory || '';
+        }
+        
+        items.push(lineItem);
+      });
+    } else if (estimate.package_name && packagePrice > 0) {
+      // Fallback: if no service details, show package services as single item
+      items.push({
+        description: `AMC Services (${decodeHtmlEntities(estimate.package_name)})`,
+        quantity: 1,
+        unit_price: packagePrice,
+        total_price: packagePrice,
+        type: 'service',
+        billingDuration: estimate.billing_duration || 'yearly'
+      });
+    }
+    
+    // Add add-on services with their descriptions
+    if (Array.isArray(addonsData) && addonsData.length > 0) {
+      addonsData.forEach(addon => {
+        const addonName = decodeHtmlEntities(addon.name || addon.serviceName || addon.service_name || 'Add-on Service');
+        const addonDesc = decodeHtmlEntities(addon.description || '');
+        const frequency = addon.frequency_type || addon.frequencyType || addon.frequency || '';
+        const visits = addon.frequency_count || addon.frequencyCount || addon.visits || addon.quantity || 1;
+        // Get the price - could be totalPrice, price, calculatedPrice, etc.
+        const addonPrice = parseFloat(addon.totalPrice) || parseFloat(addon.calculatedPrice) || 
+                          parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0;
+        
+        items.push({
+          description: `${addonName}${addonDesc ? ' - ' + addonDesc : ''}`,
+          quantity: 1,
+          unit_price: addonPrice,
+          total_price: addonPrice,
+          type: 'addon',
+          frequency: frequency,
+          visits: visits
+        });
+      });
+    }
+    
+    console.log(`📦 FP Estimate total line items: ${items.length}`);
+  } else {
+    const [regularItems] = await connection.execute(`
+      SELECT ei.*, p.name as package_name, c.name as category_name
+      FROM estimate_items ei
+      LEFT JOIN packages p ON ei.package_id = p.id
+      LEFT JOIN categories c ON ei.category_id = c.id
+      WHERE ei.estimate_id = ?
+      ORDER BY ei.sort_order
+    `, [estimateId]);
+    items = regularItems;
+  }
+  
+  // Prepare line items JSON - include all services and addons
+  const lineItems = items.map(item => {
+    const name = item.name || 'Service';
+    const details = item.details || item.service_description || '';
+    const desc = item.description || item.package_name || item.category_name || name;
+    return {
+      name: name,
+      description: desc,
+      details: details, // Store full description separately
+      quantity: item.quantity || 1,
+      unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
+      totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
+      type: item.type || 'service',
+      frequency: item.frequency || null,
+      visits: item.visits || null,
+      billingDuration: item.billingDuration || null,
+      packageId: item.package_id,
+      categoryId: item.category_id
+    };
+  });
+  
+  console.log(`📋 Line items for invoice: ${JSON.stringify(lineItems)}`);
+  return lineItems;
+};
+
+const round2 = (value) => parseFloat((Number(value) || 0).toFixed(2));
+
+/**
+ * An invoice's amounts from its estimate.
+ *
+ * - **Subtotal** is the estimate's pre-GST figure; with no subtotal stored, the estimate's GST is
+ *   taken back out of its total so the estimate's tax never rides in through the base amount.
+ * - **Discount** comes over exactly as the estimate shows it: its stored discount amount when it
+ *   has one (a fixed-amount discount has no percentage), otherwise its percentage of the subtotal.
+ * - **GST is the invoice's own** (`taxPercentage`, not the estimate's). `null` means an employee
+ *   has not entered it yet: it is stored as NULL and charges nothing until they do.
+ */
+const invoiceAmountsFromEstimate = (estimate, taxPercentage = null) => {
+  const estimateTotal = parseFloat(estimate.total) || parseFloat(estimate.total_amount) || 0;
+  const estimateGst = parseFloat(estimate.gst_amount) || parseFloat(estimate.tax_amount) || 0;
+  const subtotal = parseFloat(estimate.subtotal) || Math.max(0, estimateTotal - estimateGst);
+  const discountPercent = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount_percent) || 0;
+  const storedDiscount = parseFloat(estimate.discount_amount) || parseFloat(estimate.discount) || 0;
+  const discountAmount = Math.min(subtotal, storedDiscount > 0 ? storedDiscount : subtotal * discountPercent / 100);
+  const discountPercentage = discountPercent || (subtotal > 0 ? (discountAmount / subtotal) * 100 : 0);
+  const taxable = subtotal - discountAmount;
+  const rate = taxPercentage === null || taxPercentage === undefined || taxPercentage === '' ? null : parseFloat(taxPercentage);
+  const taxAmount = taxable * ((rate || 0) / 100);
+  const totalAmount = taxable + taxAmount;
+  return {
+    subtotal: round2(subtotal),
+    discountPercentage: round2(discountPercentage),
+    discountAmount: round2(discountAmount),
+    taxPercentage: rate === null || !Number.isFinite(rate) ? null : round2(rate),
+    taxAmount: round2(taxAmount),
+    totalAmount: round2(totalAmount),
+    balanceAmount: round2(totalAmount)
+  };
+};
+
+/**
+ * Bring an estimate's still-unsent invoice up to date with the estimate: a discount (or any
+ * price change) made on the estimate after its invoice was raised is carried into the draft.
+ * The invoice keeps the GST an employee entered on it. A sent invoice, or one with money
+ * against it, is never rewritten -- the customer has already seen that figure.
+ */
+const applyEstimateToDraftInvoice = async (connection, estimate, estimateId, source) => {
+  const [[invoice]] = await connection.execute(
+    'SELECT id, invoice_id, status, tax_percentage, amount_paid FROM invoices WHERE source_estimate_id = ? ORDER BY id DESC LIMIT 1',
+    [estimate.estimate_id]
+  );
+  if (!invoice) return { updated: false, reason: 'no_invoice' };
+  if ((invoice.status && invoice.status !== 'draft') || (parseFloat(invoice.amount_paid) || 0) > 0) {
+    return { updated: false, reason: 'sent', invoiceId: invoice.invoice_id, id: invoice.id };
+  }
+  const lineItems = await buildEstimateLineItems(connection, estimate, estimateId, source);
+  const amounts = invoiceAmountsFromEstimate(estimate, invoice.tax_percentage);
+  await connection.execute(
+    `UPDATE invoices SET
+       line_items = ?, subtotal = ?, discount_percentage = ?, discount_amount = ?,
+       tax_amount = ?, total_amount = ?, balance_amount = ?, updated_at = NOW()
+     WHERE id = ?`,
+    [JSON.stringify(lineItems), amounts.subtotal, amounts.discountPercentage, amounts.discountAmount,
+      amounts.taxAmount, amounts.totalAmount, amounts.balanceAmount, invoice.id]
+  );
+  console.log(`🔄 Draft invoice ${invoice.invoice_id} refreshed from estimate ${estimate.estimate_id}: Discount=${amounts.discountAmount}, Total=${amounts.totalAmount}`);
+  return { updated: true, invoiceId: invoice.invoice_id, id: invoice.id, totalAmount: amounts.totalAmount };
+};
+
+/**
+ * Called after an estimate is edited. Never throws: an estimate save must not fail because its
+ * invoice could not be refreshed.
+ */
+const refreshDraftInvoiceFromEstimate = async (estimateId, source = 'fp') => {
+  const connection = await pool.getConnection();
+  try {
+    const estimate = await loadEstimateForInvoice(connection, estimateId, source);
+    return await applyEstimateToDraftInvoice(connection, estimate, estimateId, source);
+  } catch (error) {
+    console.error(`Could not refresh the draft invoice for estimate ${estimateId}:`, error.message);
+    return { updated: false, reason: 'error' };
+  } finally {
+    connection.release();
+  }
+};
+
 /**
  * Generate invoice from an approved estimate
  * @param {number} estimateId - The estimate ID (internal DB ID)
@@ -121,56 +448,7 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
   try {
     await connection.beginTransaction();
     
-    let estimates;
-    
-    if (source === 'fp') {
-      // Query fp_estimates table for FP estimates
-      // FP estimates use client_name, client_email, client_phone (not customer_*)
-      // Note: FP estimates store property_id as the property code string (e.g., "APT-1782187354586")
-      // Also fetch estimate_type to determine if this is a work order estimate
-      [estimates] = await connection.execute(`
-        SELECT fe.*, 
-               fe.client_email as estimate_email, fe.client_name as estimate_customer_name,
-               fe.client_phone as customer_phone,
-               fe.property_name, 
-               COALESCE(fe.property_code, fe.property_id) as property_code,
-               fe.total_amount as total,
-               fe.estimate_type,
-               fe.work_order_id,
-               op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
-               op.contact_email as op_email, op.contact_phone as op_phone,
-               fe.franchise_partner_id
-        FROM fp_estimates fe
-        LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-        WHERE fe.id = ?
-      `, [estimateId]);
-    } else {
-      // Query regular estimates table
-      [estimates] = await connection.execute(`
-        SELECT e.*, 
-               e.customer_email as estimate_email, e.customer_name as estimate_customer_name,
-               c.name as client_name, c.email as client_email, c.phone as client_phone, c.client_id as client_code,
-               p.name as property_name, p.property_id as property_code,
-               op.community_name as onboarded_property_name, op.property_id as onboarded_property_code,
-               op.contact_email as op_email, op.contact_phone as op_phone,
-               op.franchise_partner_id
-        FROM estimates e
-        LEFT JOIN clients c ON e.client_id = c.id
-        LEFT JOIN properties p ON e.property_id = p.id
-        LEFT JOIN onboarded_properties op ON e.property_id = op.id
-        WHERE e.id = ?
-      `, [estimateId]);
-    }
-    
-    console.log(`📋 Querying ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
-    console.log(`📋 Query result: Found ${estimates.length} estimate(s)`);
-    
-    if (estimates.length === 0) {
-      console.error(`❌ Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table for ID: ${estimateId}`);
-      throw new Error(`Estimate not found in ${source === 'fp' ? 'fp_estimates' : 'estimates'} table`);
-    }
-    
-    const estimate = estimates[0];
+    const estimate = await loadEstimateForInvoice(connection, estimateId, source);
     console.log(`📋 Estimate found: ${estimate.estimate_id}, Client: ${estimate.client_name || estimate.estimate_customer_name}, Email: ${estimate.client_email || estimate.estimate_email}`);
     
     // Check if invoice already exists for this estimate (check by source_estimate_id string)
@@ -181,212 +459,21 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     
     if (existingInvoice.length > 0) {
       console.log(`Invoice ${existingInvoice[0].invoice_id} already exists for estimate ${estimate.estimate_id}`);
-      await connection.rollback();
+      // Re-approved after an edit: carry the estimate's current amounts into the unsent draft
+      const refreshed = await applyEstimateToDraftInvoice(connection, estimate, estimateId, source);
+      await connection.commit();
       return { 
         success: true, 
         alreadyExists: true, 
+        refreshed: refreshed.updated,
         invoiceId: existingInvoice[0].invoice_id,
         id: existingInvoice[0].id
       };
     }
     
-    // Get estimate line items (only for regular estimates, FP estimates store items in JSON)
-    let items = [];
-    if (source === 'fp') {
-      // FP estimates store:
-      // - package_name, package_price: Main AMC package
-      // - package_services: Services included in the package (JSON array with descriptions)
-      // - addons_data: Add-on services (JSON array with name, description, price, frequency, visits, totalPrice)
-      
-      // Parse package_services - check multiple possible field names and structures
-      // For work order estimates, use work_order_services field
-      const isWorkOrderEstimate = estimate.estimate_type === 'work_order';
-      let packageServices = [];
-      try {
-        // For work order estimates, check work_order_services first
-        const rawPkgServices = isWorkOrderEstimate 
-          ? (estimate.work_order_services || estimate.package_services)
-          : (estimate.package_services || estimate.service_rows || estimate.serviceRows);
-        
-        if (rawPkgServices) {
-          const parsed = typeof rawPkgServices === 'string' ? JSON.parse(rawPkgServices) : rawPkgServices;
-          if (Array.isArray(parsed)) {
-            packageServices = parsed;
-          } else if (parsed?.serviceRows) {
-            packageServices = parsed.serviceRows;
-          } else if (parsed?.services) {
-            packageServices = parsed.services;
-          } else if (parsed?.rows) {
-            packageServices = parsed.rows;
-          }
-        }
-        
-        // For work order estimates with no services, create one from work order data
-        if (isWorkOrderEstimate && (!packageServices || packageServices.length === 0)) {
-          console.log(`📦 Creating service from work order data for estimate ${estimate.estimate_id}`);
-          const subtotalVal = parseFloat(estimate.subtotal) || parseFloat(estimate.total_amount) || 0;
-          packageServices = [{
-            name: estimate.work_order_subcategory || estimate.work_order_category || 'Work Order Service',
-            description: estimate.work_order_description || estimate.description || `Work Order: ${estimate.work_order_id}`,
-            price: subtotalVal,
-            frequencyType: 'One-time',
-            frequencyCount: 1
-          }];
-        }
-        
-        console.log(`📦 Raw package_services parsed: ${packageServices.length} services (isWorkOrder: ${isWorkOrderEstimate})`);
-        if (packageServices.length > 0) {
-          console.log(`📦 First service sample:`, JSON.stringify(packageServices[0]));
-        }
-      } catch (e) { 
-        console.log(`⚠️ Error parsing package_services:`, e.message);
-        packageServices = []; 
-      }
-      
-      // Parse addons_data
-      let addonsData = [];
-      try {
-        const rawAddons = estimate.addons_data || estimate.addons || estimate.addon_services;
-        addonsData = rawAddons ? 
-          (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : rawAddons) : [];
-        if (!Array.isArray(addonsData)) {
-          addonsData = addonsData?.addons || addonsData?.rows || [];
-        }
-        console.log(`📦 Raw addons_data parsed: ${addonsData.length} addons`);
-        if (addonsData.length > 0) {
-          console.log(`📦 First addon sample:`, JSON.stringify(addonsData[0]));
-        }
-      } catch (e) { 
-        console.log(`⚠️ Error parsing addons_data:`, e.message);
-        addonsData = []; 
-      }
-      
-      console.log(`📦 FP Estimate - Package: ${estimate.package_name}, Services: ${packageServices.length}, Addons: ${addonsData.length}, isWorkOrder: ${isWorkOrderEstimate}`);
-      
-      // Calculate package price per service (distribute evenly if services exist)
-      // For work order estimates, use the service's own price
-      const packagePrice = parseFloat(estimate.package_price) || 0;
-      const numServices = packageServices.length || 1;
-      const pricePerService = packagePrice / numServices;
-      
-      // Add package services with their descriptions (NOT the package name)
-      if (Array.isArray(packageServices) && packageServices.length > 0) {
-        console.log(`📦 Processing ${packageServices.length} services for invoice creation`);
-        packageServices.forEach((service, idx) => {
-          console.log(`📦 Service ${idx + 1} raw data:`, JSON.stringify(service));
-          const serviceName = decodeHtmlEntities(service.name || service.serviceName || service.service_name || service.service || 'Service');
-          const serviceDesc = decodeHtmlEntities(service.description || '');
-          console.log(`📦 Service ${idx + 1}: name="${serviceName}", description="${serviceDesc?.substring(0, 100)}"`);
-          const frequency = service.frequencyType || service.frequency_type || service.frequency || '';
-          const visits = service.frequencyCount || service.frequency_count || service.visits || 1;
-          
-          // For work order services, use service's own price; otherwise distribute package price
-          const servicePrice = isWorkOrderEstimate 
-            ? (parseFloat(service.price) || parseFloat(service.totalPrice) || parseFloat(estimate.subtotal) || 0)
-            : pricePerService;
-          
-          const lineItem = {
-            description: `${serviceName}${serviceDesc ? ' - ' + serviceDesc : ''}`,
-            name: serviceName,
-            details: serviceDesc,
-            quantity: 1,
-            unit_price: Math.round(servicePrice),
-            total_price: Math.round(servicePrice),
-            type: 'service',
-            frequency: frequency,
-            visits: visits
-          };
-          
-          // For work order invoices, include category and subcategory
-          if (isWorkOrderEstimate) {
-            lineItem.category = estimate.work_order_category || service.category || '';
-            lineItem.subcategory = estimate.work_order_subcategory || service.subcategory || '';
-            lineItem.serviceCategory = estimate.work_order_category || '';
-            lineItem.serviceSubcategory = estimate.work_order_subcategory || '';
-          }
-          
-          items.push(lineItem);
-        });
-      } else if (estimate.package_name && packagePrice > 0) {
-        // Fallback: if no service details, show package services as single item
-        items.push({
-          description: `AMC Services (${decodeHtmlEntities(estimate.package_name)})`,
-          quantity: 1,
-          unit_price: packagePrice,
-          total_price: packagePrice,
-          type: 'service',
-          billingDuration: estimate.billing_duration || 'yearly'
-        });
-      }
-      
-      // Add add-on services with their descriptions
-      if (Array.isArray(addonsData) && addonsData.length > 0) {
-        addonsData.forEach(addon => {
-          const addonName = decodeHtmlEntities(addon.name || addon.serviceName || addon.service_name || 'Add-on Service');
-          const addonDesc = decodeHtmlEntities(addon.description || '');
-          const frequency = addon.frequency_type || addon.frequencyType || addon.frequency || '';
-          const visits = addon.frequency_count || addon.frequencyCount || addon.visits || addon.quantity || 1;
-          // Get the price - could be totalPrice, price, calculatedPrice, etc.
-          const addonPrice = parseFloat(addon.totalPrice) || parseFloat(addon.calculatedPrice) || 
-                            parseFloat(addon.price) || parseFloat(addon.unitPrice) || 0;
-          
-          items.push({
-            description: `${addonName}${addonDesc ? ' - ' + addonDesc : ''}`,
-            quantity: 1,
-            unit_price: addonPrice,
-            total_price: addonPrice,
-            type: 'addon',
-            frequency: frequency,
-            visits: visits
-          });
-        });
-      }
-      
-      console.log(`📦 FP Estimate total line items: ${items.length}`);
-    } else {
-      const [regularItems] = await connection.execute(`
-        SELECT ei.*, p.name as package_name, c.name as category_name
-        FROM estimate_items ei
-        LEFT JOIN packages p ON ei.package_id = p.id
-        LEFT JOIN categories c ON ei.category_id = c.id
-        WHERE ei.estimate_id = ?
-        ORDER BY ei.sort_order
-      `, [estimateId]);
-      items = regularItems;
-    }
-    
-    // Calculate amounts at the rate the estimate itself carries -- GST included
-    // For FP estimates: subtotal, discount_percent, total_amount
-    // For regular estimates: subtotal, discount_percentage
-    const subtotalValue = parseFloat(estimate.subtotal) || parseFloat(estimate.total) || parseFloat(estimate.total_amount) || 0;
-    const discountValue = parseFloat(estimate.discount_percentage) || parseFloat(estimate.discount_percent) || parseFloat(estimate.discount) || 0;
-    const gstValue = parseFloat(estimate.gst_percent) || parseFloat(estimate.gst_percentage) || parseFloat(estimate.tax_percentage) || 0;
-    const amounts = calculateInvoiceAmounts(subtotalValue, discountValue, gstValue);
-    
-    console.log(`💰 Invoice amounts: Subtotal=${subtotalValue}, Discount=${discountValue}%, GST=${gstValue}%, Total=${amounts.totalAmount}`);
-    
-    // Prepare line items JSON - include all services and addons
-    const lineItems = items.map(item => {
-      const name = item.name || 'Service';
-      const details = item.details || item.service_description || '';
-      const desc = item.description || item.package_name || item.category_name || name;
-      return {
-        name: name,
-        description: desc,
-        details: details, // Store full description separately
-        quantity: item.quantity || 1,
-        unitPrice: parseFloat(item.unit_price) || parseFloat(item.price) || 0,
-        totalPrice: parseFloat(item.total_price) || (parseFloat(item.unit_price || item.price || 0) * (item.quantity || 1)),
-        type: item.type || 'service',
-        frequency: item.frequency || null,
-        visits: item.visits || null,
-        billingDuration: item.billingDuration || null,
-        packageId: item.package_id,
-        categoryId: item.category_id
-      };
-    });
-    
-    console.log(`📋 Line items for invoice: ${JSON.stringify(lineItems)}`);
+    const lineItems = await buildEstimateLineItems(connection, estimate, estimateId, source);
+    const amounts = invoiceAmountsFromEstimate(estimate, null);
+    console.log(`💰 Invoice amounts: Subtotal=${amounts.subtotal}, Discount=${amounts.discountAmount} (${amounts.discountPercentage}%), GST=not set (entered on the draft), Total=${amounts.totalAmount}`);
     
     // Generate invoice ID
     const fpId = estimate.franchise_partner_id || null;
@@ -1151,7 +1238,9 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
 module.exports = {
   generateInvoiceId,
   calculateInvoiceAmounts,
+  invoiceAmountsFromEstimate,
   generateInvoiceFromEstimate,
+  refreshDraftInvoiceFromEstimate,
   generateInvoiceFromWorkOrder,
   sendInvoiceEmailNotification,
   createPaymentLinkForInvoice,

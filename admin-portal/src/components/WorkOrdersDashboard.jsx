@@ -44,8 +44,10 @@ import DonutChart from './common/DonutChart';
 import useChartTooltip from './common/ChartTooltip';
 import DashboardSummaryCards from './common/DashboardSummaryCards';
 import { getAuthToken } from '../utils/safeStorage';
-import { formatDate } from '../utils/dateFormat';
+import { formatDate, formatMonthYear } from '../utils/dateFormat';
 import DismissPanel from '../components/common/DismissPanel';
+import { clampToViewport } from '../hooks/useViewportClamp';
+import { monthsSinceEarliest, trendSpanLabel, TREND_X_AXIS } from '../utils/trendSpan';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -423,7 +425,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       }
     } else {
       // Monthly (default)
-      let monthCount = 6;
+      let monthCount = trendPeriod === 'all' ? monthsSinceEarliest(filtered.map(wo => wo.created_at || wo.createdAt), now) : 6;
       if (trendPeriod === 'week') monthCount = 1;
       else if (trendPeriod === 'month') monthCount = 1;
       else if (trendPeriod === 'quarter') monthCount = 3;
@@ -433,7 +435,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       for (let i = monthCount - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         timePoints.push({
-          label: formatDate(date),
+          label: formatMonthYear(date),
           startDate: date,
           endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
         });
@@ -514,7 +516,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       }
     } else {
       // Monthly (default)
-      let monthCount = 6;
+      let monthCount = categoryTrendFilter === 'all' ? monthsSinceEarliest(filtered.map(wo => wo.created_at || wo.createdAt), now) : 6;
       if (categoryTrendFilter === 'week') monthCount = 1;
       else if (categoryTrendFilter === 'month') monthCount = 1;
       else if (categoryTrendFilter === 'quarter') monthCount = 3;
@@ -524,7 +526,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       for (let i = monthCount - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         timePoints.push({
-          label: formatDate(date),
+          label: formatMonthYear(date),
           startDate: date,
           endDate: new Date(date.getFullYear(), date.getMonth() + 1, 0)
         });
@@ -709,9 +711,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Work Orders Dashboard</h1>
+      <div className="flex flex-wrap justify-between items-start sm:items-center gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Work Orders Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">
             {isAdminPortal && selectedFp ? (
               selectedFp.id === 'all' ? 'Overview of all work orders' : `Work orders for ${selectedFp.name || selectedFp.companyName}`
@@ -719,7 +721,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* FP Selector - Only for Admin Portal */}
           {isAdminPortal && (
             <div className="relative">
@@ -733,7 +735,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                   {/* Admin (All FPs) Option */}
                   <button
                     onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
@@ -789,7 +791,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             </button>
 
             {showDatePicker && (
-              <div className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-5 z-50 min-w-[300px]">
+              <div ref={clampToViewport} className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-4 sm:p-5 z-50 w-80 max-w-[calc(100vw-1rem)]">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
@@ -841,7 +843,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
                         const now = new Date();
@@ -955,7 +957,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Work Orders by Status */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Status</h3>
             <PeriodDropdown value={statusChartFilter} onChange={setStatusChartFilter} />
           </div>
@@ -977,7 +979,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Work Orders by Priority */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Priority</h3>
             <PeriodDropdown value={priorityChartFilter} onChange={setPriorityChartFilter} />
           </div>
@@ -1004,7 +1006,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Work Orders by Property Type */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
@@ -1046,8 +1048,8 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
       </div>
 
       {/* Category Trend Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
           <h3 className="text-sm font-semibold text-gray-900">Work Orders by Category Trend</h3>
           <PeriodDropdown value={categoryTrendFilter} onChange={setCategoryTrendFilter} />
         </div>
@@ -1065,9 +1067,9 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryTrend.data}>
+                  <LineChart data={categoryTrend.data}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" interval={0} />
+                    <XAxis dataKey="name" stroke="#9CA3AF" {...TREND_X_AXIS} />
                     <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" allowDecimals={false} />
                     <Tooltip 
                       contentStyle={{ 
@@ -1078,31 +1080,35 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                       }}
                     />
                     {categoryTrend.categories.map((cat, index) => (
-                      <Bar 
+                      <Line
                         key={cat}
+                        type="monotone"
                         dataKey={cat}
-                        fill={categoryColors[index % categoryColors.length]}
-                        radius={[2, 2, 0, 0]}
+                        stroke={categoryColors[index % categoryColors.length]}
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
                         isAnimationActive={false}
                       />
                     ))}
-                  </BarChart>
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
+              <p className="mt-2 text-center text-xs text-gray-500">{trendSpanLabel(categoryTrend.data)}</p>
             </>
           );
         })()}
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Work Orders Trend */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 min-w-0">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
             <PeriodDropdown value={trendPeriod} onChange={setTrendPeriod} />
           </div>
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
               <span className="text-xs text-gray-600">Created</span>
@@ -1120,7 +1126,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" interval={0} />
+                <XAxis dataKey="name" stroke="#9CA3AF" {...TREND_X_AXIS} />
                 <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#9CA3AF" />
                 <Tooltip 
                   contentStyle={{ 
@@ -1130,23 +1136,24 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                   }}
                 />
-                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Created" stroke="#3B82F6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="Cancelled" stroke="#EF4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
+          <p className="mt-2 text-center text-xs text-gray-500">{trendSpanLabel(trendData)}</p>
         </div>
 
         {/* Average Completion Time */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 min-w-0">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Average Completion Time</h3>
             <PeriodDropdown value={completionTimeFilter} onChange={setCompletionTimeFilter} />
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-col sm:flex-row gap-6">
             {/* Left side - Average and Priority bars */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="mb-4">
                 <div className="text-3xl font-bold text-gray-900">{completionData.average}</div>
                 <div className="text-xs text-gray-500">Days</div>
@@ -1178,7 +1185,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             </div>
             
             {/* Right side - SLA Compliance */}
-            <div className="w-48 border-l border-gray-200 pl-6">
+            <div className="w-full sm:w-48 shrink-0 border-t sm:border-t-0 sm:border-l border-gray-200 pt-4 sm:pt-0 sm:pl-6">
               <div className="text-xs font-medium text-gray-700 mb-3">SLA Compliance</div>
               <div className="relative w-28 h-28 mx-auto">
                 <ResponsiveContainer width="100%" height="100%">

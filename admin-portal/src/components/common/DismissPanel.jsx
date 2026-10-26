@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { shouldDismiss } from '../../utils/dismiss';
+import useViewportClamp from '../../hooks/useViewportClamp';
 
 /**
  * A floating panel -- a dropdown, a picker, a suggestion list -- that closes when you click away
@@ -21,7 +22,7 @@ import { shouldDismiss } from '../../utils/dismiss';
  * trigger's own mousedown would let its click reopen the panel, and it would never shut.
  */
 const DismissPanel = ({ open, onDismiss, className = '', children, ...rest }) => {
-  const panelRef = useRef(null);
+  const panelRef = useViewportClamp(open);
   // Held in a ref so changing the handler does not tear the listener down and rebuild it, and so
   // the listener always calls the current one.
   const dismissRef = useRef(onDismiss);

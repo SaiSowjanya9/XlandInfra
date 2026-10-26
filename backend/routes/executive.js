@@ -2255,7 +2255,9 @@ router.put('/estimates/:id', requireExecutiveScope, attachPackageSnapshot(pool),
       ]
     );
     
-    res.json({ success: true, message: 'Estimate updated successfully' });
+    // A discount or price change reaches the estimate's still-unsent invoice
+    const invoiceRefresh = await require('../services/invoiceService').refreshDraftInvoiceFromEstimate(estimateId, 'fp');
+    res.json({ success: true, message: 'Estimate updated successfully', invoiceRefreshed: invoiceRefresh.updated, invoiceId: invoiceRefresh.invoiceId || null });
   } catch (error) {
     console.error('Update estimate error:', error);
     res.status(500).json({ success: false, message: error.message });

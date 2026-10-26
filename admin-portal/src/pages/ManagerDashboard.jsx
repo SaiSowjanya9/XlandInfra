@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
+import PendingPaymentAlerts, { usePendingPaymentAlerts } from '../components/common/PendingPaymentAlerts';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
@@ -30,6 +31,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PRIORITY_COLORS, PROPERTY_TYPE_COLORS, PAYMENT_STATUS_COLORS } from '../utils/chartColors';
+import { clampToViewport } from '../hooks/useViewportClamp';
 
 const ManagerDashboard = ({ user }) => {
   const navigate = useNavigate();
@@ -131,7 +133,9 @@ const ManagerDashboard = ({ user }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Customer offline payments waiting to be verified count as unread until someone verifies them
+  const { alerts: paymentAlerts } = usePendingPaymentAlerts();
+  const unreadCount = notifications.filter(n => !n.read).length + paymentAlerts.length;
 
   // Close notifications on outside click
   useEffect(() => {
@@ -606,7 +610,7 @@ const ManagerDashboard = ({ user }) => {
 
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+                <div ref={clampToViewport} className="absolute right-0 top-12 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
                   <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-800">Notifications</span>
@@ -626,11 +630,18 @@ const ManagerDashboard = ({ user }) => {
                     )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
+                    <PendingPaymentAlerts
+                      alerts={paymentAlerts}
+                      paymentsPath="/manager/billing/payments"
+                      onNavigate={() => setShowNotifications(false)}
+                    />
                     {notifications.length === 0 ? (
+                      paymentAlerts.length > 0 ? null : (
                       <div className="p-6 text-center">
                         <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                         <p className="text-sm text-gray-500">No notifications</p>
                       </div>
+                      )
                     ) : (
                       <div>
                         {notifications.some(n => n.type === 'warning') && (
@@ -714,8 +725,8 @@ const ManagerDashboard = ({ user }) => {
       )}
 
       {/* Properties Overview Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Properties Overview</h2>
             <p className="text-sm text-gray-500 mt-1">Distribution by property type</p>
@@ -733,7 +744,7 @@ const ManagerDashboard = ({ user }) => {
               <option value="sixmonths">Last 6 Months</option>
               <option value="year">This Year</option>
             </select>
-            <Link to="/manager/properties" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <Link to="/manager/properties" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -746,13 +757,13 @@ const ManagerDashboard = ({ user }) => {
               <BarChart data={propertyTypeData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} 
+                  tick={{ fontSize: 11, fill: '#1f2937', fontWeight: 500 }} 
                   stroke="#E5E7EB" 
                   axisLine={{ stroke: '#E5E7EB' }}
                   tickLine={false}
-                  angle={-15}
+                  angle={-35}
                   textAnchor="end"
-                  height={50}
+                  height={70}
                   interval={0}
                 />
                 <YAxis 
@@ -813,12 +824,12 @@ const ManagerDashboard = ({ user }) => {
       </div>
 
       {/* Combined Work Orders + Estimates Overview Box */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 space-y-6">
         {/* Work Orders Overview Section */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Work Orders Overview</h2>
-            <Link to="/manager/work-orders" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <Link to="/manager/work-orders" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -827,7 +838,7 @@ const ManagerDashboard = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {/* Work Orders by Status */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-              <div className="flex justify-between items-center mb-4 gap-2">
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                 <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Status</h3>
                 <PeriodDropdown value={woStatusFilter} onChange={setWoStatusFilter} />
               </div>
@@ -854,7 +865,7 @@ const ManagerDashboard = ({ user }) => {
 
             {/* Work Orders by Priority */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-              <div className="flex justify-between items-center mb-4 gap-2">
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                 <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Priority</h3>
                 <PeriodDropdown value={woPriorityFilter} onChange={setWoPriorityFilter} />
               </div>
@@ -881,7 +892,7 @@ const ManagerDashboard = ({ user }) => {
 
             {/* Work Orders by Property Type */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
-              <div className="flex justify-between items-center mb-4 gap-2">
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                 <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
                 <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
               </div>
@@ -952,9 +963,9 @@ const ManagerDashboard = ({ user }) => {
 
         {/* Estimates Overview Section */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Estimates Overview</h2>
-            <Link to="/manager/estimates" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <Link to="/manager/estimates" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -966,9 +977,9 @@ const ManagerDashboard = ({ user }) => {
 
         {/* Payments Overview Section - Centered and Large */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Payments Overview</h2>
-            <Link to="/manager/billing/payments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+            <Link to="/manager/billing/payments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 whitespace-nowrap">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -1042,7 +1053,7 @@ const ManagerDashboard = ({ user }) => {
       </div>
 
       {/* Your Team */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Team</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-purple-50 rounded-xl p-4">
