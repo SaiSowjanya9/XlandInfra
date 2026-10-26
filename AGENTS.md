@@ -507,12 +507,13 @@ desktop layout is the user's attached design and is the authority.
   the four destinations from `md` up, so a desktop page would not be a dead end; the user's call is
   that the menu is for signing out, and the brand link back to Home with its Quick Access cards is
   how a desktop gets around. Do not put the list back.
-- **The header owns the bell, Refresh and the account menu.** `components/NotificationBell.jsx`
-  moved out of the home page's body, where the one place a customer is told anything vanished the
-  moment they opened Work Orders. Refresh belongs to whichever page is open: a page registers its
-  fetch with `useRegisterRefresh` (`hooks/usePortalRefresh.jsx`) and the button calls it, reloading
-  the window only when nothing is registered — a Refresh that silently does nothing is worse than a
-  slow one. It also bumps the bell, because the unread count is what a customer watches.
+- **The header owns the bell and the account menu — there is no Refresh button.** It was removed on
+  the user's call. `components/NotificationBell.jsx` moved out of the home page's body, where the
+  one place a customer is told anything vanished the moment they opened Work Orders. Pages still
+  register their fetch with `useRegisterRefresh` (`hooks/usePortalRefresh.jsx`); nothing calls it
+  from the header now, so that hook is harmless and ready if a Refresh ever comes back.
+- **The bottom bar's tab order is fixed: Home, Work Orders, Payments, Schedules, More.**
+  `frontend/src/utils/portalNav.test.js` fails if it changes.
 - `Modal` gained `align="bottom"` for that sheet (**both copies**, `admin-portal` and `frontend`,
   stay identical). Existing callers render byte-identically.
 - **The banner's image is a stock Indian residential photo, `hidden sm:block`, masked into the

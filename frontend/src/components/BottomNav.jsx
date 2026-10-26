@@ -23,8 +23,8 @@ import Modal from './common/Modal';
 const TABS = [
   { label: 'Home', icon: Home, path: '/dashboard', exact: true },
   { label: 'Work Orders', icon: ClipboardList, path: '/dashboard/work-order' },
-  { label: 'Schedules', icon: Calendar, path: '/dashboard/schedule' },
   { label: 'Payments', icon: CreditCard, path: '/dashboard/payment' },
+  { label: 'Schedules', icon: Calendar, path: '/dashboard/schedule' },
 ];
 
 const isActive = (tab, pathname) => (tab.exact

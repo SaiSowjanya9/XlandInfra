@@ -30,6 +30,14 @@ test('the bottom bar is locked to the bottom of the viewport', () => {
   assert.match(nav, /env\(safe-area-inset-bottom\)/);
 });
 
+test('the bar keeps its fixed tab order: Home, Work Orders, Payments, Schedules, More', () => {
+  const nav = bottomNav();
+  const labels = [...nav.matchAll(/label: '([^']+)'/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ['Home', 'Work Orders', 'Payments', 'Schedules']);
+  // More is rendered after the mapped tabs
+  assert.ok(nav.indexOf('TABS.map') < nav.indexOf('>More<'), 'More is no longer the last tab');
+});
+
 test('the bar and Quick Access hide at the same breakpoint, in opposite directions', () => {
   // The bar: phones and tablets only
   assert.match(bottomNav(), /className="lg:hidden fixed bottom-0/);
