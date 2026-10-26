@@ -956,10 +956,13 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* 8. Work Orders: Category by Property Type (Grouped Bar) */}
+        {/* 8. Work Order Estimates: Category by Property Type (Grouped Bar). It charts estimates
+            raised from a work order (`estimate_type = 'work_order'`), as its two neighbours do --
+            titled "Work Orders" it read as a chart of the work orders themselves, so a partner
+            with plenty of those and no estimates from them saw it as a chart that had failed. */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Orders: Category by Property Type</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates: Category by Property Type</h3>
             <select
               value={filter8}
               onChange={(e) => setFilter8(e.target.value)}

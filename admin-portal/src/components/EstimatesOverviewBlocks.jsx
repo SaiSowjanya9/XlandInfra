@@ -26,6 +26,28 @@ const normalizePropertyType = (type, propertyCode) => {
   return 'Other';
 };
 
+/**
+ * An estimate's type, and its status, resolved the one way.
+ *
+ * These were declared inside the component and used by only half of its blocks: the status donuts
+ * resolved the type through this, while "Estimates by Estimate Type", both property-type bar charts
+ * and the work-order grouped chart compared `estimate_type` to a literal. Two readings of the same
+ * column in one component is how a card ends up disagreeing with the card beside it - the grouped
+ * chart drawing nothing while the Work Order Estimate Status donut beside it counts three - and how
+ * the same breakdown differs from the Estimates dashboard, which resolves every block through its
+ * own copy of this. Anything the three named types do not claim keeps its own value (`custom`), so
+ * the Other slice can still count it.
+ */
+const getEstimateType = (e) => {
+  const type = (e.estimate_type || e.estimateType || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
+  if (type.includes('property') || type === 'propertybased') return 'property';
+  if (type.includes('work') || type === 'workorder') return 'workorder';
+  if (type === 'direct') return 'direct';
+  return type || 'unknown';
+};
+
+const getStatus = (e) => (e.status || '').toString().trim().toLowerCase();
+
 // Apply time period filter
 const applyPeriodFilter = (data, period) => {
   if (period === 'all') return data;
@@ -285,18 +307,14 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const [filter4, setFilter4] = useState('all'); // Direct Property Type
   const [filter5, setFilter5] = useState('all'); // Direct Status
   const [filter6, setFilter6] = useState('all'); // Property-Based Status
-  const [filter7, setFilter7] = useState('all'); // Work Order Status
   const [filter8, setFilter8] = useState('all'); // Work Order Category
   const [filter9, setFilter9] = useState('all'); // Work Order Overview
 
   // Block 1: Estimates by Estimate Type (includes Work Order)
   const block1Filtered = applyPeriodFilter(estimates, filter3);
-  const block1Direct = block1Filtered.filter(e => e.estimate_type === 'direct' || e.estimateType === 'direct').length;
-  const block1PropertyBased = block1Filtered.filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  ).length;
-  const block1WorkOrder = block1Filtered.filter(e => e.estimate_type === 'work_order' || e.estimateType === 'work_order').length;
+  const block1Direct = block1Filtered.filter(e => getEstimateType(e) === 'direct').length;
+  const block1PropertyBased = block1Filtered.filter(e => getEstimateType(e) === 'property').length;
+  const block1WorkOrder = block1Filtered.filter(e => getEstimateType(e) === 'workorder').length;
   // What the three named types leave over -- estimate_type also allows 'custom', which the
   // service-catalog builder writes. The donut's centre counts every row, so without this the
   // slices would not add up to the figure in the middle of them.
@@ -310,10 +328,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const typeData = typeDataAll.filter(item => item.value > 0);
 
   // Block 2: Estimates by Property Type (Property-Based)
-  const block2Filtered = applyPeriodFilter(estimates, filter1).filter(e => 
-    e.estimate_type === 'property_based' || e.estimate_type === 'property-based' || 
-    e.estimateType === 'property_based' || e.estimateType === 'property-based'
-  );
+  const block2Filtered = applyPeriodFilter(estimates, filter1).filter(e => getEstimateType(e) === 'property');
   const propertyTypeCount = {};
   block2Filtered.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
@@ -322,18 +337,6 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const propertyTypeData = Object.entries(propertyTypeCount)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
-
-  // Helper function to normalize estimate type
-  const getEstimateType = (e) => {
-    const type = (e.estimate_type || e.estimateType || '').toString().trim().toLowerCase().replace(/[_\s-]/g, '');
-    if (type.includes('property') || type === 'propertybased') return 'property';
-    if (type.includes('work') || type === 'workorder') return 'workorder';
-    if (type === 'direct') return 'direct';
-    return type || 'unknown';
-  };
-
-  // Helper function to normalize status
-  const getStatus = (e) => (e.status || '').toString().trim().toLowerCase();
 
   // Block 3: Property-Based Status
   const block3Filtered = applyPeriodFilter(estimates, filter6).filter(e => getEstimateType(e) === 'property');
@@ -362,9 +365,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const statusData = statusDataAll.filter(item => item.value > 0);
 
   // Block 5: Estimates by Property Type (Direct)
-  const block5Filtered = applyPeriodFilter(estimates, filter4).filter(e => 
-    e.estimate_type === 'direct' || e.estimateType === 'direct'
-  );
+  const block5Filtered = applyPeriodFilter(estimates, filter4).filter(e => getEstimateType(e) === 'direct');
   const directPropertyTypeCount = {};
   block5Filtered.forEach(est => {
     const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
@@ -401,9 +402,7 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
   // Block 8: Work Order Estimates by Category grouped by Property Type
-  const block8Filtered = applyPeriodFilter(estimates, filter8).filter(e => 
-    e.estimate_type === 'work_order' || e.estimateType === 'work_order'
-  );
+  const block8Filtered = applyPeriodFilter(estimates, filter8).filter(e => getEstimateType(e) === 'workorder');
   
   // Group by property type, then by category
   const workOrderByPropertyAndCategory = {};
@@ -431,18 +430,6 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
     categories,
     data: workOrderByPropertyAndCategory
   };
-
-  // Block 9: Work Order Estimate Status
-  const block9Filtered = applyPeriodFilter(estimates, filter7).filter(e => getEstimateType(e) === 'workorder');
-  const workOrderStatusDataAll = [
-    { name: 'Draft', value: block9Filtered.filter(e => getStatus(e) === 'draft').length, color: STATUS_COLORS.Draft },
-    { name: 'Sent', value: block9Filtered.filter(e => getStatus(e) === 'sent').length, color: STATUS_COLORS.Sent },
-    { name: 'Approved', value: block9Filtered.filter(e => getStatus(e) === 'approved').length, color: STATUS_COLORS.Approved },
-    { name: 'Rejected', value: block9Filtered.filter(e => getStatus(e) === 'rejected').length, color: STATUS_COLORS.Rejected },
-
-  ];
-  const workOrderStatusTotal = block9Filtered.length;
-  const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
   return (
     <div className="space-y-4">
@@ -543,7 +530,8 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
         {/* 8. Work Order Estimates by Category (Grouped by Property Type) */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Orders: Category by Property Type</h3>
+            {/* Estimates raised from a work order, not the work orders themselves */}
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates: Category by Property Type</h3>
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
           <GroupedBarChart data={groupedWorkOrderData} />
