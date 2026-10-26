@@ -47,7 +47,7 @@ const normalizePropertyType = (type) => {
 };
 
 const getApiPath = (portalType) => {
-  const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'employee': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor' };
+  const map = { 'franchise': 'fp', 'manager': 'manager', 'admin': 'admin', 'employee': 'admin', 'coordinator': 'coordinator', 'supervisor': 'supervisor', 'executive': 'executive' };
   return map[portalType] || 'admin';
 };
 
@@ -150,7 +150,7 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   );
 
   const getBasePath = () => {
-    const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/employee', 'coordinator': '/coordinator', 'supervisor': '/supervisor' };
+    const map = { 'franchise': '/fp', 'manager': '/manager', 'admin': '/employee', 'coordinator': '/coordinator', 'supervisor': '/supervisor', 'executive': '/executive' };
     return map[portalType] || '/fp';
   };
 

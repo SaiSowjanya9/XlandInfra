@@ -1,6 +1,6 @@
 import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
-import { safeStorage, getAuthToken } from '../utils/safeStorage';
+import { safeStorage, getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import {
   Search,
   Eye,
@@ -126,7 +126,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   const { loading: fpLoading } = useFP();
 
@@ -223,7 +223,9 @@ const EmployeeWorkOrders = ({ admin }) => {
 
   const fetchProperties = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/onboarding`);
+      const response = await fetch(`${API_BASE}/api/onboarding`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
       const result = await response.json();
       if (result.success) {
         setProperties(result.data || []);
@@ -334,7 +336,7 @@ const EmployeeWorkOrders = ({ admin }) => {
     try {
       const response = await fetch(`${API_BASE}/api/work-orders/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
         body: JSON.stringify({ status, adminId: admin?.id, closingNotes: closingNotesValue })
       });
       const result = await response.json();
@@ -348,6 +350,10 @@ const EmployeeWorkOrders = ({ admin }) => {
           setCompletingWorkOrderId(null);
         }
         setTimeout(() => setSuccess(''), 3000);
+      } else {
+        // A refusal (e.g. the Ops Manager is view-only) used to leave the dialog open with no word.
+        setError(result.message || 'Failed to update status');
+        setTimeout(() => setError(''), 3000);
       }
     } catch (error) {
       setError('Failed to update status');
@@ -526,7 +532,7 @@ const EmployeeWorkOrders = ({ admin }) => {
     try {
       const response = await fetch(`${API_BASE}/api/work-orders/${workOrderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
         body: JSON.stringify({ status: newStatus, adminId: admin?.id, closingNotes: closingNotesValue })
       });
       const result = await response.json();
@@ -670,6 +676,7 @@ const EmployeeWorkOrders = ({ admin }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           assignedTo: assigneeId,
+          assignType,
           status: 'assigned'
         })
       });
@@ -736,6 +743,7 @@ const EmployeeWorkOrders = ({ admin }) => {
 
       const response = await fetch(`${API_BASE}/api/work-orders/admin/create`, {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
         body: submitData
       });
 
@@ -1652,6 +1660,7 @@ const EmployeeWorkOrders = ({ admin }) => {
           id={selectedOrder.work_order_id}
           title="Work Order Details"
           align="top"
+          footer={null}
         >
 
             <div className="space-y-4">

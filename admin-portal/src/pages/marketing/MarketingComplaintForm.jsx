@@ -82,7 +82,7 @@ const MarketingComplaintForm = ({ user, portalType = 'franchise' }) => {
   // canAssign is the franchise partner's own; canClose is the review the FP and its manager make,
   // and closing a complaint is also what archives it. Reporting on a complaint assigned to *this*
   // employee is decided per row, by `assigned_to_me`, not per portal.
-  const { canEdit, canAssign, canClose } = marketingPermissions(portalType);
+  const { canEdit, canAssign, canClose } = marketingPermissions(portalType, user?.role);
   const canCreate = canEdit && canLogComplaint(portalType, selectedFp);
   // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
   // manager is refused there. These same screens are the Ops Manager portal's own Marketing

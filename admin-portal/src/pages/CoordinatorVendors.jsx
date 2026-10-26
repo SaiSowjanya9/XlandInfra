@@ -120,7 +120,7 @@ const CoordinatorVendors = ({ user }) => {
         ? `/api/coordinator/vendors/${editingVendor.id}`
         : '/api/coordinator/vendors';
       
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE}${url}`, {
         method: editingVendor ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

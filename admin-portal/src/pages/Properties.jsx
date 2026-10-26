@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import { shortDivision } from '../utils/fieldOptionsStore';
 import CategorySelection from '../components/common/CategorySelection';
 import { safeStorage } from '../utils/safeStorage';
@@ -135,7 +135,7 @@ const Properties = () => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   // Admin and super_admin should always have full access
   // Check both role field and isSuperAdmin flag for maximum compatibility

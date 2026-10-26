@@ -7,7 +7,7 @@ import {
 import { getAuthToken } from '../../utils/safeStorage';
 import { filterOptions, matchesFilter } from '../../utils/filterOptions';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
-import { formatDate } from '../../utils/dateFormat';
+import { formatDate, toDateInputValue } from '../../utils/dateFormat';
 import Modal from '../../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -170,7 +170,7 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     for (let i = 0; i < 7; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toDateInputValue(date);
       
       // Random availability status
       const statuses = ['available', 'recommended', 'limited', 'booked'];
@@ -200,6 +200,15 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
     { time: '04:00 PM - 05:00 PM', available: Math.random() > 0.5 }
   ];
 
+  // '09:00 AM' -> '09:00', '01:00 PM' -> '13:00'; null for anything else
+  const slotTo24h = (part) => {
+    const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(String(part || '').trim());
+    if (!match) return null;
+    let hour = parseInt(match[1], 10) % 12;
+    if (match[3].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match[2]}`;
+  };
+
   const handleConfirmReschedule = async () => {
     if (!rescheduleData.newDate || !selectedTimeSlot) {
       showToast('Please select a new date and time', 'error');
@@ -215,9 +224,12 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        // scheduled_time_start/end are TIME columns: send '09:00' / '10:00', never the
+        // '09:00 AM - 10:00 AM' label, which MySQL rejects as an incorrect time value
         body: JSON.stringify({
           newDate: rescheduleData.newDate,
-          newTimeStart: selectedTimeSlot,
+          newTimeStart: slotTo24h(selectedTimeSlot.split(' - ')[0]),
+          newTimeEnd: slotTo24h(selectedTimeSlot.split(' - ')[1]),
           reason: rescheduleData.reason,
           scope: rescheduleData.scope
         })
@@ -657,11 +669,14 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                        <div key={day} className="text-xs text-gray-500 py-1">{day}</div>
+                      {/* The week starts today, not on a Sunday, so each heading is its own day's */}
+                      {getWeekDays().map((day) => (
+                        <div key={`h-${day.getDay()}`} className="text-xs text-gray-500 py-1">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.getDay()]}
+                        </div>
                       ))}
                       {getWeekDays().map((day, i) => {
-                        const dateStr = day.toISOString().split('T')[0];
+                        const dateStr = toDateInputValue(day);
                         const availability = vendorAvailability[dateStr];
                         const isSelected = rescheduleData.newDate === dateStr;
                         

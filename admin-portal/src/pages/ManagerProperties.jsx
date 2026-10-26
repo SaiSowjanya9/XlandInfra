@@ -217,7 +217,7 @@ const ManagerProperties = ({ user }) => {
         ? `/api/manager/properties/${editingProperty.id}`
         : '/api/manager/properties';
       
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE}${url}`, {
         method: editingProperty ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -271,7 +271,7 @@ const ManagerProperties = ({ user }) => {
         ? `/api/manager/properties/${selectedProperty.id}/assign-vendor`
         : `/api/manager/properties/${selectedProperty.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -952,7 +952,7 @@ const ManagerProperties = ({ user }) => {
                   >
                     <option value="">Select Zone</option>
                     {zones.map((zone) => (
-                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                      <option key={zone.id || zone.name} value={zone.name}>{zone.name}</option>
                     ))}
                   </select>
                 </div>

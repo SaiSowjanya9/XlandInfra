@@ -466,14 +466,9 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
       recentWorkOrders = rows;
     } catch (e) { console.log('Recent work orders error:', e.message); }
 
-    // Get zone names for display
-    let zoneNames = [];
-    if (hasZones) {
-      try {
-        const [zones] = await pool.query(`SELECT id, name FROM zones WHERE id IN (${zonePlaceholders})`, assignedZones);
-        zoneNames = zones.map(z => z.name);
-      } catch (e) {}
-    }
+    // fp_employee_zones stores zone *names*, so the assignment already is the display list.
+    // (Looking the names up as zones.id matched nothing, and the Zones card always read 0.)
+    const zoneNames = hasUnrestrictedAccess ? ['All Zones'] : assignedZones;
 
     res.json({
       success: true,
@@ -483,6 +478,7 @@ router.get('/dashboard', requireExecutiveScope, async (req, res) => {
           vendors: vendorsCount,
           customers: customersCount,
           employees: employeesCount,
+          zones: hasUnrestrictedAccess ? 'All' : assignedZones.length,
           workOrders: workOrderStats?.total || 0,
           pendingWorkOrders: workOrderStats?.pending || 0,
           completedWorkOrders: (workOrderStats?.completed || 0) + (workOrderStats?.closed || 0),
@@ -1111,8 +1107,10 @@ router.post('/work-orders', requireExecutiveScope, async (req, res) => {
       if (subcat) finalSubcategoryName = subcat.name;
     }
 
-    // Get creator identifier for zone-centric filtering
-    const createdBy = req.user?.email || req.user?.username || `executive-${executiveId}`;
+    // Get creator identifier for zone-centric filtering. Must be what getCreatorIdentifier
+    // returns (username first), or the "own created" clause of the list never matches it and an
+    // executive without zones cannot see the work order they just raised.
+    const createdBy = getCreatorIdentifier(req) || `executive-${executiveId}`;
 
     // Get the subcategory ID (use null for "Other" category with custom subcategory)
     const finalSubcategoryId = isOtherCategory ? null : (subcategoryId || null);
@@ -1177,6 +1175,16 @@ router.patch('/work-orders/:id/status', requireExecutiveScope, async (req, res) 
     const allowedStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
+    }
+
+    // The id in the URL is not trusted on its own: it must be a work order of this
+    // executive's franchise partner (or, standalone, one they raised).
+    const franchisePartnerId = req.franchisePartnerId;
+    const [owned] = franchisePartnerId
+      ? await pool.query('SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?', [id, franchisePartnerId])
+      : await pool.query('SELECT id FROM work_orders WHERE id = ? AND created_by = ?', [id, getCreatorIdentifier(req)]);
+    if (owned.length === 0) {
+      return res.status(404).json({ success: false, message: 'Work order not found' });
     }
 
     // If completing, also save closing notes and completed date
@@ -1610,7 +1618,9 @@ router.get('/vendors', requireExecutiveScope, async (req, res) => {
       // Build zone + creator filter
       let zoneClause = '';
       let zoneParams = [];
-      if (assignedZones.length > 0) {
+      if (assignedZones.includes('__ALL__')) {
+        // "All zones" assignment: every vendor of the partner (not a literal zone named __ALL__)
+      } else if (assignedZones.length > 0) {
         const placeholders = assignedZones.map(() => '?').join(',');
         zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by = ? OR ov.created_by = ?)`;
         zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
@@ -1712,8 +1722,8 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         rate_per_visit, coverage_per_day, working_hours_from, working_hours_to,
-        executive_id, franchise_partner_id, is_active, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'active')`,
+        executive_id, franchise_partner_id, created_by, created_by_id, is_active, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'active')`,
       [
         vendorId, username, companyName || ownerName || '', contactPerson || companyName || ownerName || '', 
         ownerName || companyName || '', email || ownerEmail || '', ownerEmail || email || '', 
@@ -1724,7 +1734,9 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, workingHoursFrom || null, workingHoursTo || null,
-        executiveId, franchisePartnerId
+        // created_by is what the vendor list's "own created" clause matches, so an executive
+        // sees the vendor they just added even when it sits outside their zones
+        executiveId, franchisePartnerId, getCreatorIdentifier(req) || null, req.user?.id || executiveId
       ]
     );
 
@@ -1780,11 +1792,21 @@ router.get('/vendors/assignments', requireExecutiveScope, async (req, res) => {
     // Build zone filter for vendor's zone
     let zoneClause = '';
     let zoneParams = [];
-    if (assignedZones.length > 0) {
+    if (assignedZones.length > 0 && !assignedZones.includes('__ALL__')) {
       const placeholders = assignedZones.map(() => '?').join(',');
       zoneClause = ` AND v.zone IN (${placeholders})`;
       zoneParams = assignedZones;
     }
+
+    // An FP executive reads the partner's assignments (like the coordinator and supervisor
+    // portals); only a standalone executive is limited to properties carrying their own
+    // executive_id. Scoping FP executives by executive_id showed them an empty list, since
+    // the partner's properties are not created with one.
+    const franchisePartnerId = req.franchisePartnerId;
+    const scopeClause = franchisePartnerId
+      ? '(p.franchise_partner_id = ? OR op.franchise_partner_id = ?)'
+      : '(p.executive_id = ? OR op.executive_id = ?)';
+    const scopeId = franchisePartnerId || executiveId;
     
     // Get property-vendor assignments with full vendor details
     const [propertyAssignments] = await pool.execute(
@@ -1802,9 +1824,9 @@ router.get('/vendors/assignments', requireExecutiveScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.executive_id = ? OR op.executive_id = ?) AND pva.is_active = 1${zoneClause}
+       WHERE ${scopeClause} AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
-      [executiveId, executiveId, ...zoneParams]
+      [scopeId, scopeId, ...zoneParams]
     );
 
     // IMPORTANT: propertyId must be the NUMERIC ID for filtering to work
@@ -1854,20 +1876,42 @@ router.get('/vendors/assignments', requireExecutiveScope, async (req, res) => {
 // =====================================================
 router.get('/employees', requireExecutiveScope, async (req, res) => {
   try {
-    const executiveId = req.executiveId;
+    if (!req.franchisePartnerId) {
+      return res.json({ success: true, data: [] });
+    }
 
+    // Named columns only: `fpe.*` handed every colleague's password_hash to the browser.
+    // Same shape as GET /api/manager/employees, because the Employee Zone screen
+    // (ManagerEmployeeZones, view-only here) reads this route.
     const [employees] = await pool.query(
-      `SELECT fpe.*, GROUP_CONCAT(z.name) as zone_names
-       FROM fp_employees fpe
-       LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
-       LEFT JOIN zones z ON fez.zone_id = z.id
-       WHERE fpe.franchise_partner_id = ?
-       GROUP BY fpe.id
-       ORDER BY fpe.created_at DESC`,
+      `SELECT e.id, u.user_id as employee_id, e.first_name, e.last_name,
+              CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) as name,
+              e.email, e.phone, e.country_code, e.role, e.is_active
+       FROM fp_employees e
+       LEFT JOIN users u ON e.user_id = u.id
+       WHERE e.franchise_partner_id = ? AND e.is_active = 1
+       ORDER BY FIELD(e.role, 'manager', 'coordinator', 'supervisor', 'executive'), e.first_name, e.last_name`,
       [req.franchisePartnerId]
     );
 
-    res.json({ success: true, data: employees });
+    // Zones are stored by name (fp_employee_zones.zone_id is not populated)
+    const [zoneAssignments] = await pool.query(
+      `SELECT fp_employee_id, zone_name FROM fp_employee_zones WHERE franchise_partner_id = ?`,
+      [req.franchisePartnerId]
+    );
+    const employeeZonesMap = {};
+    zoneAssignments.forEach(za => {
+      if (!za.zone_name) return;
+      (employeeZonesMap[za.fp_employee_id] = employeeZonesMap[za.fp_employee_id] || []).push(za.zone_name);
+    });
+
+    res.json({
+      success: true,
+      data: employees.map(emp => {
+        const zones = employeeZonesMap[emp.id] || [];
+        return { ...emp, assignedZones: zones, assigned_zones: zones, zone_names: zones.join(',') };
+      })
+    });
   } catch (error) {
     console.error('Employees fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch employees' });
@@ -1880,10 +1924,10 @@ router.get('/employees/:id', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
 
     const [employees] = await pool.query(
-      `SELECT fpe.*, GROUP_CONCAT(z.id) as zone_ids, GROUP_CONCAT(z.name) as zone_names
+      `SELECT fpe.id, fpe.first_name, fpe.last_name, fpe.email, fpe.phone, fpe.role, fpe.is_active,
+              GROUP_CONCAT(fez.zone_name) as zone_names
        FROM fp_employees fpe
        LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
-       LEFT JOIN zones z ON fez.zone_id = z.id
        WHERE fpe.id = ? AND fpe.franchise_partner_id = ?
        GROUP BY fpe.id`,
       [id, req.franchisePartnerId]
@@ -1948,15 +1992,21 @@ router.get('/estimates', requireExecutiveScope, async (req, res) => {
         // Get assigned zones only when not filtering by property
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
         
-        // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
-        if (assignedZones.length > 0) {
+        // Build zone + creator filter - match by created_by_id OR created_by_name (email or username).
+        // There used to be a fourth `created_by_name LIKE '%<first_name>%'` term, but the token
+        // carries no first_name, so it was LIKE '%%' -- true for every named row -- and every
+        // executive saw the partner's whole estimate book regardless of zones.
+        if (assignedZones.includes('__ALL__')) {
+          // "All zones" assignment: the partner's estimates, unfiltered
+        } else if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
-          propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [...assignedZones, executiveId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          // The zone shown is the estimate's own, falling back to its property's -- filter on the same
+          propertyClause = ` AND (COALESCE(NULLIF(e.zone, ''), op.zone, p.zone_id) IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ?)`;
+          propertyParams = [...assignedZones, executiveId, creatorEmail, req.user?.username || ''];
         } else {
-          // No zones = only see own created (by ID or by name/email/username)
-          propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [executiveId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          // No zones = only see own created (by ID or by email/username)
+          propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ?)`;
+          propertyParams = [executiveId, creatorEmail, req.user?.username || ''];
         }
       }
       
@@ -2093,24 +2143,46 @@ router.post('/estimates', requireExecutiveScope, attachPackageSnapshot(pool), va
 
     const estimateId = `EST-${Date.now()}`;
     
-    // property_id column is INT, so pass null and use property_code for string ID
-    const numericPropertyId = parseInt(property_id);
-    const propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
+    // property_id column is INT; the form sends the typed property *code* (GC-…), which used to be
+    // stored as NULL. Everything downstream joins fp_estimates.property_id to the property row
+    // (pending schedules, invoices), so resolve the code to the row's id within this partner.
+    const numericPropertyId = /^\d+$/.test(String(property_id ?? '')) ? parseInt(property_id, 10) : NaN;
+    let propertyIdValue = isNaN(numericPropertyId) ? null : numericPropertyId;
+    const codeToResolve = property_code || (propertyIdValue === null ? property_id : null);
+    if (propertyIdValue === null && codeToResolve && franchisePartnerId && estimate_type !== 'direct') {
+      try {
+        const [[onb]] = await pool.query(
+          'SELECT id FROM onboarded_properties WHERE property_id = ? AND franchise_partner_id = ? LIMIT 1',
+          [codeToResolve, franchisePartnerId]
+        );
+        if (onb) {
+          propertyIdValue = onb.id;
+        } else {
+          const [[legacy]] = await pool.query(
+            'SELECT id FROM properties WHERE property_id = ? AND franchise_partner_id = ? LIMIT 1',
+            [codeToResolve, franchisePartnerId]
+          );
+          if (legacy) propertyIdValue = legacy.id;
+        }
+      } catch (e) { console.log('Property code lookup error:', e.message); }
+    }
 
     // Get creator name - check fp_employees first, then users table
     let creatorName = 'Executive';
     try {
-      // Try fp_employees table first (for FP-created employees)
-      const [[fpEmp]] = await pool.query(
-        'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR user_id = ?',
-        [executiveId, executiveId]
-      );
+      // Try fp_employees first. The token's fpEmployeeId is that table's own id; the executive id
+      // is a users.id, and `id = ? OR user_id = ?` with it matched whichever colleague's
+      // fp_employees.id happened to collide, stamping their name on this estimate.
+      const fpEmployeeId = req.user?.fpEmployeeId;
+      const [[fpEmp]] = fpEmployeeId
+        ? await pool.query('SELECT first_name, last_name FROM fp_employees WHERE id = ?', [fpEmployeeId])
+        : await pool.query('SELECT first_name, last_name FROM fp_employees WHERE user_id = ?', [executiveId]);
       if (fpEmp && (fpEmp.first_name || fpEmp.last_name)) {
         creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Executive';
       } else {
-        // Fall back to users table
-        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [executiveId]);
-        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Executive';
+        // Fall back to users table (which has first_name/last_name and no `name` column)
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name FROM users WHERE id = ?', [executiveId]);
+        if (userInfo) creatorName = `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || 'Executive';
       }
     } catch (e) { console.log('Creator name lookup error:', e.message); }
 
@@ -2626,10 +2698,10 @@ router.get('/export/vendors', requireExecutiveScope, async (req, res) => {
 router.get('/export/employees', requireExecutiveScope, async (req, res) => {
   try {
     const [employees] = await pool.query(
-      `SELECT fpe.*, GROUP_CONCAT(z.name) as zone_names
+      `SELECT fpe.id, fpe.first_name, fpe.last_name, fpe.email, fpe.phone, fpe.role, fpe.is_active,
+              GROUP_CONCAT(fez.zone_name) as zone_names
        FROM fp_employees fpe
        LEFT JOIN fp_employee_zones fez ON fpe.id = fez.fp_employee_id
-       LEFT JOIN zones z ON fez.zone_id = z.id
        WHERE fpe.franchise_partner_id = ?
        GROUP BY fpe.id`,
       [req.franchisePartnerId]
@@ -2749,6 +2821,118 @@ router.get('/fp-portal-links', requireExecutiveScope, async (req, res) => {
       message: 'Failed to fetch portal links',
       error: error.message
     });
+  }
+});
+
+// =====================================================
+// SCHEDULES (read-only) -- the two feeds the Schedules Dashboard reads
+// =====================================================
+// The sidebar has offered Schedules > Dashboard since the portal was built, but neither the
+// route nor these endpoints existed, so the link bounced back to the home dashboard. Read-only:
+// the executive sees the partner's visits within their zones (or properties they created),
+// the same "my zones or my own records" rule as their Properties list.
+const { fetchScheduleStats, derivedStatusFilter } = require('../utils/scheduleStats');
+const { fetchPendingPropertiesForFp } = require('../utils/pendingProperties');
+
+const executiveScheduleScope = async (req) => {
+  const franchisePartnerId = req.franchisePartnerId;
+  const creator = getCreatorIdentifier(req);
+  const zones = await getAssignedZones(getEmployeeIdForZoneLookup(req), creator);
+  const zoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(zones, creator, 'op');
+  return { franchisePartnerId, zones, zoneFilter };
+};
+
+router.get('/schedules/pending-properties', requireExecutiveScope, async (req, res) => {
+  try {
+    const { franchisePartnerId, zones } = await executiveScheduleScope(req);
+    if (!franchisePartnerId) return res.json({ success: true, data: [] });
+    let data = await fetchPendingPropertiesForFp(franchisePartnerId);
+    if (!zones.includes('__ALL__')) {
+      // No zones assigned means no partner properties, as on the Properties list
+      const allowed = new Set(zones.map(z => String(z).toLowerCase()));
+      data = data.filter(p => p.zone && allowed.has(String(p.zone).toLowerCase()));
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Executive pending properties error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending properties', error: error.message });
+  }
+});
+
+router.get('/schedules/all', requireExecutiveScope, async (req, res) => {
+  try {
+    const { franchisePartnerId, zoneFilter } = await executiveScheduleScope(req);
+    if (!franchisePartnerId) {
+      return res.json({ success: true, data: [], total: 0, page: 1, limit: 0, totalPages: 0, stats: await fetchScheduleStats({ whereClause: 'WHERE 1 = 0', label: 'Executive Schedules' }) });
+    }
+    const { page = 1, limit = 15, search, status, service, zone, startDate, endDate } = req.query;
+    // Inlined as clamped integers: pool.execute cannot bind LIMIT/OFFSET
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 15, 1), 500);
+    const safePage = Math.max(parseInt(page, 10) || 1, 1);
+    const offset = (safePage - 1) * safeLimit;
+
+    let whereClause = `WHERE op.franchise_partner_id = ?${zoneFilter.clause}`;
+    const params = [franchisePartnerId, ...zoneFilter.params];
+    if (startDate) { whereClause += ' AND sv.scheduled_date >= ?'; params.push(startDate); }
+    if (endDate) { whereClause += ' AND sv.scheduled_date <= ?'; params.push(endDate); }
+    if (search) {
+      whereClause += ' AND (op.property_id LIKE ? OR op.community_name LIKE ? OR pss.service_name LIKE ?)';
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+    if (service && service !== 'all') { whereClause += ' AND pss.service_name = ?'; params.push(service); }
+    if (zone && zone !== 'all') { whereClause += ' AND op.zone = ?'; params.push(zone); }
+    // Stats use every filter except status, so the other cards stay visible
+    const statsWhere = whereClause;
+    const statsParams = [...params];
+    if (status && status !== 'all') {
+      const derived = derivedStatusFilter(status);
+      if (derived) whereClause += derived;
+      else { whereClause += ' AND sv.status = ?'; params.push(status); }
+    }
+
+    const [[{ total }]] = await pool.execute(
+      `SELECT COUNT(DISTINCT sv.id) as total
+       FROM scheduled_visits sv
+       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       ${whereClause}`,
+      params
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT sv.id, sv.visit_id as visitId, sv.visit_number as visitNumber, sv.total_visits as totalVisits,
+              sv.scheduled_date as scheduledDate, sv.scheduled_time_start as scheduledTime,
+              sv.original_date as originalDate, sv.rescheduled_at as rescheduledAt,
+              sv.reschedule_reason as rescheduleReason, sv.created_at as createdAt, sv.updated_at as updatedAt,
+              sv.status, pss.service_name as serviceName, pss.service_category as serviceCategory,
+              op.property_id as propertyId, op.community_name as propertyName,
+              op.property_type as propertyType, op.zone,
+              COALESCE(ov.company_name, ov.owner_name) as vendorName
+       FROM scheduled_visits sv
+       JOIN property_service_schedules pss ON pss.id = sv.service_schedule_id
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       LEFT JOIN onboarded_vendors ov ON ov.id = pss.vendor_id
+       ${whereClause}
+       ORDER BY sv.scheduled_date DESC, sv.scheduled_time_start ASC
+       LIMIT ${safeLimit} OFFSET ${offset}`,
+      params
+    );
+
+    const stats = await fetchScheduleStats({ whereClause: statsWhere, params: statsParams, label: 'Executive Schedules' });
+
+    res.json({
+      success: true,
+      data: rows.map(s => ({ ...s, targetDate: s.scheduledDate, isRescheduled: s.originalDate !== null })),
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+      stats
+    });
+  } catch (error) {
+    console.error('Executive schedules error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching schedules', error: error.message });
   }
 });
 

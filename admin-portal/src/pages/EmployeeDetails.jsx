@@ -37,7 +37,7 @@ const EMPLOYEE_ROLES = {
   executive: { label: 'Executive', color: 'bg-orange-100 text-orange-700' }
 };
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import {
   getEmployees,
   updateEmployee,
@@ -70,7 +70,7 @@ const EmployeeDetails = () => {
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   const handleFpSelect = (fp) => {

@@ -5,7 +5,9 @@
  * Standalone Managers see only their own data (filtered by manager_id)
  */
 
-const pool = require('../config/database');
+// The module exports { pool } (a getter), not the pool itself: binding the module object made
+// every pool.execute below a TypeError, so validateOwnership refused every record with a 403.
+const { pool } = require('../config/database');
 const { ROLES, isManager } = require('../config/roles');
 
 /**

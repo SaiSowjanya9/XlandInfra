@@ -282,6 +282,10 @@ function App() {
     setUser(null);
     sessionStorage.removeItem('portalUser');
     sessionStorage.removeItem('lastActivity');
+    // The bearer token lives in localStorage and every page reads it from there; left behind, the
+    // next person to sign in on this browser through the legacy residents login (which stores no
+    // token of its own) was shown the previous customer's invoices and work orders
+    localStorage.removeItem('customerToken');
   };
 
   if (loading) {

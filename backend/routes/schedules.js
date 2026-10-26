@@ -1915,7 +1915,9 @@ router.put('/visits/:visitId/reschedule', authenticate, canMakeSchedule, async (
                rescheduled_at = NOW(),
                reschedule_reason = ?
            WHERE id = ?`,
-          [shiftedDate.toISOString().split('T')[0], req.user.id, 
+          // Local components, not toISOString(): mysql2 hands a DATE back as local midnight, which
+          // is the previous UTC day on a server east of UTC (IST), so every visit moved a day short
+          [`${shiftedDate.getFullYear()}-${String(shiftedDate.getMonth() + 1).padStart(2, '0')}-${String(shiftedDate.getDate()).padStart(2, '0')}`, req.user.id, 
            futureVisit.id === currentVisit.id ? reason : `Series shifted: ${reason || 'Pattern change'}`,
            futureVisit.id]
         );
@@ -1969,8 +1971,10 @@ router.post('/visits/:visitId/restore', authenticate, canMakeSchedule, async (re
 
     const visit = visits[0];
     
-    // Use provided original date or the stored original_date
-    const restoreDate = originalDate || visit.original_date;
+    // Use provided original date or the stored original_date. A cancelled visit that was never
+    // rescheduled has no original_date: Cancelled Schedules restores it on the day it was booked for.
+    const restoreDate = originalDate || visit.original_date
+      || (visit.status === 'cancelled' ? visit.scheduled_date : null);
     const restoreTime = originalTime || visit.scheduled_time_start;
     
     if (!restoreDate) {

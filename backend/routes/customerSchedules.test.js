@@ -65,13 +65,19 @@ test('the customer schedule is scoped to the customer property and exposes nothi
   const request = async (customerId, query = '') => {
     const customer = customers[customerId];
     const headers = customer
-      ? { Authorization: `Bearer ${generateToken({ id: customer.id, email: customer.email })}` }
+      ? { Authorization: `Bearer ${generateToken({ id: customer.id, email: customer.email, role: 'customer' })}` }
       : {};
     const response = await fetch(`${base}${query}`, { headers });
     return { status: response.status, ...(await response.json()) };
   };
 
   assert.equal((await request(null)).status, 401);
+  // Staff and customer tokens share a secret: a staff login for users.id 1 is not customer account 1
+  const staff = await fetch(base, { headers: { Authorization: `Bearer ${generateToken({ id: 1, email: 'admin@example.test', role: 'admin' })}` } });
+  assert.equal(staff.status, 401, 'a staff token is not a customer login');
+  // verifyToken answers null for a bad token; that used to throw into a 500
+  const forged = await fetch(base, { headers: { Authorization: 'Bearer not-a-token' } });
+  assert.equal(forged.status, 401);
 
   // Resolved from customer_accounts.property_id
   const byId = await request(1);

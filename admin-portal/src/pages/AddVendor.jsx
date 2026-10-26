@@ -23,7 +23,7 @@ import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader'
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import SelectWithAdd from '../components/SelectWithAdd';
 import DismissPanel from '../components/common/DismissPanel';
 import Modal from '../components/common/Modal';
@@ -80,7 +80,7 @@ const AddVendor = ({ admin }) => {
   const [createdVendor, setCreatedVendor] = useState(null);
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Redirect Ops Manager to Vendor Details (view-only)

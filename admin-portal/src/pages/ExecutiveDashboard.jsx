@@ -61,7 +61,9 @@ const ExecutiveDashboard = ({ user }) => {
       if (estResult.success && Array.isArray(estResult.data)) setEstimates(estResult.data);
       if (propResult.success && Array.isArray(propResult.data)) setProperties(propResult.data);
       if (woResult.success && Array.isArray(woResult.data)) setWorkOrders(woResult.data);
-      if (vendorResult.success && Array.isArray(vendorResult.data)) setVendors(vendorResult.data);
+      // /vendors answers { own, assigned, all }, not a bare array
+      const vendorList = vendorResult.data?.all || vendorResult.data;
+      if (vendorResult.success && Array.isArray(vendorList)) setVendors(vendorList);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {

@@ -1005,7 +1005,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
         </div>
 
         {/* Work Orders by Property Type */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden md:col-span-2 lg:col-span-1">
           <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />

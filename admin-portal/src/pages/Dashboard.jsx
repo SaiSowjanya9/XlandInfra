@@ -198,7 +198,9 @@ const Dashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/notifications`);
+      const response = await fetch(`${API_BASE}/api/admin/notifications`, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
       const result = await response.json();
       if (result.success && result.data) {
         setNotifications(result.data);
@@ -260,7 +262,10 @@ const Dashboard = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await fetch(`${API_BASE}/api/admin/notifications/${notificationId}/read`, { method: 'PUT' });
+      await fetch(`${API_BASE}/api/admin/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -270,7 +275,10 @@ const Dashboard = () => {
 
   const markAllAsRead = async () => {
     try {
-      await fetch(`${API_BASE}/api/admin/notifications/read-all`, { method: 'PUT' });
+      await fetch(`${API_BASE}/api/admin/notifications/read-all`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -378,8 +386,9 @@ const Dashboard = () => {
 
   // Computed real-time stats from actual data arrays
   const realTimeStats = {
-    totalProperties: dateFilteredProperties.length || properties.length,
-    totalVendors: dateFilteredVendors.length || vendors.length,
+    // A date range with nothing in it is 0, not the all-time total (`||` used to fall back to it)
+    totalProperties: dateFilteredProperties.length,
+    totalVendors: dateFilteredVendors.length,
     totalEmployees: employees.length, // Employees typically not date-filtered
     totalWorkOrders: dateFilteredWorkOrders.length,
     totalEstimates: dateFilteredEstimates.length,
@@ -934,7 +943,7 @@ const Dashboard = () => {
               </div>
 
               {/* Work Orders by Property Type */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
                 <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
                   <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />

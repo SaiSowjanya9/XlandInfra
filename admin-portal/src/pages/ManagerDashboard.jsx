@@ -891,7 +891,7 @@ const ManagerDashboard = ({ user }) => {
             </div>
 
             {/* Work Orders by Property Type */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
               <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
                 <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
                 <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />

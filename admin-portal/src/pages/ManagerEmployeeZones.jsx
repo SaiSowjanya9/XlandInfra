@@ -49,7 +49,10 @@ const getRoleBadgeStyle = (role) => {
   return roleStyles[role?.toLowerCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
 };
 
-const ManagerEmployeeZones = ({ user }) => {
+// apiPortal picks the backend mount: the executive portal reuses this screen read-only
+// (viewOnly) and must read its own /api/executive routes -- /api/manager refuses its token.
+const ManagerEmployeeZones = ({ user, viewOnly = false, apiPortal = 'manager' }) => {
+  const API_ROOT = `${API_BASE}/api/${apiPortal}`;
   const [employees, setEmployees] = useState([]);
   const [zones, setZones] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,7 +74,7 @@ const ManagerEmployeeZones = ({ user }) => {
     setLoading(true);
     try {
       // Fetch employees
-      const empResponse = await fetch(`${API_BASE}/api/manager/employees`, {
+      const empResponse = await fetch(`${API_ROOT}/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!empResponse.ok) {
@@ -85,7 +88,7 @@ const ManagerEmployeeZones = ({ user }) => {
       const allEmployees = empResult.success ? (Array.isArray(empResult.data) ? empResult.data : []) : [];
       
       // Fetch zones
-      const zoneResponse = await fetch(`${API_BASE}/api/manager/zones`, {
+      const zoneResponse = await fetch(`${API_ROOT}/zones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!zoneResponse.ok) {
@@ -148,7 +151,7 @@ const ManagerEmployeeZones = ({ user }) => {
   const openAssignModal = async (employee) => {
     // Refresh zones to get any newly created zones
     try {
-      const zoneResponse = await fetch(`${API_BASE}/api/manager/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const zoneResponse = await fetch(`${API_ROOT}/zones`, { headers: { 'Authorization': `Bearer ${token}` } });
       const zoneResult = await zoneResponse.json();
       if (zoneResult.success) {
         const freshZones = Array.isArray(zoneResult.data) ? zoneResult.data : [];
@@ -250,7 +253,7 @@ const ManagerEmployeeZones = ({ user }) => {
       // If ALL zones are selected, save as 'all' so new zones are auto-included
       const zonesToSave = isAllAvailableSelected() ? 'all' : selectedZones;
       
-      const response = await fetch(`${API_BASE}/api/manager/employees/${selectedEmployee.id}/zones`, {
+      const response = await fetch(`${API_ROOT}/employees/${selectedEmployee.id}/zones`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -350,7 +353,7 @@ const ManagerEmployeeZones = ({ user }) => {
 
       {/* The shared section header, as on Work Orders and Estimates */}
       <PageHeader icon={MapPin} title="Employee Zone Management"
-        subtitle={`Assign and manage zones for employees • ${employees.length} employees • ${zones.length} zones`}
+        subtitle={`${viewOnly ? 'Zones assigned to employees' : 'Assign and manage zones for employees'} • ${employees.length} employees • ${zones.length} zones`}
         stats={[
           { icon: Users, tone: 'info', label: 'Total Employees', value: employees.length },
           { icon: CheckCircle2, tone: 'success', label: 'Zones Assigned', value: assignedCount },
@@ -481,7 +484,8 @@ const ManagerEmployeeZones = ({ user }) => {
                   )}
                 </div>
 
-                {/* Action Button */}
+                {/* Action Button -- absent in view-only mode, whose backend refuses the save */}
+                {!viewOnly && (
                 <button
                   onClick={() => openAssignModal(employee)}
                   className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
@@ -493,6 +497,7 @@ const ManagerEmployeeZones = ({ user }) => {
                   <Edit3 className="w-4 h-4" />
                   {hasZones ? 'Modify Zones' : 'Assign Zones'}
                 </button>
+                )}
               </div>
             );
           })}

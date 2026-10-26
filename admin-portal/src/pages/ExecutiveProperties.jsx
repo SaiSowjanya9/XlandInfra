@@ -253,7 +253,7 @@ const ExecutiveProperties = ({ user }) => {
         ? `/api/executive/properties/${selectedProperty.id}/assign-vendor`
         : `/api/executive/properties/${selectedProperty.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -692,7 +692,6 @@ const ExecutiveProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
@@ -728,6 +727,9 @@ const ExecutiveProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.city || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">{property.contact_person || '-'}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">

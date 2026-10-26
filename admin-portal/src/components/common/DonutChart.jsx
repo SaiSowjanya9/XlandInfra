@@ -53,8 +53,8 @@ const DonutChart = ({
   });
   
   return (
-    <div className="relative inline-block">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <div className="relative" style={{ width: size, maxWidth: '100%' }}>
+      <svg viewBox={`0 0 ${size} ${size}`} className="block h-auto w-full overflow-visible">
         {/* Background gray ring - always visible */}
         <circle
           cx={center}

@@ -504,7 +504,7 @@ const FPWorkOrders = ({ user }) => {
         ? `/api/fp/work-orders/${selectedWorkOrder.id}/assign-vendor`
         : `/api/fp/work-orders/${selectedWorkOrder.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1612,7 +1612,7 @@ const FPWorkOrders = ({ user }) => {
                             {activeTab === 'completed' && (
                               <>
                                 <button
-                                  onClick={() => navigate(`/fp/payments/invoices/create?workOrderId=${wo.id}`)}
+                                  onClick={() => navigate('/fp/billing/generate-invoices')}
                                   className="p-1.5 hover:bg-amber-50 rounded-lg transition-colors"
                                   title="Generate Invoice"
                                 >
@@ -1699,6 +1699,7 @@ const FPWorkOrders = ({ user }) => {
           id={selectedWorkOrder.work_order_id}
           title="Work Order Details"
           align="top"
+          footer={null}
         >
 
             <div className="space-y-4">

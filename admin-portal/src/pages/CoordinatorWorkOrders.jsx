@@ -398,7 +398,7 @@ const CoordinatorWorkOrders = ({ user }) => {
         ? `/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-vendor`
         : `/api/coordinator/work-orders/${selectedWorkOrder.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

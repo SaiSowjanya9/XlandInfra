@@ -38,6 +38,7 @@ import * as XLSX from 'xlsx';
 import WorkOrdersHeader from '../components/workorders/WorkOrdersHeader';
 import { formatDateTime } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+import { decodeDeep } from '../utils/text';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const ITEMS_PER_PAGE = 10;
@@ -437,7 +438,7 @@ const ManagerWorkOrders = ({ user }) => {
         ? `/api/manager/work-orders/${selectedWorkOrder.id}/assign-vendor`
         : `/api/manager/work-orders/${selectedWorkOrder.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -470,7 +471,8 @@ const ManagerWorkOrders = ({ user }) => {
   // Open edit modal with work order data
   const handleEditWorkOrder = (wo) => {
     setSelectedWorkOrder(wo);
-    setEditFormData({
+    // Stored text is HTML-escaped; decode before editing or every save escapes it again
+    setEditFormData(decodeDeep({
       categoryId: wo.category_id || '',
       subcategoryId: wo.subcategory_id || '',
       description: wo.description || '',
@@ -484,7 +486,7 @@ const ManagerWorkOrders = ({ user }) => {
       customerPhone: wo.customer_phone || wo.phone || '',
       block: wo.block || '',
       flatNumber: wo.flat_number || ''
-    });
+    }));
     // Load subcategories for the selected category
     if (wo.category_id) {
       fetchSubcategories(wo.category_id);
@@ -1440,6 +1442,7 @@ const ManagerWorkOrders = ({ user }) => {
           maxWidth="max-w-2xl"
           title="Work Order Details"
           align="top"
+          footer={null}
         >
 
             <div className="space-y-4">

@@ -20,6 +20,9 @@ const Login = ({ onLogin }) => {
     setNotActivated(false);
     setEmailResent(false);
     setLoading(true);
+    // A token left by an earlier sign-in on this browser must not outlive it: the residents
+    // fallback below stores none, and every page would otherwise read the old one
+    localStorage.removeItem('customerToken');
 
     try {
       // First try customer accounts API

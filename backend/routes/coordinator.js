@@ -385,17 +385,17 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     let estimatesByPropertyType = { direct_gc: 0, direct_apt: 0, direct_villa: 0, direct_flat: 0, direct_plot: 0, direct_other: 0, prop_gc: 0, prop_apt: 0, prop_villa: 0, prop_flat: 0, prop_plot: 0 };
     try {
       let estQuery = `SELECT 
-        SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) = 'GC' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
-        SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('APT', 'AP') OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
-        SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
-        SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('FLAT', 'FL') OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as direct_flat,
-        SUM(CASE WHEN estimate_type = 'direct' AND (UPPER(property_type) IN ('PLOT', 'PL') OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as direct_plot,
-        SUM(CASE WHEN estimate_type = 'direct' AND (property_type IS NULL OR property_type = '' OR (UPPER(property_type) NOT IN ('GC', 'APT', 'AP', 'VILLA', 'VL', 'FLAT', 'FL', 'PLOT', 'PL') AND LOWER(property_type) NOT LIKE '%gated%' AND LOWER(property_type) NOT LIKE '%apartment%' AND LOWER(property_type) NOT LIKE '%villa%' AND LOWER(property_type) NOT LIKE '%flat%' AND LOWER(property_type) NOT LIKE '%plot%')) THEN 1 ELSE 0 END) as direct_other,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) = 'GC' OR LOWER(property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as prop_gc,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('APT', 'AP') OR LOWER(property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as prop_apt,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('VILLA', 'VL') OR LOWER(property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('FLAT', 'FL') OR LOWER(property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND (UPPER(property_type) IN ('PLOT', 'PL') OR LOWER(property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (UPPER(fe.property_type) = 'GC' OR LOWER(fe.property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as direct_gc,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (UPPER(fe.property_type) IN ('APT', 'AP') OR LOWER(fe.property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as direct_apt,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (UPPER(fe.property_type) IN ('VILLA', 'VL') OR LOWER(fe.property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as direct_villa,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (UPPER(fe.property_type) IN ('FLAT', 'FL') OR LOWER(fe.property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as direct_flat,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (UPPER(fe.property_type) IN ('PLOT', 'PL') OR LOWER(fe.property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as direct_plot,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND (fe.property_type IS NULL OR fe.property_type = '' OR (UPPER(fe.property_type) NOT IN ('GC', 'APT', 'AP', 'VILLA', 'VL', 'FLAT', 'FL', 'PLOT', 'PL') AND LOWER(fe.property_type) NOT LIKE '%gated%' AND LOWER(fe.property_type) NOT LIKE '%apartment%' AND LOWER(fe.property_type) NOT LIKE '%villa%' AND LOWER(fe.property_type) NOT LIKE '%flat%' AND LOWER(fe.property_type) NOT LIKE '%plot%')) THEN 1 ELSE 0 END) as direct_other,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND (UPPER(fe.property_type) = 'GC' OR LOWER(fe.property_type) LIKE '%gated%') THEN 1 ELSE 0 END) as prop_gc,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND (UPPER(fe.property_type) IN ('APT', 'AP') OR LOWER(fe.property_type) LIKE '%apartment%') THEN 1 ELSE 0 END) as prop_apt,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND (UPPER(fe.property_type) IN ('VILLA', 'VL') OR LOWER(fe.property_type) LIKE '%villa%') THEN 1 ELSE 0 END) as prop_villa,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND (UPPER(fe.property_type) IN ('FLAT', 'FL') OR LOWER(fe.property_type) LIKE '%flat%') THEN 1 ELSE 0 END) as prop_flat,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND (UPPER(fe.property_type) IN ('PLOT', 'PL') OR LOWER(fe.property_type) LIKE '%plot%') THEN 1 ELSE 0 END) as prop_plot
       FROM fp_estimates fe
       LEFT JOIN properties p ON fe.property_id = p.id
       LEFT JOIN onboarded_properties op ON fe.property_id = op.id
@@ -416,14 +416,14 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
     let estimatesByStatus = { direct_draft: 0, direct_sent: 0, direct_approved: 0, direct_rejected: 0, prop_draft: 0, prop_sent: 0, prop_approved: 0, prop_rejected: 0 };
     try {
       let estQuery = `SELECT 
-        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as direct_draft,
-        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as direct_sent,
-        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as direct_approved,
-        SUM(CASE WHEN estimate_type = 'direct' AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as direct_rejected,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'draft' THEN 1 ELSE 0 END) as prop_draft,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'sent' THEN 1 ELSE 0 END) as prop_sent,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'approved' THEN 1 ELSE 0 END) as prop_approved,
-        SUM(CASE WHEN (estimate_type = 'property_based' OR estimate_type = 'property-based') AND LOWER(status) = 'rejected' THEN 1 ELSE 0 END) as prop_rejected
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND LOWER(fe.status) = 'draft' THEN 1 ELSE 0 END) as direct_draft,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND LOWER(fe.status) = 'sent' THEN 1 ELSE 0 END) as direct_sent,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND LOWER(fe.status) = 'approved' THEN 1 ELSE 0 END) as direct_approved,
+        SUM(CASE WHEN fe.estimate_type = 'direct' AND LOWER(fe.status) = 'rejected' THEN 1 ELSE 0 END) as direct_rejected,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND LOWER(fe.status) = 'draft' THEN 1 ELSE 0 END) as prop_draft,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND LOWER(fe.status) = 'sent' THEN 1 ELSE 0 END) as prop_sent,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND LOWER(fe.status) = 'approved' THEN 1 ELSE 0 END) as prop_approved,
+        SUM(CASE WHEN (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based') AND LOWER(fe.status) = 'rejected' THEN 1 ELSE 0 END) as prop_rejected
       FROM fp_estimates fe
       LEFT JOIN properties p ON fe.property_id = p.id
       LEFT JOIN onboarded_properties op ON fe.property_id = op.id
@@ -798,7 +798,7 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
     const allowedFieldsMap = {
       properties: [
         'name', 'property_type', 'address', 'city', 'state', 'zip_code',
-        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active',
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'status',
         'notes', 'landmark', 'latitude', 'longitude',
         'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
         'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
@@ -850,7 +850,10 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
       else if (fieldMapping[dbKey]) dbKey = fieldMapping[dbKey];
       
       let finalValue = value;
-      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+      // Both tables record Active/Inactive in `status` -- the column the list filters on.
+      // `properties` has no is_active column on a database built from this repo, so writing it
+      // failed every save from the edit dialog.
+      if (key === 'isActive' || key === 'is_active') {
         dbKey = 'status';
         finalValue = value ? 'active' : 'inactive';
       }
@@ -870,8 +873,17 @@ router.put('/properties/:id', requireCoordinatorScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
     }
 
-    values.push(id);
-    await pool.query(`UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    // The id in the URL is never trusted on its own: only a property in this coordinator's
+    // scope (their partner's, or their own when standalone) may be changed.
+    const scopeClause = req.franchisePartnerId ? 'franchise_partner_id = ?' : 'coordinator_id = ?';
+    values.push(id, req.franchisePartnerId || req.coordinatorId);
+    const [updateResult] = await pool.query(
+      `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ? AND ${scopeClause}`,
+      values
+    );
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found or access denied' });
+    }
 
     res.json({ success: true, message: 'Property updated successfully' });
   } catch (error) {
@@ -1468,6 +1480,77 @@ router.patch('/work-orders/:id/assign-vendor', requireCoordinatorScope, async (r
   }
 });
 
+// Edit a work order -- the list's Edit (pencil) dialog saves here. The route did not exist, so
+// every save from that dialog failed.
+router.put('/work-orders/:id', requireCoordinatorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const [existingRows] = franchisePartnerId
+      ? await pool.query('SELECT id, status FROM work_orders WHERE id = ? AND franchise_partner_id = ?', [id, franchisePartnerId])
+      : await pool.query(
+        'SELECT id, status FROM work_orders WHERE id = ? AND (coordinator_id = ? OR created_by = ? OR created_by = ?)',
+        [id, req.coordinatorId, req.coordinatorId, getCreatorIdentifier(req)]
+      );
+    if (existingRows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+    const current = existingRows[0];
+
+    const {
+      category_id, subcategory_id, description,
+      permission_to_enter, has_pet, entry_notes, priority, status,
+      customer_name, customer_email, customer_phone, block, flat_number
+    } = req.body;
+
+    const updates = [];
+    const params = [];
+    const set = (column, value) => { updates.push(`${column} = ?`); params.push(value); };
+    // ENUM columns: a blank or unknown value would raise WARN_DATA_TRUNCATED, so it is left alone
+    const oneOf = (value, allowed) => allowed.includes(value);
+
+    if (category_id !== undefined) set('category_id', category_id || null);
+    if (subcategory_id !== undefined) set('subcategory_id', subcategory_id || null);
+    if (description !== undefined) set('description', description);
+    if (oneOf(permission_to_enter, ['yes', 'no'])) set('permission_to_enter', permission_to_enter);
+    if (oneOf(has_pet, ['yes', 'no'])) set('has_pet', has_pet);
+    if (entry_notes !== undefined) set('entry_notes', entry_notes);
+    if (oneOf(priority, ['low', 'medium', 'high', 'urgent'])) set('priority', priority);
+    if (status && status !== current.status) {
+      // Completing goes through the status action, which records the closing notes, emails the
+      // customer and raises the invoice; a coordinator never closes (Completed is their end state).
+      if (status === 'completed') {
+        return res.status(400).json({ success: false, message: 'Use the Completed status action so the closing notes are recorded' });
+      }
+      if (oneOf(status, ['pending', 'assigned', 'in_progress', 'cancelled'])) set('status', status);
+    }
+    if (customer_name !== undefined) set('customer_name', customer_name);
+    if (customer_email !== undefined) set('customer_email', customer_email);
+    if (customer_phone !== undefined) set('customer_phone', customer_phone);
+    if (block !== undefined) set('block', block);
+    if (flat_number !== undefined) set('flat_number', flat_number);
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    // Category and subcategory names come from the config the category picker reads
+    const categoriesConfig = require('../config/categories');
+    const category = category_id ? categoriesConfig.find(c => c.id === parseInt(category_id)) : null;
+    if (category) set('category_name', category.name);
+    const subcategory = subcategory_id
+      ? (category ? [category] : categoriesConfig).map(c => c.subcategories?.find(s => s.id === parseInt(subcategory_id))).find(Boolean)
+      : null;
+    if (subcategory) set('subcategory_name', subcategory.name);
+
+    await pool.execute(`UPDATE work_orders SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`, [...params, id]);
+    res.json({ success: true, message: 'Work order updated successfully' });
+  } catch (error) {
+    console.error('Coordinator update work order error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update work order' });
+  }
+});
+
 router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1491,9 +1574,33 @@ router.patch('/work-orders/:id/assign-employee', requireCoordinatorScope, async 
       return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
     }
 
+    const numericEmployeeId = Number(employeeId);
+    if (!Number.isSafeInteger(numericEmployeeId) || numericEmployeeId <= 0) {
+      return res.status(400).json({ success: false, message: 'Select an employee' });
+    }
+    if (franchisePartnerId) {
+      const [emp] = await pool.query(
+        'SELECT id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
+        [numericEmployeeId, franchisePartnerId]
+      );
+      if (emp.length === 0) return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // work_orders.assigned_employee_id is created by no CREATE TABLE, so every assignment used to
+    // fail with "Unknown column". It is ensured here, the same way the Manager route does it.
+    const [[col]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = 'work_orders' AND column_name = 'assigned_employee_id'`
+    );
+    if (Number(col.n) === 0) await pool.query('ALTER TABLE work_orders ADD COLUMN assigned_employee_id INT NULL');
+
+    // A pending order becomes assigned; one already under way keeps its status
     await pool.query(
-      'UPDATE work_orders SET assigned_employee_id = ?, status = ? WHERE id = ?',
-      [employeeId, 'assigned', id]
+      `UPDATE work_orders SET assigned_employee_id = ?,
+              status = CASE WHEN status IN ('pending', 'requested') THEN 'assigned' ELSE status END,
+              updated_at = NOW()
+       WHERE id = ?`,
+      [numericEmployeeId, id]
     );
 
     res.json({ success: true, message: 'Employee assigned successfully' });
@@ -1525,9 +1632,10 @@ router.delete('/work-orders/:id', requireCoordinatorScope, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
     }
 
-    // Soft delete - update status to cancelled
+    // Soft delete - update status to cancelled. (It also stamped a deleted_at column that no
+    // migration creates, so every delete failed with "Unknown column".)
     await pool.query(
-      'UPDATE work_orders SET status = ?, deleted_at = NOW() WHERE id = ?',
+      'UPDATE work_orders SET status = ?, updated_at = NOW() WHERE id = ?',
       ['cancelled', id]
     );
 
@@ -1831,7 +1939,7 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
   try {
     // Schedule filters only offer vendors that actually appear in existing schedules
     if (req.query.forSchedules === 'true') {
-      const franchisePartnerId = req.user?.franchisePartnerId;
+      const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
       const scheduleVendors = franchisePartnerId
         ? await fetchScheduledVendors({
             whereClause: 'WHERE op.franchise_partner_id = ?',
@@ -2329,17 +2437,22 @@ router.post('/estimates', requireCoordinatorScope, attachPackageSnapshot(pool), 
     // Get creator name - check fp_employees first, then users table
     let creatorName = 'Coordinator';
     try {
-      // Try fp_employees table first (for FP-created employees)
-      const [[fpEmp]] = await pool.query(
-        'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR user_id = ?',
-        [coordinatorId, coordinatorId]
-      );
+      // Try fp_employees first (for FP-created employees) -- resolved by user_id, then
+      // email/username, never by treating the token's users.id as an fp_employees.id: the two
+      // sequences collide, and that credited the estimate to another employee.
+      const fpEmp = await resolveFpEmployee(pool, {
+        franchisePartnerId: req.franchisePartnerId,
+        userId: req.user?.id,
+        email: req.user?.email,
+        username: req.user?.username
+      });
       if (fpEmp && (fpEmp.first_name || fpEmp.last_name)) {
         creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Coordinator';
       } else {
-        // Fall back to users table
-        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [coordinatorId]);
-        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Coordinator';
+        // Fall back to users table (it has first_name/last_name and no `name` column -- selecting
+        // one threw, and every such estimate was credited to plain "Coordinator")
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name FROM users WHERE id = ?', [coordinatorId]);
+        if (userInfo && (userInfo.first_name || userInfo.last_name)) creatorName = `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim();
       }
     } catch (e) { console.log('Creator name lookup error:', e.message); }
 
@@ -2523,6 +2636,9 @@ router.get('/amc-packages', requireCoordinatorScope, async (req, res) => {
 
     res.json({ success: true, data: packages.map(transformPackage) });
   } catch (error) {
+    // A standalone coordinator's table (schema_v10) may never have been created: that is "no
+    // packages", not a failure that blanks the whole Estimates screen
+    if (error.code === 'ER_NO_SUCH_TABLE') return res.json({ success: true, data: [] });
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
   }
@@ -2536,14 +2652,21 @@ router.post('/amc-packages', requireCoordinatorScope, async (req, res) => {
   }
   try {
     const coordinatorId = req.coordinatorId;
-    const franchisePartnerId = req.franchisePartnerId;
-    const { name, description, durationMonths, basePrice, services, termsConditions, hidePricing } = req.body;
+    const { name, description, durationMonths, basePrice, price, property_type, services, termsConditions, hidePricing } = req.body;
+    // The package form sends `price` and `property_type`; the property type rides inside the
+    // services JSON, as on the FP packages, because coordinator_amc_packages has no column for it.
+    // coordinator_amc_packages has no franchise_partner_id either (schema_v10), and naming it
+    // failed every insert.
+    const serviceList = Array.isArray(services) ? services : [];
+    const servicesJson = property_type
+      ? { property_type, property_types: [property_type], services: serviceList }
+      : serviceList;
 
     const [result] = await pool.query(
-      `INSERT INTO coordinator_amc_packages (coordinator_id, franchise_partner_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [coordinatorId, franchisePartnerId, name, description, durationMonths || 12, basePrice || 0,
-        JSON.stringify(services || []), termsConditions, hidePricing || false]
+      `INSERT INTO coordinator_amc_packages (coordinator_id, name, description, duration_months, base_price, services, terms_conditions, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [coordinatorId, name, description || null, durationMonths || 12, parseFloat(basePrice ?? price) || 0,
+        JSON.stringify(servicesJson), termsConditions || null, hidePricing || false]
     );
 
     res.json({
@@ -2597,6 +2720,7 @@ router.get('/addons', requireCoordinatorScope, async (req, res) => {
 
     res.json({ success: true, data: addons.map(transformAddon) });
   } catch (error) {
+    if (error.code === 'ER_NO_SUCH_TABLE') return res.json({ success: true, data: [] });
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
   }
@@ -2610,13 +2734,16 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
   }
   try {
     const coordinatorId = req.coordinatorId;
-    const franchisePartnerId = req.franchisePartnerId;
-    const { name, description, price, unit, categoryId, hidePricing } = req.body;
+    // The Add Service form sends `service_name`; coordinator_addons has no franchise_partner_id
+    // column (schema_v10), and naming it failed every insert.
+    const { name, service_name, description, price, unit, categoryId, hidePricing } = req.body;
+    const addonName = String(name || service_name || '').trim();
+    if (!addonName) return res.status(400).json({ success: false, message: 'Service name is required' });
 
     const [result] = await pool.query(
-      `INSERT INTO coordinator_addons (coordinator_id, franchise_partner_id, name, description, price, unit, category_id, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [coordinatorId, franchisePartnerId, name, description, price || 0, unit || 'per_service', categoryId || null, hidePricing || false]
+      `INSERT INTO coordinator_addons (coordinator_id, name, description, price, unit, category_id, hide_pricing)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [coordinatorId, addonName, description || null, parseFloat(price) || 0, unit || 'per_service', categoryId || null, hidePricing || false]
     );
 
     res.json({
@@ -3018,7 +3145,9 @@ router.get('/services', requireCoordinatorScope, async (req, res) => {
 // Get all schedules (visits) with filtering and pagination
 router.get('/schedules/all', requireCoordinatorScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.user?.franchisePartnerId;
+    // Fall back to the scope middleware's lookup, as /services and /pending-properties do: a token
+    // without franchisePartnerId would otherwise list nobody's visits
+    const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
     const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     

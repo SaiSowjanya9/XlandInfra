@@ -95,6 +95,38 @@ const {
   getCreatorIdentifier
 } = require('../middleware/zoneHelper');
 
+// The legacy supervisor_* tables come from schema_v11, which stops on MySQL 8 at its first
+// `ADD COLUMN IF NOT EXISTS` -- before supervisor_assigned_properties is ever created -- and
+// properties.assigned_vendor_id was never created by any migration. A query that touches one of
+// them asks first; otherwise the whole statement fails and a list reads as empty. Only a positive
+// answer is cached, so a table created later is picked up without a restart.
+const knownSchema = new Set();
+const schemaHas = async (table, column = null) => {
+  const key = column ? `${table}.${column}` : table;
+  if (knownSchema.has(key)) return true;
+  try {
+    const [rows] = column
+      ? await pool.query(
+          `SELECT COUNT(*) AS n FROM information_schema.columns
+           WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`, [table, column])
+      : await pool.query(
+          `SELECT COUNT(*) AS n FROM information_schema.tables
+           WHERE table_schema = DATABASE() AND table_name = ?`, [table]);
+    if (Number(rows[0]?.n) > 0) {
+      knownSchema.add(key);
+      return true;
+    }
+  } catch (e) {
+    console.log('[Supervisor] schema check failed:', key, e.message);
+  }
+  return false;
+};
+
+// An employee whose zone list holds 'all' gets the '__ALL__' marker back from getAssignedZones.
+// It is not a zone name: `zone IN ('__ALL__')` matches nothing and quietly hid every row in the
+// partner's zones from a supervisor who is meant to see all of them.
+const isUnrestricted = (zones) => Array.isArray(zones) && zones.includes('__ALL__');
+
 // =====================================================
 // SUPERVISOR LOGIN (No auth required - rate limited)
 // Handles both standalone supervisors and FP-created supervisors
@@ -499,13 +531,22 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       recentWorkOrders = rows;
     } catch (e) { console.log('Recent work orders error:', e.message); }
 
-    // Get zone names for display
-    let zoneNames = [];
-    if (hasZones) {
+    // Zone names for display. fp_employee_zones stores the zone *name*, so the assignment already is
+    // the list -- looking the names up as `zones.id` found nothing and the Zones card always read 0.
+    // An unrestricted employee covers every zone the partner's properties sit in.
+    let zoneNames = hasZones ? [...assignedZones] : [];
+    if (hasUnrestrictedAccess) {
       try {
-        const [zones] = await pool.query(`SELECT id, name FROM zones WHERE id IN (${zonePlaceholders})`, assignedZones);
+        const [zones] = await pool.query(
+          `SELECT DISTINCT zone AS name FROM onboarded_properties
+           WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''
+           UNION
+           SELECT DISTINCT zone_id AS name FROM properties
+           WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+          [franchisePartnerId, franchisePartnerId]
+        );
         zoneNames = zones.map(z => z.name);
-      } catch (e) {}
+      } catch (e) { console.log('Dashboard zones error:', e.message); }
     }
 
     res.json({
@@ -513,6 +554,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       data: {
         stats: {
           properties: propertiesCount + onboardedPropsCount,
+          zones: zoneNames.length,
           vendors: vendorsCount,
           customers: customersCount,
           employees: employeesCount,
@@ -605,8 +647,11 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE (p.supervisor_id = ?${franchisePartnerId ? ' OR p.franchise_partner_id = ?' : ''}) ${statusClause}${zoneFilter.clause}
-       UNION
+       WHERE ${franchisePartnerId ? 'p.franchise_partner_id = ?' : 'p.supervisor_id = ?'} ${statusClause}${zoneFilter.clause}`;
+    // A supervisor under a partner sees that partner's properties; matching supervisor_id as well
+    // would also match another partner's row whose supervisor_id happens to equal this token's id
+    // (users.id and fp_employees.id are separate sequences).
+    const assignedQuery = `
        SELECT p.*,
               COALESCE(z.name, zn.name, p.zone_id) as zone_name,
               COALESCE(p.area_name, p.city) as area,
@@ -624,12 +669,15 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
        LEFT JOIN fp_divisions fd ON (CAST(p.division_id AS UNSIGNED) = fd.id OR p.division_id = fd.name) AND fd.franchise_partner_id = p.franchise_partner_id
        LEFT JOIN fp_employees fpe ON p.created_by = fpe.email OR p.created_by = fpe.username OR CAST(p.created_by AS CHAR) = CAST(fpe.id AS CHAR)
        LEFT JOIN users u ON p.created_by = u.email OR p.created_by = u.username OR p.created_by = u.user_id OR CAST(p.created_by AS CHAR) = CAST(u.id AS CHAR)
-       WHERE sap.supervisor_id = ? ${statusClause}${zoneFilter.clause}
-       ORDER BY created_at DESC`;
-    const params = franchisePartnerId 
-      ? [supervisorId, franchisePartnerId, ...zoneFilter.params, supervisorId, ...zoneFilter.params] 
-      : [supervisorId, ...zoneFilter.params, supervisorId, ...zoneFilter.params];
-    const [regularProperties] = await pool.query(query, params);
+       WHERE sap.supervisor_id = ? ${statusClause}${zoneFilter.clause}`;
+    const params = [franchisePartnerId || supervisorId, ...zoneFilter.params];
+    // supervisor_assigned_properties is missing wherever schema_v11 stopped early; joining it then
+    // failed the whole statement and Property Management (and every property picker) read empty.
+    const hasAssignedTable = await schemaHas('supervisor_assigned_properties');
+    const [regularProperties] = await pool.query(
+      hasAssignedTable ? `${query} UNION ${assignedQuery} ORDER BY created_at DESC` : `${query} ORDER BY p.created_at DESC`,
+      hasAssignedTable ? [...params, supervisorId, ...zoneFilter.params] : params
+    );
 
     // Also fetch from onboarded_properties with creator name (zone-centric + own created)
     let onboardedProperties = [];
@@ -807,10 +855,21 @@ router.put('/properties/:id', requireSupervisorScope, async (req, res) => {
       }
     }
 
+    // The id in the URL is not proof of access: this route used to update whatever row had it,
+    // so a supervisor could edit any partner's property. The scope is checked here and carried
+    // into the UPDATE.
+    const scopeFpId = req.franchisePartnerId || req.fpId;
+    const scopeSql = scopeFpId ? 'franchise_partner_id = ?' : 'supervisor_id = ?';
+    const scopeValue = scopeFpId || req.supervisorId;
+    const [ownedRows] = await pool.query(`SELECT id FROM ${tableName} WHERE id = ? AND ${scopeSql}`, [id, scopeValue]);
+    if (ownedRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
     const allowedFieldsMap = {
       properties: [
         'name', 'property_type', 'address', 'city', 'state', 'zip_code',
-        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active',
+        'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'status',
         'notes', 'landmark', 'latitude', 'longitude',
         'number_of_blocks', 'block_names', 'units_per_block', 'block_unit_types',
         'number_of_units', 'villa_plot_number', 'block_info', 'block_na',
@@ -862,7 +921,10 @@ router.put('/properties/:id', requireSupervisorScope, async (req, res) => {
       else if (fieldMapping[dbKey]) dbKey = fieldMapping[dbKey];
       
       let finalValue = value;
-      if (tableName === 'onboarded_properties' && (key === 'isActive' || key === 'is_active')) {
+      // Both tables keep the active flag as `status`, which is what the property lists filter on.
+      // `properties` has no is_active column, so the edit form's Active toggle failed every save of
+      // a properties-table row with "Unknown column 'is_active'".
+      if (key === 'isActive' || key === 'is_active') {
         dbKey = 'status';
         finalValue = value ? 'active' : 'inactive';
       }
@@ -882,8 +944,8 @@ router.put('/properties/:id', requireSupervisorScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
     }
 
-    values.push(id);
-    await pool.query(`UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ?`, values);
+    values.push(id, scopeValue);
+    await pool.query(`UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ? AND ${scopeSql}`, values);
 
     res.json({ success: true, message: 'Property updated successfully' });
   } catch (error) {
@@ -913,20 +975,22 @@ router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req,
     if (franchisePartnerId) {
       // FP supervisor - check via franchise_partner_id
       [property] = await pool.query(
-        `SELECT id, name FROM properties WHERE id = ? AND franchise_partner_id = ?
+        `SELECT id, name, 'properties' AS source_table FROM properties WHERE id = ? AND franchise_partner_id = ?
          UNION
-         SELECT id, community_name as name FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+         SELECT id, community_name as name, 'onboarded_properties' AS source_table FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
         [id, franchisePartnerId, id, franchisePartnerId]
       );
     } else {
       // Standalone supervisor
+      const hasAssignedTable = await schemaHas('supervisor_assigned_properties');
       [property] = await pool.query(
-        `SELECT id, name FROM properties WHERE id = ? AND supervisor_id = ?
+        `SELECT id, name, 'properties' AS source_table FROM properties WHERE id = ? AND supervisor_id = ?` +
+        (hasAssignedTable ? `
          UNION
-         SELECT p.id, p.name FROM properties p
+         SELECT p.id, p.name, 'properties' AS source_table FROM properties p
          JOIN supervisor_assigned_properties sap ON p.id = sap.property_id 
-         WHERE sap.property_id = ? AND sap.supervisor_id = ? AND sap.can_assign_vendor = TRUE`,
-        [id, supervisorId, id, supervisorId]
+         WHERE sap.property_id = ? AND sap.supervisor_id = ? AND sap.can_assign_vendor = TRUE` : ''),
+        hasAssignedTable ? [id, supervisorId, id, supervisorId] : [id, supervisorId]
       );
     }
 
@@ -984,11 +1048,18 @@ router.post('/properties/:id/assign-vendor', requireSupervisorScope, async (req,
       );
     }
 
-    // Also update the property's assigned_vendor_id for backward compatibility
-    await pool.query(
-      'UPDATE properties SET assigned_vendor_id = ? WHERE id = ?',
-      [numericVendorId, id]
-    );
+    // Also update the property's assigned_vendor_id for backward compatibility -- only where the
+    // column exists (no migration creates it) and only for a properties-table row: the same numeric
+    // id in onboarded_properties is a different property. Unguarded, this UPDATE failed after the
+    // assignment above had already been saved, so the screen said "Failed to assign vendor" and a
+    // retry said "already assigned".
+    const isPropertiesRow = property.some(p => p.source_table === 'properties');
+    if (isPropertiesRow && await schemaHas('properties', 'assigned_vendor_id')) {
+      await pool.query(
+        'UPDATE properties SET assigned_vendor_id = ? WHERE id = ?',
+        [numericVendorId, id]
+      );
+    }
 
     res.json({ success: true, message: 'Vendor assigned successfully', data: { vendorName: vendor[0].owner_name } });
   } catch (error) {
@@ -1003,12 +1074,19 @@ router.post('/properties/:id/assign-employee', requireSupervisorScope, async (re
     const { employeeId } = req.body;
     const supervisorId = req.supervisorId;
 
+    // No migration creates properties.assigned_employee_id; say so instead of a generic 500
+    if (!(await schemaHas('properties', 'assigned_employee_id'))) {
+      return res.status(400).json({ success: false, message: 'Assigning an employee to a property is not available on this system yet' });
+    }
+
     // Verify property belongs to supervisor
+    const hasAssignedTable = await schemaHas('supervisor_assigned_properties');
     const [property] = await pool.query(
-      `SELECT id FROM properties WHERE id = ? AND supervisor_id = ?
+      `SELECT id FROM properties WHERE id = ? AND supervisor_id = ?` +
+      (hasAssignedTable ? `
        UNION
-       SELECT property_id FROM supervisor_assigned_properties WHERE property_id = ? AND supervisor_id = ? AND can_assign_employee = TRUE`,
-      [id, supervisorId, id, supervisorId]
+       SELECT property_id FROM supervisor_assigned_properties WHERE property_id = ? AND supervisor_id = ? AND can_assign_employee = TRUE` : ''),
+      hasAssignedTable ? [id, supervisorId, id, supervisorId] : [id, supervisorId]
     );
 
     if (property.length === 0) {
@@ -1266,9 +1344,11 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
         propertyZone = onbProps[0].zone;
         propertyDivision = onbProps[0].division;
       } else {
-        // Fallback to properties table
+        // Fallback to properties table. It keeps the division as division_id only -- `division`
+        // is an onboarded_properties column, and naming it here failed every work order raised
+        // against a properties-table row with "Unknown column 'division'".
         const [props] = await pool.query(
-          `SELECT name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division FROM properties WHERE id = ?`,
+          `SELECT name, property_type, property_id, zone_id as zone, division_id as division FROM properties WHERE id = ?`,
           [propertyId]
         );
         if (props.length > 0) {
@@ -1312,8 +1392,10 @@ router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
       if (subcat) finalSubcategoryName = subcat.name;
     }
 
-    // Get creator identifier for zone-centric filtering
-    const createdBy = req.user?.email || req.user?.username || `supervisor-${supervisorId}`;
+    // Get creator identifier for zone-centric filtering. It must be the same identifier the list
+    // filters on (getCreatorIdentifier: username first) -- writing the email here meant a
+    // supervisor with no zones never saw the work order they had just created.
+    const createdBy = getCreatorIdentifier(req) || `supervisor-${supervisorId}`;
 
     // Get the subcategory ID (use null for "Other" category with custom subcategory)
     const finalSubcategoryId = isOtherCategory ? null : (subcategoryId || null);
@@ -1400,8 +1482,9 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, async (req, res)
       return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
     }
 
-    // Supervisors can change status for completed work orders and revert to pending
-    const allowedStatuses = ['pending', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled', 'closed'];
+    // Supervisors can change status for completed work orders and revert to pending. 'closed' is
+    // not theirs to set (.devin/rules/work-orders.md: Completed, never Mark As Closed).
+    const allowedStatuses = ['pending', 'under_review', 'assigned', 'in_progress', 'completed', 'cancelled'];
     if (!allowedStatuses.includes(status)) {
       return res.status(403).json({ success: false, message: 'Invalid status value' });
     }
@@ -1489,6 +1572,126 @@ router.patch('/work-orders/:id/status', requireSupervisorScope, async (req, res)
     console.error('Status update error:', error);
     res.status(500).json({ success: false, message: 'Failed to update status' });
   }
+});
+
+// The Work Orders screen's Edit, Assign Vendor and Delete buttons called routes this file never
+// had, so each one answered 404. Access follows the status route: the partner's work orders for a
+// supervisor under a partner, otherwise the ones this supervisor created.
+const findSupervisorWorkOrder = async (req, id) => {
+  const franchisePartnerId = req.franchisePartnerId || req.fpId;
+  const [rows] = franchisePartnerId
+    ? await pool.query('SELECT id, status FROM work_orders WHERE id = ? AND franchise_partner_id = ?', [id, franchisePartnerId])
+    : await pool.query('SELECT id, status FROM work_orders WHERE id = ? AND (created_by = ? OR created_by = ?)',
+        [id, String(req.supervisorId), getCreatorIdentifier(req)]);
+  return rows[0] || null;
+};
+
+router.patch('/work-orders/:id/assign-vendor', requireSupervisorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId } = req.body;
+    if (!vendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+    const workOrder = await findSupervisorWorkOrder(req, id);
+    if (!workOrder) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+
+    // The vendor must be one of this partner's
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const [vendor] = await pool.query(
+      `SELECT id FROM onboarded_vendors WHERE (id = ? OR vendor_id = ?)${franchisePartnerId ? ' AND franchise_partner_id = ?' : ''}`,
+      franchisePartnerId ? [vendorId, vendorId, franchisePartnerId] : [vendorId, vendorId]
+    );
+    if (vendor.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    // A vendor added to a work order already under way, or finished, does not rewind its status
+    await pool.query(
+      `UPDATE work_orders
+       SET assigned_vendor_id = ?, assigned_at = NOW(), assigned_by = ?,
+           status = CASE WHEN status IN ('pending', 'requested') THEN 'assigned' ELSE status END,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [vendor[0].id, String(req.user?.id || req.supervisorId), id]
+    );
+
+    res.json({ success: true, message: 'Vendor assigned successfully' });
+  } catch (error) {
+    console.error('Supervisor assign vendor to work order error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign vendor' });
+  }
+});
+
+router.put('/work-orders/:id', requireSupervisorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const workOrder = await findSupervisorWorkOrder(req, id);
+    if (!workOrder) {
+      return res.status(404).json({ success: false, message: 'Work order not found' });
+    }
+
+    const {
+      category_id, subcategory_id, description, permission_to_enter, has_pet, entry_notes, priority, status,
+      customer_name, customer_email, customer_phone, block, flat_number
+    } = req.body;
+
+    const updates = [];
+    const params = [];
+    const set = (column, value) => { updates.push(`${column} = ?`); params.push(value); };
+
+    if (category_id !== undefined) set('category_id', category_id || null);
+    if (subcategory_id !== undefined) set('subcategory_id', subcategory_id || null);
+    if (description !== undefined) set('description', description);
+    // ENUM columns: the edit form starts them at '' for an older row, which no member accepts
+    if (['yes', 'no'].includes(permission_to_enter)) set('permission_to_enter', permission_to_enter);
+    if (['yes', 'no'].includes(has_pet)) set('has_pet', has_pet);
+    if (entry_notes !== undefined) set('entry_notes', entry_notes);
+    if (['low', 'medium', 'high', 'urgent'].includes(priority)) set('priority', priority);
+    if (status !== undefined && status !== workOrder.status) {
+      // Completing or cancelling records closing/cancellation notes, emails the customer and raises
+      // the invoice -- all in the status route, so this form must not do it half-way.
+      if (!['pending', 'assigned', 'in_progress'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'To complete or cancel a work order, use the status menu in the work orders list' });
+      }
+      set('status', status);
+    }
+    if (customer_name !== undefined) set('customer_name', customer_name);
+    if (customer_email !== undefined) set('customer_email', customer_email);
+    if (customer_phone !== undefined) set('customer_phone', customer_phone);
+    if (block !== undefined) set('block', block);
+    if (flat_number !== undefined) set('flat_number', flat_number);
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    // Category and subcategory names come from the config (the subcategories table is empty)
+    if (category_id) {
+      const categoriesConfig = require('../config/categories');
+      const category = categoriesConfig.find(c => c.id === parseInt(category_id));
+      if (category) {
+        set('category_name', category.name);
+        const subcategory = subcategory_id ? category.subcategories?.find(s => s.id === parseInt(subcategory_id)) : null;
+        if (subcategory) set('subcategory_name', subcategory.name);
+      }
+    }
+
+    updates.push('updated_at = NOW()');
+    await pool.query(`UPDATE work_orders SET ${updates.join(', ')} WHERE id = ?`, [...params, id]);
+
+    res.json({ success: true, message: 'Work order updated successfully' });
+  } catch (error) {
+    console.error('Supervisor update work order error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update work order' });
+  }
+});
+
+// Delete work order - DISABLED for Supervisor role, as properties and vendors are
+router.delete('/work-orders/:id', requireSupervisorScope, async (req, res) => {
+  return res.status(403).json({ success: false, message: 'Delete operation not allowed for this role' });
 });
 
 // =====================================================
@@ -1775,7 +1978,7 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
   try {
     // Schedule filters only offer vendors that actually appear in existing schedules
     if (req.query.forSchedules === 'true') {
-      const fpId = req.user?.franchisePartnerId;
+      const fpId = req.user?.franchisePartnerId || req.franchisePartnerId;
       const scheduleVendors = fpId
         ? await fetchScheduledVendors({
             whereClause: 'WHERE op.franchise_partner_id = ?',
@@ -1816,14 +2019,16 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
       // Build zone + creator filter
       let zoneClause = '';
       let zoneParams = [];
-      if (assignedZones.length > 0) {
+      if (isUnrestricted(assignedZones)) {
+        // Every zone: no filter (the '__ALL__' marker is not a zone name)
+      } else if (assignedZones.length > 0) {
         const placeholders = assignedZones.map(() => '?').join(',');
         zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by = ? OR ov.created_by = ?)`;
-        zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+        zoneParams = [...assignedZones, creatorEmail, req.user?.email || ''];
       } else {
         // No zones = only see own created
         zoneClause = ` AND (ov.created_by = ? OR ov.created_by = ?)`;
-        zoneParams = [creatorEmail, req.user?.username || ''];
+        zoneParams = [creatorEmail, req.user?.email || ''];
       }
 
       const vendorQuery = `
@@ -1928,8 +2133,8 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         rate_per_visit, coverage_per_day, working_hours_from, working_hours_to,
-        supervisor_id, franchise_partner_id, is_active, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'active')`,
+        supervisor_id, franchise_partner_id, created_by, created_by_id, is_active, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'active')`,
       [
         vendorId, username, companyName || ownerName || '', contactPerson || companyName || ownerName || '', 
         ownerName || companyName || '', email || ownerEmail || '', ownerEmail || email || '', 
@@ -1940,7 +2145,11 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
         parseFloat(ratePerVisit) || 0, parseInt(coveragePerDay) || 0, workingHoursFrom || null, workingHoursTo || null,
-        supervisorId, franchisePartnerId
+        // Vendor Details shows a supervisor the vendors in their zones plus the ones they created,
+        // matched on created_by. It was never written (the column's default is 'Manager'), so a
+        // vendor added outside the supervisor's zones vanished from the list on save.
+        // created_by_id is joined to fp_employees.id for the creator's name, so it is that id
+        supervisorId, franchisePartnerId, getCreatorIdentifier(req) || 'Supervisor', req.user?.fpEmployeeId || req.user?.id || supervisorId
       ]
     );
 
@@ -1996,11 +2205,20 @@ router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
     // Build zone filter for vendor's zone
     let zoneClause = '';
     let zoneParams = [];
-    if (assignedZones.length > 0) {
+    if (assignedZones.length > 0 && !isUnrestricted(assignedZones)) {
       const placeholders = assignedZones.map(() => '?').join(',');
       zoneClause = ` AND v.zone IN (${placeholders})`;
       zoneParams = assignedZones;
     }
+
+    // A supervisor under a partner sees the partner's assignments, as the coordinator does. Matching
+    // only properties.supervisor_id showed nothing but properties this person had created, so
+    // Assigned Vendors and a property's vendor panel were empty for the partner's own properties.
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    const scopeClause = franchisePartnerId
+      ? '(p.franchise_partner_id = ? OR op.franchise_partner_id = ?)'
+      : '(p.supervisor_id = ? OR op.supervisor_id = ?)';
+    const scopeId = franchisePartnerId || supervisorId;
     
     // Get property-vendor assignments with full vendor details
     const [propertyAssignments] = await pool.execute(
@@ -2018,9 +2236,9 @@ router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
        LEFT JOIN properties p ON pva.property_id = p.id
        LEFT JOIN onboarded_properties op ON pva.property_id = op.id
        JOIN onboarded_vendors v ON pva.vendor_id = v.id
-       WHERE (p.supervisor_id = ? OR op.supervisor_id = ?) AND pva.is_active = 1${zoneClause}
+       WHERE ${scopeClause} AND pva.is_active = 1${zoneClause}
        ORDER BY pva.assigned_at DESC`,
-      [supervisorId, supervisorId, ...zoneParams]
+      [scopeId, scopeId, ...zoneParams]
     );
 
     // IMPORTANT: propertyId must be the NUMERIC ID for filtering to work
@@ -2254,15 +2472,26 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
         // Get assigned zones only when not filtering by property
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
         
-        // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
-        if (assignedZones.length > 0) {
+        // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username).
+        // The token carries no first_name, so the old `created_by_name LIKE '%<first_name>%'` was
+        // `LIKE '%%'` -- true for every row -- and the zone rule never applied. The name match is
+        // only added when there is a name to match.
+        const firstName = String(req.user?.first_name || req.user?.firstName || '').trim();
+        const ownClause = `e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ?${firstName ? ' OR e.created_by_name LIKE ?' : ''}`;
+        const ownParams = [supervisorId, creatorEmail, req.user?.email || '', ...(firstName ? [`%${firstName}%`] : [])];
+        if (isUnrestricted(assignedZones)) {
+          // Every zone: the partner's estimates, unfiltered
+          propertyClause = '';
+          propertyParams = [];
+        } else if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
-          propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [...assignedZones, supervisorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          // The property's zone counts as well as the estimate's own, as on the dashboard's counts
+          propertyClause = ` AND (e.zone IN (${placeholders}) OR op.zone IN (${placeholders}) OR p.zone_id IN (${placeholders}) OR ${ownClause})`;
+          propertyParams = [...assignedZones, ...assignedZones, ...assignedZones, ...ownParams];
         } else {
           // No zones = only see own created (by ID or by name/email/username)
-          propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [supervisorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          propertyClause = ` AND (${ownClause})`;
+          propertyParams = ownParams;
         }
       }
       
@@ -2406,17 +2635,19 @@ router.post('/estimates', requireSupervisorScope, attachPackageSnapshot(pool), v
     // Get creator name - check fp_employees first, then users table
     let creatorName = 'Supervisor';
     try {
-      // Try fp_employees table first (for FP-created employees)
-      const [[fpEmp]] = await pool.query(
-        'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR user_id = ?',
-        [supervisorId, supervisorId]
-      );
+      // Try fp_employees table first (for FP-created employees). The token's fpEmployeeId is that
+      // table's id; the bare token id is not -- users.id and fp_employees.id collide, and
+      // `id = <token id>` named the estimate after whichever employee happened to share it.
+      const [[fpEmp]] = req.user?.fpEmployeeId
+        ? await pool.query('SELECT first_name, last_name FROM fp_employees WHERE id = ?', [req.user.fpEmployeeId])
+        : await pool.query('SELECT first_name, last_name FROM fp_employees WHERE user_id = ?', [supervisorId]);
       if (fpEmp && (fpEmp.first_name || fpEmp.last_name)) {
         creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Supervisor';
       } else {
-        // Fall back to users table
-        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [supervisorId]);
-        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Supervisor';
+        // Fall back to users table (first_name/last_name -- users has no `name` column, and asking
+        // for one failed this lookup outright)
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name FROM users WHERE id = ?', [supervisorId]);
+        if (userInfo) creatorName = `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || 'Supervisor';
       }
     } catch (e) { console.log('Creator name lookup error:', e.message); }
 
@@ -2549,6 +2780,12 @@ router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
 });
 
 router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
+  // A partner's supervisor reads the partner's packages (fp_amc_packages) and does not author them,
+  // as for the FP coordinator. This insert wrote to supervisor_amc_packages, which the GET above
+  // never reads and which has no franchise_partner_id column, so it could only 500 or vanish.
+  if (req.isFPSupervisor) {
+    return res.status(403).json({ success: false, message: 'Create package not allowed for this role' });
+  }
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
@@ -2618,6 +2855,10 @@ router.get('/addons', requireSupervisorScope, async (req, res) => {
 });
 
 router.post('/addons', requireSupervisorScope, async (req, res) => {
+  // Same as packages: the partner's supervisor reads fp_addons and does not author them
+  if (req.isFPSupervisor) {
+    return res.status(403).json({ success: false, message: 'Create add-on not allowed for this role' });
+  }
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
@@ -2784,7 +3025,7 @@ router.get('/divisions', requireSupervisorScope, async (req, res) => {
       divisions = fpDivisions;
     }
     const [propertyDivisions] = await pool.execute(
-      `SELECT DISTINCT division as name FROM properties WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
+      `SELECT DISTINCT division_id as name FROM properties WHERE franchise_partner_id = ? AND division_id IS NOT NULL AND division_id != ''
        AND (status = 'active' OR status IS NULL)
        UNION SELECT DISTINCT division as name FROM onboarded_vendors WHERE franchise_partner_id = ? AND division IS NOT NULL AND division != ''
        AND (status = 'active' OR status IS NULL)`,
@@ -3043,7 +3284,9 @@ router.get('/services', requireSupervisorScope, async (req, res) => {
 // Get all schedules (visits) with filtering and pagination
 router.get('/schedules/all', requireSupervisorScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.user?.franchisePartnerId;
+    // The scope middleware's lookup too, as the other schedule routes here use -- a token signed
+    // without the partner id otherwise asked for `franchise_partner_id = NULL` and listed nothing
+    const franchisePartnerId = req.user?.franchisePartnerId || req.franchisePartnerId;
     const { page = 1, limit = 15, search, status, service, vendor, zone, propertyType, startDate, endDate } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
