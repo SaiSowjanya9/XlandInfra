@@ -1,28 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, LogOut, RefreshCw, User } from 'lucide-react';
+import { ChevronDown, LogOut, User } from 'lucide-react';
 import DismissPanel from './common/DismissPanel';
 import NotificationBell from './NotificationBell';
 import BottomNav from './BottomNav';
-import { PortalRefreshProvider, usePortalRefresh } from '../hooks/usePortalRefresh';
+import { PortalRefreshProvider } from '../hooks/usePortalRefresh';
 
 /**
- * The portal header: the brand, the bell, Refresh and the account menu.
- *
- * It is a child of the refresh provider rather than Layout itself because Refresh belongs to
- * whichever page is open -- the header only knows to ask.
+ * The portal header: the brand, the bell and the account menu.
  */
 const PortalHeader = ({ user, onLogout }) => {
   const [showAccount, setShowAccount] = useState(false);
-  // Bumped on Refresh so the bell refetches with the page: the unread count is the thing a customer
-  // watches, and a Refresh that left it stale would be reporting the page and not the account.
-  const [notificationsVersion, setNotificationsVersion] = useState(0);
-  const refreshPage = usePortalRefresh();
-
-  const handleRefresh = () => {
-    setNotificationsVersion(version => version + 1);
-    refreshPage();
-  };
 
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
 
@@ -39,17 +27,7 @@ const PortalHeader = ({ user, onLogout }) => {
           </Link>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <NotificationBell refreshToken={notificationsVersion} />
-
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg text-gray-500 hover:text-gold-600 hover:bg-gold-600/10 transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm font-medium">Refresh</span>
-            </button>
+            <NotificationBell />
 
             <span className="hidden sm:block w-px h-6 bg-gray-200" aria-hidden="true" />
 
