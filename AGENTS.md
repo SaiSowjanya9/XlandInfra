@@ -80,6 +80,14 @@ Mistakes that fail silently and have each already broken live endpoints:
   `utils/paymentHistoryAction.js`, which widens the column as the migration would, or writes the
   nearest legal member when it cannot. Regression test:
   `node --test backend/utils/paymentHistoryAction.test.js`.
+- **`payment_history.payment_method_details` can be too narrow too.** schema_v22 adds it as JSON, but
+  production had it as a short string column, so the Razorpay audit blob raised
+  "Data too long for column 'payment_method_details'" inside the payment transaction and a paid
+  payment-link invoice (INV-00018, `pay_TsZdMi0KXfMZNK`) stayed Overdue. Always write it through
+  `utils/paymentMethodDetails.js` `paymentMethodDetailsValue()`, awaited **before**
+  `beginTransaction`; it widens the column to TEXT as `schema_v59_payment_method_details_width.sql`
+  would, or writes a compact value / NULL that fits. Regression test:
+  `node --test backend/utils/paymentMethodDetails.test.js`.
 - A "Unknown column X in 'field list'" in the live log usually means the VPS is behind this repo,
   not that the code is wrong — the `assign_vendor` and `fp_amc_packages.price` errors were both
   fixed here well before they stopped appearing there. Check `git log` for the fix before chasing it.

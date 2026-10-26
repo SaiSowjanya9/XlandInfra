@@ -18,6 +18,7 @@ const { markPaymentCompleted } = require('./schedulingWorkflow');
 const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
 const { paidAtAssignment } = require('../utils/invoiceColumns');
+const { paymentMethodDetailsValue } = require('../utils/paymentMethodDetails');
 
 // The action every Razorpay payment writes to payment_history. The Razorpay tab filters on it.
 const RAZORPAY_HISTORY_ACTION = 'razorpay_payment';
@@ -128,6 +129,24 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
     // settlement timestamp must never be the reason a payment is lost.
     await ensurePaymentColumns();
     const paidAt = await paidAtAssignment(newPaymentStatus);
+    // Same reason: a payment_method_details column narrower than this blob raised "Data too long"
+    // inside the transaction and lost the payment. Widened or fitted here, before it opens.
+    const methodDetails = await paymentMethodDetailsValue({
+      method: paymentEntity?.method || null,
+      card_last4: paymentEntity?.card?.last4 || null,
+      card_network: paymentEntity?.card?.network || null,
+      bank: paymentEntity?.bank || null,
+      wallet: paymentEntity?.wallet || null,
+      email: paymentEntity?.email || invoice.customer_email || null,
+      contact: paymentEntity?.contact || invoice.customer_phone || null,
+      invoice_id: invoice.invoice_id,
+      invoice_amount: parseFloat(invoice.total_amount || 0),
+      amount_paid: amount,
+      balance_remaining: Math.max(0, newBalance),
+      payment_date: new Date().toISOString(),
+      razorpay_payment_link_id: paymentLinkId,
+      recorded_by: source
+    });
     await connection.beginTransaction();
 
     const [result] = await connection.execute(`
@@ -204,22 +223,7 @@ async function recordRazorpayPayment({ invoiceId, amountPaid, paymentEntity = nu
       description,
       razorpayPaymentId,
       paymentEntity?.receipt || null,
-      JSON.stringify({
-        method: paymentEntity?.method || null,
-        card_last4: paymentEntity?.card?.last4 || null,
-        card_network: paymentEntity?.card?.network || null,
-        bank: paymentEntity?.bank || null,
-        wallet: paymentEntity?.wallet || null,
-        email: paymentEntity?.email || invoice.customer_email || null,
-        contact: paymentEntity?.contact || invoice.customer_phone || null,
-        invoice_id: invoice.invoice_id,
-        invoice_amount: parseFloat(invoice.total_amount || 0),
-        amount_paid: amount,
-        balance_remaining: Math.max(0, newBalance),
-        payment_date: new Date().toISOString(),
-        razorpay_payment_link_id: paymentLinkId,
-        recorded_by: source
-      })
+      methodDetails
     ]);
 
     await connection.commit();
