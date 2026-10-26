@@ -1054,6 +1054,16 @@ const CustomerReceiptModal = ({ paymentDbId, onClose }) => {
                 <p className="text-xs text-gray-500 mt-1">{formatDate(receipt.paymentDate)}</p>
               </div>
               <div className="space-y-2 text-sm">
+                {receipt.receiptId && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Receipt No.</span>
+                    <span className="text-gray-900 font-medium">{receipt.receiptId}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment ID</span>
+                  <span className="text-gray-900 font-medium">{receipt.paymentId || '-'}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Invoice</span>
                   <span className="text-gray-900 font-medium">{receipt.invoiceId || '-'}</span>
@@ -1291,6 +1301,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
                         <p className="text-gray-500 text-xs">
                           {formatDate(payment.payment_date)} · {RECEIPT_METHOD_LABELS[payment.payment_method] || payment.payment_method || '-'}
                         </p>
+                        {(payment.payment_id || payment.receipt_id) && (
+                          <p className="text-gray-500 text-xs font-mono">
+                            {[payment.payment_id, payment.receipt_id].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${

@@ -1090,7 +1090,7 @@ const generateReceiptPDF = async (payment) => {
       doc.on('error', reject);
 
       const {
-        paymentId, invoiceId, customerName, customerEmail, customerPhone, propertyName, propertyCode,
+        paymentId, receiptId, invoiceId, customerName, customerEmail, customerPhone, propertyName, propertyCode,
         propertyType, property_type,
         amount,          // Amount paid in this transaction
         invoiceAmount,   // Total invoice amount
@@ -1129,7 +1129,9 @@ const generateReceiptPDF = async (payment) => {
           };
         })(),
         meta: [
-          ['RECEIPT NO.', paymentId || '-'],
+          // The RCP- sequence is the receipt's own number; a payment confirmed before it was
+          // drawn still prints its PAY- id here, and the PAY- id is always in the details below
+          ['RECEIPT NO.', receiptId || paymentId || '-'],
           ['DATE', formatDocumentDate(paymentDate || Date.now())],
           ['AMOUNT PAID', rupees(amountPaid)],
           ['STATUS', String(status || 'Paid').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())]
@@ -1139,6 +1141,7 @@ const generateReceiptPDF = async (payment) => {
       // ===== PAYMENT DETAILS =====
       y = drawSectionHeading(doc, y, 'Payment Details', MARGIN);
       y = drawDetailTable(doc, y, [
+        ['Payment ID', paymentId],
         ['Invoice', invoiceId],
         ['Method', methodLabel],
         ['Transaction Ref', transactionReference],

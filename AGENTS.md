@@ -80,6 +80,14 @@ Mistakes that fail silently and have each already broken live endpoints:
   `utils/paymentHistoryAction.js`, which widens the column as the migration would, or writes the
   nearest legal member when it cannot. Regression test:
   `node --test backend/utils/paymentHistoryAction.test.js`.
+- **Every confirmed payment carries two numbers: `payment_id` (PAY-<year>-n) and `receipt_id` (RCP-n,
+  per-partner `receipt_sequence`).** Only the Razorpay writer and `POST /payments` used to draw a
+  receipt number, so cash/cheque/bank payments never had one and no screen showed it.
+  `resyncInvoiceSettlement` now calls `assignMissingReceiptIds` (`utils/paymentIds.js`), so any
+  payment that becomes `paid`/`completed` gets one — never a `verification_pending` intent. Receipts
+  print RCP as "Receipt No." and PAY as "Payment ID"; staff and customer screens show both. Older
+  rows: `node scripts/backfill-receipt-ids.js` (dry run) then `--apply`. Regression test:
+  `node --test backend/utils/receiptIds.test.js`.
 - **`payment_history.payment_method_details` can be too narrow too.** schema_v22 adds it as JSON, but
   production had it as a short string column, so the Razorpay audit blob raised
   "Data too long for column 'payment_method_details'" inside the payment transaction and a paid

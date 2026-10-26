@@ -184,7 +184,8 @@ const createInvoicePaymentLink = async ({ invoice, portion, customAmount, perfor
     },
     notify: {
       sms: false,
-      email: false // We'll send our own email
+      // Razorpay's own link and payment-confirmation emails, alongside ours
+      email: true
     },
     reminder_enable: true,
     notes: {
@@ -1753,6 +1754,7 @@ router.get('/payment-details/:paymentId', async (req, res) => {
       SELECT
         p.id,
         p.payment_id,
+        p.receipt_id,
         p.amount,
         p.payment_method,
         p.transaction_reference,
@@ -1832,6 +1834,7 @@ router.get('/payment-details/:paymentId', async (req, res) => {
       data: {
         paymentId: payment.razorpay_payment_id || payment.transaction_reference,
         receiptNumber: payment.payment_id,
+        receiptId: payment.receipt_id || null,
         amount: parseFloat(payment.amount) || 0,
         status: payment.status,
         method: methodDetails?.method || payment.payment_method,

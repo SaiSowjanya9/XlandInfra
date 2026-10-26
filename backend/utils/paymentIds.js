@@ -91,4 +91,36 @@ const generateReceiptId = async (fpId = null) => {
   }
 };
 
-module.exports = { generatePaymentId, generateReceiptId };
+// Statuses that mean the money is in; only these carry a receipt number
+const CONFIRMED_STATUSES = "('paid', 'completed')";
+
+/**
+ * Give every confirmed payment of an invoice that still lacks one its RCP- number, in payment
+ * order. Only the Razorpay writer and POST /payments used to draw one, so cash, cheque and bank
+ * payments -- recorded, verified or edited to paid -- never had a receipt number at all. Called
+ * from resyncInvoiceSettlement, which every confirming writer goes through. A receipt number
+ * must never block the settlement itself, so a failure is logged, not thrown.
+ */
+const assignMissingReceiptIds = async (invoiceId, conn = pool) => {
+  try {
+    const [rows] = await conn.execute(
+      `SELECT id, franchise_partner_id FROM payments
+       WHERE invoice_id = ? AND status IN ${CONFIRMED_STATUSES} AND (receipt_id IS NULL OR receipt_id = '')
+       ORDER BY payment_date, id`,
+      [invoiceId]
+    );
+    for (const row of rows) {
+      const receiptId = await generateReceiptId(row.franchise_partner_id || null);
+      await conn.execute(
+        "UPDATE payments SET receipt_id = ? WHERE id = ? AND (receipt_id IS NULL OR receipt_id = '')",
+        [receiptId, row.id]
+      );
+    }
+    return rows.length;
+  } catch (error) {
+    console.warn(`[payments] could not assign receipt numbers for invoice ${invoiceId} (${error.message})`);
+    return 0;
+  }
+};
+
+module.exports = { generatePaymentId, generateReceiptId, assignMissingReceiptIds, CONFIRMED_STATUSES };

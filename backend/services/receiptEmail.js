@@ -70,7 +70,11 @@ const sendReceiptEmail = async (paymentData) => {
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="padding: 8px 0; color: #888; font-size: 13px;">Receipt No.</td>
-                <td style="padding: 8px 0; text-align: right; color: #D8B25C; font-size: 13px; font-family: monospace;">${paymentData.paymentId}</td>
+                <td style="padding: 8px 0; text-align: right; color: #D8B25C; font-size: 13px; font-family: monospace;">${paymentData.receiptId || paymentData.paymentId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 13px;">Payment ID</td>
+                <td style="padding: 8px 0; text-align: right; color: #ffffff; font-size: 13px; font-family: monospace;">${paymentData.paymentId}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #888; font-size: 13px;">Invoice</td>

@@ -150,8 +150,14 @@ const ReceiptModal = ({ isOpen, onClose, payment, onDownload, onSend, downloadin
             )}
 
             {/* Receipt ID */}
+            {payment.receiptId && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Receipt No.</span>
+                <span className="text-gray-900">{payment.receiptId}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
-              <span className="text-gray-500">Receipt ID</span>
+              <span className="text-gray-500">Payment ID</span>
               <span className="text-gray-900">{payment.paymentId}</span>
             </div>
 

@@ -807,7 +807,8 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
       },
       notify: {
         sms: false,
-        email: false // We send our own email
+        // Razorpay's own link and payment-confirmation emails, alongside ours
+        email: true
       },
       reminder_enable: true,
       notes: {

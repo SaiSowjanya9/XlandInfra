@@ -2910,6 +2910,9 @@ const Payments = ({ user, portalType = 'admin' }) => {
                             >
                               {payment.paymentId}
                             </button>
+                            {payment.receiptId && (
+                              <p className="text-[11px] text-gray-400">{payment.receiptId}</p>
+                            )}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <span className="text-sm text-gray-600">{payment.invoiceId || '-'}</span>

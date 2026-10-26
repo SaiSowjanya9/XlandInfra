@@ -1985,7 +1985,7 @@ router.get('/invoices/:id', async (req, res) => {
 
     // Get payment history for this invoice
     const [payments] = await pool.execute(
-      `SELECT id, amount, payment_method, payment_date, transaction_reference, status, remarks, created_at
+      `SELECT id, payment_id, receipt_id, amount, payment_method, payment_date, transaction_reference, status, remarks, created_at
        FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC`,
       [id]
     );
@@ -2154,6 +2154,7 @@ router.get('/payments/:id/receipt/pdf', authenticateCustomer, async (req, res) =
     const p = result.payment;
     const paymentData = {
       paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      receiptId: p.receipt_id || null,
       invoiceId: p.invoice_code,
       customerName: p.customer_name,
       customerEmail: p.customer_email || p.invoice_email,
