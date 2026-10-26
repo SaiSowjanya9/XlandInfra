@@ -148,8 +148,8 @@ const Properties = () => {
     try {
       // Use FP-specific endpoint if an FP is selected, otherwise get all
       const baseEndpoint = selectedFp && selectedFp.id !== 'all' 
-        ? `/api/admin/fp-view/${selectedFp.id}/properties`
-        : '/api/onboarding';
+        ? `${API_BASE}/api/admin/fp-view/${selectedFp.id}/properties`
+        : `${API_BASE}/api/onboarding`;
       // Add status filter parameter
       const statusParam = statusFilter ? `?status=${statusFilter}` : '';
       const endpoint = `${baseEndpoint}${statusParam}`;

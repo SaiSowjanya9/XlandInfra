@@ -826,14 +826,16 @@ const ManagerProperties = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Assign Vendor */}
-                        <button
-                          onClick={() => openAssignModal(property, 'vendor')}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
-                          title="Assign Vendor"
-                        >
-                          <Store className="w-4 h-4" />
-                        </button>
+                        {/* Assign Vendor - the server refuses it for FP managers */}
+                        {!isFPManager && (
+                          <button
+                            onClick={() => openAssignModal(property, 'vendor')}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                            title="Assign Vendor"
+                          >
+                            <Store className="w-4 h-4" />
+                          </button>
+                        )}
                         {/* Assigned Employees */}
                         <button
                           onClick={() => openAssignedEmployeesModal(property)}

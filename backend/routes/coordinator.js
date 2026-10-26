@@ -2123,7 +2123,7 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
     const coordinatorId = req.coordinatorId;
     const franchisePartnerId = req.franchisePartnerId;
     const {
-      serviceType, serviceVerified, zone, areaName, division,
+      companyName, serviceType, serviceVerified, zone, areaName, division,
       ownerName, ownerMobile, ownerEmail, ownerAadhar, ownerCountryCode,
       managerName, managerMobile, managerEmail, managerCountryCode,
       pocName, pocMobile, pocEmail, pocCountryCode,
@@ -2142,16 +2142,16 @@ router.post('/vendors', requireCoordinatorScope, async (req, res) => {
 
     const [result] = await pool.query(
       `INSERT INTO onboarded_vendors (
-        vendor_id, username, service_type, service_verified, zone, area_name, division,
+        vendor_id, username, company_name, service_type, service_verified, zone, area_name, division,
         owner_name, owner_mobile, owner_email, owner_aadhar, owner_country_code,
         manager_name, manager_mobile, manager_email, manager_country_code,
         poc_name, poc_mobile, poc_email, poc_country_code,
         gst_number, pan_number, license_number,
         rate_per_visit, coverage_per_day, working_hours_from, working_hours_to, rating, total_jobs_completed,
         franchise_partner_id, coordinator_id, created_by, created_by_id, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 'active')`,
       [
-        vendorId, username, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        vendorId, username, companyName || ownerName || '', serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
@@ -2276,11 +2276,12 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
         if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
           propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [...assignedZones, coordinatorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          // A blank first name must not become LIKE '%%', which matched every estimate of the FP
+          propertyParams = [...assignedZones, coordinatorId, creatorEmail, req.user?.username || '', req.user?.first_name ? `%${req.user.first_name}%` : null];
         } else {
           // No zones = only see own created (by ID or by name/email/username)
           propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [coordinatorId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          propertyParams = [coordinatorId, creatorEmail, req.user?.username || '', req.user?.first_name ? `%${req.user.first_name}%` : null];
         }
       }
       
@@ -2813,7 +2814,8 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
     fpZones.forEach(z => {
       if (!allZoneNames.has(z.name)) {
         allZoneNames.add(z.name);
-        combinedZones.push({ id: z.id, name: z.name });
+        // 'fp-' marks an fp_zones row for utils/zoneDelete; a bare number is a company-wide zone
+        combinedZones.push({ id: `fp-${z.id}`, name: z.name });
       }
     });
 

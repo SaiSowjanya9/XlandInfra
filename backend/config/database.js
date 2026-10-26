@@ -875,6 +875,44 @@ const initOnboardingTables = async () => {
       // Ignore if column doesn't exist yet
     }
     
+    // fp_zones (schema_v59): every portal's zone create/list/delete uses it, but nothing created it
+    try {
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS fp_zones (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          franchise_partner_id INT DEFAULT NULL,
+          manager_id INT DEFAULT NULL,
+          coordinator_id INT DEFAULT NULL,
+          supervisor_id INT DEFAULT NULL,
+          executive_id INT DEFAULT NULL,
+          created_by VARCHAR(255) DEFAULT NULL,
+          is_active TINYINT(1) DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_fp_zones_fp (franchise_partner_id),
+          INDEX idx_fp_zones_name (name)
+        )
+      `);
+    } catch (e) {
+      console.log('  - fp_zones table check failed:', e.message);
+    }
+
+    // payments.invoice_id must accept NULL (schema_v60): deleting an unpaid invoice detaches its
+    // pending/failed payment intents, which schema_v17's NOT NULL turned into a 500 every time
+    try {
+      const [[payCol]] = await conn.execute(
+        `SELECT IS_NULLABLE, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'payments' AND COLUMN_NAME = 'invoice_id'`,
+        [dbConfig.database]
+      );
+      if (payCol && payCol.IS_NULLABLE === 'NO') {
+        await conn.execute(`ALTER TABLE payments MODIFY COLUMN invoice_id ${payCol.COLUMN_TYPE} NULL`);
+      }
+    } catch (e) {
+      console.log('  - payments.invoice_id nullability check failed:', e.message);
+    }
+
     // fp_addons drift (schema_v58): schema_v8's table lacks the columns the add-on routes use,
     // and its legacy addon_code/name are NOT NULL though the insert never supplies them
     try {

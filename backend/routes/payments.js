@@ -2169,7 +2169,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
         taxAmount: invoice.tax_amount,
-        taxPercentage: invoice.tax_percent,
+        taxPercentage: invoice.tax_percentage,
         totalAmount: invoice.total_amount,
         balanceAmount: invoice.balance_amount,
         workOrderId: invoice.work_order_id || invoice.est_work_order_id,
@@ -2189,8 +2189,9 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
       if (lineItems.length > 0) {
         lineItemsHtml = lineItems.map((item, idx) => {
-          const name = item.name || 'Service';
-          const details = item.details || '';
+          // Generic invoices store their line as `description` only
+          const name = item.name || item.serviceName || item.description || 'Service';
+          const details = item.details || (item.name ? item.description : '') || '';
           const freq = item.frequency || item.frequencyType || item.frequency_type || '-';
           const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
           const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
@@ -2296,7 +2297,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                   </tr>
                   ` : ''}
                   <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${parseFloat(invoice.tax_percent) || 0}%)</td>
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${parseFloat(invoice.tax_percentage) || 0}%)</td>
                     <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.tax_amount)}</td>
                   </tr>
                   <tr style="border-top: 2px solid #C9A227;">

@@ -57,6 +57,7 @@ const resyncInvoiceSettlement = async (invoiceId, conn = pool) => {
          ELSE status
        END,
        ${paidAt.sql}
+       updated_at = NOW()
      WHERE id = ?`,
     [totalPaid, balanceAmount, paymentStatus, paymentStatus, paymentStatus, ...paidAt.params, invoiceId]
   );
