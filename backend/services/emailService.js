@@ -5,6 +5,7 @@ const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
 const { pool } = require('../config/database');
+const { brandEmailHeader, BRAND_HEAD, BRAND_LOGO_ATTACHMENT } = require('../utils/emailBrandHeader');
 
 // The brand mark and the three contact icons, sent with the message and referenced by Content-ID.
 // Hotlinking them puts the letterhead behind the "display images" prompt every mail client shows
@@ -478,22 +479,17 @@ const sendCustomerActivationEmail = async (customerData) => {
       'Message-ID': `<activation-${Date.now()}@xlandinfra.com>`
     },
     text: `Welcome to XLAND INFRA Customer Portal!\n\nHello ${firstName || 'Valued Customer'},\n\nYour account has been created for ${propertyName || 'XLAND INFRA'} property portal.${propertyId ? `\nProperty ID: ${propertyId}` : ''}\n\nYour Login Credentials:\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nActivate your account: ${activationLink}\n\nThis link expires in 72 hours.\n\nRegards,\nXLAND INFRA Team`,
+    attachments: [BRAND_LOGO_ATTACHMENT],
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">${BRAND_HEAD}
       </head>
-      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <body class="body" style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <!-- Header -->
-          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
-            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
-              XLAND<span style="color: #D8B25C;">INFRA</span>
-            </h1>
-            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
-          </div>
+          <!-- Header -->${brandEmailHeader()}
           
           <!-- Main Content -->
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
@@ -749,22 +745,17 @@ const sendEmployeeWelcomeEmail = async (userData) => {
       'Message-ID': `<employee-${Date.now()}@xlandinfra.com>`
     },
     text: `Welcome to XLAND INFRA!\n\nHello ${firstName || 'Team Member'},\n\nYour account has been created for XLAND INFRA Service Portal.\nRole: ${roleLabel}\n\nYour Login Credentials:\nUser ID: ${userId}\nUsername: ${username || email}\nTemporary Password: ${tempPassword}\n\nLogin at: ${portalUrl}\n\nYou will be required to change your password on first login.\n\nRegards,\nXLAND INFRA Team`,
+    attachments: [BRAND_LOGO_ATTACHMENT],
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">${BRAND_HEAD}
       </head>
-      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <body class="body" style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <!-- Header -->
-          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
-            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
-              XLAND<span style="color: #D8B25C;">INFRA</span>
-            </h1>
-            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
-          </div>
+          <!-- Header -->${brandEmailHeader()}
           
           <!-- Main Content -->
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
@@ -870,22 +861,17 @@ const sendFPEmployeeWelcomeEmail = async (userData) => {
     from: `"XLAND INFRA" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Welcome to XLAND INFRA - Your Employee Account Has Been Created`,
+    attachments: [BRAND_LOGO_ATTACHMENT],
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">${BRAND_HEAD}
       </head>
-      <body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <body class="body" style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <!-- Header -->
-          <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
-            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
-              XLAND<span style="color: #D8B25C;">INFRA</span>
-            </h1>
-            <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
-          </div>
+          <!-- Header -->${brandEmailHeader()}
           
           <!-- Main Content -->
           <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">

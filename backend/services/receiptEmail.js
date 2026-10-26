@@ -1,5 +1,6 @@
 const { sendEmail } = require('./emailService');
 const { generateReceiptPDF } = require('./pdfService');
+const { brandEmailHeader, BRAND_HEAD, BRAND_LOGO_ATTACHMENT, keepWhite } = require('../utils/emailBrandHeader');
 
 const METHOD_LABELS = {
   razorpay: 'Card/Net Banking',
@@ -44,20 +45,21 @@ const sendReceiptEmail = async (paymentData) => {
     // The same dark + gold family the activation and reset emails use — a receipt from us
     // should look like it came from the same house as the account welcome
     html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">${BRAND_HEAD}
+      </head>
+      <body class="body" style="margin: 0; padding: 0; background-color: #0D0D0D;">
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #0D0D0D;">
-        <!-- Header -->
-        <div style="text-align: center; padding: 30px 0; background: linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%); border-radius: 16px 16px 0 0; border: 1px solid #D8B25C33; border-bottom: none;">
-          <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 2px;">
-            XLAND<span style="color: #D8B25C;">INFRA</span>
-          </h1>
-          <p style="margin: 5px 0 0 0; color: #888; font-size: 11px; letter-spacing: 3px;">PRIVATE LIMITED</p>
-        </div>
+        <!-- Header -->${brandEmailHeader()}
 
         <!-- Main content -->
         <div style="background: linear-gradient(180deg, #1a1a1a 0%, #141414 100%); padding: 40px 30px; border: 1px solid #D8B25C33; border-top: none; border-bottom: none;">
           <h2 style="color: #D8B25C; margin: 0 0 8px 0; font-size: 24px; font-weight: 400;">Payment Received</h2>
           <p style="color: #cccccc; font-size: 15px; line-height: 1.8; margin: 0 0 25px 0;">
-            Thank you, <strong style="color: #ffffff;">${paymentData.customerName || 'Customer'}</strong> — we received
+            Thank you, <strong style="color: #ffffff;">${keepWhite(paymentData.customerName || 'Customer')}</strong> — we received
             <strong style="color: #D8B25C;">₹${amountPaid.toLocaleString('en-IN')}</strong>
             on ${paymentDateFormatted}. Your receipt is attached as a PDF.
           </p>
@@ -116,8 +118,10 @@ const sendReceiptEmail = async (paymentData) => {
           </p>
         </div>
       </div>
+      </body>
+      </html>
     `,
-    attachments: [{
+    attachments: [BRAND_LOGO_ATTACHMENT, {
       filename: `Receipt_${paymentData.paymentId}.pdf`,
       content: pdfBuffer,
       contentType: 'application/pdf'
