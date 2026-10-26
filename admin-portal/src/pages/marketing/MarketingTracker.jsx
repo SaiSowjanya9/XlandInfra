@@ -108,7 +108,7 @@ const MarketingTracker = ({ user, portalType = 'franchise' }) => {
   const showPartner = getMarketingApiPath(portalType) === 'admin';
   // What this portal may change. The server refuses the rest with a 403 whatever is rendered;
   // this is so a read-only portal shows the pipeline instead of controls that all fail.
-  const { canEdit, canReview } = marketingPermissions(portalType);
+  const { canEdit, canReview } = marketingPermissions(portalType, user?.role);
   // Marketing belongs to the franchise partner account inside the FP portal, so an FP's own
   // manager is refused there. These same screens are the Ops Manager portal's own Marketing
   // section, where a 'manager' role is exactly who they are for -- so what decides is the portal,

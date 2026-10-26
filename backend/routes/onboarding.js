@@ -368,8 +368,10 @@ router.post('/', authenticate, async (req, res) => {
 
 // ============================================
 // GET /api/onboarding  — List all properties from BOTH tables
+// Every row carries its contacts' names, emails and phones, so it needs a login; it used to be
+// readable by anyone who knew the URL.
 // ============================================
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const { status } = req.query;
     const data = [];
@@ -689,7 +691,7 @@ router.get('/suggestions/cities', async (req, res) => {
 // ============================================
 // GET /api/onboarding/lookup/:propertyId — Find property by property_id string
 // ============================================
-router.get('/lookup/:propertyId', async (req, res) => {
+router.get('/lookup/:propertyId', authenticate, async (req, res) => {
   try {
     const { propertyId } = req.params;
     const [rows] = await pool.execute(

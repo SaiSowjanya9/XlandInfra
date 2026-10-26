@@ -136,7 +136,7 @@ const ExecutiveWorkOrders = ({ user }) => {
   const paginatedWorkOrders = filteredWorkOrders.slice(startIndex, endIndex);
 
   const handleSearch = () => setSearchTerm(searchInput);
-  const handleClear = () => { setSearchInput(''); setSearchTerm(''); };
+  const handleClear = () => { setSearchInput(''); setSearchTerm(''); setStatusFilter(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -434,7 +434,6 @@ const ExecutiveWorkOrders = ({ user }) => {
               <option value="assigned">Assigned</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
-              <option value="closed">Closed</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <button onClick={() => fetchWorkOrders()} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-700" title="Refresh">

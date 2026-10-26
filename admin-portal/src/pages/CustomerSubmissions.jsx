@@ -1,6 +1,6 @@
 import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import React, { useState, useEffect, useCallback } from 'react';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import { 
   Search, Trash2, X, Check, Building2, Home, TreePine, Map,
   Eye, ChevronDown, AlertCircle, Bell, Clock, Hammer, Lock, 
@@ -100,6 +100,11 @@ const CustomerSubmissions = () => {
   const { fpList, selectedFp, selectFp, selectedPropertyType, setSelectedPropertyType, loading: fpLoading, refreshFpList } = useFP();
   const token = getAuthToken();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+
+  // The Operations Manager is view-only here as on every other screen of this portal: no edit,
+  // assignment, deactivate, restore or permanent delete. The server refuses those writes too.
+  const currentUser = getCurrentUser();
+  const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Assignment states
   const [assignVendorModal, setAssignVendorModal] = useState(null); // property to assign vendor to
@@ -361,7 +366,9 @@ const CustomerSubmissions = () => {
         ? property.id.replace('prop-', '') 
         : property.id;
       
-      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}`, {
+      // The two property tables share ids; name the row's own table so only it is touched
+      const source = property.sourceTable ? `?sourceTable=${encodeURIComponent(property.sourceTable)}` : '';
+      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}${source}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -387,7 +394,8 @@ const CustomerSubmissions = () => {
         ? property.id.replace('prop-', '') 
         : property.id;
       
-      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/restore`, {
+      const source = property.sourceTable ? `?sourceTable=${encodeURIComponent(property.sourceTable)}` : '';
+      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/restore${source}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -414,7 +422,8 @@ const CustomerSubmissions = () => {
         ? property.id.replace('prop-', '') 
         : property.id;
       
-      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/permanent`, {
+      const source = property.sourceTable ? `?sourceTable=${encodeURIComponent(property.sourceTable)}` : '';
+      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/permanent${source}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -505,7 +514,9 @@ const CustomerSubmissions = () => {
           flatBlockInfo: editFormData.flatBlockInfo,
           watchmanName: editFormData.watchmanName,
           watchmanContact: editFormData.watchmanContact ? `+91${editFormData.watchmanContact}` : '',
-          associationContacts: editFormData.contacts
+          associationContacts: editFormData.contacts,
+          // Without it the route guessed `properties` first whenever that table had the same id
+          sourceTable: editProperty?.sourceTable
         })
       });
       const result = await response.json();
@@ -1244,6 +1255,7 @@ const CustomerSubmissions = () => {
                           >
                             <Download className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
                           </button>
+                          {!isOpsManager && (<>
                           <button
                             onClick={() => openEditModal(property)}
                             className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1291,6 +1303,7 @@ const CustomerSubmissions = () => {
                               <Trash2 className="w-4 h-4 text-red-500" />
                             </button>
                           )}
+                          </>)}
                         </div>
                       </td>
                     </tr>
@@ -1796,7 +1809,7 @@ const CustomerSubmissions = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-warm-section border-t border-warm-border flex justify-between items-center sticky bottom-0">
-              {viewProperty.status === 'inactive' ? (
+              {isOpsManager ? <span /> : viewProperty.status === 'inactive' ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { handleRestore(viewProperty); setViewProperty(null); }}

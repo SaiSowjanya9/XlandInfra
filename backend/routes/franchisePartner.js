@@ -1145,7 +1145,7 @@ router.post('/properties/:id/assign-vendor', requireFPScope, async (req, res) =>
     // If not found, check onboarded_properties table
     if (property.length === 0) {
       [property] = await pool.execute(
-        `SELECT id, property_id, community_name as name, property_type, address, city, state, pincode as zipcode, zone as zone_id,
+        `SELECT id, property_id, community_name as name, property_type, address, city, state, postal_code as zipcode, zone as zone_id,
                 contact_person, contact_phone, contact_email 
          FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
         [id, req.fpId]
@@ -1757,6 +1757,51 @@ router.patch('/work-orders/:id/assign-vendor', requireFPScope, async (req, res) 
       message: 'Failed to assign vendor',
       error: error.message
     });
+  }
+});
+
+// Assign an employee to a work order. FP Work Orders' Assign Employee action called this and it
+// did not exist ("Route not found"). Same rule as the Manager's: work_orders.assigned_employee_id
+// is created by no CREATE TABLE, so it is ensured here (schema_v57 is the same repair).
+router.patch('/work-orders/:id/assign-employee', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const employeeId = Number(req.body.employeeId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+      return res.status(400).json({ success: false, message: 'Select an employee' });
+    }
+    const [accessCheck] = await pool.execute(
+      'SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?',
+      [id, req.fpId]
+    );
+    if (accessCheck.length === 0) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+    const [emp] = await pool.execute(
+      'SELECT id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
+      [employeeId, req.fpId]
+    );
+    if (emp.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    const [[col]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = 'work_orders' AND column_name = 'assigned_employee_id'`
+    );
+    if (Number(col.n) === 0) await pool.query('ALTER TABLE work_orders ADD COLUMN assigned_employee_id INT NULL');
+
+    // A pending order becomes assigned; one already under way keeps its status
+    await pool.execute(
+      `UPDATE work_orders SET assigned_employee_id = ?,
+              status = CASE WHEN status IN ('pending', 'requested') THEN 'assigned' ELSE status END,
+              updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [employeeId, id, req.fpId]
+    );
+    res.json({ success: true, message: 'Employee assigned' });
+  } catch (error) {
+    console.error('FP assign employee error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign employee', error: error.message });
   }
 });
 
@@ -2807,6 +2852,32 @@ router.post('/vendors', requireFPScope, async (req, res) => {
   }
 });
 
+// Bulk archive vendors (soft delete multiple).
+// Declared before PUT /vendors/:id: Express matches in order, so below it this path was answered
+// by the single-vendor update with id 'bulk-archive' -- "Vendor not found or access denied".
+router.put('/vendors/bulk-archive', requireFPScope, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No vendor IDs provided' });
+    }
+    
+    // Create placeholders for SQL IN clause
+    const placeholders = ids.map(() => '?').join(',');
+    const params = [...ids, req.fpId];
+    
+    const [result] = await pool.execute(
+      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive', updated_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
+      params
+    );
+    
+    res.json({ success: true, message: `${result.affectedRows} vendor(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Bulk archive vendors error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Update/Modify vendor (uses onboarded_vendors table)
 router.put('/vendors/:id', requireFPScope, async (req, res) => {
   try {
@@ -3002,30 +3073,6 @@ router.delete('/vendors/:id/permanent', requireFPScope, async (req, res) => {
       message: 'Failed to permanently delete vendor',
       error: error.message
     });
-  }
-});
-
-// Bulk archive vendors (soft delete multiple)
-router.put('/vendors/bulk-archive', requireFPScope, async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, message: 'No vendor IDs provided' });
-    }
-    
-    // Create placeholders for SQL IN clause
-    const placeholders = ids.map(() => '?').join(',');
-    const params = [...ids, req.fpId];
-    
-    const [result] = await pool.execute(
-      `UPDATE onboarded_vendors SET is_active = 0, status = 'inactive', updated_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
-      params
-    );
-    
-    res.json({ success: true, message: `${result.affectedRows} vendor(s) archived`, archivedCount: result.affectedRows });
-  } catch (error) {
-    console.error('Bulk archive vendors error:', error);
-    res.status(500).json({ success: false, message: error.message });
   }
 });
 

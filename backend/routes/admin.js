@@ -474,7 +474,10 @@ router.post('/properties', authenticate, managerOrAdmin, async (req, res) => {
 });
 
 // Update property (Admin, Manager only) - handles both properties and onboarded_properties
-router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => {
+// The Operations Manager reaches managerOrAdmin too, but is view-only (see adminWriteRoles).
+router.put('/properties/:id', authenticate, managerOrAdmin, (req, res, next) => (
+  req.user?.role === ROLES.OPERATIONS_MANAGER ? adminWriteRoles(req, res, next) : next()
+), async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -510,9 +513,15 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
         'name', 'property_type', 'address', 'city', 'state', 'zip_code', 'country',
         'contact_person', 'contact_phone', 'contact_email', 'zone_id', 'division_id', 'area_name', 'is_active'
       ],
+      // The contact, notes and watchman columns are the ones POST /api/onboarding writes. They
+      // were missing here, so Property Management's Edit reported "updated" for a customer added
+      // through Add Customer while silently dropping every contact, note and watchman change.
       onboarded_properties: [
         'community_name', 'property_type', 'address', 'city', 'state', 'postal_code',
-        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units'
+        'zone', 'division', 'area_name', 'status', 'number_of_units', 'total_units',
+        'contact_person', 'contact_phone', 'contact_email', 'association_contacts',
+        'notes', 'landmark', 'block_info', 'flat_block_info', 'villa_plot_number',
+        'watchman_name', 'watchman_contact'
       ]
     };
 
@@ -551,6 +560,13 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
         finalValue = value ? 'active' : 'inactive';
       }
       
+      // association_contacts is a JSON column; an array cannot be bound as one value
+      if (dbKey === 'association_contacts' && finalValue !== null && typeof finalValue === 'object') {
+        finalValue = JSON.stringify(finalValue);
+      }
+      // mysql2 refuses an undefined bind
+      if (finalValue === undefined) continue;
+
       if (allowedFields.includes(dbKey)) {
         setClauses.push(`${dbKey} = ?`);
         values.push(finalValue);
@@ -592,23 +608,37 @@ router.put('/properties/:id', authenticate, managerOrAdmin, async (req, res) => 
   }
 });
 
+// `properties` and `onboarded_properties` number their rows independently, so the same id names
+// two different customers. The list knows which table each row came from (`source_table`) and
+// the delete/restore/permanent-delete calls now pass it as ?sourceTable=; without it they touched
+// both tables -- deactivating (or deleting) an unrelated customer that happened to share the id.
+// Absent or unrecognised, both tables are tried, as before.
+const propertySourceTables = (req) => {
+  const s = req.query?.sourceTable || req.body?.sourceTable;
+  if (s === 'properties' || s === 'onboarded_properties') return [s];
+  return ['properties', 'onboarded_properties'];
+};
+
 // Delete property (Admin only) - soft delete by setting status to 'inactive'
-router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
+router.delete('/properties/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
+    const tables = propertySourceTables(req);
     let updated = false;
     let contactEmail = null;
 
     // Get contact email before soft-deleting (for customer account deactivation)
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email FROM properties WHERE id = ?`,
-        [id]
-      );
-      if (props.length > 0) contactEmail = props[0].contact_email;
-    } catch (e) {}
+    if (tables.includes('properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM properties WHERE id = ?`,
+          [id]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
     
-    if (!contactEmail) {
+    if (!contactEmail && tables.includes('onboarded_properties')) {
       try {
         const [props] = await pool.execute(
           `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
@@ -619,22 +649,26 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
     }
 
     // Try to soft-delete from properties table first (set status to 'inactive')
-    try {
-      const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'inactive' WHERE id = ?`,
-        [id]
-      );
-      if (result1.affectedRows > 0) updated = true;
-    } catch (e) { console.log('Properties table update skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `UPDATE properties SET status = 'inactive' WHERE id = ?`,
+          [id]
+        );
+        if (result1.affectedRows > 0) updated = true;
+      } catch (e) { console.log('Properties table update skipped:', e.message); }
+    }
 
     // Also try to soft-delete from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ?`,
-        [id]
-      );
-      if (result2.affectedRows > 0) updated = true;
-    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ?`,
+          [id]
+        );
+        if (result2.affectedRows > 0) updated = true;
+      } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+    }
 
     if (!updated) {
       return res.status(404).json({
@@ -671,22 +705,25 @@ router.delete('/properties/:id', authenticate, adminOnly, async (req, res) => {
 });
 
 // Restore property (Admin only) - set status back to 'active'
-router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) => {
+router.put('/properties/:id/restore', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
+    const tables = propertySourceTables(req);
     let restored = false;
     let contactEmail = null;
 
     // Get contact email before restoring (for customer account reactivation)
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email FROM properties WHERE id = ?`,
-        [id]
-      );
-      if (props.length > 0) contactEmail = props[0].contact_email;
-    } catch (e) {}
+    if (tables.includes('properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email FROM properties WHERE id = ?`,
+          [id]
+        );
+        if (props.length > 0) contactEmail = props[0].contact_email;
+      } catch (e) {}
+    }
     
-    if (!contactEmail) {
+    if (!contactEmail && tables.includes('onboarded_properties')) {
       try {
         const [props] = await pool.execute(
           `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
@@ -697,22 +734,26 @@ router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) 
     }
 
     // Try to restore from properties table first
-    try {
-      const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
-        [id]
-      );
-      if (result1.affectedRows > 0) restored = true;
-    } catch (e) { console.log('Properties table restore skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
+          [id]
+        );
+        if (result1.affectedRows > 0) restored = true;
+      } catch (e) { console.log('Properties table restore skipped:', e.message); }
+    }
 
     // Also try to restore from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
-        [id]
-      );
-      if (result2.affectedRows > 0) restored = true;
-    } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive'`,
+          [id]
+        );
+        if (result2.affectedRows > 0) restored = true;
+      } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+    }
 
     if (!restored) {
       return res.status(404).json({
@@ -749,18 +790,21 @@ router.put('/properties/:id/restore', authenticate, adminOnly, async (req, res) 
 });
 
 // Permanently delete property (Admin only) - hard delete from database
-router.delete('/properties/:id/permanent', authenticate, adminOnly, async (req, res) => {
+router.delete('/properties/:id/permanent', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
+    const tables = propertySourceTables(req);
     let deleted = false;
     let contactEmail = null;
 
     // Get contact email before deleting (for customer_accounts cleanup)
-    try {
-      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
-      if (prop.length > 0) contactEmail = prop[0].contact_email;
-    } catch (e) {}
-    if (!contactEmail) {
+    if (tables.includes('properties')) {
+      try {
+        const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
+        if (prop.length > 0) contactEmail = prop[0].contact_email;
+      } catch (e) {}
+    }
+    if (!contactEmail && tables.includes('onboarded_properties')) {
       try {
         const [prop] = await pool.query('SELECT contact_email FROM onboarded_properties WHERE id = ?', [id]);
         if (prop.length > 0) contactEmail = prop[0].contact_email;
@@ -768,22 +812,26 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, async (req, 
     }
 
     // Try to delete from properties table first
-    try {
-      const [result1] = await pool.execute(
-        `DELETE FROM properties WHERE id = ?`,
-        [id]
-      );
-      if (result1.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Properties table delete skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `DELETE FROM properties WHERE id = ?`,
+          [id]
+        );
+        if (result1.affectedRows > 0) deleted = true;
+      } catch (e) { console.log('Properties table delete skipped:', e.message); }
+    }
 
     // Also try to delete from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `DELETE FROM onboarded_properties WHERE id = ?`,
-        [id]
-      );
-      if (result2.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `DELETE FROM onboarded_properties WHERE id = ?`,
+          [id]
+        );
+        if (result2.affectedRows > 0) deleted = true;
+      } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
+    }
 
     if (!deleted) {
       return res.status(404).json({
@@ -1018,10 +1066,11 @@ router.delete('/units/:id', authenticate, adminOnly, async (req, res) => {
 // WORK ORDERS MANAGEMENT
 // ============================================
 
-// Get all work orders (Public for admin portal)
-router.get('/work-orders', async (req, res) => {
+// Get all work orders. It lists every customer's name, email and phone, so it needs a login --
+// it used to be public, readable by anyone who knew the URL.
+router.get('/work-orders', authenticate, adminOnly, async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, fpId, excludeWithEstimates } = req.query;
     
     let query = `
       SELECT wo.*,
@@ -1079,6 +1128,20 @@ router.get('/work-orders', async (req, res) => {
       const searchTerm = `%${search.trim()}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
+
+    // The Work Orders dashboard sends the partner chosen in its FP picker; this route ignored it,
+    // so every partner's dashboard showed the whole company's work orders. `all` is not an id.
+    if (fpId && /^\d+$/.test(String(fpId))) {
+      conditions.push(`wo.franchise_partner_id = ?`);
+      params.push(parseInt(fpId, 10));
+    }
+
+    // Generated Invoices > Work Order lists completed work orders still waiting for an estimate
+    if (excludeWithEstimates === 'true') {
+      conditions.push(`wo.work_order_id NOT IN (
+        SELECT DISTINCT work_order_id FROM fp_estimates WHERE work_order_id IS NOT NULL
+      )`);
+    }
     
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
@@ -1086,7 +1149,12 @@ router.get('/work-orders', async (req, res) => {
     
     query += ` ORDER BY wo.created_at DESC LIMIT 500`;
 
-    const [workOrders] = await pool.execute(query, params);
+    const [rows] = await pool.execute(query, params);
+
+    // The property joins match on id OR name, so one work order can come back once per matching
+    // property; list each work order once.
+    const seen = new Set();
+    const workOrders = rows.filter(wo => (seen.has(wo.id) ? false : (seen.add(wo.id), true)));
 
     // Fetch attachments for each work order
     for (const wo of workOrders) {
@@ -1192,7 +1260,7 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
   try {
     const { id } = req.params;
     const { 
-      status, priority, assignedTo, scheduledDate, notes,
+      status, priority, assignedTo, assignType, scheduledDate, notes,
       category_id, subcategory_id, description,
       permission_to_enter, has_pet, entry_notes,
       customer_name, customer_email, customer_phone, block, flat_number
@@ -1204,7 +1272,23 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
 
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
     if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
-    if (assignedTo !== undefined) { updates.push('assigned_to = ?'); params.push(assignedTo); }
+    // An assignment used to write `assigned_to`, a column the work_orders table does not have, so
+    // the admin's Assign Vendor / Assign Employee always failed with a 500. A vendor goes where
+    // the vendor portal reads it (assigned_vendor_id); an employee goes to assigned_employee_id,
+    // which no CREATE TABLE makes, so it is ensured first (schema_v57 is the same repair).
+    if (assignedTo !== undefined) {
+      if (assignType === 'employee') {
+        const [[col]] = await pool.query(
+          `SELECT COUNT(*) AS n FROM information_schema.columns
+           WHERE table_schema = DATABASE() AND table_name = 'work_orders' AND column_name = 'assigned_employee_id'`
+        );
+        if (Number(col.n) === 0) await pool.query('ALTER TABLE work_orders ADD COLUMN assigned_employee_id INT NULL');
+        updates.push('assigned_employee_id = ?'); params.push(assignedTo || null);
+      } else {
+        updates.push('assigned_vendor_id = ?', 'assigned_at = NOW()', 'assigned_by = ?');
+        params.push(assignedTo || null, req.user?.id ? String(req.user.id) : null);
+      }
+    }
     if (scheduledDate !== undefined) { updates.push('scheduled_date = ?'); params.push(scheduledDate); }
     if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
     if (category_id !== undefined) { updates.push('category_id = ?'); params.push(category_id || null); }
@@ -1283,7 +1367,7 @@ router.put('/work-orders/:id', authenticate, managerOrAdmin, async (req, res) =>
 });
 
 // Get vendors list for admin
-router.get('/vendors', async (req, res) => {
+router.get('/vendors', authenticate, adminOnly, async (req, res) => {
   try {
     const { forSchedules, fpId } = req.query;
 
@@ -1310,10 +1394,10 @@ router.get('/vendors', async (req, res) => {
 });
 
 // Get employees list for admin
-router.get('/employees', async (req, res) => {
+router.get('/employees', authenticate, adminOnly, async (req, res) => {
   try {
     const [employees] = await pool.execute(
-      `SELECT id, first_name, last_name, email, phone, role FROM admins WHERE is_active = 1 ORDER BY first_name`
+      `SELECT id, first_name, last_name, email, phone, role FROM admin_users WHERE is_active = 1 ORDER BY first_name`
     );
     res.json({ success: true, employees });
   } catch (error) {
@@ -1323,7 +1407,7 @@ router.get('/employees', async (req, res) => {
 });
 
 // Get vendor assignments for admin
-router.get('/vendors/assignments', async (req, res) => {
+router.get('/vendors/assignments', authenticate, adminOnly, async (req, res) => {
   try {
     const { status } = req.query;
     
@@ -1516,10 +1600,10 @@ router.delete('/work-orders/:id', authenticate, managerOrAdmin, async (req, res)
 });
 
 // ============================================
-// DASHBOARD STATS (Public - no auth required)
+// DASHBOARD STATS (no caller is anonymous any more -- company figures need a login)
 // ============================================
 
-router.get('/dashboard/stats', async (req, res) => {
+router.get('/dashboard/stats', authenticate, adminOnly, async (req, res) => {
   try {
     // Run all queries in parallel for faster response
     const [
@@ -1595,10 +1679,10 @@ router.get('/dashboard/stats', async (req, res) => {
 });
 
 // ============================================
-// RECENT ACTIVITIES (Public)
+// RECENT ACTIVITIES
 // ============================================
 
-router.get('/dashboard/recent-activities', async (req, res) => {
+router.get('/dashboard/recent-activities', authenticate, adminOnly, async (req, res) => {
   try {
     // Run all queries in parallel for faster response
     const [workOrders, props, vends] = await Promise.all([
@@ -1687,7 +1771,7 @@ function formatTimeAgo(date) {
 // NOTIFICATIONS
 // ============================================
 
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', authenticate, adminOnly, async (req, res) => {
   try {
     // Return system notifications based on recent activities
     const notifications = [];
@@ -1730,11 +1814,11 @@ router.get('/notifications', async (req, res) => {
   }
 });
 
-router.put('/notifications/:id/read', async (req, res) => {
+router.put('/notifications/:id/read', authenticate, adminOnly, async (req, res) => {
   res.json({ success: true, message: 'Notification marked as read' });
 });
 
-router.put('/notifications/read-all', async (req, res) => {
+router.put('/notifications/read-all', authenticate, adminOnly, async (req, res) => {
   res.json({ success: true, message: 'All notifications marked as read' });
 });
 
@@ -2455,7 +2539,7 @@ router.get('/fp-view/:fpId/estimates', authenticate, adminOnly, async (req, res)
 });
 
 // Bulk archive estimates (Admin)
-router.put('/estimates/bulk-archive', authenticate, adminOnly, async (req, res) => {
+router.put('/estimates/bulk-archive', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -2478,7 +2562,7 @@ router.put('/estimates/bulk-archive', authenticate, adminOnly, async (req, res) 
 });
 
 // Update estimate details (full update for property-based estimates)
-router.put('/estimates/:id', authenticate, adminOnly, async (req, res) => {
+router.put('/estimates/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const estimateId = req.params.id;
     
@@ -3125,7 +3209,7 @@ router.get('/fp-view/:fpId/vendors', authenticate, adminOnly, async (req, res) =
 });
 
 // Bulk archive vendors (Admin)
-router.put('/vendors/bulk-archive', authenticate, adminOnly, async (req, res) => {
+router.put('/vendors/bulk-archive', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -3147,7 +3231,7 @@ router.put('/vendors/bulk-archive', authenticate, adminOnly, async (req, res) =>
 });
 
 // Delete all archived/inactive vendors permanently (Admin)
-router.delete('/vendors/archived/delete-all', authenticate, adminOnly, async (req, res) => {
+router.delete('/vendors/archived/delete-all', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const [result] = await pool.execute(
       `DELETE FROM onboarded_vendors WHERE (status = 'inactive' OR status = 'deleted' OR is_active = 0)`
@@ -3383,7 +3467,7 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
 });
 
 // Update employee zones (Admin)
-router.put('/employees/:id/zones', authenticate, adminOnly, async (req, res) => {
+router.put('/employees/:id/zones', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     const { zones } = req.body;
@@ -3523,7 +3607,7 @@ router.get('/all-amc-packages', authenticate, adminOnly, async (req, res) => {
 });
 
 // DELETE AMC Package (Admin mode) - deletes from fp_amc_packages table
-router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
+router.delete('/amc-packages/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -3546,7 +3630,7 @@ router.delete('/amc-packages/:id', authenticate, adminOnly, async (req, res) => 
 });
 
 // CREATE AMC Package (Admin mode) - creates in fp_amc_packages table
-router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
+router.post('/amc-packages', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { fpId, packageName, serviceRows, services, rate, billingDuration, description } = req.body;
     // The package's own markup, kept so a reopened package prices as it was saved rather than
@@ -3599,7 +3683,7 @@ router.post('/amc-packages', authenticate, adminOnly, async (req, res) => {
 });
 
 // UPDATE AMC Package (Admin mode) - updates fp_amc_packages table
-router.put('/amc-packages/:id', authenticate, adminOnly, async (req, res) => {
+router.put('/amc-packages/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     const { packageName, serviceRows, rate, billingDuration, description } = req.body;
@@ -3728,7 +3812,7 @@ router.get('/all-addons', authenticate, adminOnly, async (req, res) => {
 });
 
 // DELETE Add-on (Admin mode) - deletes from fp_addons table
-router.delete('/addons/:id', authenticate, adminOnly, async (req, res) => {
+router.delete('/addons/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -3773,7 +3857,7 @@ router.get('/fp-view/:fpId/addons', authenticate, adminOnly, async (req, res) =>
 });
 
 // Update FP Add-on (Admin can edit any FP's addon)
-router.put('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
+router.put('/fp-addons/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     const { service_name, frequency_type, frequency_count, property_type, price, description } = req.body;
@@ -3799,7 +3883,7 @@ router.put('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
 });
 
 // Delete FP Add-on (Admin can delete any FP's addon)
-router.delete('/fp-addons/:id', authenticate, adminOnly, async (req, res) => {
+router.delete('/fp-addons/:id', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.execute('DELETE FROM fp_addons WHERE id = ?', [id]);
@@ -3896,8 +3980,9 @@ router.get('/fp-view/:fpId/customers', authenticate, adminOnly, async (req, res)
   }
 });
 
-// Migration: Update all existing estimates with created_by_name
-router.post('/migrate-estimate-names', async (req, res) => {
+// Migration: Update all existing estimates with created_by_name. It rewrites data, so it is an
+// admin write -- it used to answer anyone at all.
+router.post('/migrate-estimate-names', authenticate, adminWriteRoles, async (req, res) => {
   try {
     // Update estimates where created_by_name is empty - get name from users table
     const [result] = await pool.query(`
@@ -4039,10 +4124,13 @@ router.get('/service-types', authenticate, async (req, res) => {
     // Get user's franchise_partner_id and role
     const userId = req.user?.id || req.user?.userId;
     const userRole = req.user?.role;
-    let fpId = null;
+    // An FP employee's token carries its partner. Prefer it: an employee who signed in from
+    // fp_employees has that table's id as req.user.id, which collides with an unrelated
+    // users.id -- possibly an admin's, which then listed every partner's service types.
+    let fpId = req.user?.franchisePartnerId || null;
     let isSuperAdmin = userRole === 'super_admin' || userRole === 'admin';
     
-    if (userId && !isSuperAdmin) {
+    if (userId && !isSuperAdmin && !fpId) {
       const [userRows] = await pool.execute(
         'SELECT franchise_partner_id, role FROM users WHERE id = ?',
         [userId]
@@ -4101,9 +4189,9 @@ router.post('/service-types', authenticate, async (req, res) => {
     const userRole = req.user?.role;
     const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-    // Get user's franchise_partner_id if they're an employee
-    let fpId = null;
-    if (!isAdmin && userId) {
+    // Get user's franchise_partner_id if they're an employee (token first -- see GET above)
+    let fpId = isAdmin ? null : (req.user?.franchisePartnerId || null);
+    if (!isAdmin && userId && !fpId) {
       const [userRows] = await pool.execute(
         'SELECT franchise_partner_id FROM users WHERE id = ?',
         [userId]

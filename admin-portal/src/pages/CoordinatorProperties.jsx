@@ -252,7 +252,7 @@ const CoordinatorProperties = ({ user }) => {
         ? `/api/coordinator/properties/${selectedProperty.id}/assign-vendor`
         : `/api/coordinator/properties/${selectedProperty.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -291,7 +291,9 @@ const CoordinatorProperties = ({ user }) => {
       zone: property.zone_name || property.zone_id || '',
       division: property.division || property.division_id || '',
       area: property.area || property.area_name || '',
-      isActive: property.is_active !== false,
+      // Active/Inactive lives in `status` on both property tables; is_active is not on the row,
+      // so reading it showed every inactive property as Active and a save reactivated it
+      isActive: property.status ? property.status !== 'inactive' : property.is_active !== false,
       sourceTable: property.source_table || 'properties',
       watchmanName: property.watchman_name || '',
       watchmanContact: property.watchman_contact || ''

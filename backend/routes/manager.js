@@ -1544,6 +1544,142 @@ router.patch('/work-orders/:id/assign-vendor', requireManagerScope, async (req, 
   }
 });
 
+// The ownership rule assign-vendor uses: an FP manager reaches its partner's work orders, a
+// standalone manager the ones it created.
+const managerOwnsWorkOrder = async (req, id) => {
+  const franchisePartnerId = req.franchisePartnerId || req.fpId;
+  const [rows] = franchisePartnerId
+    ? await pool.query('SELECT id FROM work_orders WHERE id = ? AND franchise_partner_id = ?', [id, franchisePartnerId])
+    : await pool.query(
+      'SELECT id FROM work_orders WHERE id = ? AND (manager_id = ? OR created_by = ? OR created_by = ?)',
+      [id, req.managerId, req.managerId, getCreatorIdentifier(req)]
+    );
+  return rows.length > 0;
+};
+
+// Work orders closed/cancelled long enough ago to be auto-deleted soon. The Manager sidebar bell
+// and dashboard both asked for this and it did not exist, so the warning never showed.
+router.get('/work-orders/approaching-deletion', requireManagerScope, async (req, res) => {
+  try {
+    const { getWorkOrdersApproachingDeletion, AUTO_DELETE_DAYS, WARNING_DAYS } = require('../utils/workOrderCleanup');
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    // Without a partner the helper would answer every partner's rows, so a standalone manager gets none
+    const workOrders = franchisePartnerId ? await getWorkOrdersApproachingDeletion(franchisePartnerId) : [];
+    res.json({ success: true, data: workOrders, config: { autoDeleteDays: AUTO_DELETE_DAYS, warningDays: WARNING_DAYS } });
+  } catch (error) {
+    console.error('Manager approaching deletion error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Edit a work order. The Manager list's Edit dialog saved through this and it did not exist.
+router.put('/work-orders/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!(await managerOwnsWorkOrder(req, id))) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+    const {
+      category_id, subcategory_id, description,
+      permission_to_enter, has_pet, entry_notes, priority, status,
+      customer_name, customer_email, customer_phone, block, flat_number
+    } = req.body;
+
+    const updates = [];
+    const params = [];
+    const set = (column, value) => { updates.push(`${column} = ?`); params.push(value); };
+    // ENUM columns: a blank or unknown value would raise WARN_DATA_TRUNCATED, so it is left alone
+    const oneOf = (value, allowed) => allowed.includes(value);
+
+    if (category_id !== undefined) set('category_id', category_id || null);
+    if (subcategory_id !== undefined) set('subcategory_id', subcategory_id || null);
+    if (description !== undefined) set('description', description);
+    if (oneOf(permission_to_enter, ['yes', 'no'])) set('permission_to_enter', permission_to_enter);
+    if (oneOf(has_pet, ['yes', 'no'])) set('has_pet', has_pet);
+    if (entry_notes !== undefined) set('entry_notes', entry_notes);
+    if (oneOf(priority, ['low', 'medium', 'high', 'urgent'])) set('priority', priority);
+    if (oneOf(status, ['pending', 'requested', 'assigned', 'in_progress', 'completed', 'closed', 'cancelled'])) set('status', status);
+    if (customer_name !== undefined) set('customer_name', customer_name);
+    if (customer_email !== undefined) set('customer_email', customer_email);
+    if (customer_phone !== undefined) set('customer_phone', customer_phone);
+    if (block !== undefined) set('block', block);
+    if (flat_number !== undefined) set('flat_number', flat_number);
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    // Category and subcategory names come from the config the category picker reads
+    const categoriesConfig = require('../config/categories');
+    const category = category_id ? categoriesConfig.find(c => c.id === parseInt(category_id)) : null;
+    if (category) set('category_name', category.name);
+    const subcategory = subcategory_id
+      ? (category ? [category] : categoriesConfig).map(c => c.subcategories?.find(s => s.id === parseInt(subcategory_id))).find(Boolean)
+      : null;
+    if (subcategory) set('subcategory_name', subcategory.name);
+
+    await pool.execute(`UPDATE work_orders SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`, [...params, id]);
+    res.json({ success: true, message: 'Work order updated successfully' });
+  } catch (error) {
+    console.error('Manager update work order error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Assign an employee to a work order. The Manager list's Assign Employee action called this and
+// it did not exist. work_orders.assigned_employee_id is created by no CREATE TABLE, so it is
+// ensured here (schema_v57_work_order_assigned_employee.sql is the same repair).
+router.patch('/work-orders/:id/assign-employee', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const employeeId = Number(req.body.employeeId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+      return res.status(400).json({ success: false, message: 'Select an employee' });
+    }
+    if (!(await managerOwnsWorkOrder(req, id))) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+    if (franchisePartnerId) {
+      const [emp] = await pool.query('SELECT id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?', [employeeId, franchisePartnerId]);
+      if (emp.length === 0) return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    const [[col]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = 'work_orders' AND column_name = 'assigned_employee_id'`
+    );
+    if (Number(col.n) === 0) await pool.query('ALTER TABLE work_orders ADD COLUMN assigned_employee_id INT NULL');
+
+    // A pending order becomes assigned; one already under way keeps its status
+    await pool.query(
+      `UPDATE work_orders SET assigned_employee_id = ?,
+              status = CASE WHEN status IN ('pending', 'requested') THEN 'assigned' ELSE status END,
+              updated_at = NOW()
+       WHERE id = ?`,
+      [employeeId, id]
+    );
+    res.json({ success: true, message: 'Employee assigned' });
+  } catch (error) {
+    console.error('Manager assign employee error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete a work order (the Manager list's Delete action; it had no route). Same rule as the FP's.
+router.delete('/work-orders/:id', requireManagerScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!(await managerOwnsWorkOrder(req, id))) {
+      return res.status(404).json({ success: false, message: 'Work order not found or access denied' });
+    }
+    await pool.execute('DELETE FROM work_orders WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Work order deleted' });
+  } catch (error) {
+    console.error('Manager delete work order error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // CUSTOMER MANAGEMENT
 // ============================================
@@ -1923,7 +2059,7 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
               ov.owner_mobile, ov.owner_mobile as phone, ov.owner_email, ov.owner_email as email,
               ov.owner_aadhar, ov.owner_country_code,
               ov.manager_name, ov.manager_mobile, ov.manager_email, ov.manager_country_code,
-              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_county_code,
+              ov.poc_name, ov.poc_mobile, ov.poc_email, ov.poc_country_code,
               ov.rate_per_visit, ov.coverage_per_day, ov.working_hours_from, ov.working_hours_to,
               ov.created_by, ov.created_by_id,
               COALESCE(
@@ -2485,6 +2621,9 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
       } else {
         // Get assigned zones only when not filtering by property
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
+        // The manager token carries no first_name, so '%' + '' + '%' matched every estimate and
+        // the zone filter never applied. Without a name the LIKE binds NULL, which matches nothing.
+        const firstNameLike = req.user?.first_name ? `%${req.user.first_name}%` : null;
         
         // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
         if (assignedZones.includes('__ALL__')) {
@@ -2492,11 +2631,11 @@ router.get('/estimates', requireManagerScope, async (req, res) => {
         } else if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
           propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          propertyParams = [...assignedZones, managerId, creatorEmail, req.user?.username || '', firstNameLike];
         } else {
           // No zones = only see own created (by ID or by name/email/username)
           propertyClause = ` AND (e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
-          propertyParams = [managerId, creatorEmail, req.user?.username || '', `%${req.user?.first_name || ''}%`];
+          propertyParams = [managerId, creatorEmail, req.user?.username || '', firstNameLike];
         }
       }
       
@@ -2711,8 +2850,9 @@ router.post('/estimates', requireManagerScope, attachPackageSnapshot(pool), requ
         creatorName = `${fpEmp.first_name || ''} ${fpEmp.last_name || ''}`.trim() || 'Manager';
       } else {
         // Fall back to users table
-        const [[userInfo]] = await pool.query('SELECT first_name, last_name, name FROM users WHERE id = ?', [managerId]);
-        if (userInfo) creatorName = userInfo.first_name && userInfo.last_name ? `${userInfo.first_name} ${userInfo.last_name}`.trim() : userInfo.name || 'Manager';
+        // users has first_name/last_name and no name column; naming one failed the lookup
+        const [[userInfo]] = await pool.query('SELECT first_name, last_name FROM users WHERE id = ?', [managerId]);
+        if (userInfo) creatorName = `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || 'Manager';
       }
     } catch (e) { console.log('Creator name lookup error:', e.message); }
 
@@ -2786,6 +2926,33 @@ router.put('/estimates/:id/archive', requireManagerScope, async (req, res) => {
     }
     res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Bulk archive estimates. The All Estimates "Archive Selected" button posts here; the route did
+// not exist, so the bulk action always failed. Same scope as the single archive above.
+router.post('/estimates/bulk-archive', requireManagerScope, async (req, res) => {
+  try {
+    const ids = (Array.isArray(req.body.estimateIds) ? req.body.estimateIds : req.body.ids || [])
+      .map(Number).filter(id => Number.isSafeInteger(id) && id > 0);
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'No estimates selected' });
+    }
+    const scopeId = getScopeId(req);
+    const placeholders = ids.map(() => '?').join(',');
+    const [result] = req.isFPManager
+      ? await pool.execute(
+        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
+        [...ids, scopeId]
+      )
+      : await pool.execute(
+        `UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id IN (${placeholders}) AND manager_id = ?`,
+        [...ids, scopeId]
+      );
+    res.json({ success: true, message: `${result.affectedRows} estimate(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Manager bulk archive estimates error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -3092,10 +3259,13 @@ router.get('/zones', requireManagerScope, async (req, res) => {
       }
     });
 
+    // 'fp-<id>', as zoneDelete expects: a bare number is a company-wide zone, so stamping an
+    // fp_zones row with its bare id made DELETE refuse the manager's own zone (or resolve a
+    // different, global zone that happened to share the number)
     fpZones.forEach(z => {
       if (!allZoneNames.has(z.name)) {
         allZoneNames.add(z.name);
-        combinedZones.push({ id: z.id, name: z.name });
+        combinedZones.push({ id: `fp-${z.id}`, name: z.name });
       }
     });
 
@@ -3676,6 +3846,49 @@ router.post('/schedules/assign-vendor', requireManagerScope, async (req, res) =>
   } catch (error) {
     console.error('Error assigning vendor:', error);
     res.status(500).json({ success: false, message: 'Error assigning vendor to service', error: error.message });
+  }
+});
+
+// Restore a rescheduled visit to its original date. Rescheduled Requests' Restore button posts
+// to /api/manager/schedules/:id/restore, which did not exist. Same rule as the FP's route, scoped
+// to this manager's partner.
+router.post('/schedules/:visitId/restore', requireManagerScope, async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { originalDate, originalTime } = req.body;
+    if (!req.franchisePartnerId) {
+      return res.status(403).json({ success: false, message: 'Access denied - visit does not belong to your franchise' });
+    }
+    const [visits] = await pool.execute(
+      `SELECT sv.*, op.franchise_partner_id
+       FROM scheduled_visits sv
+       JOIN onboarded_properties op ON op.id = sv.property_id
+       WHERE (sv.id = ? OR sv.visit_id = ?) AND op.franchise_partner_id = ?`,
+      [visitId, visitId, req.franchisePartnerId]
+    );
+    if (visits.length === 0) {
+      return res.status(404).json({ success: false, message: 'Visit not found' });
+    }
+    const visit = visits[0];
+    const restoreDate = originalDate || visit.original_date;
+    const restoreTime = originalTime || visit.scheduled_time_start;
+    if (!restoreDate) {
+      return res.status(400).json({ success: false, message: 'Original date not available for restoration' });
+    }
+    await pool.execute(
+      `UPDATE scheduled_visits
+       SET scheduled_date = ?, scheduled_time_start = ?, original_date = NULL, status = 'scheduled', updated_at = NOW()
+       WHERE id = ?`,
+      [restoreDate, restoreTime, visit.id]
+    );
+    res.json({
+      success: true,
+      message: 'Schedule restored to original date successfully',
+      data: { visitId: visit.id, restoredDate: restoreDate, restoredTime: restoreTime }
+    });
+  } catch (error) {
+    console.error('Manager restore visit error:', error);
+    res.status(500).json({ success: false, message: 'Error restoring visit', error: error.message });
   }
 });
 

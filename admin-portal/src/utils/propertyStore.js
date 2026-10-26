@@ -14,7 +14,10 @@ const NOTIFICATION_KEY = 'xland_notifications';
 // status: 'active' (default), 'deleted', or 'all'
 export const getProperties = async (status = 'active') => {
   try {
-    const res = await fetch(`${API_BASE}?status=${status}`);
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE}?status=${status}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const json = await res.json();
     if (json.success) return json.data;
     console.error('getProperties failed:', json.message);
@@ -28,7 +31,10 @@ export const getProperties = async (status = 'active') => {
 // Get a single property by Property ID
 export const getPropertyById = async (propertyId) => {
   try {
-    const res = await fetch(`${API_BASE}/lookup/${encodeURIComponent(propertyId)}`);
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE}/lookup/${encodeURIComponent(propertyId)}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
     const json = await res.json();
     if (json.success) return json.data;
     console.error('getPropertyById failed:', json.message);
@@ -120,10 +126,34 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
   console.log('📧 createCustomerAccounts called with contacts:', contacts);
   console.log('📧 Property data:', propertyData);
   
+  // POST /api/onboarding has already set up the primary contact's account and sent its email
+  // (activation, resend or "you've been added"). Calling /customers/create for it again re-issued
+  // the activation token and temporary password, so the customer got two emails and the first
+  // one's link and password no longer worked. Report the onboarding result for it instead.
+  const handled = new Set();
+  const primaryEmail = (contacts[0]?.email || '').trim().toLowerCase();
+  if (primaryEmail) {
+    handled.add(primaryEmail);
+    if (primaryEmail.includes('@')) {
+      const ok = Boolean(propertyData.emailSent || propertyData.accountLinked);
+      results.push({
+        email: contacts[0].email,
+        success: ok,
+        message: propertyData.emailNote
+          ? (ok ? `${contacts[0].email}: ${propertyData.emailNote}` : propertyData.emailNote)
+          : (ok ? '' : 'Customer account could not be set up'),
+        emailSent: propertyData.emailSent
+      });
+    }
+  }
+
   for (const contact of contacts) {
     console.log('📧 Processing contact:', contact);
+    const contactEmail = (contact.email || '').trim().toLowerCase();
+    if (handled.has(contactEmail)) continue;
     // Only create account if contact has a valid email
     if (contact.email && contact.email.includes('@')) {
+      handled.add(contactEmail);
       console.log('📧 Valid email found, calling /api/customers/create for:', contact.email);
       try {
         const token = getAuthToken();

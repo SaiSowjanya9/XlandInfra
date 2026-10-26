@@ -146,6 +146,10 @@ const getFPScope = (req) => {
   return null;
 };
 
+// Admin and the Operations Manager see every partner and narrow with ?fpId= from the FP picker.
+// The Operations Manager used to be left out, so its picker changed nothing on the billing screens.
+const isCompanyWideRole = (req) => ['admin', 'super_admin', ROLES.OPERATIONS_MANAGER].includes(req.user?.role);
+
 // Generate unique invoice ID (Format: INV-00001)
 const generateInvoiceId = async (fpId = null) => {
   const prefix = 'INV';
@@ -190,7 +194,7 @@ router.get('/properties/by-code/:code', authenticate, canViewPayments, async (re
              op.contact_person as customer_name,
              op.contact_email as customer_email,
              op.contact_phone as customer_phone,
-             op.property_type, op.zone, op.division
+             op.property_type, op.zone, op.division, op.state
       FROM onboarded_properties op
       WHERE op.property_id = ?
     `;
@@ -210,7 +214,7 @@ router.get('/properties/by-code/:code', authenticate, canViewPayments, async (re
                p.contact_person as customer_name,
                p.contact_email as customer_email,
                p.contact_phone as customer_phone,
-               p.property_type, p.zone_id as zone
+               p.property_type, p.zone_id as zone, p.state
         FROM properties p
         WHERE p.property_id = ?
       `;
@@ -227,8 +231,11 @@ router.get('/properties/by-code/:code', authenticate, canViewPayments, async (re
     // Also check customer_accounts for customer info
     if (properties.length > 0) {
       const propId = properties[0].id;
+      // customer_accounts has first_name/last_name, not `name`: the bare column threw
+      // "Unknown column 'name'" for every property that had a portal account.
       const [customers] = await pool.execute(
-        `SELECT name, email, phone FROM customer_accounts WHERE property_id = ? LIMIT 1`,
+        `SELECT NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)), '') AS name, email, phone
+         FROM customer_accounts WHERE property_id = ? LIMIT 1`,
         [propId]
       );
       
@@ -546,7 +553,7 @@ router.get('/invoices', authenticate, canViewPayments, async (req, res) => {
   try {
     // For admins, allow fpId from query params; for FP users, use their scope
     const { status, paymentStatus, search, propertyId, customerId, archived, invoiceType, fpId: queryFpId } = req.query;
-    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
+    const fpId = getFPScope(req) || (isCompanyWideRole(req) ? queryFpId : null);
     
     // settled_paid is counted from the payments ledger, not the stored amount_paid cache —
     // invoices written before the settlement fix carry a stale (often doubled) figure, and
@@ -2352,7 +2359,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
   try {
     // For admins, allow fpId from query params; for FP users, use their scope
     const { invoiceId, status, paymentMethod, startDate, endDate, search, archived, fpId: queryFpId } = req.query;
-    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
+    const fpId = getFPScope(req) || (isCompanyWideRole(req) ? queryFpId : null);
     // The archived filter below needs the column to exist — a cached no-op on a current schema
     await ensurePaymentColumns();
 
@@ -3378,7 +3385,7 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
     // An FP (or its staff) is scoped to its own partner by the token. An admin sees every partner
     // and narrows with ?fpId=, the same way /razorpay-history does -- 'all' is not an id, and a
     // non-numeric value must not reach the query.
-    const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+    const isAdmin = isCompanyWideRole(req);
     const requestedFpId = isAdmin && /^\d+$/.test(String(queryFpId || '')) ? Number(queryFpId) : null;
     const fpId = getFPScope(req) || requestedFpId;
 
@@ -3477,7 +3484,7 @@ router.get('/razorpay-history', authenticate, canViewPayments, async (req, res) 
   try {
     // For admins, allow fpId from query params; for FP users, use their scope
     const { startDate, endDate, search, fpId: queryFpId } = req.query;
-    const fpId = getFPScope(req) || (req.user.role === 'admin' || req.user.role === 'super_admin' ? queryFpId : null);
+    const fpId = getFPScope(req) || (isCompanyWideRole(req) ? queryFpId : null);
 
     // Razorpay handles: Card, Net Banking, UPI
     // XLAND INFRA handles: Cash, Cheque, Bank Transfer

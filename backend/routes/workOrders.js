@@ -123,6 +123,12 @@ router.post('/', requireCustomer, (req, res, next) => {
     const account = req.customerAccount;
     const residentId = String(account.id);
     const propertyId = account.property_id || account.property_code || null;
+    // Looked up by code before id: properties.id 5 and onboarded_properties.id 5 are different
+    // properties, and the FP portal's Add Customer stores a properties id -- read as an onboarded
+    // one, the request was filed against another household's property and franchise partner
+    const propertyLookups = [...new Set([account.property_code, account.property_id]
+      .filter(value => value !== null && value !== undefined && value !== '' && value !== 'undefined')
+      .map(String))];
     const customerName = [account.first_name, account.last_name].filter(Boolean).join(' ') || null;
     const customerEmail = account.email || null;
     const customerPhone = account.phone || null;
@@ -199,33 +205,41 @@ router.post('/', requireCustomer, (req, res, next) => {
       let actualPropertyId = null;
       const propId = propertyId && propertyId !== 'undefined' ? propertyId : null;
       
-      if (propId) {
+      for (const lookup of propertyLookups) {
+        // Only an all-digit value can be an id; a code is compared against property_id alone
+        const lookupId = /^\d+$/.test(lookup) ? Number(lookup) : 0;
         // Priority: onboarded_properties first (FP context), then properties table
         // Try onboarded_properties first - check by both id and property_id columns
         const [opData] = await pool.query(
           `SELECT id, franchise_partner_id, community_name as name, property_type, property_id, zone, division,
                   address, city, state, contact_person, contact_phone, contact_email
            FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-          [propId, propId]
+          [lookupId, lookup]
         );
         if (opData.length > 0) {
           propDetails = opData[0];
           franchisePartnerId = opData[0].franchise_partner_id;
           actualPropertyId = opData[0].property_id;
-        } else {
-          // Fallback to properties table - check by both id and property_id columns
-          const [propData] = await pool.query(
-            `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, COALESCE(division_id, division) as division,
-                    address, city, state, contact_person, contact_phone, contact_email
-             FROM properties WHERE id = ? OR property_id = ?`,
-            [propId, propId]
-          );
-          if (propData.length > 0) {
-            propDetails = propData[0];
-            franchisePartnerId = propData[0].franchise_partner_id;
-            actualPropertyId = propData[0].property_id;
-          }
+          break;
         }
+        // Fallback to properties table - check by both id and property_id columns.
+        // properties has division_id (a VARCHAR holding the name) and no division column:
+        // COALESCE(division_id, division) failed the statement, so a customer whose property
+        // lives there could not raise a work order at all.
+        const [propData] = await pool.query(
+          `SELECT id, franchise_partner_id, name, property_type, property_id, zone_id as zone, division_id as division,
+                  address, city, state, contact_person, contact_phone, contact_email
+           FROM properties WHERE id = ? OR property_id = ?`,
+          [lookupId, lookup]
+        );
+        if (propData.length > 0) {
+          propDetails = propData[0];
+          franchisePartnerId = propData[0].franchise_partner_id;
+          actualPropertyId = propData[0].property_id;
+          break;
+        }
+      }
+      if (propId) {
         console.log('[WorkOrder] Property lookup - fpId:', franchisePartnerId, 'zone:', propDetails.zone, 'propertyId:', actualPropertyId);
       }
 
@@ -394,9 +408,10 @@ router.post('/', requireCustomer, (req, res, next) => {
 // ============================================
 // GET ALL WORK ORDERS (Admin Portal) - with search support
 // ============================================
-router.get('/', async (req, res) => {
+// It lists every customer's name, email and phone, so it needs a staff login (it used to be public).
+router.get('/', authenticate, async (req, res) => {
   try {
-    const { status, page = 1, limit = 50, search } = req.query;
+    const { status, page = 1, limit = 50, search, propertyId } = req.query;
     const offset = (page - 1) * limit;
 
     try {
@@ -423,6 +438,13 @@ router.get('/', async (req, res) => {
         params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
       
+      // Filter by property. Create Invoice asks for one property's completed work orders and
+      // used to be handed every property's, so a work order could be billed to the wrong customer.
+      if (propertyId && String(propertyId).trim()) {
+        conditions.push(`wo.property_id = ?`);
+        params.push(String(propertyId).trim());
+      }
+
       // Filter by status
       if (status && status !== 'all') {
         if (status === 'pending') {
@@ -489,7 +511,9 @@ router.get('/', async (req, res) => {
 // ============================================
 // GET WORK ORDER BY ID
 // ============================================
-router.get('/:id', async (req, res) => {
+// Numeric ids only: a bare `/:id` here swallowed `GET /pending-verification`, declared further
+// down, and answered it "Work order not found".
+router.get('/:id', (req, res, next) => /^\d+$/.test(req.params.id) ? next() : next('route'), authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -545,7 +569,9 @@ router.get('/:id', async (req, res) => {
 // ============================================
 // UPDATE WORK ORDER STATUS
 // ============================================
-router.patch('/:id/status', async (req, res) => {
+// Staff only: this completes work orders, which emails the customer and raises an invoice --
+// it used to answer anyone at all.
+router.patch('/:id/status', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, adminId, closingNotes, cancelNote, cancellationNote } = req.body;
@@ -677,7 +703,8 @@ router.patch('/:id/status', async (req, res) => {
 // ============================================
 // CREATE WORK ORDER FROM ADMIN PORTAL
 // ============================================
-router.post('/admin/create', upload.array('attachments', 5), async (req, res) => {
+// The login is checked before multer runs, so an anonymous upload never reaches the disk.
+router.post('/admin/create', authenticate, managerOrAdmin, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
       categoryId,
@@ -810,8 +837,8 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           category_id, subcategory_id, category_name, subcategory_name,
           description, permission_to_enter, entry_notes, has_pet,
           customer_name, customer_email, customer_phone, property_name, property_type, block, flat_number,
-          status, priority, source, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
+          franchise_partner_id, status, priority, source, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'admin', ?, NOW())`,
         [
           orderNumber,
           residentId && residentId !== 'undefined' ? residentId : null,
@@ -832,6 +859,9 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
           propertyType || null,
           block || null,
           flatNumber || null,
+          // The property's franchise partner. It was looked up above and then never written, so
+          // a work order the admin raised appeared in no FP's list (they filter on this column).
+          propFranchisePartnerId || null,
           priority || 'medium',
           adminId || null
         ]
@@ -902,7 +932,7 @@ router.post('/admin/create', upload.array('attachments', 5), async (req, res) =>
 // ============================================
 // ASSIGN VENDOR
 // ============================================
-router.post('/:id/assign', async (req, res) => {
+router.post('/:id/assign', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { vendorId, scheduledDate, adminId, notes } = req.body;
@@ -936,7 +966,7 @@ router.post('/:id/assign', async (req, res) => {
 // ============================================
 // CLOSE WORK ORDER
 // ============================================
-router.post('/:id/close', async (req, res) => {
+router.post('/:id/close', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { notes, adminId } = req.body;
@@ -969,7 +999,7 @@ router.post('/:id/close', async (req, res) => {
 // ============================================
 // REOPEN WORK ORDER
 // ============================================
-router.post('/:id/reopen', async (req, res) => {
+router.post('/:id/reopen', authenticate, managerOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { reason, adminId } = req.body;
@@ -1000,7 +1030,7 @@ router.post('/:id/reopen', async (req, res) => {
 // ============================================
 // GET WORK ORDER HISTORY
 // ============================================
-router.get('/:id/history', async (req, res) => {
+router.get('/:id/history', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 

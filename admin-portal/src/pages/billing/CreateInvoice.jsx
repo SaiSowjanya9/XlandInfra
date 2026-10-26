@@ -211,19 +211,32 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
     
     setPropertySearching(true);
     try {
-      const response = await fetch(`${API_BASE}/api/properties/search?code=${encodeURIComponent(propertyId)}`, {
+      // /api/properties/search never existed -- `/api/properties/:id` answered it as id "search",
+      // so every lookup said "Property not found". The payments router's by-code lookup searches
+      // both property tables (scoped to the caller's partner) and answers snake_case, so the row
+      // is mapped onto the names this screen reads.
+      const response = await fetch(`${API_BASE}/api/payments/properties/by-code/${encodeURIComponent(propertyId.trim())}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
+      const found = data.success && data.data ? (Array.isArray(data.data) ? data.data[0] : data.data) : null;
       
-      if (data.success && data.data && data.data.length > 0) {
-        const property = data.data[0];
+      if (found) {
+        const property = {
+          ...found,
+          propertyCode: found.propertyCode || found.property_id,
+          propertyName: found.propertyName || found.name,
+          propertyType: found.propertyType || found.property_type,
+          customerName: found.customerName || found.customer_name,
+          customerEmail: found.customerEmail || found.customer_email,
+          customerPhone: found.customerPhone || found.customer_phone
+        };
         setPropertyDetails(property);
         setCustomerDetails({
           name: property.customerName || property.societyName || '',
           email: property.customerEmail || property.email || '',
           phone: property.customerPhone || property.phone || '',
-          contactPerson: property.contactPerson || ''
+          contactPerson: property.contactPerson || property.customer_name || ''
         });
         setPlaceOfSupply(property.state ? `${property.state}` : 'Telangana (36)');
         showToast('Property found!');
@@ -1089,16 +1102,18 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                     <div
                       key={wo.id}
                       onClick={() => {
-                        setWorkOrderId(wo.workOrderId || wo.id);
+                        // GET /api/work-orders answers raw rows (snake_case), so the WO- code is
+                        // work_order_id; the bare numeric id is not what an invoice refers to.
+                        setWorkOrderId(wo.workOrderId || wo.work_order_id || wo.id);
                         setShowWorkOrderModal(false);
                       }}
                       className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 cursor-pointer"
                     >
                       <div className="flex justify-between">
-                        <span className="font-medium text-gray-900">{wo.workOrderId || wo.id}</span>
-                        <span className="text-sm text-gray-500">{formatDateDisplay(wo.completedAt || wo.createdAt)}</span>
+                        <span className="font-medium text-gray-900">{wo.workOrderId || wo.work_order_id || wo.id}</span>
+                        <span className="text-sm text-gray-500">{formatDateDisplay(wo.completedAt || wo.completed_at || wo.createdAt || wo.created_at)}</span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{wo.serviceCategory || wo.category}</p>
+                      <p className="text-sm text-gray-500 mt-1">{wo.serviceCategory || wo.category || [wo.category_name, wo.subcategory_name].filter(Boolean).join(' - ')}</p>
                     </div>
                   ))}
                 </div>

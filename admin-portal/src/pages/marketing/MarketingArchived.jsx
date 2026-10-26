@@ -67,7 +67,7 @@ const MarketingArchived = ({ user, portalType = 'franchise' }) => {
   // not the role on its own.
   const unavailable = portalType === 'franchise' && user?.role === 'manager';
   // Restoring a row is a write, so the read-only portals see the archive without the button.
-  const { canEdit } = marketingPermissions(portalType);
+  const { canEdit } = marketingPermissions(portalType, user?.role);
   // The supervisor portal has the Complaint Form and no lead pipeline, so this screen is its
   // archived complaints alone: its backend mount answers 403 to the tracker read, and asking anyway
   // would put an error where the first tab is.

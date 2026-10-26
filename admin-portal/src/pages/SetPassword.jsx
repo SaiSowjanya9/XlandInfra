@@ -1,4 +1,4 @@
-import { safeStorage } from '../utils/safeStorage';
+import { safeSessionStorage } from '../utils/safeStorage';
 import { useState } from 'react';
 import { 
   Eye, EyeOff, AlertCircle, CheckCircle2, Lock, Shield, ArrowRight, Loader2
@@ -98,9 +98,11 @@ const SetPassword = ({ user, onPasswordSet, onCancel }) => {
       const result = await response.json();
 
       if (result.success) {
-        // Store new token and user data
+        // Store new token and user data in sessionStorage, where EmployeeLogin keeps them and
+        // getAuthToken() reads them. They used to go to localStorage, so the first session after
+        // setting a password sent no token and every screen answered 401.
         if (result.data?.token) {
-          safeStorage.setItem('pm_auth_token', result.data.token);
+          safeSessionStorage.setItem('pm_auth_token', result.data.token);
         }
         if (result.data?.user) {
           const updatedUser = {
@@ -108,7 +110,7 @@ const SetPassword = ({ user, onPasswordSet, onCancel }) => {
             name: `${result.data.user.firstName || ''} ${result.data.user.lastName || ''}`.trim(),
             portal: user.portal || 'employee'
           };
-          safeStorage.setItem('pm_current_user', JSON.stringify(updatedUser));
+          safeSessionStorage.setItem('pm_current_user', JSON.stringify(updatedUser));
           onPasswordSet(updatedUser);
         } else {
           onPasswordSet(user);

@@ -977,8 +977,13 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
   const fetchCompletedWorkOrders = useCallback(async () => {
     setLoadingWorkOrders(true);
     try {
-      // Fetch completed work orders that don't have estimates yet
-      const response = await fetch(`${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`, {
+      // Fetch completed work orders that don't have estimates yet. The admin has no franchise
+      // scope, so the FP route bound an undefined partner id and answered 500 -- the admin's
+      // Work Order tab was always empty. The admin reads its own route, narrowed by the FP picker.
+      const url = isAdminPortal
+        ? `${API_BASE}/api/admin/work-orders?status=completed&excludeWithEstimates=true${selectedFp && selectedFp.id !== 'all' ? `&fpId=${selectedFp.id}` : ''}`
+        : `${API_BASE}/api/fp/work-orders?status=completed&excludeWithEstimates=true`;
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
@@ -990,7 +995,7 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoadingWorkOrders(false);
     }
-  }, [token]);
+  }, [token, isAdminPortal, selectedFp]);
 
   useEffect(() => {
     fetchInvoices();

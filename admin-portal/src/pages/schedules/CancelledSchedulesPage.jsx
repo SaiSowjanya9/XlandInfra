@@ -153,7 +153,9 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
     
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE}/api/schedules/${selectedSchedule.id}/restore`, {
+      // The rows are scheduled_visits; /api/schedules/:id/restore restores the legacy `schedules`
+      // table, so a visit id there answered "Schedule not found" (or restored an unrelated row).
+      const response = await fetch(`${API_BASE}/api/schedules/visits/${selectedSchedule.id}/restore`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -162,7 +164,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
       });
       
       if (response.ok) {
-        alert('Schedule restored successfully! It has been moved to Pending Schedules.');
+        alert('Schedule restored successfully! The visit is back on its scheduled date.');
         setShowRestoreModal(false);
         setShowDetailsModal(false);
         fetchCancelledSchedules();

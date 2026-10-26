@@ -226,6 +226,11 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   // Helper functions (must be defined before calculatePriceSummary)
     const formatCurrency = (amt) => { const num = parseFloat(amt); return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(isNaN(num) ? 0 : Math.round(num)); };
 
+  // The edit flow reports through the page's message banner. showToast was called here but never
+  // defined, so every save threw a ReferenceError: the estimate was updated on the server while
+  // the dialog stayed open with no word of success or failure.
+  const showToast = (text, type = 'success') => setMessage({ type, text });
+
   // Edit estimate functions for DIRECT estimates only
   const openEditEstimate = (estimate) => {
     if (estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') {
@@ -302,7 +307,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const result = await res.json();
-      if (result.success) { showToast('Estimate updated successfully'); setEditEstimate(null); setEditEstimateForm(null); loadData(); }
+      if (result.success) { showToast('Estimate updated successfully'); setEditEstimate(null); setEditEstimateForm(null); fetchData(); }
       else { showToast(result.message || 'Failed to update estimate', 'error'); }
     } catch (e) { console.error('Update estimate error:', e); showToast('Failed to update estimate', 'error'); }
     finally { setSavingEstimate(false); }

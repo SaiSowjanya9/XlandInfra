@@ -71,8 +71,15 @@ const PORTAL_PERMISSIONS = {
   executive: { canEdit: false, canReview: false, canAssign: false, canClose: false }
 };
 
-export const marketingPermissions = (portalType) => (
-  PORTAL_PERMISSIONS[portalType] || DEFAULT_PERMISSIONS
+// The Operations Manager signs in to the admin portal but changes nothing there: the admin mount's
+// scope gives that role `canWrite: false` (backend/routes/admin.js adminMarketingScope), so every
+// control the admin sees would answer 403 for it.
+const VIEW_ONLY = { canEdit: false, canReview: false, canAssign: false, canClose: false };
+
+export const marketingPermissions = (portalType, role) => (
+  role === 'operations_manager' && getMarketingApiPath(portalType) === 'admin'
+    ? VIEW_ONLY
+    : PORTAL_PERMISSIONS[portalType] || DEFAULT_PERMISSIONS
 );
 
 /**

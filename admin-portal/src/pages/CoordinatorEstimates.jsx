@@ -22,9 +22,22 @@ import {
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
 import { duplicatePackageName, updatePackageRow } from '../utils/packageRows';
-import { capitalizeFirst } from '../utils/text';
+import { capitalizeFirst, decodeDeep } from '../utils/text';
 
 const ITEMS_PER_PAGE = 10;
+
+// A saved estimate's hand-entered (customService) and configured (catalogServiceId) rows. The edit
+// dialog only offers the legacy add-on list, so these must travel through a save untouched.
+const isKeptServiceRow = (row) => !!(row && (row.customService || row.catalogServiceId
+  || /^(CUSTOM|CAT)-/.test(String(row.addonId || ''))));
+const keptServiceRows = (estimate) => {
+  if (!estimate) return [];
+  let rows = estimate.addons || estimate.addons_data || [];
+  if (typeof rows === 'string') {
+    try { rows = JSON.parse(rows); } catch (e) { rows = []; }
+  }
+  return Array.isArray(rows) ? rows.filter(isKeptServiceRow) : [];
+};
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import usePrintShortcut from '../hooks/usePrintShortcut';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
@@ -343,7 +356,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     if (estimate.addons_data || estimate.addons) {
       try {
         const addonsData = estimate.addons || (typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data);
-        selectedAddonsWithQty = (addonsData || []).map(a => ({ id: a.id || a.addon_id, quantity: a.quantity || 1 })).filter(a => a.id);
+        selectedAddonsWithQty = (addonsData || []).filter(a => !isKeptServiceRow(a)).map(a => ({ id: a.id || a.addon_id, quantity: a.quantity || 1 })).filter(a => a.id);
       } catch (e) { console.log('Addon parse error:', e); }
     }
     setEditEstimate(estimate);
@@ -373,7 +386,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
       const qty = item.quantity || 1;
       return sum + ((parseFloat(addon?.price) || 0) * qty);
     }, 0);
-    const subtotal = pkgPrice + addonsPrice;
+    const subtotal = pkgPrice + addonsPrice + customServicesTotal(keptServiceRows(editEstimate));
     const discount = parseFloat(editEstimateForm.discount_percent) || 0;
     const gst = parseFloat(editEstimateForm.gst_percent) || 0;
     const discountAmt = (subtotal * discount) / 100;
@@ -404,7 +417,10 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         amc_package_description: pkg?.description || editEstimate.amc_package_description, package_services: packageServices, billing_duration: pkg?.billing_duration || editEstimate.billing_duration,
         subtotal: pricing.subtotal, discount_percent: editEstimateForm.discount_percent, discount_amount: pricing.discountAmt,
         gst_percent: editEstimateForm.gst_percent, gst_amount: pricing.gstAmt, total_amount: pricing.total,
-        addons_data: selectedAddonsList, description: editEstimateForm.description
+        // Hand-entered and configured services are not offered in this dialog, so they ride along
+        // unchanged -- rebuilding the list from the add-on picker alone used to erase them. Decoded,
+        // because the server escapes every request string and they arrive already escaped.
+        addons_data: [...selectedAddonsList, ...decodeDeep(keptServiceRows(editEstimate))], description: editEstimateForm.description
       };
       const res = await fetch(`${API_BASE}/api/coordinator/estimates/${editEstimate.id}`, {
         method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload)

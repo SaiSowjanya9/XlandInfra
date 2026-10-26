@@ -178,6 +178,15 @@ Mistakes that fail silently and have each already broken live endpoints:
   (Hostinger) — a deployment that set only `EMAIL_*` got `EAUTH: Missing credentials for PLAIN`
   on every receipt and payment-link email. There is one transporter; if mail needs a different
   sender, change `sendEmail`, don't construct another.
+- **`fp_addons` drifted like `invoices.paid_at`.** schema_v8 created it with `addon_code`/`name`
+  NOT NULL and none of the `property_type`, `service_name`, `frequency_count`, `frequency_type`,
+  `billing_cycle` columns every add-on route uses, so the FP Add-ons screen 500ed and no add-on
+  could be created. `config/database.js` repairs it at boot; `schema_v58_fp_addons_drift.sql` is
+  the same repair for a privileged user.
+- **Staff log in through `/api/employee/login`, and only failed logins count toward the
+  5-per-15-minutes limiter.** A smoke script that tries a portal's own `/login` first locks itself
+  out; restart the backend to clear the in-memory limiter. The seeded `franchise` user has no
+  `franchise_partners` row — test FP writes as `franchise1`.
 - **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
   union the global `zones` table, `fp_zones`, and zone text stored on properties
   (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id

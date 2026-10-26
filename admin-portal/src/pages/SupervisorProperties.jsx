@@ -248,9 +248,10 @@ const SupervisorProperties = ({ user }) => {
     if (!selectedProperty) return;
 
     try {
+      // Full API_BASE URL: a relative /api/... resolves against the admin site, not the API
       const endpoint = assignType === 'vendor'
-        ? `/api/supervisor/properties/${selectedProperty.id}/assign-vendor`
-        : `/api/supervisor/properties/${selectedProperty.id}/assign-employee`;
+        ? `${API_BASE}/api/supervisor/properties/${selectedProperty.id}/assign-vendor`
+        : `${API_BASE}/api/supervisor/properties/${selectedProperty.id}/assign-employee`;
 
       const response = await fetch(endpoint, {
         method: 'POST',

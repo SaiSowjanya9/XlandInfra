@@ -14,7 +14,7 @@ import PageHeader, { HEADER_GHOST_CLASS } from '../components/common/PageHeader'
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import { useNavigate } from 'react-router-dom';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import { checkDuplicateEmployee } from '../utils/employeeStore';
 
 // Employee roles with descriptions
@@ -54,7 +54,7 @@ const AddEmployee = ({ admin }) => {
   const [createdEmployee, setCreatedEmployee] = useState(null);
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Show view-only message for Ops Manager

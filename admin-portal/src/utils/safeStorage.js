@@ -116,4 +116,20 @@ export const getAdminUser = () => {
   }
 };
 
+// The signed-in staff user. EmployeeLogin writes `pm_current_user` to sessionStorage; screens that
+// read it from localStorage (safeStorage) found nothing, so every Operations Manager view-only
+// check (`role === 'operations_manager'`) read false and the role was shown the admin's controls.
+// localStorage is still consulted as the legacy fallback (SetPassword writes there). Never null.
+export const getCurrentUser = () => {
+  for (const store of [() => sessionStorage, () => localStorage]) {
+    try {
+      const raw = store().getItem('pm_current_user');
+      if (raw) return JSON.parse(raw) || {};
+    } catch (e) {
+      // blocked storage or malformed JSON -- try the next one
+    }
+  }
+  return {};
+};
+
 export default safeStorage;

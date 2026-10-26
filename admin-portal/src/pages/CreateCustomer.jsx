@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAuthToken } from '../utils/safeStorage';
+import { getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import CategorySelection from '../components/common/CategorySelection';
 import { 
   Building2, 
@@ -190,7 +190,7 @@ const CreateCustomer = ({ admin }) => {
   const [searchParams] = useSearchParams();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   
   // Show view-only message for Ops Manager

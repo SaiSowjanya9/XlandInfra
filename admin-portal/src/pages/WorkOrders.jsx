@@ -1148,6 +1148,7 @@ const WorkOrders = ({ admin }) => {
           id={selectedOrder.work_order_id}
           title="Work Order Details"
           align="top"
+          footer={null}
         >
 
             <div className="space-y-4">

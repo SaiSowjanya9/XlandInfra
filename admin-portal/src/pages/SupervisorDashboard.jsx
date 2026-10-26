@@ -250,7 +250,9 @@ const SupervisorDashboard = ({ user }) => {
                 </div>
               </div>
             </button>
-            <button onClick={() => navigate('/supervisor/employees/zones')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
+            {/* /supervisor/employees/zones is not a route in this portal (it bounced back to this
+                dashboard), so the Zones figure goes to Property Management, where those zones' properties are */}
+            <button onClick={() => navigate('/supervisor/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <MapPin className="w-5 h-5 text-orange-600" />

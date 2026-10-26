@@ -306,7 +306,10 @@ const initOnboardingTables = async () => {
       { name: 'coordinator_id', def: "INT DEFAULT NULL" },
       { name: 'supervisor_id', def: "INT DEFAULT NULL" },
       { name: 'executive_id', def: "INT DEFAULT NULL" },
-      { name: 'status', def: "VARCHAR(20) DEFAULT 'active'" }
+      { name: 'status', def: "VARCHAR(20) DEFAULT 'active'" },
+      // Written by the Manager's POST /properties and read by its work-order create and
+      // GET /properties/:id; only the FP property route ALTERed it in, on first use
+      { name: 'division', def: "VARCHAR(100) DEFAULT NULL" }
     ];
     for (const col of propertyColumnsToAdd) {
       try {
@@ -872,6 +875,34 @@ const initOnboardingTables = async () => {
       // Ignore if column doesn't exist yet
     }
     
+    // fp_addons drift (schema_v58): schema_v8's table lacks the columns the add-on routes use,
+    // and its legacy addon_code/name are NOT NULL though the insert never supplies them
+    try {
+      const [addonCols] = await conn.execute(
+        `SELECT COLUMN_NAME, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'fp_addons'`,
+        [dbConfig.database]
+      );
+      if (addonCols.length > 0) {
+        const existing = new Map(addonCols.map(c => [c.COLUMN_NAME, c.IS_NULLABLE]));
+        const addonColumnsToAdd = [
+          ['property_type', 'VARCHAR(50) NULL'],
+          ['service_name', 'VARCHAR(255) NULL'],
+          ['frequency_count', 'INT DEFAULT 1'],
+          ['frequency_type', "VARCHAR(50) DEFAULT 'Monthly'"],
+          ['billing_cycle', "VARCHAR(50) DEFAULT 'Monthly'"]
+        ];
+        for (const [name, def] of addonColumnsToAdd) {
+          if (!existing.has(name)) await conn.execute(`ALTER TABLE fp_addons ADD COLUMN ${name} ${def}`);
+        }
+        for (const [name, def] of [['addon_code', 'VARCHAR(50) NULL'], ['name', 'VARCHAR(255) NULL']]) {
+          if (existing.get(name) === 'NO') await conn.execute(`ALTER TABLE fp_addons MODIFY COLUMN ${name} ${def}`);
+        }
+      }
+    } catch (e) {
+      console.log('  - fp_addons column check failed:', e.message);
+    }
+
     console.log('  ✅ Franchise partners table initialized');
 
     // Create fp_users table (Portal users under FP)

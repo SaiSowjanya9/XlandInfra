@@ -666,7 +666,7 @@ const FPProperties = ({ user }) => {
         ? `/api/fp/properties/${selectedProperty.id}/assign-vendor`
         : `/api/fp/properties/${selectedProperty.id}/assign-employee`;
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

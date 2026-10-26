@@ -626,6 +626,7 @@ function App() {
                     <Route path="vendors/add" element={<CoordinatorAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
                     <Route path="employees/zones" element={<CoordinatorEmployees user={user} />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="coordinator" />} />
                     <Route path="estimates" element={<CoordinatorEstimates user={user} defaultTab="list" />} />
                     <Route path="estimates/create" element={<CoordinatorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<CoordinatorEstimates user={user} defaultTab="amc" />} />
@@ -684,11 +685,13 @@ function App() {
                     <Route path="vendors" element={<SupervisorVendors user={user} />} />
                     <Route path="vendors/add" element={<SupervisorAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="supervisor" />} />
                     <Route path="estimates" element={<SupervisorEstimates user={user} defaultTab="list" />} />
                     <Route path="estimates/create" element={<SupervisorEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<SupervisorEstimates user={user} defaultTab="amc" />} />
                     <Route path="estimates/addons" element={<SupervisorEstimates user={user} defaultTab="addons" />} />
                     <Route path="estimates/archived" element={<SupervisorEstimates user={user} defaultTab="archived" />} />
+                    <Route path="billing/dashboard" element={<PaymentsDashboard user={user} portalType="supervisor" />} />
                     <Route path="billing/generate-invoices" element={<GeneratedInvoices user={user} portalType="supervisor" />} />
                     <Route path="billing/create-invoice" element={<CreateInvoice user={user} portalType="supervisor" />} />
                     <Route path="billing/invoices" element={<Invoices user={user} portalType="supervisor" />} />
@@ -745,7 +748,12 @@ function App() {
                     <Route path="vendors" element={<ExecutiveVendors user={user} />} />
                     <Route path="vendors/add" element={<ExecutiveAddVendor user={user} />} />
                     <Route path="vendors/assigned" element={<AssignedVendors user={user} />} />
-                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} />} />
+                    <Route path="employees/zones" element={<ManagerEmployeeZones user={user} viewOnly={true} apiPortal="executive" />} />
+                    <Route path="estimates/dashboard" element={<EstimatesDashboard user={user} portalType="executive" />} />
+                    {/* Schedules: the dashboard only. Its drill-down links point at screens this
+                        portal has no endpoints for, so they land back on the dashboard. */}
+                    <Route path="schedules/dashboard" element={<SchedulesDashboard user={user} portalType="executive" />} />
+                    <Route path="schedules/*" element={<Navigate to="/executive/schedules/dashboard" replace />} />
                     <Route path="estimates" element={<ExecutiveEstimates user={user} defaultTab="list" />} />
                     <Route path="estimates/create" element={<ExecutiveEstimates user={user} defaultTab="create" />} />
                     <Route path="estimates/amc" element={<ExecutiveEstimates user={user} defaultTab="amc" />} />

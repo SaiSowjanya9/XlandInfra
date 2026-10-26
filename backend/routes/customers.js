@@ -97,28 +97,10 @@ const presentCustomerComplaint = (complaint) => ({
  * intent route applies.
  */
 const customerOwnsInvoice = async (account, inv) => {
-  let numericPropertyId = account.property_id;
-  let propertyCode = account.property_code;
-  const lookupId = account.property_id || account.property_code;
-  if (lookupId) {
-    const [opData] = await pool.execute(
-      'SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?',
-      [lookupId, lookupId]
-    );
-    if (opData.length > 0) {
-      numericPropertyId = opData[0].id;
-      propertyCode = propertyCode || opData[0].property_id;
-    } else {
-      const [pData] = await pool.execute(
-        'SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?',
-        [lookupId, lookupId]
-      );
-      if (pData.length > 0) {
-        numericPropertyId = pData[0].id;
-        propertyCode = propertyCode || pData[0].property_id;
-      }
-    }
-  }
+  // The shared resolver (code before id), defined with the dashboard routes below
+  const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+    account.property_id, account.property_code, account.property_name
+  );
   const invoicePropertyId = String(inv.property_id || '');
   const invoicePropertyCode = String(inv.property_code || '');
   const invoiceEmail = String(inv.customer_email || '').toLowerCase();
@@ -126,13 +108,20 @@ const customerOwnsInvoice = async (account, inv) => {
   const custPropertyCode = String(propertyCode || '');
   const custEmail = String(account.email || '').toLowerCase();
   return Boolean(
-    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId &&
+      // The number alone is not unique across onboarded_properties and properties: an invoice
+      // that names another property's code is not this customer's however its id reads
+      (!invoicePropertyCode || !custPropertyCode || invoicePropertyCode === custPropertyCode)) ||
     (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
     (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
     (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
     (custEmail && invoiceEmail && custEmail === invoiceEmail)
   );
 };
+
+// Only POST /login mints role 'customer' (middleware/customerAuth.js applies the same rule to
+// POST /api/work-orders). verifyToken answers null for a bad signature, hence the guard.
+const isCustomerToken = (decoded) => Boolean(decoded && decoded.role === 'customer' && decoded.id);
 
 // Customer authentication middleware
 const authenticateCustomer = async (req, res, next) => {
@@ -148,6 +137,12 @@ const authenticateCustomer = async (req, res, next) => {
       decoded = verifyToken(token);
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    // Staff and customer tokens share one secret, so only a customer login may act as an account:
+    // a staff token for users.id = 3 would otherwise be read as customer_accounts.id = 3
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Please log in to the customer portal' });
     }
 
     const customerId = decoded.id;
@@ -285,6 +280,7 @@ router.post('/create', authenticate, requireCustomerCreator, async (req, res) =>
 
     // Validate required fields
     if (!email) {
+      await conn.rollback();
       return res.status(400).json({
         success: false,
         message: 'Email is required'
@@ -539,6 +535,7 @@ router.post('/set-password', async (req, res) => {
 
     // Validate required fields
     if (!token || !email || !tempPassword || !newPassword) {
+      await conn.rollback();
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
@@ -547,6 +544,7 @@ router.post('/set-password', async (req, res) => {
 
     // Password validation
     if (newPassword.length < 8) {
+      await conn.rollback();
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 8 characters long'
@@ -701,15 +699,23 @@ router.post('/login', loginRateLimiter, async (req, res) => {
               COALESCE(p.name, op1.community_name, op2.community_name) as op_property_name,
               COALESCE(p.property_id, op1.property_id, op2.property_id) as op_property_id,
               COALESCE(p.zone_id, op1.zone, op2.zone) as op_zone, 
-              COALESCE(p.division, op1.division, op2.division) as op_division, 
+              -- properties has division_id (a VARCHAR holding the name), not division: naming
+              -- p.division fails the whole statement on a database built from this repo
+              COALESCE(p.division_id, op1.division, op2.division) as op_division, 
               COALESCE(op1.entry_type, op2.entry_type) as entry_type,
               COALESCE(p.address, op1.address, op2.address) as op_address, 
               COALESCE(p.city, op1.city, op2.city) as op_city, 
               COALESCE(p.state, op1.state, op2.state) as op_state,
               COALESCE(p.property_type, op1.property_type, op2.property_type) as op_property_type
        FROM customer_accounts ca
-       LEFT JOIN properties p ON CAST(ca.property_id AS UNSIGNED) = p.id
-       LEFT JOIN onboarded_properties op1 ON CAST(ca.property_id AS UNSIGNED) = op1.id
+       -- By code when the account has one: properties.id 5 and onboarded_properties.id 5 are
+       -- different properties, and joining both on the number named the wrong one at login
+       LEFT JOIN properties p ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN p.property_id = ca.property_code
+              ELSE p.id = CAST(ca.property_id AS UNSIGNED) END)
+       LEFT JOIN onboarded_properties op1 ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN op1.property_id = ca.property_code
+              ELSE op1.id = CAST(ca.property_id AS UNSIGNED) END)
        LEFT JOIN onboarded_properties op2 ON ca.property_id = op2.property_id
        WHERE ca.email = ? AND ca.is_active = 1`,
       [email.toLowerCase()]
@@ -1250,13 +1256,19 @@ router.get('/profile', async (req, res) => {
         message: 'Invalid or expired token'
       });
     }
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+    }
 
     // Get customer profile - check both onboarded_properties and properties tables
     const [customers] = await pool.execute(
       `SELECT ca.*, 
               COALESCE(op.community_name, p.name) as community_name,
               op.zone as zone, 
-              COALESCE(op.division, p.division) as division, 
+              COALESCE(op.division, p.division_id) as division, 
               op.entry_type,
               COALESCE(op.address, p.address) as prop_address, 
               COALESCE(op.city, p.city) as prop_city, 
@@ -1264,8 +1276,13 @@ router.get('/profile', async (req, res) => {
               op.total_units, 
               COALESCE(op.property_id, p.property_id) as actual_property_id
        FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       LEFT JOIN properties p ON ca.property_id = p.id
+       -- The same code-before-id join as /login (properties has division_id, not division)
+       LEFT JOIN onboarded_properties op ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN op.property_id = ca.property_code
+              ELSE op.id = ca.property_id END)
+       LEFT JOIN properties p ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN p.property_id = ca.property_code
+              ELSE p.id = ca.property_id END)
        WHERE ca.id = ? AND ca.is_active = 1`,
       [decoded.id]
     );
@@ -1388,31 +1405,38 @@ const resolveCustomerProperty = async (storedPropertyId, storedPropertyCode, sto
   let propertyCode = storedPropertyCode;
   let propertyName = storedPropertyName;
 
-  const lookupId = storedPropertyId || storedPropertyCode;
-  if (lookupId) {
-    const numericLookup = /^\d+$/.test(String(lookupId)) ? Number(lookupId) : 0;
+  // The code is tried before the id because it is unique and the id is not: onboarded_properties.id
+  // 5 and properties.id 5 are two different properties. The FP portal's Add Customer stores a
+  // `properties` id with its code, and looking that id up in onboarded_properties first resolved
+  // the customer onto whichever other household's onboarded property shared the number. The id is
+  // still tried when no code is stored, or when the stored code matches neither table.
+  const lookups = [...new Set([storedPropertyCode, storedPropertyId]
+    .filter(value => value !== null && value !== undefined && value !== '')
+    .map(String))];
+
+  for (const lookupId of lookups) {
+    const numericLookup = /^\d+$/.test(lookupId) ? Number(lookupId) : 0;
 
     // Onboarded properties first, then the legacy table the employee portals write
     const [opData] = await pool.execute(
-      `SELECT id, property_id, community_name FROM onboarded_properties
-       WHERE id = ? OR property_id = ?`,
-      [numericLookup, String(lookupId)]
+      `SELECT id, property_id, community_name FROM onboarded_properties WHERE id = ? OR property_id = ?`,
+      [numericLookup, lookupId]
     );
     if (opData.length > 0) {
       numericPropertyId = opData[0].id;
       propertyCode = propertyCode || opData[0].property_id;
       propertyName = propertyName || opData[0].community_name;
-    } else {
-      const [pData] = await pool.execute(
-        `SELECT id, property_id, name FROM properties
-         WHERE id = ? OR property_id = ?`,
-        [numericLookup, String(lookupId)]
-      );
-      if (pData.length > 0) {
-        numericPropertyId = pData[0].id;
-        propertyCode = propertyCode || pData[0].property_id;
-        propertyName = propertyName || pData[0].name;
-      }
+      break;
+    }
+    const [pData] = await pool.execute(
+      `SELECT id, property_id, name FROM properties WHERE id = ? OR property_id = ?`,
+      [numericLookup, lookupId]
+    );
+    if (pData.length > 0) {
+      numericPropertyId = pData[0].id;
+      propertyCode = propertyCode || pData[0].property_id;
+      propertyName = propertyName || pData[0].name;
+      break;
     }
   }
 
@@ -1458,7 +1482,12 @@ const customerInvoiceScope = ({ numericPropertyId, propertyCode, email }) => {
   const conditions = [];
   const params = [];
 
-  if (numericPropertyId) {
+  if (numericPropertyId && propertyCode) {
+    // The number alone is not unique across onboarded_properties and properties, so an invoice
+    // matched by it must not name another property's code
+    conditions.push("(i.property_id = ? AND (i.property_code IS NULL OR i.property_code = '' OR i.property_code = ?))");
+    params.push(numericPropertyId, propertyCode);
+  } else if (numericPropertyId) {
     conditions.push('i.property_id = ?');
     params.push(numericPropertyId);
   }
@@ -1495,6 +1524,11 @@ router.get('/dashboard', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
     const customerEmail = decoded.email;
@@ -1504,7 +1538,7 @@ router.get('/dashboard', async (req, res) => {
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -1642,13 +1676,18 @@ router.get('/work-orders', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
     const customerEmail = decoded.email;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -1658,62 +1697,15 @@ router.get('/work-orders', async (req, res) => {
 
     const customerData = customer[0];
     const custEmail = customerEmail || customerData.email;
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code; // String like "GC-1781557633834"
-    let propertyName = customerData.property_name; // Store property name for matching
 
-    // Resolve property to get numeric ID
-    let numericPropertyId = storedPropertyId;
-    let propertyCode = storedPropertyCode;
-
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      const [opData] = await pool.execute(
-        `SELECT id, property_id, community_name FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-        propertyName = propertyName || opData[0].community_name;
-      } else {
-        const [pData] = await pool.execute(
-          `SELECT id, property_id, name FROM properties WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-          propertyName = propertyName || pData[0].name;
-        }
-      }
-    }
-
-    // Build WHERE conditions - prioritize unique identifiers, AVOID property_name as it's not unique
-    // Match by: property_id (numeric), property_code (unique string), resident_id (customer account), or customer_email
-    const whereConditions = [];
-    const whereParams = [];
-    
-    if (numericPropertyId) {
-      whereConditions.push('wo.property_id = ?');
-      whereParams.push(numericPropertyId);
-    }
-    if (propertyCode && propertyCode !== numericPropertyId) {
-      whereConditions.push('wo.property_id = ?');
-      whereParams.push(propertyCode);
-    }
-    if (customerId) {
-      whereConditions.push('wo.resident_id = ?');
-      whereParams.push(customerId);
-    }
-    if (custEmail) {
-      whereConditions.push('LOWER(wo.customer_email) = LOWER(?)');
-      whereParams.push(custEmail);
-    }
-    
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE (${whereConditions.join(' OR ')})` 
-      : 'WHERE 1=0';
+    // The same property resolution and matching rule as /dashboard and /activity -- this route
+    // carried its own copy, which looked the stored id up before the code
+    const property = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code, customerData.property_name
+    );
+    const scope = customerWorkOrderScope({ ...property, customerId, email: custEmail });
+    const whereClause = `WHERE ${scope.sql}`;
+    const whereParams = scope.params;
 
     // Get all work orders with full details
     const [workOrders] = await pool.execute(
@@ -1725,7 +1717,7 @@ router.get('/work-orders', async (req, res) => {
               COALESCE(wo.property_type, p.property_type, op.property_type) as property_type, 
               wo.block, wo.flat_number,
               wo.assigned_vendor_id, wo.scheduled_date, wo.completed_at,
-              wo.admin_notes, wo.created_at, wo.updated_at, wo.source
+              wo.created_at, wo.updated_at, wo.source
        FROM work_orders wo
        LEFT JOIN properties p ON (wo.property_id = p.id OR wo.property_id = p.property_id) AND p.status != 'deleted'
        LEFT JOIN onboarded_properties op ON (wo.property_id = op.id OR wo.property_id = op.property_id) AND op.status = 'active'
@@ -1771,12 +1763,17 @@ router.get('/invoices', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -1844,7 +1841,9 @@ router.get('/invoices', async (req, res) => {
         discountAmount: parseFloat(inv.discount_amount) || 0,
         discountPercentage: parseFloat(inv.discount_percentage) || 0,
         taxAmount: parseFloat(inv.tax_amount) || 0,
-        taxPercentage: parseFloat(inv.tax_percent) || 0,
+        // The column is tax_percentage (schema_v17); tax_percent does not exist, so every
+        // invoice read "GST (0%)" beside a non-zero GST amount
+        taxPercentage: parseFloat(inv.tax_percentage ?? inv.tax_percent) || 0,
         totalAmount: totalAmount,
         amountPaid: amountPaid,
         balanceAmount: balanceAmount,
@@ -1893,12 +1892,17 @@ router.get('/invoices/:id', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -1908,33 +1912,10 @@ router.get('/invoices/:id', async (req, res) => {
 
     const customerData = customer[0];
     const customerEmail = customerData.email;
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code;
-
-    // Resolve property to get numeric ID
-    let numericPropertyId = storedPropertyId;
-    let propertyCode = storedPropertyCode;
-
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      const [opData] = await pool.execute(
-        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-      } else {
-        const [pData] = await pool.execute(
-          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-        }
-      }
-    }
+    // Resolve property to get numeric ID -- through the shared resolver, code before id
+    const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code, customerData.property_name
+    );
 
     // Get invoice
     const [invoices] = await pool.execute(
@@ -1972,7 +1953,10 @@ router.get('/invoices/:id', async (req, res) => {
     const custEmail = String(customerEmail || '').toLowerCase();
 
     const hasAccess = 
-      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId &&
+      // The number alone is not unique across onboarded_properties and properties: an invoice
+      // that names another property's code is not this customer's however its id reads
+      (!invoicePropertyCode || !custPropertyCode || invoicePropertyCode === custPropertyCode)) ||
       (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
       (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
       (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
@@ -2027,7 +2011,7 @@ router.get('/invoices/:id', async (req, res) => {
         discountAmount: parseFloat(inv.discount_amount) || 0,
         discountPercentage: parseFloat(inv.discount_percentage) || 0,
         taxAmount: parseFloat(inv.tax_amount) || 0,
-        taxPercentage: parseFloat(inv.tax_percent) || 0,
+        taxPercentage: parseFloat(inv.tax_percentage ?? inv.tax_percent) || 0,
         totalAmount: totalAmount,
         amountPaid: amountPaid,
         balanceAmount: balanceAmount,
@@ -2070,7 +2054,10 @@ const customerCanAccessInvoice = (customerEmail, numericPropertyId, propertyCode
   const custPropertyCode = String(propertyCode || '');
   const custEmail = String(customerEmail || '').toLowerCase();
   return (
-    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+    (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId &&
+      // The number alone is not unique across onboarded_properties and properties: an invoice
+      // that names another property's code is not this customer's however its id reads
+      (!invoicePropertyCode || !custPropertyCode || invoicePropertyCode === custPropertyCode)) ||
     (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
     (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
     (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
@@ -2081,6 +2068,9 @@ const customerCanAccessInvoice = (customerEmail, numericPropertyId, propertyCode
 // Load a settled payment only if it belongs to this customer's invoice. Pending / failed /
 // refunded rows are not receipts — a verification_pending row carries no money yet.
 const loadCustomerPayment = async (customerId, paymentId) => {
+  // `payments.archived` is read below and created by this guard, not by any boot step -- on a
+  // database where no staff payment screen has run yet the receipt would 500 on it
+  await ensurePaymentColumns();
   const [customer] = await pool.execute(
     `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
     [customerId]
@@ -2210,12 +2200,17 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -2370,12 +2365,17 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -2385,33 +2385,10 @@ router.post('/invoices/:id/create-order', async (req, res) => {
 
     const customerData = customer[0];
     const customerEmail = customerData.email;
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code;
-
-    // Resolve property to get numeric ID
-    let numericPropertyId = storedPropertyId;
-    let propertyCode = storedPropertyCode;
-
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      const [opData] = await pool.execute(
-        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-      } else {
-        const [pData] = await pool.execute(
-          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-        }
-      }
-    }
+    // Resolve property to get numeric ID -- through the shared resolver, code before id
+    const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code, customerData.property_name
+    );
 
     // Get invoice
     const [invoices] = await pool.execute(
@@ -2446,7 +2423,10 @@ router.post('/invoices/:id/create-order', async (req, res) => {
     const custEmail = String(customerEmail || '').toLowerCase();
 
     const hasAccess = 
-      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId &&
+      // The number alone is not unique across onboarded_properties and properties: an invoice
+      // that names another property's code is not this customer's however its id reads
+      (!invoicePropertyCode || !custPropertyCode || invoicePropertyCode === custPropertyCode)) ||
       (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
       (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
       (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
@@ -2542,6 +2522,11 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     // Verify signature
     const crypto = require('crypto');
@@ -2578,7 +2563,7 @@ router.post('/invoices/:id/verify-payment', async (req, res) => {
     // SECURITY: the caller must own this invoice -- the same property/email rule as
     // GET /invoices/:id. A valid signature only proves Razorpay issued the payment.
     const [accountRows] = decoded?.id
-      ? await pool.execute('SELECT * FROM customer_accounts WHERE id = ?', [decoded.id])
+      ? await pool.execute('SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1', [decoded.id])
       : [[]];
     if (!accountRows.length || !(await customerOwnsInvoice(accountRows[0], inv))) {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
@@ -2665,12 +2650,17 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     } catch (err) {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
+    // verifyToken answers null (it never throws) for a bad or expired token, and a staff token
+    // carries a users.id, not a customer_accounts.id -- both used to reach the lookups below
+    if (!isCustomerToken(decoded)) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
 
     const customerId = decoded.id;
 
     // Get customer details
     const [customer] = await pool.execute(
-      `SELECT * FROM customer_accounts WHERE id = ?`,
+      `SELECT * FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
 
@@ -2679,33 +2669,10 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     }
 
     const customerData = customer[0];
-    const storedPropertyId = customerData.property_id;
-    const storedPropertyCode = customerData.property_code;
-
-    // Resolve property to get numeric ID
-    let numericPropertyId = storedPropertyId;
-    let propertyCode = storedPropertyCode;
-
-    const lookupId = storedPropertyId || storedPropertyCode;
-    if (lookupId) {
-      const [opData] = await pool.execute(
-        `SELECT id, property_id FROM onboarded_properties WHERE id = ? OR property_id = ?`,
-        [lookupId, lookupId]
-      );
-      if (opData.length > 0) {
-        numericPropertyId = opData[0].id;
-        propertyCode = propertyCode || opData[0].property_id;
-      } else {
-        const [pData] = await pool.execute(
-          `SELECT id, property_id FROM properties WHERE id = ? OR property_id = ?`,
-          [lookupId, lookupId]
-        );
-        if (pData.length > 0) {
-          numericPropertyId = pData[0].id;
-          propertyCode = propertyCode || pData[0].property_id;
-        }
-      }
-    }
+    // Resolve property to get numeric ID -- through the shared resolver, code before id
+    const { numericPropertyId, propertyCode } = await resolveCustomerProperty(
+      customerData.property_id, customerData.property_code, customerData.property_name
+    );
 
     // Get invoice
     const [invoices] = await pool.execute(
@@ -2733,7 +2700,10 @@ router.post('/invoices/:id/offline-payment-intent', async (req, res) => {
     const custEmail = String(customerData.email || '').toLowerCase();
 
     const hasAccess =
-      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId) ||
+      (custPropertyId && invoicePropertyId && custPropertyId === invoicePropertyId &&
+      // The number alone is not unique across onboarded_properties and properties: an invoice
+      // that names another property's code is not this customer's however its id reads
+      (!invoicePropertyCode || !custPropertyCode || invoicePropertyCode === custPropertyCode)) ||
       (custPropertyId && invoicePropertyCode && custPropertyId === invoicePropertyCode) ||
       (custPropertyCode && invoicePropertyId && custPropertyCode === invoicePropertyId) ||
       (custPropertyCode && invoicePropertyCode && custPropertyCode === invoicePropertyCode) ||
@@ -3165,7 +3135,9 @@ const MAX_CUSTOMER_VISITS = 1000;
  * property is not onboarded - such a customer simply has no visits yet.
  */
 const resolveOnboardedPropertyId = async (customer) => {
-  for (const lookup of [customer.propertyId, customer.propertyCode].filter(Boolean)) {
+  // The code before the id, as resolveCustomerProperty does: an id is not unique across
+  // onboarded_properties and properties, and the FP portal's Add Customer stores a properties id
+  for (const lookup of [customer.propertyCode, customer.propertyId].filter(Boolean)) {
     // Only an all-digit value can be an id; the code goes to property_id
     const numericId = /^\d+$/.test(String(lookup)) ? Number(lookup) : 0;
     const [[property]] = await pool.execute(
@@ -3173,6 +3145,19 @@ const resolveOnboardedPropertyId = async (customer) => {
       [numericId, String(lookup)]
     );
     if (property) return property.id;
+    if (lookup === customer.propertyCode && !numericId) {
+      // A code that names a `properties` row is a property that is not onboarded, so it has no
+      // visits -- its stored id is a properties id and must not be read as an onboarded one
+      try {
+        const [[legacy]] = await pool.execute(
+          'SELECT id FROM properties WHERE property_id = ? LIMIT 1',
+          [String(lookup)]
+        );
+        if (legacy) return null;
+      } catch (e) {
+        // a deployment without the properties table falls through to the stored id
+      }
+    }
   }
   return null;
 };
@@ -3378,8 +3363,15 @@ router.post('/complaints', authenticateCustomer, async (req, res) => {
               p.property_id AS p_code, p.division_id AS p_division, p.franchise_partner_id AS p_fp,
               COALESCE(z.name, zn.name, p.zone_id) AS p_zone
        FROM customer_accounts ca
-       LEFT JOIN onboarded_properties op ON ca.property_id = op.id
-       LEFT JOIN properties p ON ca.property_id = p.id
+       -- By code when the account has one: the id alone is not unique across the two tables, and
+       -- the FP portal's Add Customer stores a properties id, which joined onto (and filed the
+       -- complaint with the partner and zone of) whichever onboarded property shared the number
+       LEFT JOIN onboarded_properties op ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN op.property_id = ca.property_code
+              ELSE op.id = ca.property_id END)
+       LEFT JOIN properties p ON (
+         CASE WHEN COALESCE(ca.property_code, '') <> '' THEN p.property_id = ca.property_code
+              ELSE p.id = ca.property_id END)
        LEFT JOIN zones z ON CAST(p.zone_id AS UNSIGNED) = z.id
        LEFT JOIN zones zn ON p.zone_id = zn.name
        WHERE ca.id = ? AND ca.is_active = 1`,

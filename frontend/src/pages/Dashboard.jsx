@@ -869,9 +869,13 @@ const Dashboard = ({ user }) => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {selectedWorkOrder.attachments.map((att) => {
                       const isImage = att.file_type?.startsWith('image/');
+                      // file_path is where multer wrote the file on the server's own disk
+                      // (/var/www/.../uploads/x.jpg, or C:\...\uploads\x.jpg), not a URL; the
+                      // server publishes the folder at /uploads, under the stored file name
+                      const storedName = att.file_name || String(att.file_path || '').split(/[\\/]/).pop();
                       const fileUrl = att.file_path?.startsWith('http')
                         ? att.file_path
-                        : `${UPLOADS_BASE_URL}${att.file_path}`;
+                        : `${UPLOADS_BASE_URL}/uploads/${encodeURIComponent(storedName || '')}`;
 
                       return (
                         <a

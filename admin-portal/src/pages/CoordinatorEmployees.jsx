@@ -161,7 +161,7 @@ const CoordinatorEmployees = ({ user }) => {
         ? `/api/coordinator/employees/${editingEmployee.id}`
         : '/api/coordinator/employees';
       
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE}${url}`, {
         method: editingEmployee ? 'PUT' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -1,6 +1,6 @@
 import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
-import { safeStorage, getAuthToken } from '../utils/safeStorage';
+import { safeStorage, getAuthToken, getCurrentUser } from '../utils/safeStorage';
 import {
   Search,
   X,
@@ -69,7 +69,7 @@ const EmployeeZoneManagement = () => {
   const token = getAuthToken();
   
   // Check if user is Operations Manager (view-only access)
-  const currentUser = JSON.parse(safeStorage.getItem('pm_current_user') || '{}');
+  const currentUser = getCurrentUser();
   const isOpsManager = currentUser?.role === 'operations_manager';
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
   

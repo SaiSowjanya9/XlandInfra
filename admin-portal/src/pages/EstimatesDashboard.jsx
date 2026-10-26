@@ -68,7 +68,10 @@ const getApiPath = (portalType) => {
     'franchise': 'fp',
     'manager': 'manager',
     'admin': 'admin',
-    'employee': 'admin'
+    'employee': 'admin',
+    'supervisor': 'supervisor',
+    'executive': 'executive',
+    'coordinator': 'coordinator'
   };
   return portalMap[portalType] || 'fp';
 };

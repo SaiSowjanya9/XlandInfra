@@ -104,8 +104,11 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
       const month = currentDate.getMonth();
       
       // Get first and last day of the month for the query
-      const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-      const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      // Built from the digits, not toISOString(): local midnight is the previous UTC day in IST,
+      // which shifted the range back a day and dropped every visit on the month's last day.
+      const monthStr = String(month + 1).padStart(2, '0');
+      const startDate = `${year}-${monthStr}-01`;
+      const endDate = `${year}-${monthStr}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`;
       
       const response = await fetch(
         `${API_BASE}/api/${apiPath}/schedules/all?startDate=${startDate}&endDate=${endDate}&limit=500`, 

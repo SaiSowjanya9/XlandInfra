@@ -61,7 +61,8 @@ const AssignedVendors = ({ user }) => {
     if (isFPUser) return '/api/fp';
     return '/api';
   };
-  const apiPrefix = getApiPrefix();
+  // Full API_BASE URL: a relative /api/... resolves to admin.xlandinfra.com in production
+  const apiPrefix = `${API_BASE}${getApiPrefix()}`;
   
   // Coordinators, Supervisors, Executives, FP Managers, and Ops Manager are view-only
   const isViewOnly = isCoordinator || isSupervisor || isExecutive || isFPManager || isOpsManager;

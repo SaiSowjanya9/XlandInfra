@@ -440,9 +440,10 @@ const SupervisorWorkOrders = ({ user }) => {
     if (!selectedWorkOrder) return;
 
     try {
+      // Full API_BASE URL: a relative /api/... resolves against the admin site, not the API
       const endpoint = assignType === 'vendor'
-        ? `/api/supervisor/work-orders/${selectedWorkOrder.id}/assign-vendor`
-        : `/api/supervisor/work-orders/${selectedWorkOrder.id}/assign-employee`;
+        ? `${API_BASE}/api/supervisor/work-orders/${selectedWorkOrder.id}/assign-vendor`
+        : `${API_BASE}/api/supervisor/work-orders/${selectedWorkOrder.id}/assign-employee`;
 
       const response = await fetch(endpoint, {
         method: 'PATCH',
@@ -1048,7 +1049,6 @@ const SupervisorWorkOrders = ({ user }) => {
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
               <button onClick={() => fetchWorkOrders()} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-700" title="Refresh">
@@ -1112,7 +1112,8 @@ const SupervisorWorkOrders = ({ user }) => {
                               <option value="assigned" className="bg-white text-gray-900">Assigned</option>
                               <option value="in_progress" className="bg-white text-gray-900">In Progress</option>
                               <option value="completed" className="bg-white text-gray-900">Completed</option>
-                              <option value="closed" className="bg-white text-gray-900">Closed</option>
+                              {/* Closed is not a supervisor's to set; an already-closed row still reads as Closed */}
+                              {wo.status === 'closed' && <option value="closed" disabled className="bg-white text-gray-900">Closed</option>}
                               <option value="cancelled" className="bg-white text-gray-900">Cancelled</option>
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" />
@@ -1162,13 +1163,7 @@ const SupervisorWorkOrders = ({ user }) => {
                             >
                               <UserPlus className="w-4 h-4 text-green-500" />
                             </button>
-                            <button
-                              onClick={() => handleDeleteWorkOrder(wo.id)}
-                              className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
+                            {/* No Delete: a supervisor cannot delete work orders (the API refuses it, as it does properties and vendors) */}
                           </div>
                         </td>
                       </tr>
@@ -1236,6 +1231,7 @@ const SupervisorWorkOrders = ({ user }) => {
           maxWidth="max-w-2xl"
           title="Work Order Details"
           align="top"
+          footer={null}
         >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1688,7 +1684,7 @@ const SupervisorWorkOrders = ({ user }) => {
                     <option value="assigned">Assigned</option>
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
-                    <option value="closed">Closed</option>
+                    {editFormData.status === 'closed' && <option value="closed" disabled>Closed</option>}
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
