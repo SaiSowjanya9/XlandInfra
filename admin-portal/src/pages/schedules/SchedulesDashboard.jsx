@@ -10,6 +10,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import DonutChart from '../../components/common/DonutChart';
+import ChartLegend from '../../components/common/ChartLegend';
 import DateRangeFilter from '../../components/common/DateRangeFilter';
 import { getAuthToken } from '../../utils/safeStorage';
 import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHeader';
@@ -69,6 +70,40 @@ const formatTimeOfDay = (t) => {
   const displayHour = h % 12 === 0 ? 12 : h % 12;
   return `${displayHour}:${minutes || '00'} ${suffix}`;
 };
+
+// Every donut legend states its figure the same way: the count and its share of that card's total.
+const countShare = (value, total) => `${value} (${total ? Math.round((value / total) * 100) : 0}%)`;
+
+/**
+ * One of the three donut cards in the charts row.
+ *
+ * The three were written out by hand and had drifted into three different cards - a 90px, a 170px
+ * and a 110px chart, one card a grid column wide beside one spanning two, and three legends laid
+ * out three ways (one column, two columns, counts with a share and without) - so no two labels or
+ * figures lined up. They are one component now: an equal share of the grid row, the same chart,
+ * and the shared ChartLegend, whose labels hold the left edge and whose figures hold the right.
+ */
+const DonutCard = ({ title, filter, data, total, items, className = '' }) => (
+  <div className={`bg-white rounded-xl border border-gray-200 p-4 min-w-0 overflow-hidden ${className}`}>
+    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+      {filter}
+    </div>
+    {items.length > 0 ? (
+      // Stacked until xl: a card holding a third of the row is too narrow for a 144px chart beside
+      // a legend, which is what squeezed the labels in the first place.
+      <div className="flex flex-col xl:flex-row items-center xl:items-start justify-center gap-4 xl:gap-5">
+        <div className="flex-shrink-0">
+          <DonutChart data={data} size={144} centerValue={total} centerLabel="Total" />
+        </div>
+        {/* The legend takes the rest of the card, which is the same width in all three */}
+        <ChartLegend items={items} className="xl:flex-1 max-h-60 overflow-y-auto pr-1" />
+      </div>
+    ) : (
+      <p className="text-xs text-gray-400 text-center py-16">No data</p>
+    )}
+  </div>
+);
 
 const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
   const navigate = useNavigate();
@@ -537,80 +572,33 @@ const SchedulesDashboard = ({ user, portalType = 'franchise' }) => {
         { key: 'overdue', label: 'Overdue', sublabel: 'Schedules', value: overdueSchedules.length, icon: AlertTriangle, color: 'rose', linkText: 'View Overdue', to: `${getBasePath()}/schedules/all` }
       ]} />
 
-      {/* Charts Row - Responsive grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        {/* Status Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Schedules by Status</h3>
-            <PeriodFilter value={statusFilter} onChange={setStatusFilter} />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <DonutChart data={statusData} size={90} strokeWidth={16} centerValue={statusTotal} centerLabel="Total" />
-            </div>
-            <div className="space-y-1 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
-              {statusData.map((d, i) => (
-                <div key={i} className="flex items-start gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
-                  {/* Status names are shown in full - they wrap instead of being cut off */}
-                  <span className="text-gray-600 flex-1 leading-tight break-words">{d.name}</span>
-                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0">{d.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Charts Row - three cards of equal width, each a third of the row from lg up */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <DonutCard
+          title="Schedules by Status"
+          filter={<PeriodFilter value={statusFilter} onChange={setStatusFilter} />}
+          data={statusData}
+          total={statusTotal}
+          items={statusData.map(d => ({ label: d.name, color: d.color, value: countShare(d.value, statusTotal) }))}
+        />
 
-        {/* Service Donut Chart - expanded, grows with the number of services */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden sm:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Schedules by Service</h3>
-            <PeriodFilter value={serviceFilter} onChange={setServiceFilter} />
-          </div>
-          {serviceData.length > 0 ? (
-            <div className="flex items-center gap-5">
-              <div className="flex-shrink-0">
-                <DonutChart data={serviceData} size={170} strokeWidth={28} centerValue={serviceTotal} centerLabel="Total" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-1.5 text-xs min-w-0 flex-1 max-h-[170px] overflow-y-auto pr-1">
-                {serviceData.map((d, i) => (
-                  <div key={i} className="flex items-start gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
-                    {/* Long service names wrap onto a second line instead of being cut off */}
-                    <span className="text-gray-600 flex-1 min-w-0 leading-tight break-words">{d.name}</span>
-                    <span className="font-medium text-gray-900 flex-shrink-0 whitespace-nowrap">{d.value} ({serviceTotal ? Math.round((d.value / serviceTotal) * 100) : 0}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400 text-center py-16">No data</p>
-          )}
-        </div>
+        <DonutCard
+          title="Schedules by Service"
+          filter={<PeriodFilter value={serviceFilter} onChange={setServiceFilter} />}
+          data={serviceData}
+          total={serviceTotal}
+          items={serviceData.map(d => ({ label: d.name, color: d.color, value: countShare(d.value, serviceTotal) }))}
+        />
 
-        {/* Property Type Donut */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Schedules by Property Type</h3>
-            <PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
-          </div>
-          {/* Stacked so each legend row gets the full card width - type names are long */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex-shrink-0">
-              <DonutChart data={propertyTypeData} size={110} strokeWidth={18} centerValue={propertyTypeTotal} centerLabel="Total" />
-            </div>
-            <div className="space-y-1 text-xs w-full">
-              {propertyTypeData.map((d, i) => (
-                <div key={i} className="flex items-start gap-1.5">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: d.color }} />
-                  <span className="text-gray-600 flex-1 min-w-0 leading-tight break-words">{d.name}</span>
-                  <span className="font-medium text-gray-900 text-[10px] flex-shrink-0 whitespace-nowrap">{d.value} ({propertyTypeTotal ? Math.round((d.value / propertyTypeTotal) * 100) : 0}%)</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Below lg the row holds two cards, so the third spans it rather than leaving half empty */}
+        <DonutCard
+          className="md:col-span-2 lg:col-span-1"
+          title="Schedules by Property Type"
+          filter={<PeriodFilter value={propertyTypeFilter} onChange={setPropertyTypeFilter} />}
+          data={propertyTypeData}
+          total={propertyTypeTotal}
+          items={propertyTypeData.map(d => ({ label: d.name, color: d.color, value: countShare(d.value, propertyTypeTotal) }))}
+        />
       </div>
 
       {/* Schedule Trend + Tables Row - Responsive. min-w-0 keeps each card inside its

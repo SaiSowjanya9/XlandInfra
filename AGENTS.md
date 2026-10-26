@@ -345,6 +345,7 @@ fetch('/api/manager/dashboard', { ... });
 - **A floating panel stays on screen.** `DismissPanel` clamps itself through `hooks/useViewportClamp.js`; a plain `{open && <div className="absolute right-0 w-80 …">}` takes `ref={clampToViewport}` and `max-w-[calc(100vw-1rem)]`. A `right-0 w-80` panel opened mid-row on a phone otherwise runs off the left edge (the dashboard date filter did).
 - **A chart's month reads "May 2026"** — `formatMonthYear` from `utils/dateFormat.js`, never `formatDate` (which gave `01/05/2026` on the Work Orders trends) or a two-digit year. Day buckets stay "09 Sep".
 - **A trend chart is one continuous line, not a row of labelled months** (the user's call). Every trend — Work Orders Trend, Work Orders by Category Trend, Estimate Trend, Collection Trend, Lead Trend, Schedule Trend — is drawn as lines (no bars, no per-point dots, `activeDot` on hover), its XAxis spreads `TREND_X_AXIS` from `utils/trendSpan.js` (axis line only, no ticks), and the span is stated once underneath with `trendSpanLabel` ("May 2026 – Oct 2026"). The hover still names the bucket. "All Time" runs from the earliest record's month to the current month (`monthsSinceEarliest`), not a fixed six. Regression test: `node --test admin-portal/src/utils/trendSpan.test.js`.
+- **A counting axis never labels itself in fractions.** Recharts picks its own ticks and only rounds them off above a peak of three, so an axis left on the default `allowDecimals` reads correctly on a busy deployment and wrong on a new one: the Estimate Trend whose tallest month held three estimates was labelled `0 / 0.75 / 1.5 / 2.25 / 3` — two and a quarter estimates — while the same chart at ten gives `0 / 3 / 6 / 9 / 12` by itself. Every axis measuring a count of rows (the Estimate and Work Orders trends, Work Orders by Category, the Properties by Type bars on the Executive, Coordinator, Supervisor, FP and Manager dashboards, the Schedules and Marketing charts) sets `allowDecimals={false}`; only an axis that formats its own ticks (`tickFormatter` for ₹1.5L) or carries labels rather than figures (`type="category"`, `unit="%"`) is exempt. Regression test: `node --test admin-portal/src/utils/countAxisTicks.test.js`.
 - **A dashboard's summary row is `components/common/DashboardSummaryCards.jsx`, never a copy.** Four
   dashboards had four designs for the same row: Payments (white card, coloured `border-l-4` edge,
   icon tile, label over a sublabel, the figure, "View All →"), Estimates (top border over a
@@ -1348,6 +1349,17 @@ from `server.js` on boot) does the same thing at runtime.
 - A donut and its legend **stack until `xl`**. A card in a three-column grid is narrow at every
   breakpoint below that, and a 130px chart beside a legend is what squeezed the labels in the first
   place. Where a label must keep a fixed column so bars line up, it wraps inside that column.
+- **The donut cards of one row are equal, and equal because they are one component.** The
+  Scheduling dashboard's Status / Service / Property Type cards were three hand-written blocks and
+  had drifted into three designs — a 90px, a 170px and a 110px chart, one card spanning two grid
+  columns beside two spanning one, and legends in one column, in two columns, with a share and
+  without — so no two labels or figures lined up. They render through `DonutCard` in
+  `pages/schedules/SchedulesDashboard.jsx`: one grid column each (`md:grid-cols-2 lg:grid-cols-3`,
+  the last card `md:col-span-2 lg:col-span-1` so it fills the two-card row rather than half of it),
+  one 144px `DonutChart`, and one `ChartLegend` taking the rest of the card, which is the same
+  width in all three — so a label sits on the same left edge and its figure on the same right edge
+  across the row. A figure is `countShare(value, total)`, the count and its share, everywhere.
+  Add a fourth card by calling the component, never by copying the markup.
 
 ## Collection Trend
 

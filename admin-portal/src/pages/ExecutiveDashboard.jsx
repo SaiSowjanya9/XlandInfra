@@ -316,7 +316,7 @@ const ExecutiveDashboard = ({ user }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={propertyTypeData} margin={{ top: 10, right: 10, left: 10, bottom: 30 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={{ stroke: '#E5E7EB' }} tickLine={false} angle={-35} textAnchor="end" height={70} interval={0} />
-                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#1f2937', fontWeight: 500 }} stroke="#E5E7EB" axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', fontSize: '12px' }} formatter={(value) => [`${value} properties`, 'Count']} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32} fillOpacity={0.85} isAnimationActive={false}>
                   {propertyTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
