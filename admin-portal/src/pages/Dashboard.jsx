@@ -784,10 +784,10 @@ const Dashboard = () => {
 
         {/* First Stats Row - 5 KPI Cards with Real-Time Data. They wrap to the screen and
             share each row's width, so no card is cut off on a phone or tablet. */}
-        <div className="flex flex-wrap gap-3 py-1">
+        <div className="flex flex-wrap gap-3 py-1 lg:flex-nowrap">
           <div 
             onClick={() => navigate('/employee/customer-submissions')}
-            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] lg:flex-[1_1_0%] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -803,7 +803,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/assigned-vendors')}
-            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] lg:flex-[1_1_0%] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -819,7 +819,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/employee-details')}
-            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] lg:flex-[1_1_0%] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -835,7 +835,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/work-orders')}
-            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] lg:flex-[1_1_0%] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-purple-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -851,7 +851,7 @@ const Dashboard = () => {
 
           <div 
             onClick={() => navigate('/employee/estimates/list')}
-            className="min-w-0 flex-[1_1_10rem] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
+            className="min-w-0 flex-[1_1_10rem] lg:flex-[1_1_0%] bg-white rounded-xl border border-gray-100 px-4 py-3 hover:shadow-lg hover:border-teal-200 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
