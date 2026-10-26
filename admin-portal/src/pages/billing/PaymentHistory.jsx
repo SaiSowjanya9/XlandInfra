@@ -181,7 +181,7 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
       });
       if (!response.ok) throw new Error('Failed to generate receipt');
       const blob = await response.blob();
-      setReceipt({ code: row.paymentCode || row.paymentId, url: window.URL.createObjectURL(blob) });
+      setReceipt({ code: row.receiptCode || row.paymentCode || row.paymentId, url: window.URL.createObjectURL(blob) });
     } catch (err) {
       setError('Could not load the receipt. Please try again.');
     } finally {
@@ -439,6 +439,9 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                               {row.paymentCode || '-'}
                             </p>
                           )}
+                          {row.receiptCode && (
+                            <p className="text-[11px] text-gray-500">{row.receiptCode}</p>
+                          )}
                           <p className="text-[11px] text-gray-400 truncate" title={row.invoiceCode || ''}>
                             {row.invoiceCode || '-'}
                           </p>
@@ -499,6 +502,7 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
                           <p className="text-sm font-medium text-gray-500 truncate">{row.paymentCode || '-'}</p>
                         )}
                         <p className="text-xs text-gray-500 truncate">
+                          {row.receiptCode ? `${row.receiptCode} · ` : ''}
                           {row.invoiceCode || '-'}
                           {row.customerName ? ` · ${row.customerName}` : ''}
                         </p>

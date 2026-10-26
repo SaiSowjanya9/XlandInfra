@@ -49,6 +49,7 @@ const PaymentSuccess = () => {
             paymentLinkId: result.data?.paymentLinkId || paymentLinkId,
             referenceId: result.data?.referenceId || paymentLinkReferenceId,
             amount: result.data?.amount,
+            receiptId: result.data?.receiptId,
             invoiceId: result.data?.invoiceId,
             customerName: result.data?.customerName
           });
@@ -158,6 +159,12 @@ const PaymentSuccess = () => {
                       <span className="text-gray-900 font-semibold text-lg">
                         {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(paymentDetails.amount)}
                       </span>
+                    </div>
+                  )}
+                  {paymentDetails.receiptId && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Receipt No.</span>
+                      <span className="text-gray-900 font-mono text-sm">{paymentDetails.receiptId}</span>
                     </div>
                   )}
                   {paymentDetails.invoiceId && (

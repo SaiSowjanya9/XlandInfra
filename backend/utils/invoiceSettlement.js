@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { paidAtAssignment } = require('./invoiceColumns');
 const { ensureRefundTable, settledRefundTotal } = require('./refundLedger');
+const { assignMissingReceiptIds } = require('./paymentIds');
 
 /**
  * One invoice's settlement fields, recomputed from the payments table -- the payments rows
@@ -18,6 +19,8 @@ const { ensureRefundTable, settledRefundTotal } = require('./refundLedger');
  * still runs on `pool`, outside `conn`.
  */
 const resyncInvoiceSettlement = async (invoiceId, conn = pool) => {
+  // Any payment this write just confirmed gets its RCP- receipt number with it
+  await assignMissingReceiptIds(invoiceId, conn);
   const [[totals]] = await conn.execute(
     `SELECT COALESCE(SUM(amount), 0) AS total_paid
      FROM payments

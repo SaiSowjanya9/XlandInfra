@@ -47,7 +47,7 @@ const findRecordedPayment = async (razorpayPaymentId) => {
   if (!razorpayPaymentId) return null;
 
   const [rows] = await pool.execute(`
-    SELECT p.id, p.payment_id, p.amount, p.status, p.payment_date,
+    SELECT p.id, p.payment_id, p.receipt_id, p.amount, p.status, p.payment_date,
            i.invoice_id, i.customer_name, prop.community_name AS property_name
     FROM payments p
     LEFT JOIN invoices i ON p.invoice_id = i.id
@@ -62,6 +62,7 @@ const findRecordedPayment = async (razorpayPaymentId) => {
   return {
     id: row.id,
     paymentId: row.payment_id,
+    receiptId: row.receipt_id || null,
     amount: parseFloat(row.amount),
     status: row.status,
     invoiceId: row.invoice_id,

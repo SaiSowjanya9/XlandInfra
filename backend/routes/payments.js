@@ -2446,6 +2446,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
       data: payments.map(p => ({
         id: p.id,
         paymentId: p.payment_id || `PYMT-${String(p.id).padStart(4, '0')}`,
+        receiptId: p.receipt_id || null,
         invoiceId: p.invoice_code || p.invoice_id,
         invoiceCode: p.invoice_code,
         propertyId: p.property_id,
@@ -3183,8 +3184,11 @@ router.put('/:id/verify', authenticate, canEditPayments, async (req, res) => {
       console.log(`[Payment Verify] Customer email for receipt: ${customerEmail || 'NOT FOUND'}`);
       if (customerEmail) {
         try {
+          // p was read before the resync drew this payment's RCP- number
+          const [[receiptRow]] = await pool.execute('SELECT receipt_id FROM payments WHERE id = ?', [p.id]);
           const paymentData = {
             paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+            receiptId: receiptRow?.receipt_id || null,
             invoiceId: p.invoice_code,
             customerName: p.customer_name || p.invoice_customer_name,
             customerEmail,
@@ -3390,7 +3394,7 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
     const fpId = getFPScope(req) || requestedFpId;
 
     let query = `
-      SELECT ph.*, p.payment_id as payment_code, i.invoice_id as invoice_code,
+      SELECT ph.*, p.payment_id as payment_code, p.receipt_id as receipt_code, i.invoice_id as invoice_code,
              i.customer_name, i.total_amount as invoice_total,
              prop.community_name as property_name
       FROM payment_history ph
@@ -3451,6 +3455,7 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
           id: h.id,
           paymentId: h.payment_id,
           paymentCode: h.payment_code,
+          receiptCode: h.receipt_code || null,
           invoiceId: h.invoice_id,
           invoiceCode: h.invoice_code,
           customerName: h.customer_name,
@@ -3767,6 +3772,7 @@ router.get('/:id/receipt', authenticate, canViewPayments, async (req, res) => {
       data: {
         id: p.id,
         paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+        receiptId: p.receipt_id || null,
         invoiceId: p.invoice_code,
         customerName: p.customer_name,
         customerEmail: p.customer_email || p.email,
@@ -3829,6 +3835,7 @@ router.get('/:id/receipt/pdf', authenticate, canViewPayments, async (req, res) =
     
     const paymentData = {
       paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      receiptId: p.receipt_id || null,
       invoiceId: p.invoice_code,
       customerName: p.customer_name,
       customerEmail: p.customer_email || p.email,
@@ -3896,6 +3903,7 @@ router.post('/:id/receipt/send', authenticate, canEditPayments, async (req, res)
 
     const paymentData = {
       paymentId: p.payment_id || `PAY-${String(p.id).padStart(4, '0')}`,
+      receiptId: p.receipt_id || null,
       invoiceId: p.invoice_code,
       customerName: p.customer_name,
       customerEmail,
