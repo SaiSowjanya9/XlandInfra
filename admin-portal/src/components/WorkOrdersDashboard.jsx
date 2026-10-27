@@ -681,7 +681,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
     <select 
       value={value} 
       onChange={(e) => onChange(e.target.value)}
-      className={`text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+      className={`flex-shrink-0 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
     >
       <option value="all">All Time</option>
       <option value="week">This Week</option>
@@ -1006,7 +1006,7 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
 
         {/* Work Orders by Property Type */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 overflow-hidden md:col-span-2 lg:col-span-1">
-          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
+          <div className="flex justify-between items-center gap-2 mb-4">
             <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
             <PeriodDropdown value={propertyTypeFilter} onChange={setPropertyTypeFilter} />
           </div>
