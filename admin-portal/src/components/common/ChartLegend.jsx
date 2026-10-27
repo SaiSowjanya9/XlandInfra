@@ -16,6 +16,8 @@
  * own legend will not do -- recharts orders its legend by the order the shapes are painted and
  * floats it over the plot, where a data point can be drawn straight through it.
  */
+import { legendColumns } from '../../utils/legendColumns';
+
 // Every legend of every chart on every dashboard is this size, and there is no prop to change it.
 // It was a `size` with three values -- 11px, 12/14px and a flat 14px -- so a single row of cards
 // could hold three different legends; and at 14px a label and its figure stopped sharing a line in
@@ -43,8 +45,10 @@ export default function ChartLegend({ items = [], className = '', layout = 'list
       </ul>
     );
   }
+  // The list layout splits across columns once the key is longer than the chart it describes --
+  // see legendColumns; how wide the caller lets the legend be decides how many columns it gets.
   return (
-    <ul className={`w-full space-y-1.5 ${className}`}>
+    <ul className={`w-full ${legendColumns(rows.length)} ${className}`}>
       {rows.map((item, index) => (
         // The row wraps as a whole: where the label and its figure will not share a line, the figure
         // drops to the next one and the label keeps the full width. Holding them on one line squeezed

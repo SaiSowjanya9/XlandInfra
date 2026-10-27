@@ -1416,6 +1416,18 @@ from `server.js` on boot) does the same thing at runtime.
   invoice-status card (`2xl:w-44`). Give a legend beside a chart a width of its own — `w-44`/`w-48`
   holds "Partially Paid" and its figure on one 12px line — rather than `flex-1` on a card wider
   than the legend needs.
+- **A legend longer than its chart splits across columns, by width not breakpoint.**
+  `utils/legendColumns.js` `legendColumns(count)` is the one decision: `LEGEND_SPLIT_AT` (9) rows
+  and up gets `grid-cols-[repeat(auto-fill,minmax(10rem,1fr))]` — as many 160px columns as the
+  legend's own width holds, so a legend beside a chart keeps one column and one given the card's
+  full width splits into two or three. `Categories.jsx` ships seventeen work-order categories;
+  keyed one per row the key ran to twice the donut's height. `ChartLegend` consumes it, so every
+  legend inherits the fix — the test fails if the list layout is hand-set again. A card whose
+  legend sits beside its chart asks `legendSplits` too and stacks the legend under the chart when
+  true (two columns do not fit beside the ring): the "Work Order Estimates by Category" card does
+  this in both `EstimatesOverviewBlocks.jsx` and `EstimatesDashboard.jsx`, and the
+  `WORK_ORDER_FRAME_CATEGORIES` key stays under the threshold by design.
+  Regression test: `node --test admin-portal/src/utils/legendColumns.test.js`.
 
 ## Collection Trend
 
