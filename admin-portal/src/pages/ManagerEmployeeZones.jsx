@@ -429,7 +429,12 @@ const ManagerEmployeeZones = ({ user, viewOnly = false, apiPortal = 'manager' })
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-xs font-mono text-gray-500 mb-1">{employee.employee_id || employee.user_id || employee.employeeId || `ID: ${employee.id}`}</p>
-                    <h3 className="font-semibold text-gray-900">{employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim()}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-gray-900">{employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim()}</h3>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold border ${getRoleBadgeStyle(employee.role || employee.employee_type)}`}>
+                        {formatRoleName(employee.role || employee.employee_type)}
+                      </span>
+                    </div>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     hasZones
@@ -437,13 +442,6 @@ const ManagerEmployeeZones = ({ user, viewOnly = false, apiPortal = 'manager' })
                       : 'bg-gray-100 text-gray-600'
                   }`}>
                     {hasZones ? 'Active' : 'Pending'}
-                  </span>
-                </div>
-
-                {/* Role Badge */}
-                <div className="mb-3">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${getRoleBadgeStyle(employee.role || employee.employee_type)}`}>
-                    {formatRoleName(employee.role || employee.employee_type)}
                   </span>
                 </div>
 
