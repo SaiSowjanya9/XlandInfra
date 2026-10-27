@@ -24,9 +24,11 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
  * shown. The audit trail is the screen the name promises, and `GET /api/payments/history` was
  * already serving it with nothing on the other end.
  *
- * A row here is one *thing that happened* to a payment, not a payment: the same payment appears
- * as often as it moved. That is the point -- it answers "who marked this paid, and when", which
- * the Payments list cannot.
+ * A row here is one *thing that happened* to a payment whose money settled (or came back as a
+ * refund), not a payment: the same payment appears as often as it moved. That is the point -- it
+ * answers "who marked this paid, and when", which the Payments list cannot. The server already
+ * drops rows that only record an intent -- a created link, a still-pending verification -- so a
+ * row here is confirmed money, not a request for it.
  */
 
 // What each audited action looks like. `action` is free text on a current database
@@ -381,7 +383,7 @@ const PaymentHistory = ({ user, portalType = 'admin' }) => {
               <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
                 {hasFilters
                   ? 'Clear them to see the whole trail.'
-                  : 'Every payment that is recorded, verified, refunded or paid online is logged here.'}
+                  : 'Payments appear here once the money settles -- verified, paid online or refunded.'}
               </p>
             </div>
           ) : (
