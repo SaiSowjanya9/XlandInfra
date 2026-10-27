@@ -33,7 +33,6 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend,
   LineChart,
   Line,
   CartesianGrid,
@@ -41,6 +40,7 @@ import {
   Area
 } from 'recharts';
 import DonutChart from './common/DonutChart';
+import ChartLegend from './common/ChartLegend';
 import useChartTooltip from './common/ChartTooltip';
 import DashboardSummaryCards from './common/DashboardSummaryCards';
 import { getAuthToken } from '../utils/safeStorage';
@@ -1057,14 +1057,18 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
           const categoryTrend = getCategoryTrendData();
           return (
             <>
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                {categoryTrend.categories.map((cat, index) => (
-                  <div key={cat} className="flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: categoryColors[index % categoryColors.length], minWidth: '10px', minHeight: '10px' }}></span>
-                    <span className="text-xs text-gray-600">{cat}</span>
-                  </div>
-                ))}
-              </div>
+              {/* The shared key above the plot, its swatches drawn as dashes because the series
+                  are lines: the catalogue is unbounded (Categories.jsx ships seventeen) and a row
+                  legend wraps onto as many lines as it needs instead of squeezing. */}
+              <ChartLegend
+                layout="row"
+                className="mb-4"
+                items={categoryTrend.categories.map((cat, index) => ({
+                  label: cat,
+                  color: categoryColors[index % categoryColors.length],
+                  line: true
+                }))}
+              />
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={categoryTrend.data}>
@@ -1108,20 +1112,16 @@ const WorkOrdersDashboard = ({ user, portalType = 'franchise' }) => {
             <h3 className="text-sm font-semibold text-gray-900">Work Orders Trend</h3>
             <PeriodDropdown value={trendPeriod} onChange={setTrendPeriod} />
           </div>
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-              <span className="text-xs text-gray-600">Created</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-              <span className="text-xs text-gray-600">Completed</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-              <span className="text-xs text-gray-600">Cancelled</span>
-            </div>
-          </div>
+          {/* Dashes for line series, through the same shared key the category trend above uses */}
+          <ChartLegend
+            layout="row"
+            className="mb-4"
+            items={[
+              { label: 'Created', color: '#3B82F6', line: true },
+              { label: 'Completed', color: '#10B981', line: true },
+              { label: 'Cancelled', color: '#EF4444', line: true }
+            ]}
+          />
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
