@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SVGDonutChart from './common/DonutChart';
+import ChartLegend from './common/ChartLegend';
 import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
 
 // Helper to normalize property type - also checks property_code prefix
@@ -198,161 +199,21 @@ const HorizontalBarChart = ({ data }) => {
   );
 };
 
-// Category colors for grouped chart
-const CATEGORY_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
-  '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1'
-];
-
 /**
- * The frame this card draws before its first work-order estimate exists.
+ * The key this card draws before its first work-order estimate exists.
  *
  * The Work Order Estimate Status donut beside it draws its grey ring and lists all four statuses at
- * zero, so a card that collapses to a bare "0" and a line of text reads, next to it, as a chart that
- * failed rather than one with nothing in it yet. The property types are the five the dashboards'
- * own property-type cards show; the categories are the work-order categories `chartColors.js`
- * names, which keeps the key's colours the ones a real estimate will be drawn in. The catalogue in
- * `pages/Categories.jsx` is seventeen long -- too many for a key beside a chart this size -- so the
- * categories an estimate actually carries replace these outright as soon as there is one.
+ * zero, so a card that collapses to a bare "0" and a line of text reads, next to it, as a chart
+ * that failed rather than one with nothing in it yet. These are the work-order categories
+ * `chartColors.js` names, which keeps the key's colours the ones a real estimate will be drawn in.
+ * The catalogue in `pages/Categories.jsx` is seventeen long -- too many for a key beside a chart
+ * this size -- so the categories an estimate actually carries replace these outright as soon as
+ * there is one.
  */
-const FRAME_PROPERTY_TYPES = ['Gated Community', 'Apartment', 'Villa', 'Plot', 'Flat'];
 const FRAME_CATEGORIES = [
   'Building Interior', 'Building Exterior', 'Appliances',
   'Electrical', 'Plumbing', 'HVAC', 'Landscaping'
 ];
-
-// Grouped bar chart - Categories by Property Type
-const GroupedBarChart = ({ data }) => {
-  const { propertyTypes, categories, data: groupedData } = data;
-  const [hoveredBar, setHoveredBar] = useState(null);
-  
-  if (propertyTypes.length === 0) {
-    return (
-      <div className="h-48 flex">
-        {/* The chart, empty: a track where each group's bars would stand, so the axis and the
-            shape of the chart are there to read. It charts estimates raised from a work order,
-            and the note says so -- a partner with plenty of work orders and none of those read
-            the old bare "0" as a failure. */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Scrolls sideways rather than squeezing five labelled groups into nothing, as the
-              Collection Trend's plot does. `min-w-max` only takes effect once the groups no
-              longer fit, so on a card with room they stay centred and there is no scrollbar. */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="flex h-full min-w-max items-end justify-center gap-6">
-              {FRAME_PROPERTY_TYPES.map((propType) => (
-                <div key={propType} className="flex flex-col items-center">
-                  <div className="w-6 h-24 rounded-t-md bg-gray-100" />
-                  <span className="text-[11px] text-gray-700 font-semibold mt-2 text-center whitespace-nowrap">
-                    {propType}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="mt-2 text-center text-[11px] text-gray-400">
-            No estimates created from work orders yet
-          </p>
-        </div>
-
-        {/* The key, at zero -- the statuses donut beside it lists all four the same way */}
-        <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
-          {FRAME_CATEGORIES.map((cat) => (
-            <div key={cat} className="flex items-center gap-1.5">
-              <div
-                className="w-3 h-3 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: getConsistentColor(cat) }}
-              />
-              <span className="min-w-0 flex-1 text-[11px] text-gray-700 font-medium leading-tight" title={cat}>
-                {cat}
-              </span>
-              <span className="text-[11px] text-gray-500 tabular-nums">0</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Find max value for scaling
-  let maxValue = 0;
-  propertyTypes.forEach(pt => {
-    categories.forEach(cat => {
-      const val = groupedData[pt]?.[cat] || 0;
-      if (val > maxValue) maxValue = val;
-    });
-  });
-
-  return (
-    <div className="h-48 flex">
-      {/* Chart - Left side */}
-      <div className="flex-1 flex items-end justify-center gap-6 h-36">
-        {propertyTypes.map((propType) => (
-          <div key={propType} className="flex flex-col items-center">
-            {/* Bars group */}
-            <div className="flex items-end gap-1">
-              {categories.map((cat, catIdx) => {
-                const value = groupedData[propType]?.[cat] || 0;
-                const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-                const barColor = CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length];
-                const barKey = `${propType}-${cat}`;
-                return (
-                  <div 
-                    key={cat} 
-                    className="flex flex-col items-center relative"
-                    onMouseEnter={() => setHoveredBar(barKey)}
-                    onMouseLeave={() => setHoveredBar(null)}
-                  >
-                    {value > 0 && (
-                      <span className="text-[11px] font-bold text-gray-800 mb-1">{value}</span>
-                    )}
-                    <div 
-                      className="w-6 rounded-t-md transition-all duration-500 cursor-pointer"
-                      style={{ 
-                        height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
-                        backgroundColor: barColor,
-                        minHeight: value > 0 ? '16px' : '0px'
-                      }}
-                    />
-                    {/* Tooltip */}
-                    {hoveredBar === barKey && value > 0 && (
-                      <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap">
-                        <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
-                          <span className="text-gray-600">{cat}:</span>
-                          <span className="font-bold text-gray-900">{value}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Property type label */}
-            <span className="text-[11px] text-gray-700 font-semibold mt-2 text-center whitespace-nowrap">
-              {propType}
-            </span>
-          </div>
-        ))}
-      </div>
-      
-      {/* Legend - Right side */}
-      <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
-        {categories.map((cat, idx) => (
-          <div key={cat} className="flex items-center gap-1.5">
-            <div 
-              className="w-3 h-3 rounded-sm flex-shrink-0" 
-              style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
-            />
-            <span className="text-[11px] text-gray-700 font-medium leading-tight" title={cat}>
-              {cat}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   // Individual filters for each block
@@ -456,35 +317,22 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const workOrderOverviewTotal = block7Filtered.length;
   const workOrderOverviewData = workOrderOverviewDataAll.filter(item => item.value > 0);
 
-  // Block 8: Work Order Estimates by Category grouped by Property Type
+  // Block 8: Work Order Estimates by Category. A donut of the one dimension, like the status
+  // cards -- the grouped bars this used to be needed a labelled group per property type and had
+  // no room for them at half a dashboard row, so neither dimension could be read there.
   const block8Filtered = applyPeriodFilter(estimates, filter8).filter(e => getEstimateType(e) === 'workorder');
-  
-  // Group by property type, then by category
-  const workOrderByPropertyAndCategory = {};
-  const allCategories = new Set();
-  
+  const workOrderCategoryCount = {};
   block8Filtered.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
-    
-    allCategories.add(category);
-    
-    if (!workOrderByPropertyAndCategory[propType]) {
-      workOrderByPropertyAndCategory[propType] = {};
-    }
-    workOrderByPropertyAndCategory[propType][category] = 
-      (workOrderByPropertyAndCategory[propType][category] || 0) + 1;
+    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
   });
-  
-  // Convert to array format for chart
-  const propertyTypes = Object.keys(workOrderByPropertyAndCategory).sort();
-  const categories = Array.from(allCategories).sort();
-  
-  const groupedWorkOrderData = {
-    propertyTypes,
-    categories,
-    data: workOrderByPropertyAndCategory
-  };
+  const workOrderCategoryTotal = block8Filtered.length;
+  // With nothing to draw yet the key still names the categories at zero and the ring is its grey
+  // track, which is exactly what the status donut beside it shows at zero.
+  const workOrderCategoryData = (workOrderCategoryTotal > 0
+    ? Object.entries(workOrderCategoryCount).sort((a, b) => b[1] - a[1])
+    : FRAME_CATEGORIES.map(name => [name, 0])
+  ).map(([name, value]) => ({ name, value, color: getConsistentColor(name) }));
 
   return (
     <div className="space-y-4">
@@ -582,14 +430,31 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
           />
         </div>
 
-        {/* 8. Work Order Estimates by Category (Grouped by Property Type) */}
+        {/* 8. Work Order Estimates by Category */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            {/* Estimates raised from a work order, not the work orders themselves */}
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates: Category by Property Type</h3>
+            {/* Estimates raised from a work order, not the work orders themselves. The title no
+                longer claims a property-type breakdown: a ring carries one dimension, and the
+                category is the one this card is for. */}
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
-          <GroupedBarChart data={groupedWorkOrderData} />
+          <div className="flex items-center">
+            <div className="w-1/2 relative flex items-center justify-center">
+              <SVGDonutChart data={workOrderCategoryData} centerValue={workOrderCategoryTotal} size={120} strokeWidth={16} />
+            </div>
+            {/* The shared legend, whose labels wrap: "Building Exterior" does not fit the fixed
+                80px column the status donuts' legend holds its four short words in. */}
+            <div className="w-1/2 pl-3">
+              <ChartLegend
+                items={workOrderCategoryData.map(item => ({
+                  label: item.name,
+                  color: item.color,
+                  value: `${item.value} (${workOrderCategoryTotal ? ((item.value / workOrderCategoryTotal) * 100).toFixed(1) : 0}%)`
+                }))}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
