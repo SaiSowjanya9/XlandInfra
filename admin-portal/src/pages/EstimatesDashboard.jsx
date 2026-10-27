@@ -1056,7 +1056,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           ) : (
             <div className="h-36 flex flex-col items-center justify-center text-gray-400">
               <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
-              <div className="text-sm">No work order estimates</div>
+              {/* Says why it is empty: the panel charts estimates raised from a work order, and a
+                  partner with plenty of work orders and none of those read this as a failure */}
+              <div className="text-sm">No estimates created from work orders yet</div>
             </div>
           )}
         </div>

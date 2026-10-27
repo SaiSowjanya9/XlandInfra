@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  BarChart3, Megaphone, Loader2, AlertCircle, RefreshCw
+  BarChart3, Megaphone, Loader2, AlertCircle, RefreshCw, Target
 } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,

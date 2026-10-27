@@ -213,7 +213,9 @@ const GroupedBarChart = ({ data }) => {
     return (
       <div className="h-36 flex flex-col items-center justify-center text-gray-400">
         <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
-        <div className="text-xs">No work order estimates</div>
+        {/* "No work order estimates" read as a chart that had failed to a partner who has plenty
+            of work orders. It charts estimates raised from one, and there are none yet. */}
+        <div className="text-xs">No estimates created from work orders yet</div>
       </div>
     );
   }
