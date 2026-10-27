@@ -1428,6 +1428,11 @@ from `server.js` on boot) does the same thing at runtime.
   this in both `EstimatesOverviewBlocks.jsx` and `EstimatesDashboard.jsx`, and the
   `WORK_ORDER_FRAME_CATEGORIES` key stays under the threshold by design.
   Regression test: `node --test admin-portal/src/utils/legendColumns.test.js`.
+- **The keys above a line chart are `ChartLegend layout="row"` with `line: true`.** The Work Orders
+  dashboard's category trend keys one line per category — all of them, unbounded — and the Work
+  Orders Trend keys its three; both were hand-written dot rows. A `line` item draws a dash instead
+  of a dot, matching the stroke it names, and the row wraps onto as many lines as the catalogue
+  needs rather than floating over the plot the way a recharts `<Legend>` does.
 
 ## Collection Trend
 
