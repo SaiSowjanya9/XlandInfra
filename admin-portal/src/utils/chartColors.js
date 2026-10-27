@@ -154,6 +154,23 @@ export const CATEGORY_COLORS = {
 };
 
 /**
+ * The work-order categories named before any estimate has one.
+ *
+ * The "Work Order Estimates by Category" donut lists its key at zero the way the status donuts
+ * list Draft/Sent/Approved/Rejected at zero, so its empty state needs a category list that does
+ * not come from the data. These are the names CATEGORY_COLORS already has colours for, which keeps
+ * the key's swatches the colours a real estimate will be drawn in. The catalogue in
+ * `pages/Categories.jsx` is seventeen long -- too many for a key beside a chart this size -- so
+ * the categories an estimate actually carries replace these outright as soon as there is one.
+ * Shared by `EstimatesOverviewBlocks` and `EstimatesDashboard`; when one changed without the
+ * other the two dashboards' empty cards disagreed.
+ */
+export const WORK_ORDER_FRAME_CATEGORIES = [
+  'Building Interior', 'Building Exterior', 'Appliances',
+  'Electrical', 'Plumbing', 'HVAC', 'Landscaping'
+];
+
+/**
  * Get a consistent color for any category/name.
  * Uses predefined colors for known categories, or generates a deterministic color for unknown ones.
  * @param {string} name - The category or item name
@@ -285,6 +302,7 @@ export default {
   ESTIMATE_TYPE_COLORS,
   BAR_CHART_COLORS,
   CATEGORY_COLORS,
+  WORK_ORDER_FRAME_CATEGORIES,
   MARKETING_PHASE_COLORS,
   MARKETING_DUE_COLORS,
   MARKETING_PRIORITY_COLORS,

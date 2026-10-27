@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SVGDonutChart from './common/DonutChart';
 import ChartLegend from './common/ChartLegend';
-import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor, WORK_ORDER_FRAME_CATEGORIES } from '../utils/chartColors';
+import { legendSplits } from '../utils/legendColumns';
 
 // Helper to normalize property type - also checks property_code prefix
 const normalizePropertyType = (type, propertyCode) => {
@@ -199,22 +200,6 @@ const HorizontalBarChart = ({ data }) => {
   );
 };
 
-/**
- * The key this card draws before its first work-order estimate exists.
- *
- * The Work Order Estimate Status donut beside it draws its grey ring and lists all four statuses at
- * zero, so a card that collapses to a bare "0" and a line of text reads, next to it, as a chart
- * that failed rather than one with nothing in it yet. These are the work-order categories
- * `chartColors.js` names, which keeps the key's colours the ones a real estimate will be drawn in.
- * The catalogue in `pages/Categories.jsx` is seventeen long -- too many for a key beside a chart
- * this size -- so the categories an estimate actually carries replace these outright as soon as
- * there is one.
- */
-const FRAME_CATEGORIES = [
-  'Building Interior', 'Building Exterior', 'Appliances',
-  'Electrical', 'Plumbing', 'HVAC', 'Landscaping'
-];
-
 const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   // Individual filters for each block
   const [filter1, setFilter1] = useState('all'); // Property-Based Property Type
@@ -329,10 +314,16 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
   const workOrderCategoryTotal = block8Filtered.length;
   // With nothing to draw yet the key still names the categories at zero and the ring is its grey
   // track, which is exactly what the status donut beside it shows at zero.
+  // WORK_ORDER_FRAME_CATEGORIES is the same list the Estimates dashboard's own copy of this card
+  // keys with, and is deliberately below LEGEND_SPLIT_AT -- the empty card holds one column while
+  // real data can grow past it.
   const workOrderCategoryData = (workOrderCategoryTotal > 0
     ? Object.entries(workOrderCategoryCount).sort((a, b) => b[1] - a[1])
-    : FRAME_CATEGORIES.map(name => [name, 0])
+    : WORK_ORDER_FRAME_CATEGORIES.map(name => [name, 0])
   ).map(([name, value]) => ({ name, value, color: getConsistentColor(name) }));
+  // Two legend columns will not fit beside the ring, so a long key takes the card's width under it
+  // (and splits there) instead of stacking seventeen rows beside it.
+  const block8Splits = legendSplits(workOrderCategoryData.length);
 
   return (
     <div className="space-y-4">
@@ -439,13 +430,15 @@ const EstimatesOverviewBlocks = ({ estimates = [] }) => {
             <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
             <FilterSelect value={filter8} onChange={setFilter8} />
           </div>
-          <div className="flex items-center">
-            <div className="w-1/2 relative flex items-center justify-center">
+          <div className={`flex items-center ${block8Splits ? 'flex-col gap-4' : ''}`}>
+            <div className={`${block8Splits ? '' : 'w-1/2 '}relative flex items-center justify-center`}>
               <SVGDonutChart data={workOrderCategoryData} centerValue={workOrderCategoryTotal} size={120} strokeWidth={16} />
             </div>
             {/* The shared legend, whose labels wrap: "Building Exterior" does not fit the fixed
-                80px column the status donuts' legend holds its four short words in. */}
-            <div className="w-1/2 pl-3">
+                80px column the status donuts' legend holds its four short words in. Once the key
+                is long enough to split it sits under the chart at the card's full width, since
+                two columns do not fit beside it. */}
+            <div className={block8Splits ? 'w-full' : 'w-1/2 pl-3'}>
               <ChartLegend
                 items={workOrderCategoryData.map(item => ({
                   label: item.name,

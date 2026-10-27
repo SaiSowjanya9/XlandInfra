@@ -31,9 +31,11 @@ import {
   CartesianGrid
 } from 'recharts';
 import DonutChart from '../components/common/DonutChart';
+import ChartLegend from '../components/common/ChartLegend';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { getAuthToken } from '../utils/safeStorage';
-import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor } from '../utils/chartColors';
+import { STATUS_COLORS, ESTIMATE_TYPE_COLORS, getConsistentColor, WORK_ORDER_FRAME_CATEGORIES } from '../utils/chartColors';
+import { legendSplits } from '../utils/legendColumns';
 import { estimateProfitSummary } from '../utils/estimateProfitSummary';
 import { trendSpanLabel, TREND_X_AXIS, trendDot } from '../utils/trendSpan';
 import { estimateTrendBuckets, periodStart } from '../utils/estimateTrend';
@@ -437,35 +439,23 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const workOrderStatusTotal = block7Data.length;
   const workOrderStatusData = workOrderStatusDataAll.filter(item => item.value > 0);
 
-  // Block 8: Work Order Estimates by Category grouped by Property Type
+  // Block 8: Work Order Estimates by Category. The same donut the six main dashboards' Estimates
+  // Overview draws (EstimatesOverviewBlocks.jsx block 8): one dimension counted, never the
+  // property-type cross-tab whose labelled groups a half-row card has no width for -- and whose
+  // legend had no answer when the category list grew.
   const block8Data = applyPeriodFilter(mainFilteredEstimates, filter8).filter(e => getEstimateType(e) === 'workorder');
-  
-  // Group by property type, then by category
-  const workOrderByPropertyAndCategory = {};
-  const allCategories = new Set();
-  
+  const workOrderCategoryCount = {};
   block8Data.forEach(est => {
-    const propType = normalizePropertyType(est.property_type || est.propertyType, est.property_code || est.propertyCode);
     const category = est.work_order_category || est.workOrderCategory || 'Other';
-    
-    allCategories.add(category);
-    
-    if (!workOrderByPropertyAndCategory[propType]) {
-      workOrderByPropertyAndCategory[propType] = {};
-    }
-    workOrderByPropertyAndCategory[propType][category] = 
-      (workOrderByPropertyAndCategory[propType][category] || 0) + 1;
+    workOrderCategoryCount[category] = (workOrderCategoryCount[category] || 0) + 1;
   });
-  
-  // Convert to array format for chart
-  const woPropertyTypes = Object.keys(workOrderByPropertyAndCategory).sort();
-  const woCategories = Array.from(allCategories).sort();
-  
-  // Category colors for grouped chart
-  const CATEGORY_COLORS = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
-    '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1'
-  ];
+  const workOrderCategoryTotal = block8Data.length;
+  const workOrderCategoryData = (workOrderCategoryTotal > 0
+    ? Object.entries(workOrderCategoryCount).sort((a, b) => b[1] - a[1])
+    : WORK_ORDER_FRAME_CATEGORIES.map(name => [name, 0])
+  ).map(([name, value]) => ({ name, value, color: getConsistentColor(name) }));
+  // Two legend columns will not fit beside the ring, so a long key takes the card's width under it.
+  const block8Splits = legendSplits(workOrderCategoryData.length);
 
   // Block 9: Work Order Overview (uses filter9)
   const block9Data = applyPeriodFilter(mainFilteredEstimates, filter9).filter(e => getEstimateType(e) === 'workorder');
@@ -956,13 +946,15 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
           </div>
         </div>
 
-        {/* 8. Work Order Estimates: Category by Property Type (Grouped Bar). It charts estimates
-            raised from a work order (`estimate_type = 'work_order'`), as its two neighbours do --
-            titled "Work Orders" it read as a chart of the work orders themselves, so a partner
-            with plenty of those and no estimates from them saw it as a chart that had failed. */}
+        {/* 8. Work Order Estimates by Category (donut). It charts estimates raised from a work
+            order (`estimate_type = 'work_order'`), as its two neighbours do -- titled "Work
+            Orders" it read as a chart of the work orders themselves, so a partner with plenty of
+            those and no estimates from them saw it as a chart that had failed. One dimension on
+            the ring: the property-type cross-tab it used to draw had no room for its groups, and
+            a ring is what the six main dashboards' copy of this card draws. */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates: Category by Property Type</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Work Order Estimates by Category</h3>
             <select
               value={filter8}
               onChange={(e) => setFilter8(e.target.value)}
@@ -977,90 +969,23 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
             </select>
           </div>
           
-          {woPropertyTypes.length > 0 ? (
-            (() => {
-              // Find max value for scaling
-              let maxValue = 0;
-              woPropertyTypes.forEach(pt => {
-                woCategories.forEach(cat => {
-                  const val = workOrderByPropertyAndCategory[pt]?.[cat] || 0;
-                  if (val > maxValue) maxValue = val;
-                });
-              });
-              
-              return (
-                <div className="h-48 flex">
-                  {/* Chart - Left side */}
-                  <div className="flex-1 flex items-end justify-center gap-6 h-36">
-                    {woPropertyTypes.map((propType) => (
-                      <div key={propType} className="flex flex-col items-center">
-                        {/* Bars group */}
-                        <div className="flex items-end gap-1">
-                          {woCategories.map((cat, catIdx) => {
-                            const value = workOrderByPropertyAndCategory[propType]?.[cat] || 0;
-                            const heightPercent = maxValue > 0 ? (value / maxValue) * 100 : 0;
-                            const barColor = CATEGORY_COLORS[catIdx % CATEGORY_COLORS.length];
-                            return (
-                              <div key={cat} className="flex flex-col items-center relative group cursor-pointer">
-                                {value > 0 && (
-                                  <span className="text-[9px] font-semibold text-gray-700 mb-1">{value}</span>
-                                )}
-                                <div 
-                                  className="w-6 rounded-t-md transition-all duration-500"
-                                  style={{ 
-                                    height: value > 0 ? `${Math.max(heightPercent, 10)}%` : '0px',
-                                    backgroundColor: barColor,
-                                    minHeight: value > 0 ? '16px' : '0px'
-                                  }}
-                                />
-                                {/* Tooltip */}
-                                {value > 0 && (
-                                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white px-4 py-3 shadow-lg rounded-lg border border-gray-200 z-50 whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                                    <p className="font-semibold text-gray-900 text-sm mb-1">{propType}</p>
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: barColor, minWidth: '12px', minHeight: '12px' }}></span>
-                                      <span className="text-gray-600">{cat}:</span>
-                                      <span className="font-bold text-gray-900">{value}</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {/* Property type label */}
-                        <span className="text-[10px] text-gray-600 font-medium mt-2 text-center whitespace-nowrap">
-                          {propType}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-              
-                  {/* Legend - Right side */}
-                  <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
-                    {woCategories.map((cat, idx) => (
-                      <div key={cat} className="flex items-center gap-1.5">
-                        <div 
-                          className="w-3 h-3 rounded-sm flex-shrink-0" 
-                          style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
-                        />
-                        <span className="text-[9px] text-gray-600 leading-tight" title={cat}>
-                          {cat}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            <div className="h-36 flex flex-col items-center justify-center text-gray-400">
-              <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
-              {/* Says why it is empty: the panel charts estimates raised from a work order, and a
-                  partner with plenty of work orders and none of those read this as a failure */}
-              <div className="text-sm">No estimates created from work orders yet</div>
+          <div className={`flex items-center ${block8Splits ? 'flex-col gap-4' : ''}`}>
+            <div className={`${block8Splits ? '' : 'w-1/2 '}relative flex items-center justify-center`}>
+              <DonutChart data={workOrderCategoryData} centerValue={workOrderCategoryTotal} size={130} strokeWidth={18} />
             </div>
-          )}
+            {/* Two columns do not fit beside the ring, so a key long enough to split sits under
+                the chart at the card's full width, as the main dashboards' copy of this card
+                does. */}
+            <div className={block8Splits ? 'w-full' : 'w-1/2 pl-3'}>
+              <ChartLegend
+                items={workOrderCategoryData.map(item => ({
+                  label: item.name,
+                  color: item.color,
+                  value: `${item.value} (${workOrderCategoryTotal ? ((item.value / workOrderCategoryTotal) * 100).toFixed(1) : 0}%)`
+                }))}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
