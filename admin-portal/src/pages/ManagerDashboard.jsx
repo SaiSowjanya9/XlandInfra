@@ -23,6 +23,7 @@ import PendingPaymentAlerts, { usePendingPaymentAlerts } from '../components/com
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
+import ChartLegend from '../components/common/ChartLegend';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import DashboardStatCards from '../components/common/DashboardStatCards';
 import { PendingSchedulesBadge, usePendingSchedulesCount } from '../components/scheduling/PropertyScheduleNotificationCard';
@@ -379,7 +380,7 @@ const ManagerDashboard = ({ user }) => {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="flex-shrink-0 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       <option value="all">All Time</option>
       <option value="week">This Week</option>
@@ -893,8 +894,8 @@ const ManagerDashboard = ({ user }) => {
 
             {/* Work Orders by Property Type */}
             <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
-              <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-                <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
+              <div className="flex justify-between items-center mb-4 gap-2">
+                <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
                 <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
               </div>
               <div className="space-y-3">
@@ -1006,7 +1007,7 @@ const ManagerDashboard = ({ user }) => {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-5 sm:flex-row">
+              <div className="flex flex-col items-center justify-center gap-5 sm:flex-row sm:gap-8">
                 {(() => {
                   // Calculate invoice status data
                   const statusCounts = {
@@ -1034,16 +1035,17 @@ const ManagerDashboard = ({ user }) => {
                           strokeWidth={18}
                         />
                       </div>
-                      <div className="w-full min-w-0 space-y-3 sm:flex-1">
-                        {invoiceStatusData.map((item, index) => (
-                          <div key={index} className="grid grid-cols-[12px_minmax(0,1fr)_auto_52px] items-center gap-2 text-xs">
-                            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }}></span>
-                            <span className="text-gray-600">{item.name}</span>
-                            <span className="text-right font-semibold tabular-nums text-gray-900">{item.value}</span>
-                            <span className="text-right tabular-nums text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
-                          </div>
-                        ))}
-                      </div>
+                      {/* A figure sits beside its label, not at the far edge of a 768px card: the
+                          legend keeps a column of its own and the pair is centred, as the Payments
+                          dashboard's invoice-status card does. */}
+                      <ChartLegend
+                        className="sm:w-48"
+                        items={invoiceStatusData.map(item => ({
+                          label: item.name,
+                          color: item.color,
+                          value: `${item.value} (${total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)`
+                        }))}
+                      />
                     </>
                   );
                 })()}

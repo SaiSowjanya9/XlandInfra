@@ -204,6 +204,23 @@ const CATEGORY_COLORS = [
   '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1'
 ];
 
+/**
+ * The frame this card draws before its first work-order estimate exists.
+ *
+ * The Work Order Estimate Status donut beside it draws its grey ring and lists all four statuses at
+ * zero, so a card that collapses to a bare "0" and a line of text reads, next to it, as a chart that
+ * failed rather than one with nothing in it yet. The property types are the five the dashboards'
+ * own property-type cards show; the categories are the work-order categories `chartColors.js`
+ * names, which keeps the key's colours the ones a real estimate will be drawn in. The catalogue in
+ * `pages/Categories.jsx` is seventeen long -- too many for a key beside a chart this size -- so the
+ * categories an estimate actually carries replace these outright as soon as there is one.
+ */
+const FRAME_PROPERTY_TYPES = ['Gated Community', 'Apartment', 'Villa', 'Plot', 'Flat'];
+const FRAME_CATEGORIES = [
+  'Building Interior', 'Building Exterior', 'Appliances',
+  'Electrical', 'Plumbing', 'HVAC', 'Landscaping'
+];
+
 // Grouped bar chart - Categories by Property Type
 const GroupedBarChart = ({ data }) => {
   const { propertyTypes, categories, data: groupedData } = data;
@@ -211,11 +228,47 @@ const GroupedBarChart = ({ data }) => {
   
   if (propertyTypes.length === 0) {
     return (
-      <div className="h-36 flex flex-col items-center justify-center text-gray-400">
-        <div className="text-3xl font-bold text-gray-300 mb-1">0</div>
-        {/* "No work order estimates" read as a chart that had failed to a partner who has plenty
-            of work orders. It charts estimates raised from one, and there are none yet. */}
-        <div className="text-xs">No estimates created from work orders yet</div>
+      <div className="h-48 flex">
+        {/* The chart, empty: a track where each group's bars would stand, so the axis and the
+            shape of the chart are there to read. It charts estimates raised from a work order,
+            and the note says so -- a partner with plenty of work orders and none of those read
+            the old bare "0" as a failure. */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Scrolls sideways rather than squeezing five labelled groups into nothing, as the
+              Collection Trend's plot does. `min-w-max` only takes effect once the groups no
+              longer fit, so on a card with room they stay centred and there is no scrollbar. */}
+          <div className="flex-1 overflow-x-auto">
+            <div className="flex h-full min-w-max items-end justify-center gap-6">
+              {FRAME_PROPERTY_TYPES.map((propType) => (
+                <div key={propType} className="flex flex-col items-center">
+                  <div className="w-6 h-24 rounded-t-md bg-gray-100" />
+                  <span className="text-[11px] text-gray-700 font-semibold mt-2 text-center whitespace-nowrap">
+                    {propType}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-gray-400">
+            No estimates created from work orders yet
+          </p>
+        </div>
+
+        {/* The key, at zero -- the statuses donut beside it lists all four the same way */}
+        <div className="w-36 flex flex-col justify-center gap-1.5 pl-3 border-l border-gray-100">
+          {FRAME_CATEGORIES.map((cat) => (
+            <div key={cat} className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: getConsistentColor(cat) }}
+              />
+              <span className="min-w-0 flex-1 text-[11px] text-gray-700 font-medium leading-tight" title={cat}>
+                {cat}
+              </span>
+              <span className="text-[11px] text-gray-500 tabular-nums">0</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
