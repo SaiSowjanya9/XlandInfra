@@ -27,6 +27,7 @@ import { useFP } from '../contexts/FPContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DonutChart from '../components/common/DonutChart';
+import ChartLegend from '../components/common/ChartLegend';
 import DateRangeFilter from '../components/common/DateRangeFilter';
 import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PRIORITY_COLORS, PROPERTY_TYPE_COLORS, PAYMENT_STATUS_COLORS } from '../utils/chartColors';
 import DismissPanel from '../components/common/DismissPanel';
@@ -425,7 +426,7 @@ const Dashboard = () => {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="flex-shrink-0 text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       <option value="all">All Time</option>
       <option value="week">This Week</option>
@@ -944,8 +945,8 @@ const Dashboard = () => {
 
               {/* Work Orders by Property Type */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0 md:col-span-2 xl:col-span-1">
-                <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-                  <h3 className="text-sm font-semibold text-gray-900 whitespace-nowrap">Work Orders by Property Type</h3>
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Work Orders by Property Type</h3>
                   <PeriodDropdown value={woPropertyTypeFilter} onChange={setWoPropertyTypeFilter} />
                 </div>
                 <div className="space-y-3">
@@ -1059,7 +1060,7 @@ const Dashboard = () => {
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
                 {(() => {
                   // Filter out cancelled invoices - they shouldn't appear in payment status chart
                   // Use dateFilteredInvoices for real-time accuracy
@@ -1109,16 +1110,17 @@ const Dashboard = () => {
                           strokeWidth={18}
                         />
                       </div>
-                      <div className="w-full sm:flex-1 min-w-0 space-y-2">
-                        {invoiceStatusData.map((item, index) => (
-                          <div key={index} className="flex items-center gap-2 text-xs">
-                            <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></span>
-                            <span className="text-gray-600">{item.name}</span>
-                            <span className="font-semibold text-gray-900 ml-auto">{item.value}</span>
-                            <span className="text-gray-400">({total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)</span>
-                          </div>
-                        ))}
-                      </div>
+                      {/* A figure sits beside its label rather than at the card's far edge: the
+                          legend keeps a column of its own, as the Payments dashboard's
+                          invoice-status card does. */}
+                      <ChartLegend
+                        className="sm:w-48"
+                        items={invoiceStatusData.map(item => ({
+                          label: item.name,
+                          color: item.color,
+                          value: `${item.value} (${total > 0 ? ((item.value / total) * 100).toFixed(1) : 0}%)`
+                        }))}
+                      />
                     </>
                   );
                 })()}
