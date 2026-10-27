@@ -699,6 +699,10 @@ shapes to avoid, both of which were on the customer portal:
   That is the point — it answers "who marked this paid, and when", which the Payments list cannot.
   `GET /api/payments/history` already served it and had **no caller at all**; it now takes `?fpId=`
   for the admin portal's partner selector, guarded with `/^\d+$/` because `all` is not an id.
+  **The route returns settled money only** — a row qualifies on `new_status IN
+  ('paid','completed','refunded')` or `action IN ('razorpay_payment','refunded','refund')`, so
+  intents (a created link, a still-pending verification) never render. Refunds stay because
+  refunded money was paid once. Regression test: `node --test backend/routes/paymentsHistory.test.js`.
 - **Every action the server can write needs a label in `ACTIONS`.** `payment_history.action` is free
   text on a current database (schema_v27 widened it from an ENUM), so the screen titles an
   unrecognised value from itself rather than dropping the row — but the eight real ones are spelled

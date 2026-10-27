@@ -3406,6 +3406,16 @@ router.get('/history', authenticate, canViewPayments, async (req, res) => {
     `;
     const params = [];
 
+    // A row here must record money that settled or that came back. Rows that only record an
+    // intent -- a payment link created, an offline intent recorded, an edit, a status sitting
+    // verification_pending -- are not the payments themselves, and showing them drowned the
+    // confirmed ones; a refund stays because refunded money was paid once. The screen's
+    // "created" pill therefore only ever appears on a row that was born paid.
+    query += ` AND (
+      ph.new_status IN ('paid', 'completed', 'refunded')
+      OR ph.action IN ('razorpay_payment', 'refunded', 'refund')
+    )`;
+
     if (fpId) {
       query += ' AND (p.franchise_partner_id = ? OR i.franchise_partner_id = ?)';
       params.push(fpId, fpId);
