@@ -684,9 +684,11 @@ router.post('/webhook', webhookLimiter, express.raw({ type: 'application/json' }
     const signature = req.headers['x-razorpay-signature'];
     const ip = getClientIP(req);
     
-    // Verify webhook signature using timing-safe comparison
-    if (RAZORPAY_WEBHOOK_SECRET && signature) {
-      const isValid = verifyRazorpayWebhookSignature(
+    // Verify webhook signature using timing-safe comparison. A configured secret makes the
+    // signature mandatory: the check used to run only when the header was present, so an
+    // unsigned "payment.captured" was accepted and could mark any invoice paid.
+    if (RAZORPAY_WEBHOOK_SECRET) {
+      const isValid = !!signature && verifyRazorpayWebhookSignature(
         req.body.toString(),
         signature,
         RAZORPAY_WEBHOOK_SECRET

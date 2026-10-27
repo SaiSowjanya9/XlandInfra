@@ -203,6 +203,31 @@ Mistakes that fail silently and have each already broken live endpoints:
   5-per-15-minutes limiter.** A smoke script that tries a portal's own `/login` first locks itself
   out; restart the backend to clear the in-memory limiter. The seeded `franchise` user has no
   `franchise_partners` row — test FP writes as `franchise1`.
+- **`paidAtAssignment(status).sql` ends in a comma — never splice it last.** It must be followed by
+  another assignment (`updated_at = NOW()`). `utils/invoiceSettlement.js` put it right before
+  `WHERE`, so every `PUT /api/payments/:id/verify` failed with ER_PARSE_ERROR. The mocked tests never
+  ran that SQL; `invoiceColumns.test.js` now checks the splice position statically.
+- **ID sequences are per franchise partner, the codes are unique system-wide.** `payment_sequence`,
+  `receipt_sequence` and `invoice_sequence` count per FP (NULL = head office) while
+  `payments.payment_id` and `invoices.invoice_id` are UNIQUE, so a second counter re-issued
+  `PAY-2026-00001` and the insert failed (a recorded payment 500ed; a Razorpay payment, inside its
+  transaction, rolled back). The generators walk forward to the first unused code via
+  `firstFreeNumber` in `utils/paymentIds.js`; use it for any new sequence.
+- **A configured `RAZORPAY_WEBHOOK_SECRET` makes the signature mandatory.** The webhook used to verify
+  only when the `x-razorpay-signature` header was present, so an unsigned `payment.captured` was
+  accepted. Webhooks can be exercised locally by starting the backend with a throwaway
+  `RAZORPAY_WEBHOOK_SECRET` env var and HMAC-signing the body with it.
+- **`fp_zones` and `payments.invoice_id NULL` come from boot, not from an old migration.** No file created
+  `fp_zones` (every portal's zone create 500ed) and schema_v17 made `payments.invoice_id NOT NULL`,
+  which broke the unpaid-invoice delete's detach. `config/database.js` repairs both at boot;
+  schema_v59/v60 are the same repairs. Portal zone lists must stamp fp_zones rows `fp-<id>`, or
+  `zoneDelete` treats the bare number as a company-wide zone and refuses to delete it.
+- **End-to-end QA without real credentials.** Start the backend with `EMAIL_HOST=127.0.0.1
+  EMAIL_PORT=2525 EMAIL_USER=… EMAIL_PASS=…` (env vars win over the blank `.env` values) and a local
+  SMTP sink to capture every email, including new employees' temporary passwords. ESLint with only
+  `no-undef` + `react/jsx-no-undef` (installed under `frontend/`) finds icons and helpers used
+  without an import, which crash only when that state renders — the Marketing Dashboard's empty
+  state was blank for every new franchise for this reason.
 - **A zone is a name merged from several sources, not one row.** The `GET …/zones` pickers
   union the global `zones` table, `fp_zones`, and zone text stored on properties
   (`onboarded_properties.zone`, `properties.zone_id`), stamping each row with a prefixed id
@@ -343,6 +368,14 @@ fetch('/api/manager/dashboard', { ... });
 
 - Keep dashboard summary cards equal in height, with consistent icon sizing, spacing, and label/count alignment. **On phones and tablets the cards wrap** (`flex flex-wrap`, each card `flex-[1_1_10rem]` / `9.5rem`): two per row on a phone, about four on a tablet, and the cards of a short last row stretch to fill it — never a sideways-scrolling row that cuts a card off at the screen edge (the user's call; it replaced the earlier scroll rule). **From `lg` up every card sits on one line** (`lg:flex-nowrap`, each card `lg:flex-[1_1_0%]`) — a seventh card must never drop to a row of its own on a laptop. Keep date, notification, and refresh controls compact on the row below.
 - **A floating panel stays on screen.** `DismissPanel` clamps itself through `hooks/useViewportClamp.js`; a plain `{open && <div className="absolute right-0 w-80 …">}` takes `ref={clampToViewport}` and `max-w-[calc(100vw-1rem)]`. A `right-0 w-80` panel opened mid-row on a phone otherwise runs off the left edge (the dashboard date filter did).
+- **A chart card's period filter sits beside its heading, on the same line** (the user's call). The
+  "Work Orders by Property Type" card on the three main dashboards (`Dashboard`, `FPDashboard`,
+  `ManagerDashboard`) paired `flex-wrap` with a `whitespace-nowrap` heading, so in the narrow third
+  grid column the heading claimed its whole max-content width and pushed the "All Time" select onto a
+  row of its own, left-aligned under the title. The header row is plain `flex justify-between
+  items-center gap-2`; the heading drops `whitespace-nowrap` so its text wraps between words when the
+  column is tight, and `PeriodDropdown`'s select carries `flex-shrink-0` so it keeps its width
+  instead of being squeezed.
 - **A chart's month reads "May 2026"** — `formatMonthYear` from `utils/dateFormat.js`, never `formatDate` (which gave `01/05/2026` on the Work Orders trends) or a two-digit year. Day buckets stay "09 Sep".
 - **A trend chart is one continuous line, not a row of labelled months** (the user's call). Every trend — Work Orders Trend, Work Orders by Category Trend, Estimate Trend, Collection Trend, Lead Trend, Schedule Trend — is drawn as lines (no bars, no per-point dots, `activeDot` on hover), its XAxis spreads `TREND_X_AXIS` from `utils/trendSpan.js` (axis line only, no ticks), and the span is stated once underneath with `trendSpanLabel` ("May 2026 – Oct 2026"). The hover still names the bucket. "All Time" runs from the earliest record's month to the current month (`monthsSinceEarliest`), not a fixed six. Regression test: `node --test admin-portal/src/utils/trendSpan.test.js`.
 - **A trend's window decides its bucket, and a single bucket shows its dot.** A line needs two points: one point is a path that moves the pen and closes (`"M10,20Z"`), which strokes nothing, so a one-bucket window drawn with `dot={false}` is an empty frame over a correct axis — it reads as missing data. The Estimate Trend bucketed by month whatever the dropdown said, so "This Week" and "This Month" were a single point each and drew nothing at all, and the one bucket "This Week" produced was labelled with the whole month while holding seven days. `utils/estimateTrend.js` now buckets it by day where the window spans a month or less and by month beyond, through the same `bucketScale` as the Collection Trend; its `periodStart` is shared with the dashboard's own period filter, so the filter can never admit an estimate the buckets have nowhere to put. Every trend series takes `dot={trendDot(rows)}` (`utils/trendSpan.js`) rather than a hard-coded `false` — it answers `false` for any span of two or more, so it costs a healthy chart nothing and saves the degenerate one (the 1st of a month, or a deployment whose first record is today). Regression tests: `node --test admin-portal/src/utils/estimateTrend.test.js admin-portal/src/utils/trendSpan.test.js`, the latter failing if any `.jsx` hard-codes `dot={false}` again.
@@ -1373,6 +1406,16 @@ from `server.js` on boot) does the same thing at runtime.
   width in all three — so a label sits on the same left edge and its figure on the same right edge
   across the row. A figure is `countShare(value, total)`, the count and its share, everywhere.
   Add a fourth card by calling the component, never by copying the markup.
+- **A legend column is capped on a wide card; it never stretches to the card's edge.** The main
+  dashboards' "Invoices by Payment Status" legend was hand-written as
+  `grid-cols-[12px_minmax(0,1fr)_auto_52px]` inside a `max-w-3xl` card, so the label column took
+  every spare pixel and flung "6 (35.3%)" some 550px from the "Paid" it belongs to — a figure that
+  far from its label reads as a column of unrelated numbers. The three cards (`Dashboard`,
+  `FPDashboard`, `ManagerDashboard`) now render `ChartLegend className="sm:w-48"` with the donut
+  and legend centred as a pair (`justify-center`), the same shape as the Payments dashboard's
+  invoice-status card (`2xl:w-44`). Give a legend beside a chart a width of its own — `w-44`/`w-48`
+  holds "Partially Paid" and its figure on one 12px line — rather than `flex-1` on a card wider
+  than the legend needs.
 
 ## Collection Trend
 
