@@ -339,7 +339,7 @@ const VendorDetails = () => {
       if (result.success) {
         showToast(`${result.archivedCount || selectedVendors.length} vendor(s) archived`);
         setSelectedVendors([]);
-        fetchVendors();
+        loadData();
       } else {
         showToast(result.message || 'Failed to archive vendors', 'error');
       }
