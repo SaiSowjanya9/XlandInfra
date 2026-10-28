@@ -922,6 +922,13 @@ const Properties = () => {
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                         {(() => {
                           const contacts = property.contacts || [];
+                          if (contacts.length > 0 && contacts[0].name) return contacts[0].name;
+                          return property.contact_name || property.contact_person || '-';
+                        })()}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        {(() => {
+                          const contacts = property.contacts || [];
                           if (contacts.length > 0 && contacts[0].phone) {
                             const phone = contacts[0].phone;
                             return phone.startsWith('+') ? phone : `+91${phone}`;
