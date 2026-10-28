@@ -844,7 +844,7 @@ const FPVendors = ({ user }) => {
           ]}
           badge={
             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-              viewVendor.serviceVerified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              viewVendor.serviceVerified ? 'bg-green-100 text-green-700' : 'bg-warm-section text-gray-600'
             }`}>
               {viewVendor.serviceVerified ? 'Verified' : 'Unverified'}
             </span>
@@ -872,7 +872,7 @@ const FPVendors = ({ user }) => {
                   <ViewGrid cols={3}>
                     <ViewField label="Rate Per Visit" value={`₹${viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}`} />
                     <ViewField label="Coverage Per Day" value={viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0} />
-                    <ViewField label="Working Hours" valueClassName="text-purple-700" value={(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'} />
+                    <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'} />
                   </ViewGrid>
                 </ViewSection>
               )}

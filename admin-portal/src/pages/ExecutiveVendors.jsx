@@ -278,7 +278,7 @@ const ExecutiveVendors = ({ user }) => {
           ]}
           badge={
             <span className="flex items-center gap-1.5">
-              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-warm-accent-soft text-warm-accent-hover' : 'bg-warm-section text-warm-muted'}`}>
                 {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
               </span>
               <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${selectedVendor.is_active || selectedVendor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -292,7 +292,7 @@ const ExecutiveVendors = ({ user }) => {
                 <ViewGrid>
                   <ViewField label="Service Type" value={selectedVendor.service_type} />
                   <ViewField label="Vendor Type">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${selectedVendor.vendor_type === 'own' ? 'bg-warm-accent-soft text-warm-accent-hover' : 'bg-warm-section text-warm-muted'}`}>
                       {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
                     </span>
                   </ViewField>
@@ -311,7 +311,7 @@ const ExecutiveVendors = ({ user }) => {
               <ViewSection title="Coverage & Working Hours">
                 <ViewGrid>
                   <ViewField label="Coverage Per Day" value={selectedVendor.coverage_per_day || 0} />
-                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
+                  <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
                 </ViewGrid>
               </ViewSection>
 

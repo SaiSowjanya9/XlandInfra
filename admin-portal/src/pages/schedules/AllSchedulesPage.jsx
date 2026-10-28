@@ -1474,7 +1474,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs text-gray-500 uppercase tracking-wide">Property ID</label>
-                    <p className="text-sm font-medium text-blue-600">{selectedSchedule.propertyId}</p>
+                    <p className="text-sm font-medium text-warm-accent-hover">{selectedSchedule.propertyId}</p>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 uppercase tracking-wide">Property Name</label>
@@ -1519,7 +1519,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 uppercase tracking-wide">Work Order</label>
-                    <p className="text-sm text-blue-600 font-medium">{selectedSchedule.workOrderId || '-'}</p>
+                    <p className="text-sm text-warm-accent-hover font-medium">{selectedSchedule.workOrderId || '-'}</p>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
@@ -1549,7 +1549,7 @@ const AllSchedulesPage = ({ portalType = 'admin' }) => {
               )}
               <button
                 onClick={() => { setShowViewModal(false); setSelectedSchedule(null); }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                className="px-4 py-2 bg-warm-border text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
               >
                 Close
               </button>

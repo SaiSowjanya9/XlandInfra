@@ -1724,8 +1724,8 @@ const FPWorkOrders = ({ user }) => {
               </div>
 
               {/* Property Details Section */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+              <div className="bg-warm-accent-soft rounded-lg p-4 border border-warm-border">
+                <h4 className="text-sm font-semibold text-warm-accent-hover mb-3">Property Details</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-500">Property Name</p>
@@ -1733,7 +1733,7 @@ const FPWorkOrders = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property ID</p>
-                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedWorkOrder.actual_property_id || selectedWorkOrder.property_code || '-'}</p>
+                    <p className="font-medium text-gray-900 font-mono text-warm-accent-hover">{selectedWorkOrder.actual_property_id || selectedWorkOrder.property_code || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property Type</p>
@@ -1855,11 +1855,11 @@ const FPWorkOrders = ({ user }) => {
                               }}
                             />
                           ) : null}
-                          <div className={`w-full h-20 bg-gray-100 rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
+                          <div className={`w-full h-20 bg-warm-section rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
                             <span className="text-2xl">{isImage ? '🖼️' : '📄'}</span>
                             {isImage && <span className="text-xs text-gray-500 mt-1">Click to view</span>}
                           </div>
-                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
+                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-warm-accent-hover">{att.original_name || att.file_name}</p>
                         </div>
                       );
                     })}
@@ -1893,14 +1893,14 @@ const FPWorkOrders = ({ user }) => {
                 {!selectedWorkOrder.assigned_vendor_id && selectedWorkOrder.status !== 'completed' && selectedWorkOrder.status !== 'cancelled' && (
                   <button
                     onClick={() => { setShowDetailModal(false); setShowAssignModal(true); }}
-                    className="px-4 py-2 text-purple-600 border border-purple-200 rounded-lg hover:bg-warm-accent-soft"
+                    className="px-4 py-2 text-warm-accent-hover border border-warm-border rounded-lg hover:bg-warm-accent-soft"
                   >
                     Assign Vendor
                   </button>
                 )}
                 <button
                   onClick={() => { setShowDetailModal(false); setSelectedWorkOrder(null); }}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  className="px-4 py-2 bg-warm-section text-gray-700 rounded-lg hover:bg-warm-border"
                 >
                   Close
                 </button>

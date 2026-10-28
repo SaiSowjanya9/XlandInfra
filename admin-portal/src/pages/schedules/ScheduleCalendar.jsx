@@ -935,16 +935,16 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                   selectedSchedule.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                   selectedSchedule.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                   selectedSchedule.status === 'rescheduled' ? 'bg-orange-100 text-orange-700' :
-                  selectedSchedule.status === 'overdue' ? 'bg-gray-100 text-gray-400' :
-                  'bg-blue-100 text-blue-700'
+                  selectedSchedule.status === 'overdue' ? 'bg-warm-section text-gray-400' :
+                  'bg-warm-accent-soft text-warm-accent-hover'
                 }`}>
                   {selectedSchedule.status?.replace('_', ' ')}
                 </span>
                 {/* Only show type badge for work orders or unscheduled */}
                 {(selectedSchedule.type === 'work_order' || selectedSchedule.type === 'unscheduled') && (
                   <span className={`px-3 py-1.5 text-sm font-medium rounded-full capitalize ${
-                    selectedSchedule.type === 'work_order' ? 'bg-indigo-100 text-indigo-700' :
-                    'bg-gray-100 text-gray-700'
+                    selectedSchedule.type === 'work_order' ? 'bg-warm-accent-soft text-warm-accent-hover' :
+                    'bg-warm-section text-gray-700'
                   }`}>
                     {selectedSchedule.type?.replace('_', ' ')}
                   </span>
@@ -954,7 +954,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
               {/* Schedule Details */}
               <div className="space-y-2 pt-2">
                 <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
-                  <Clock className="w-4 h-4 text-blue-600 mt-0.5" />
+                  <Clock className="w-4 h-4 text-warm-accent-hover mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Scheduled Time</p>
                     <p className="text-sm font-medium text-gray-900">{selectedSchedule.time}</p>
@@ -962,7 +962,7 @@ const ScheduleCalendar = ({ user, portalType = 'admin' }) => {
                 </div>
 
                 <div className="flex items-start gap-2.5 p-2.5 bg-warm-section rounded-lg">
-                  <Building2 className="w-4 h-4 text-purple-600 mt-0.5" />
+                  <Building2 className="w-4 h-4 text-warm-accent-hover mt-0.5" />
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">Property</p>
                     <p className="text-sm font-medium text-gray-900">{selectedSchedule.property}</p>

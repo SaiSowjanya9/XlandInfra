@@ -1173,8 +1173,8 @@ const WorkOrders = ({ admin }) => {
               </div>
 
               {/* Property Details Section */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+              <div className="bg-warm-accent-soft rounded-lg p-4 border border-warm-border">
+                <h4 className="text-sm font-semibold text-warm-accent-hover mb-3">Property Details</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-500">Property Name</p>
@@ -1182,7 +1182,7 @@ const WorkOrders = ({ admin }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property ID</p>
-                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedOrder.actual_property_id || selectedOrder.property_code || '-'}</p>
+                    <p className="font-medium text-gray-900 font-mono text-warm-accent-hover">{selectedOrder.actual_property_id || selectedOrder.property_code || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property Type</p>
@@ -1325,11 +1325,11 @@ const WorkOrders = ({ admin }) => {
                               }}
                             />
                           ) : null}
-                          <div className={`w-full h-20 bg-gray-100 rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
+                          <div className={`w-full h-20 bg-warm-section rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
                             <span className="text-2xl">{isImage ? '???' : '??'}</span>
                             {isImage && <span className="text-xs text-gray-500 mt-1">Click to view</span>}
                           </div>
-                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
+                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-warm-accent-hover">{att.original_name || att.file_name}</p>
                         </div>
                       );
                     })}
@@ -1360,7 +1360,7 @@ const WorkOrders = ({ admin }) => {
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-warm-border">
-                <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+                <button onClick={() => setSelectedOrder(null)} className="px-4 py-2 bg-warm-section text-gray-700 rounded-lg hover:bg-warm-border">Close</button>
                 <button onClick={() => handleEditWorkOrder(selectedOrder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Edit</button>
               </div>
             </div>

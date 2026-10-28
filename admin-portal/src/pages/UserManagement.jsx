@@ -1054,20 +1054,20 @@ const UserManagement = () => {
             <div className="space-y-4">
               {/* User Header */}
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 ${USER_ROLES[viewingUser.role]?.bgColor || 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                <div className={`w-14 h-14 ${USER_ROLES[viewingUser.role]?.bgColor || 'bg-warm-section'} rounded-full flex items-center justify-center`}>
                   <span className={`text-lg font-semibold ${USER_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
                     {viewingUser.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs text-gray-700 bg-warm-section px-2 py-0.5 rounded">
                       {viewingUser.userId || viewingUser.id}
                     </span>
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900">{viewingUser.name}</h4>
                   <p className="text-sm text-gray-500">@{viewingUser.username}</p>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded text-xs font-medium ${USER_ROLES[viewingUser.role]?.bgColor || 'bg-gray-100'} ${USER_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded text-xs font-medium ${USER_ROLES[viewingUser.role]?.bgColor || 'bg-warm-section'} ${USER_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
                     {getRoleLabel(viewingUser.role)}
                   </span>
                 </div>
@@ -1091,7 +1091,7 @@ const UserManagement = () => {
               </div>
 
               {/* Password Info */}
-              <div className={`rounded-lg p-4 ${viewingUser.mustChangePassword ? 'bg-warm-accent-soft border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
+              <div className={`rounded-lg p-4 ${viewingUser.mustChangePassword ? 'bg-warm-accent-soft border border-amber-200' : 'bg-warm-accent-soft border border-warm-border'}`}>
                 <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <Key className="w-4 h-4 text-gray-500" />
                   Password Information
@@ -1209,9 +1209,9 @@ const UserManagement = () => {
 
                   {/* Bank & Commission Details Section */}
                   {(viewingUser.bankName || viewingUser.accountNumber || viewingUser.ifscCode || viewingUser.commissionRate) && (
-                    <div className="bg-indigo-50/50 rounded-lg p-4 border border-indigo-100">
+                    <div className="bg-warm-accent-soft/50 rounded-lg p-4 border border-warm-border">
                       <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-                        <Landmark className="w-4 h-4 text-indigo-600" />
+                        <Landmark className="w-4 h-4 text-warm-accent-hover" />
                         Bank & Commission Details
                       </h5>
                       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -1249,7 +1249,7 @@ const UserManagement = () => {
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                     viewingUser.status === 'active'
                       ? 'bg-green-50 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                      : 'bg-warm-section text-gray-500'
                   }`}>
                     {viewingUser.status === 'active' ? 'Active' : 'Inactive'}
                   </span>

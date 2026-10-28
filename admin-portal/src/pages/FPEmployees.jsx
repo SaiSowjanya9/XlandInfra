@@ -479,7 +479,7 @@ const FPEmployees = ({ user }) => {
                   </div>
                   <button
                     onClick={() => { setViewEmployee(null); goToZoneManagement(); }}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    className="text-xs text-warm-accent-hover hover:text-warm-accent-hover flex items-center gap-1"
                   >
                     Manage <ExternalLink className="w-3 h-3" />
                   </button>
@@ -505,7 +505,7 @@ const FPEmployees = ({ user }) => {
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                   (viewEmployee.status || (viewEmployee.is_active ? 'active' : 'inactive')) === 'active'
                     ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-200 text-gray-600'
+                    : 'bg-warm-border text-gray-600'
                 }`}>
                   {(viewEmployee.status || (viewEmployee.is_active ? 'active' : 'inactive')) === 'active' ? 'Active' : 'Inactive'}
                 </span>

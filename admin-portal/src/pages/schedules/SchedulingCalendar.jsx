@@ -515,9 +515,9 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
             <div className="space-y-4">
               {/* Schedule ID & Status */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-600 font-medium">{selectedSchedule.scheduleId}</span>
+                <span className="text-sm text-warm-accent-hover font-medium">{selectedSchedule.scheduleId}</span>
                 <span className={`px-2.5 py-1 text-xs font-medium rounded-full capitalize ${
-                  statusColors[selectedSchedule.status]?.bg || 'bg-gray-100'
+                  statusColors[selectedSchedule.status]?.bg || 'bg-warm-section'
                 } ${statusColors[selectedSchedule.status]?.text || 'text-gray-700'}`}>
                   {selectedSchedule.status?.replace('_', ' ')}
                 </span>

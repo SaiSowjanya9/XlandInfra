@@ -724,7 +724,7 @@ const CoordinatorVendors = ({ user }) => {
                   <ViewField label="Area" value={selectedVendor.area || selectedVendor.area_name} />
                   <ViewField label="Rate/Visit" value={`₹${selectedVendor.rate_per_visit || '0'}`} />
                   <ViewField label="Coverage/Day" value={selectedVendor.coverage_per_day} />
-                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
+                  <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
                 </ViewGrid>
               </ViewSection>
         </ViewModal>

@@ -1073,9 +1073,9 @@ const CustomerWorkOrder = ({ user }) => {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-indigo-50 rounded-lg p-3">
-                  <p className="text-xs text-indigo-600 uppercase tracking-wider">Permission to Enter</p>
-                  <p className="font-semibold text-indigo-900 mt-1">{selectedOrder.permission_to_enter}</p>
+                <div className="bg-warm-accent-soft rounded-lg p-3">
+                  <p className="text-xs text-warm-accent-hover uppercase tracking-wider">Permission to Enter</p>
+                  <p className="font-semibold text-warm-accent-hover mt-1">{selectedOrder.permission_to_enter}</p>
                 </div>
                 <div className="bg-warm-accent-soft rounded-lg p-3">
                   <p className="text-xs text-amber-600 uppercase tracking-wider">Has Pet</p>
