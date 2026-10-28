@@ -408,7 +408,7 @@ const ZoneManagement = () => {
 
             {/* Add Employee Section */}
             {showAddEmployeeToZone && (
-              <div className="px-4 py-3 border-b border-warm-border bg-indigo-50">
+              <div className="px-4 py-3 border-b border-warm-border bg-warm-accent-soft">
                 <p className="text-sm font-medium text-gray-700 mb-2">Select employee to add to {viewEmployeesZone.name}:</p>
                 {getEmployeesNotInZone(viewEmployeesZone.name).length === 0 ? (
                   <p className="text-sm text-gray-500">All employees are already assigned to this zone.</p>
@@ -418,9 +418,9 @@ const ZoneManagement = () => {
                       <button
                         key={emp.id}
                         onClick={() => handleAddEmployeeToZone(emp, viewEmployeesZone.name)}
-                        className="flex items-center gap-2 w-full p-2 bg-white rounded-lg hover:bg-indigo-100 transition-colors text-left"
+                        className="flex items-center gap-2 w-full p-2 bg-white rounded-lg hover:bg-warm-section transition-colors text-left"
                       >
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-warm-section rounded-full flex items-center justify-center">
                           <span className="text-gray-600 font-semibold text-xs">
                             {emp.name.charAt(0).toUpperCase()}
                           </span>
@@ -429,7 +429,7 @@ const ZoneManagement = () => {
                           <p className="text-sm font-medium text-gray-900 truncate">{emp.name}</p>
                           <p className="text-xs text-gray-500">{emp.employeeId}</p>
                         </div>
-                        <Plus className="w-4 h-4 text-indigo-600" />
+                        <Plus className="w-4 h-4 text-warm-accent-hover" />
                       </button>
                     ))}
                   </div>
@@ -448,8 +448,8 @@ const ZoneManagement = () => {
                 <div className="space-y-2">
                   {getEmployeesInZone(viewEmployeesZone.name).map((emp) => (
                     <div key={emp.id} className="flex items-center gap-3 p-3 bg-warm-section rounded-lg">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <span className="text-indigo-600 font-semibold text-sm">
+                      <div className="w-10 h-10 bg-warm-accent-soft rounded-full flex items-center justify-center">
+                        <span className="text-warm-accent-hover font-semibold text-sm">
                           {emp.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -459,8 +459,8 @@ const ZoneManagement = () => {
                       </div>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${
                         emp.assignedZones === 'all' 
-                          ? 'bg-purple-100 text-purple-700' 
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-warm-accent-soft text-warm-accent-hover' 
+                          : 'bg-warm-accent-soft text-warm-accent-hover'
                       }`}>
                         {emp.assignedZones === 'all' ? 'All Zones' : 'Selected'}
                       </span>

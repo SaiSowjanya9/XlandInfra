@@ -736,7 +736,7 @@ const EmployeeManagement = () => {
         >
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 ${EMPLOYEE_ROLES[viewingEmployee.role]?.bgColor || 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                <div className={`w-16 h-16 ${EMPLOYEE_ROLES[viewingEmployee.role]?.bgColor || 'bg-warm-section'} rounded-full flex items-center justify-center`}>
                   <span className={`text-xl font-bold ${EMPLOYEE_ROLES[viewingEmployee.role]?.textColor || 'text-gray-600'}`}>
                     {viewingEmployee.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                   </span>
@@ -744,7 +744,7 @@ const EmployeeManagement = () => {
                 <div>
                   <h4 className="font-semibold text-gray-900">{viewingEmployee.name}</h4>
                   <p className="text-sm text-gray-500">@{viewingEmployee.username}</p>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${EMPLOYEE_ROLES[viewingEmployee.role]?.bgColor || 'bg-gray-100'} ${EMPLOYEE_ROLES[viewingEmployee.role]?.textColor || 'text-gray-600'} mt-1`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${EMPLOYEE_ROLES[viewingEmployee.role]?.bgColor || 'bg-warm-section'} ${EMPLOYEE_ROLES[viewingEmployee.role]?.textColor || 'text-gray-600'} mt-1`}>
                     {getRoleLabel(viewingEmployee.role)}
                   </span>
                 </div>

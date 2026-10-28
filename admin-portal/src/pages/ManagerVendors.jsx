@@ -642,7 +642,7 @@ const ManagerVendors = ({ user }) => {
           badge={
             <span className="flex items-center gap-1.5">
               <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                selectedVendor.vendor_type === 'own' ? 'bg-warm-accent-soft text-warm-accent-hover' : 'bg-warm-section text-warm-muted'
               }`}>
                 {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
               </span>
@@ -660,7 +660,7 @@ const ManagerVendors = ({ user }) => {
                   <ViewField label="Service Type" value={selectedVendor.service_type} />
                   <ViewField label="Vendor Type">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedVendor.vendor_type === 'own' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                      selectedVendor.vendor_type === 'own' ? 'bg-warm-accent-soft text-warm-accent-hover' : 'bg-warm-section text-warm-muted'
                     }`}>
                       {selectedVendor.vendor_type === 'own' ? 'My Vendor' : 'Assigned'}
                     </span>
@@ -683,7 +683,7 @@ const ManagerVendors = ({ user }) => {
                     <ViewField label="Rate Per Visit" value={`₹${selectedVendor.rate_per_visit || 0}`} />
                   )}
                   <ViewField label="Coverage Per Day" value={selectedVendor.coverage_per_day || 0} />
-                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
+                  <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={selectedVendor.working_hours_from && selectedVendor.working_hours_to ? `${selectedVendor.working_hours_from} - ${selectedVendor.working_hours_to}` : '-'} />
                 </ViewGrid>
               </ViewSection>
 

@@ -765,20 +765,20 @@ const FPUserManagement = ({ user }) => {
             <div className="space-y-4">
               {/* User Header */}
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-gray-100'} rounded-full flex items-center justify-center`}>
+                <div className={`w-14 h-14 ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-warm-section'} rounded-full flex items-center justify-center`}>
                   <span className={`text-lg font-semibold ${FP_STAFF_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
                     {viewingUser.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs text-gray-700 bg-warm-section px-2 py-0.5 rounded">
                       {viewingUser.userId || viewingUser.id}
                     </span>
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900">{viewingUser.name}</h4>
                   <p className="text-sm text-gray-500">@{viewingUser.username}</p>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded text-xs font-medium ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-gray-100'} ${FP_STAFF_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded text-xs font-medium ${FP_STAFF_ROLES[viewingUser.role]?.bgColor || 'bg-warm-section'} ${FP_STAFF_ROLES[viewingUser.role]?.textColor || 'text-gray-600'}`}>
                     {getRoleLabel(viewingUser.role)}
                   </span>
                 </div>
@@ -816,7 +816,7 @@ const FPUserManagement = ({ user }) => {
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                     viewingUser.status === 'active'
                       ? 'bg-green-50 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
+                      : 'bg-warm-section text-gray-500'
                   }`}>
                     {viewingUser.status === 'active' ? 'Active' : 'Inactive'}
                   </span>

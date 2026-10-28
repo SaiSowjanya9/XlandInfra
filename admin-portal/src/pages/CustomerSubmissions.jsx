@@ -1373,7 +1373,7 @@ const CustomerSubmissions = () => {
         <ViewModal onClose={() => { setViewProperty(null); setPropertyVendorAssignments([]); }}
           id={viewProperty.propertyId}
           title={viewProperty.name}
-          badge={<span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+          badge={<span className="px-2.5 py-1 bg-warm-accent-soft text-warm-accent-hover rounded-full text-xs font-medium">
                     {TYPE_LABELS[viewProperty.entryType] || viewProperty.propertyType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Property'}
                   </span>}
         >
@@ -1462,13 +1462,13 @@ const CustomerSubmissions = () => {
                             return (
                               <div key={blockNum} className="p-4 bg-warm-section rounded-lg border border-warm-border">
                                 <div className="flex justify-between items-center mb-3">
-                                  <p className="text-sm font-semibold text-blue-600">{blockName}</p>
+                                  <p className="text-sm font-semibold text-warm-accent-hover">{blockName}</p>
                                   <p className="text-sm font-medium text-gray-700">{unitsPerBlock[blockNum] || unitsPerBlock[String(blockNum)] || 0} units</p>
                                 </div>
                                 {hasUnitTypes && (
                                   <div className="flex flex-wrap gap-2">
                                     {unitTypeEntries.map(([key, count]) => (
-                                      <span key={key} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                      <span key={key} className="px-2 py-1 bg-warm-accent-soft text-warm-accent-hover text-xs rounded-full">
                                         {getDisplayName(key)}: {count}
                                       </span>
                                     ))}
@@ -1522,7 +1522,7 @@ const CustomerSubmissions = () => {
                         <p className="text-xs text-gray-500 mb-2 font-medium">Unit Type Breakdown</p>
                         <div className="flex flex-wrap gap-2">
                           {unitTypeEntries.map(([key, count]) => (
-                            <span key={key} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                            <span key={key} className="px-2 py-1 bg-warm-accent-soft text-warm-accent-hover text-xs rounded-full">
                               {getDisplayName(key)}: {count}
                             </span>
                           ))}
@@ -1622,8 +1622,8 @@ const CustomerSubmissions = () => {
                       {contacts.map((contact, index) => (
                         <div key={index} className="bg-warm-section rounded-lg p-4">
                           <div className="flex items-center gap-2 mb-3">
-                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                            <div className="w-6 h-6 bg-warm-accent-soft rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-warm-accent-hover">{index + 1}</span>
                             </div>
                             <span className="text-xs text-gray-500">Contact {index + 1}</span>
                           </div>
@@ -1706,14 +1706,14 @@ const CustomerSubmissions = () => {
                 ) : (
                   <div className="space-y-3">
                     {propertyEstimates.map((estimate) => (
-                      <div key={estimate.estimateId} className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                      <div key={estimate.estimateId} className="p-3 bg-warm-accent-soft border border-warm-border rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-indigo-700 text-sm">{estimate.estimateId}</span>
+                          <span className="font-medium text-warm-accent-hover text-sm">{estimate.estimateId}</span>
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                             estimate.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                            estimate.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                            estimate.status === 'Sent' ? 'bg-warm-accent-soft text-warm-accent-hover' :
                             estimate.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
+                            'bg-warm-section text-gray-700'
                           }`}>
                             {estimate.status || 'Draft'}
                           </span>
@@ -1733,15 +1733,15 @@ const CustomerSubmissions = () => {
                           </div>
                         </div>
                         {estimate.services && estimate.services.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-indigo-200">
+                          <div className="mt-2 pt-2 border-t border-warm-border">
                             <div className="flex flex-wrap gap-1">
                               {estimate.services.slice(0, 3).map((service, idx) => (
-                                <span key={idx} className="px-1.5 py-0.5 bg-white text-indigo-600 rounded text-xs">
+                                <span key={idx} className="px-1.5 py-0.5 bg-white text-warm-accent-hover rounded text-xs">
                                   {service.name}
                                 </span>
                               ))}
                               {estimate.services.length > 3 && (
-                                <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs">
+                                <span className="px-1.5 py-0.5 bg-warm-accent-soft text-warm-accent-hover rounded text-xs">
                                   +{estimate.services.length - 3} more
                                 </span>
                               )}
@@ -1757,7 +1757,7 @@ const CustomerSubmissions = () => {
               {/* Assigned Vendors Section - Read Only */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <Truck className="w-4 h-4 text-purple-500" />
+                  <Truck className="w-4 h-4 text-warm-accent" />
                   <h3 className="text-base font-semibold text-gray-900">Assigned Vendors</h3>
                 </div>
                 {loadingVendorAssignments ? (
@@ -1773,14 +1773,14 @@ const CustomerSubmissions = () => {
                 ) : (
                   <div className="border border-warm-border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-warm-accent-soft border-b border-purple-100">
+                      <thead className="bg-warm-accent-soft border-b border-warm-border">
                         <tr>
                           <th className="px-4 py-3 text-left font-medium text-warm-text">Service Type</th>
                           <th className="px-4 py-3 text-left font-medium text-warm-text">Vendor Name</th>
                           <th className="px-4 py-3 text-left font-medium text-warm-text">Contact</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-warm-border/70">
                         {propertyVendorAssignments.map((assignment, idx) => (
                           <tr key={idx} className="hover:bg-warm-section">
                             <td className="px-4 py-3">
@@ -1841,7 +1841,7 @@ const CustomerSubmissions = () => {
                 </button>
                 <button
                   onClick={() => setViewProperty(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 bg-warm-border text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
                 >
                   Close
                 </button>
@@ -2138,7 +2138,7 @@ const CustomerSubmissions = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Type</p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TYPE_STYLES[viewAMCDetails.property.entryType]?.badge || 'bg-gray-100 text-gray-700'}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${TYPE_STYLES[viewAMCDetails.property.entryType]?.badge || 'bg-warm-section text-gray-700'}`}>
                         {TYPE_LABELS[viewAMCDetails.property.entryType] || viewAMCDetails.property.entryType}
                       </span>
                     </div>
@@ -2164,29 +2164,29 @@ const CustomerSubmissions = () => {
                   <FileText className="w-4 h-4" />
                   Package Summary
                 </h4>
-                <div className="bg-indigo-50 rounded-lg p-4">
+                <div className="bg-warm-accent-soft rounded-lg p-4">
                   <div className="grid grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-indigo-600 mb-1">Package ID</p>
-                      <p className="font-mono text-sm font-medium text-indigo-900">{viewAMCDetails.amcPackage.packageId}</p>
+                      <p className="text-xs text-warm-accent-hover mb-1">Package ID</p>
+                      <p className="font-mono text-sm font-medium text-warm-accent-hover">{viewAMCDetails.amcPackage.packageId}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-indigo-600 mb-1">Billing</p>
-                      <p className="font-medium text-indigo-900 capitalize whitespace-nowrap">{viewAMCDetails.amcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
+                      <p className="text-xs text-warm-accent-hover mb-1">Billing</p>
+                      <p className="font-medium text-warm-accent-hover capitalize whitespace-nowrap">{viewAMCDetails.amcPackage.billingDuration?.replace('-', ' ') || 'Monthly'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-indigo-600 mb-1">Status</p>
+                      <p className="text-xs text-warm-accent-hover mb-1">Status</p>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         viewAMCDetails.amcPackage.status === 'active' 
                           ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-600'
+                          : 'bg-warm-section text-gray-600'
                       }`}>
                         {viewAMCDetails.amcPackage.status || 'Active'}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs text-indigo-600 mb-1">Created</p>
-                      <p className="font-medium text-indigo-900 text-sm">
+                      <p className="text-xs text-warm-accent-hover mb-1">Created</p>
+                      <p className="font-medium text-warm-accent-hover text-sm">
                         {viewAMCDetails.amcPackage.createdAt 
                           ? new Date(viewAMCDetails.amcPackage.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) 
                           : '-'}
@@ -2213,7 +2213,7 @@ const CustomerSubmissions = () => {
                         <th className="px-4 py-3 text-right font-medium text-gray-600">Rate (₹)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-warm-border/70">
                       {viewAMCDetails.amcPackage.services?.map((service, idx) => (
                         <tr key={idx} className="hover:bg-warm-section">
                           <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
@@ -2222,7 +2222,7 @@ const CustomerSubmissions = () => {
                             {service.frequencyCount || service.frequency || 1}x
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-warm-accent-soft text-warm-accent-hover rounded text-xs">
                               {service.frequencyType || 'Monthly'}
                             </span>
                           </td>
@@ -2252,9 +2252,9 @@ const CustomerSubmissions = () => {
                       ₹{(viewAMCDetails.amcPackage.gst || 0).toLocaleString()}
                     </span>
                   </div>
-                  <div className="border-t border-indigo-200 pt-2 mt-2 flex justify-between items-center">
-                    <span className="font-semibold text-indigo-900">Total Amount</span>
-                    <span className="text-xl font-bold text-indigo-600">
+                  <div className="border-t border-warm-border pt-2 mt-2 flex justify-between items-center">
+                    <span className="font-semibold text-warm-accent-hover">Total Amount</span>
+                    <span className="text-xl font-bold text-warm-accent-hover">
                       ₹{(viewAMCDetails.amcPackage.totalPrice || 0).toLocaleString()}
                     </span>
                   </div>

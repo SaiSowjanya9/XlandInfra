@@ -482,7 +482,7 @@ const CancelledSchedulesPage = ({ portalType = 'admin', user }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property ID</p>
-                  <p className="text-sm font-medium text-blue-600">{selectedSchedule.property_id}</p>
+                  <p className="text-sm font-medium text-warm-accent-hover">{selectedSchedule.property_id}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Property Name</p>

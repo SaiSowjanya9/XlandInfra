@@ -919,7 +919,7 @@ const VendorDetails = () => {
                 <ViewGrid cols={3}>
                   <ViewField label="Rate Per Visit" value={`₹${viewVendor.ratePerVisit || viewVendor.rate_per_visit || 0}`} />
                   <ViewField label="Coverage Per Day" value={viewVendor.coveragePerDay || viewVendor.coverage_per_day || 0} />
-                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'} />
+                  <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={(viewVendor.workingHoursFrom || viewVendor.working_hours_from) && (viewVendor.workingHoursTo || viewVendor.working_hours_to) ? `${viewVendor.workingHoursFrom || viewVendor.working_hours_from} - ${viewVendor.workingHoursTo || viewVendor.working_hours_to}` : '-'} />
                 </ViewGrid>
               </ViewSection>
               {/* Manager Details */}

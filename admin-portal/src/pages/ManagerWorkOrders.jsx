@@ -1482,8 +1482,8 @@ const ManagerWorkOrders = ({ user }) => {
               </div>
 
               {/* Property Details Section */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <h4 className="text-sm font-semibold text-blue-800 mb-3">Property Details</h4>
+              <div className="bg-warm-accent-soft rounded-lg p-4 border border-warm-border">
+                <h4 className="text-sm font-semibold text-warm-accent-hover mb-3">Property Details</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-gray-500">Property Name</p>
@@ -1491,7 +1491,7 @@ const ManagerWorkOrders = ({ user }) => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property ID</p>
-                    <p className="font-medium text-gray-900 font-mono text-blue-600">{selectedWorkOrder.property_code || selectedWorkOrder.actual_property_id || '-'}</p>
+                    <p className="font-medium text-gray-900 font-mono text-warm-accent-hover">{selectedWorkOrder.property_code || selectedWorkOrder.actual_property_id || '-'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Property Type</p>
@@ -1535,10 +1535,10 @@ const ManagerWorkOrders = ({ user }) => {
 
                 {/* Property Location - Navigate to Property */}
                 {(selectedWorkOrder.property_latitude || selectedWorkOrder.property_longitude) && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="mt-4 p-4 bg-warm-accent-soft border border-warm-border rounded-xl">
                     <div className="flex items-center gap-2 mb-3">
-                      <MapPin className="w-4 h-4 text-blue-600" />
-                      <p className="text-sm font-medium text-blue-800">Property GPS Location</p>
+                      <MapPin className="w-4 h-4 text-warm-accent-hover" />
+                      <p className="text-sm font-medium text-warm-accent-hover">Property GPS Location</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <a
@@ -1556,12 +1556,12 @@ const ManagerWorkOrders = ({ user }) => {
                           navigator.clipboard.writeText(url);
                           alert('Location link copied!');
                         }}
-                        className="px-4 py-2.5 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+                        className="px-4 py-2.5 bg-white border border-warm-border text-warm-accent-hover rounded-lg text-sm font-medium hover:bg-warm-section transition-colors"
                       >
                         Copy Link
                       </button>
                     </div>
-                    <p className="text-xs text-blue-600 mt-2 font-mono">
+                    <p className="text-xs text-warm-accent-hover mt-2 font-mono">
                       {parseFloat(selectedWorkOrder.property_latitude).toFixed(6)}, {parseFloat(selectedWorkOrder.property_longitude).toFixed(6)}
                     </p>
                   </div>
@@ -1605,11 +1605,11 @@ const ManagerWorkOrders = ({ user }) => {
                               }}
                             />
                           ) : null}
-                          <div className={`w-full h-20 bg-gray-100 rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
+                          <div className={`w-full h-20 bg-warm-section rounded flex-col items-center justify-center ${isImage ? 'hidden' : 'flex'}`}>
                             <span className="text-2xl">{isImage ? '🖼️' : '📄'}</span>
                             {isImage && <span className="text-xs text-gray-500 mt-1">Click to view</span>}
                           </div>
-                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-blue-600">{att.original_name || att.file_name}</p>
+                          <p className="text-xs font-medium text-gray-700 truncate mt-1 group-hover:text-warm-accent-hover">{att.original_name || att.file_name}</p>
                         </div>
                       );
                     })}

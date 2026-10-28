@@ -651,7 +651,7 @@ const AssignedVendors = ({ user }) => {
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
               viewAssignment.is_active !== false && viewAssignment.status !== 'removed'
                 ? 'bg-green-100 text-green-700'
-                : 'bg-gray-200 text-gray-600'
+                : 'bg-warm-border text-gray-600'
             }`}>
               {viewAssignment.is_active !== false && viewAssignment.status !== 'removed' ? 'Active' : 'Removed'}
             </span>
@@ -692,7 +692,7 @@ const AssignedVendors = ({ user }) => {
                 <ViewGrid cols={3}>
                   <ViewField label="Rate Per Visit" value={`₹${viewAssignment.rate_per_visit || viewAssignment.ratePerVisit || 0}`} />
                   <ViewField label="Coverage Per Day" value={viewAssignment.coverage_per_day || viewAssignment.coveragePerDay || 0} />
-                  <ViewField label="Working Hours" valueClassName="text-purple-700" value={(viewAssignment.working_hours_from || viewAssignment.workingHoursFrom) && (viewAssignment.working_hours_to || viewAssignment.workingHoursTo) ? `${viewAssignment.working_hours_from || viewAssignment.workingHoursFrom} - ${viewAssignment.working_hours_to || viewAssignment.workingHoursTo}` : '-'} />
+                  <ViewField label="Working Hours" valueClassName="text-warm-accent-hover" value={(viewAssignment.working_hours_from || viewAssignment.workingHoursFrom) && (viewAssignment.working_hours_to || viewAssignment.workingHoursTo) ? `${viewAssignment.working_hours_from || viewAssignment.workingHoursFrom} - ${viewAssignment.working_hours_to || viewAssignment.workingHoursTo}` : '-'} />
                 </ViewGrid>
               </ViewSection>
 

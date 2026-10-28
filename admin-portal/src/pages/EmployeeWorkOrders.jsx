@@ -1691,7 +1691,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   selectedOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                   selectedOrder.priority === 'high' ? 'bg-orange-100 text-orange-700' :
                   selectedOrder.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
+                  'bg-warm-section text-gray-700'
                 }`}>
                   {selectedOrder.priority || 'Medium'}
                 </span>
