@@ -356,7 +356,15 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
     fetchCustomers();
     fetchProperties();
     fetchZones();
+    fetch(`${API_BASE}/api/onboarding/suggestions/areas`)
+      .then(r => r.json())
+      .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
+      .catch(() => {});
   }, []);
+
+  const filteredAreaSuggestions = areaSuggestions.filter(a =>
+    a.toLowerCase().includes((formData.areaName || '').toLowerCase())
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -803,13 +811,37 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
                   <label className="block text-sm text-gray-700 mb-1.5">
                     Area Name <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.areaName}
-                    onChange={(e) => updateFormData('areaName', e.target.value)}
-                    className={inputClass(hasError && !formData.areaName.trim())}
-                    placeholder="Type or select area name..."
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.areaName}
+                      onChange={(e) => {
+                        updateFormData('areaName', e.target.value);
+                        setShowAreaDropdown(true);
+                      }}
+                      onFocus={() => setShowAreaDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowAreaDropdown(false), 400)}
+                      className={inputClass(hasError && !formData.areaName.trim())}
+                      placeholder="Type or select area name..."
+                    />
+                    <DismissPanel open={showAreaDropdown && filteredAreaSuggestions.length > 0} onDismiss={() => setShowAreaDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredAreaSuggestions.map(a => (
+                        <button
+                          key={a}
+                          type="button"
+                          onMouseDown={() => {
+                            updateFormData('areaName', a);
+                            setShowAreaDropdown(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors ${
+                            formData.areaName === a ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </DismissPanel>
+                  </div>
                   <FieldError show={hasError && !formData.areaName.trim()} message="Area name is required" />
                 </div>
 
