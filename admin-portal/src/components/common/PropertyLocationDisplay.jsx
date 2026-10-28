@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
-import { useSkinClasses } from '../../utils/estimateTheme';
+import { useSkinClasses, EstimateThemeProvider } from '../../utils/estimateTheme';
 import Modal from './Modal';
 
 // Custom marker icon
@@ -26,11 +26,10 @@ const customIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const PropertyLocationDisplay = ({ 
-  location, 
+const PropertyLocationDisplayInner = ({
+  location,
   propertyName = 'Property'
 }) => {
-  // Cream inside a page that announces the warm skin (the FP portal), the original look everywhere else
   const sk = useSkinClasses();
   const [showMapModal, setShowMapModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -193,5 +192,13 @@ const PropertyLocationDisplay = ({
     </>
   );
 };
+
+// Every portal shows the warm skin now; the provider used to come from the FP page that
+// wrapped the modal, which is why the same card drew blue in every other portal.
+const PropertyLocationDisplay = (props) => (
+  <EstimateThemeProvider value="warm">
+    <PropertyLocationDisplayInner {...props} />
+  </EstimateThemeProvider>
+);
 
 export default PropertyLocationDisplay;

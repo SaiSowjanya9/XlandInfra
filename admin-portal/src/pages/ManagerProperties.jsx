@@ -780,34 +780,39 @@ const ManagerProperties = ({ user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="space-y-1">
+                      <span className="text-sm text-gray-600">
                         {(() => {
-                          // Try to get contact from association_contacts first
                           let contactName = property.contact_person;
-                          let contactPhone = property.contact_phone;
                           try {
                             if (property.association_contacts) {
-                              const contacts = typeof property.association_contacts === 'string' 
-                                ? JSON.parse(property.association_contacts) 
+                              const contacts = typeof property.association_contacts === 'string'
+                                ? JSON.parse(property.association_contacts)
                                 : property.association_contacts;
-                              if (contacts.length > 0) {
-                                contactName = contacts[0].name || contactName;
-                                contactPhone = contacts[0].phone || contactPhone;
-                              }
+                              if (contacts.length > 0 && contacts[0].name) contactName = contacts[0].name;
                             }
                           } catch {}
-                          return (
-                            <>
-                              {contactName && <p className="text-sm text-gray-600">{contactName}</p>}
-                              {contactPhone && (
-                                <p className="text-xs text-gray-400 flex items-center gap-1">
-                                  <Phone className="w-3 h-3" /> {contactPhone.startsWith('+') ? contactPhone : `+91${contactPhone}`}
-                                </p>
-                              )}
-                            </>
-                          );
+                          return contactName || '-';
                         })()}
-                      </div>
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      {(() => {
+                        let contactPhone = property.contact_phone;
+                        try {
+                          if (property.association_contacts) {
+                            const contacts = typeof property.association_contacts === 'string'
+                              ? JSON.parse(property.association_contacts)
+                              : property.association_contacts;
+                            if (contacts.length > 0 && contacts[0].phone) contactPhone = contacts[0].phone;
+                          }
+                        } catch {}
+                        if (!contactPhone) return <span className="text-sm text-gray-600">-</span>;
+                        return (
+                          <p className="text-xs text-gray-400 flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {contactPhone.startsWith('+') ? contactPhone : `+91${contactPhone}`}
+                          </p>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-sm text-gray-600">

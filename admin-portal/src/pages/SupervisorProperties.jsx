@@ -689,7 +689,6 @@ const SupervisorProperties = ({ user }) => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Address</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contacts</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created By</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Created</th>
@@ -725,6 +724,22 @@ const SupervisorProperties = ({ user }) => {
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">{property.city || '-'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {(() => {
+                            let contactName = property.contact_name || property.contact_person;
+                            try {
+                              if (property.association_contacts) {
+                                const contacts = typeof property.association_contacts === 'string'
+                                  ? JSON.parse(property.association_contacts)
+                                  : property.association_contacts;
+                                if (contacts.length > 0 && contacts[0].name) contactName = contacts[0].name;
+                              }
+                            } catch {}
+                            return contactName || '-';
+                          })()}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">
