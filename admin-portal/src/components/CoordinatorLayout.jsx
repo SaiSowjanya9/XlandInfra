@@ -53,7 +53,6 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
-    { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
   ];
 
   // FP Coordinator nav items - same structure as regular coordinator
@@ -61,7 +60,6 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     { path: '/coordinator', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/coordinator/customers/add', icon: UserPlus, label: 'Add Customer' },
     { path: '/coordinator/properties', icon: Building2, label: 'Property Management' },
-    { path: '/coordinator/work-orders', icon: ClipboardList, label: 'Work Orders' },
   ];
 
   // Stands alone rather than inside a section; rendered last, where Employee Management sits
@@ -89,6 +87,12 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     
   ];
 
+  // Work Orders section - dashboard plus the list, same shape Manager gets
+  const workOrdersSubItems = [
+    { path: '/coordinator/work-orders/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/coordinator/work-orders', icon: List, label: 'All Work Orders' }
+  ];
+
   // Marketing sub-items -- the same four screens the FP portal has, read-only here.
   const marketingSubItems = [
     { path: '/coordinator/marketing/dashboard', icon: BarChart3, label: 'Dashboard' },
@@ -100,6 +104,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   const isVendorActive = vendorSubItems.some(item => location.pathname === item.path);
   const isEstimatesActive = estimatesSubItems.some(item => location.pathname === item.path) || location.pathname === '/coordinator/estimates';
   const isSchedulesActive = schedulesSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/coordinator/schedules');
+  const isWorkOrdersActive = workOrdersSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/coordinator/work-orders');
   const isMarketingActive = marketingSubItems.some(item => location.pathname === item.path) || location.pathname.startsWith('/coordinator/marketing');
   
   // Color constants for sidebar
@@ -121,35 +126,43 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     if (isVendorActive) setExpandedMenus(prev => ({ ...prev, vendors: true }));
     if (isEstimatesActive) setExpandedMenus(prev => ({ ...prev, estimates: true }));
     if (isSchedulesActive) setExpandedMenus(prev => ({ ...prev, schedules: true }));
-    if (isMarketingActive) setExpandedMenus(prev => ({ ...prev, marketing: true }));
-  }, [location.pathname, isVendorActive, isEstimatesActive, isSchedulesActive, isMarketingActive]);
+    if (isWorkOrdersActive) setExpandedMenus(prev => ({ ...prev, workOrders: true }));
+    if (isMarketingActive) setExpandedMenus(prev => ({ ...prev, marketing: true, workOrders: false }));
+  }, [location.pathname, isVendorActive, isEstimatesActive, isSchedulesActive, isMarketingActive, isWorkOrdersActive]);
 
   // Accordion toggle functions - close other sections when opening one
   const toggleVendors = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.vendors;
-      setExpandedMenus({ vendors: opening, estimates: false, schedules: false, marketing: false });
+      setExpandedMenus({ vendors: opening, estimates: false, schedules: false, marketing: false, workOrders: false });
     }
   };
 
   const toggleEstimates = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.estimates;
-      setExpandedMenus({ vendors: false, estimates: opening, schedules: false, marketing: false });
+      setExpandedMenus({ vendors: false, estimates: opening, schedules: false, marketing: false, workOrders: false });
     }
   };
 
   const toggleSchedules = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.schedules;
-      setExpandedMenus({ vendors: false, estimates: false, schedules: opening, marketing: false });
+      setExpandedMenus({ vendors: false, estimates: false, schedules: opening, marketing: false, workOrders: false });
     }
   };
 
   const toggleMarketing = () => {
     if (!sidebarCollapsed) {
       const opening = !expandedMenus.marketing;
-      setExpandedMenus({ vendors: false, estimates: false, schedules: false, marketing: opening });
+      setExpandedMenus({ vendors: false, estimates: false, schedules: false, marketing: opening, workOrders: false });
+    }
+  };
+
+  const toggleWorkOrders = () => {
+    if (!sidebarCollapsed) {
+      const opening = !expandedMenus.workOrders;
+      setExpandedMenus({ vendors: false, estimates: false, schedules: false, marketing: false, workOrders: opening });
     }
   };
 
@@ -160,7 +173,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
   };
 
   // Check if any dropdown is open
-  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.schedules || expandedMenus.marketing;
+  const isAnyDropdownOpen = expandedMenus.vendors || expandedMenus.estimates || expandedMenus.schedules || expandedMenus.marketing || expandedMenus.workOrders;
 
   const NavLink = ({ item, mobile = false }) => {
     const Icon = item.icon;
@@ -169,7 +182,7 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
     const handleClick = () => {
       if (mobile) setSidebarOpen(false);
       // Close all dropdowns when clicking on main nav items
-      setExpandedMenus({ vendors: false, estimates: false, schedules: false, marketing: false });
+      setExpandedMenus({ vendors: false, estimates: false, schedules: false, marketing: false, workOrders: false });
     };
     return (
       <Link
@@ -267,6 +280,53 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                   <NavLink key={item.path} item={item} mobile />
                 ))}
                 
+                {/* Work Orders Section */}
+                <div className="mt-1">
+                  <button
+                    onClick={toggleWorkOrders}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                    style={{ background: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                    onMouseEnter={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                    onMouseLeave={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                    title={sidebarCollapsed ? 'Work Orders' : ''}
+                  >
+                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                      <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                      {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
+                    </div>
+                    {!sidebarCollapsed && (
+                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                        expandedMenus.workOrders ? 'bg-amber-500/20' : 'bg-white/10'
+                      }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            expandedMenus.workOrders ? 'rotate-180' : ''
+                          }`}
+                          style={{ color: expandedMenus.workOrders ? colors.activeText : colors.iconGold }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  {expandedMenus.workOrders && !sidebarCollapsed && (
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
+                      {workOrdersSubItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 {/* Estimates Section */}
                 <div className="mt-1">
                   <button
@@ -452,6 +512,53 @@ const CoordinatorLayout = ({ admin, onLogout, children }) => {
                 {navItems.map((item) => (
                   <NavLink key={item.path} item={item} mobile />
                 ))}
+
+                {/* Work Orders Section - Only for regular coordinators */}
+                <div className="mt-1">
+                  <button
+                    onClick={toggleWorkOrders}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} w-full px-4 py-2.5 rounded-xl transition-all duration-200 font-medium`}
+                    style={{ background: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeBg : 'transparent', color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.primaryText }}
+                    onMouseEnter={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = colors.hoverBg; }}
+                    onMouseLeave={(e) => { if (!expandedMenus.workOrders && !(isWorkOrdersActive && !isAnyDropdownOpen)) e.currentTarget.style.background = 'transparent'; }}
+                    title={sidebarCollapsed ? 'Work Orders' : ''}
+                  >
+                    <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                      <ClipboardList className="w-5 h-5 flex-shrink-0" style={{ color: (expandedMenus.workOrders || (isWorkOrdersActive && !isAnyDropdownOpen)) ? colors.activeText : colors.iconGold }} />
+                      {!sidebarCollapsed && <span className="text-sm whitespace-nowrap">Work Orders</span>}
+                    </div>
+                    {!sidebarCollapsed && (
+                      <span className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                        expandedMenus.workOrders ? 'bg-amber-500/20' : 'bg-white/10'
+                      }`}>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            expandedMenus.workOrders ? 'rotate-180' : ''
+                          }`}
+                          style={{ color: expandedMenus.workOrders ? colors.activeText : colors.iconGold }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  {expandedMenus.workOrders && !sidebarCollapsed && (
+                    <div className="ml-4 mt-1 space-y-1 pl-3" >
+                      {workOrdersSubItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.path;
+                        return (
+                          <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 font-medium"
+                            style={{ background: isActive ? colors.activeBg : 'transparent', color: isActive ? colors.activeText : colors.primaryText }}
+                            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = colors.hoverBg; }}
+                            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                            <Icon className="w-4 h-4" style={{ color: isActive ? colors.activeText : colors.iconGold }} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 {/* Estimates Section - Only for regular coordinators */}
                 <div className="mt-1">
