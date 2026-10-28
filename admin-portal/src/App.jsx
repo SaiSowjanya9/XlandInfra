@@ -616,6 +616,7 @@ function App() {
                 <CoordinatorLayout admin={user} onLogout={() => { handleLogout(); }}>
                   <Routes>
                     <Route path="properties" element={<CoordinatorProperties user={user} />} />
+                    <Route path="work-orders/dashboard" element={<WorkOrdersDashboard user={user} portalType="coordinator" />} />
                     <Route path="work-orders" element={<CoordinatorWorkOrders user={user} />} />
                     <Route path="work-orders/pending" element={<CoordinatorWorkOrders user={user} />} />
                     <Route path="work-orders/completed" element={<CoordinatorWorkOrders user={user} />} />
