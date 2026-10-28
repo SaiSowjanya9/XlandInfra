@@ -889,7 +889,7 @@ const Properties = () => {
                   const propType = property.property_type || property.entryType || property.propertyType;
                   const style = TYPE_STYLES[normalizePropertyType(propType)] || TYPE_STYLES.GC;
                   return (
-                    <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={`${property.source_table || 'properties'}-${property.id}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                         {property.name || property.community_name}
                       </td>

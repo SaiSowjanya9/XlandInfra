@@ -1197,7 +1197,7 @@ const CustomerSubmissions = () => {
                   const typeKey = property.propertyType?.toUpperCase()?.replace(/[^A-Z]/g, '') || 'GC';
                   const style = TYPE_STYLES[typeKey] || TYPE_STYLES.GC;
                   return (
-                    <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={`${property.sourceTable || 'properties'}-${property.id}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-3 font-medium text-gray-900 whitespace-nowrap text-sm truncate max-w-[120px]">
                         {property.name}
                       </td>

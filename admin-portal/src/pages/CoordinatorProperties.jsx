@@ -703,7 +703,7 @@ const CoordinatorProperties = ({ user }) => {
                 </thead>
                 <tbody>
                   {paginatedProperties.map((property) => (
-                    <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={`${property.source_table || 'properties'}-${property.id}`} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="text-sm font-medium text-gray-900">{property.name}</span>
                       </td>
