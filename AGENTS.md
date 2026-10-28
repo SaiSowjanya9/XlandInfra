@@ -237,6 +237,17 @@ Mistakes that fail silently and have each already broken live endpoints:
   from every source (scoped to `franchisePartnerId` on portal routes; `includeGlobal` on
   admin's). A bare numeric id on a portal route is a company-wide zone and is refused.
   `onboarded_properties.zone` is NOT NULL — detach with `''`, not `NULL`.
+- **A `key={property.id}` on a merged property list leaves zombie rows.** Every portal's
+  `GET …/properties` returns `[...regularProperties, ...onboardedProperties]`, and each table's
+  `id` is its own auto-increment, so the same `id` appears twice in one array. React's
+  reconciliation map keeps only one fibre per duplicated key; the overwritten fibres are never
+  deleted, so shrinking the list (clicking the Apartments/Villas type tab) left stale `<tr>`s in
+  the DOM while the "Showing … of N" footer counted the correctly filtered set — the table looked
+  unfiltered. Every property table keys rows by
+  `key={`${property.source_table || 'properties'}-${property.id}`}` (camelCase `sourceTable` in
+  `CustomerSubmissions`), which is unique across the merge: `CoordinatorProperties`,
+  `ManagerProperties`, `SupervisorProperties`, `ExecutiveProperties`, `FPProperties`,
+  `Properties`, `CustomerSubmissions`.
 
 ## Work Order IDs
 

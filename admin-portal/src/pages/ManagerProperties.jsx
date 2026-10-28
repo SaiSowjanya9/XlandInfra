@@ -758,7 +758,7 @@ const ManagerProperties = ({ user }) => {
               </thead>
               <tbody>
                 {paginatedProperties.map((property) => (
-                  <tr key={property.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr key={`${property.source_table || 'properties'}-${property.id}`} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div>
                         <p className="font-medium text-gray-900">{property.name}</p>
