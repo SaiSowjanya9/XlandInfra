@@ -185,16 +185,35 @@ const AddVendor = ({ admin }) => {
     s.name?.toLowerCase().startsWith((formData.serviceType || '').toLowerCase())
   );
 
+  const fetchAreaSuggestions = () => {
+    fetch(`${API_BASE}/api/onboarding/suggestions/areas`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
+      .catch(() => {});
+  };
+
+  const handleDeleteArea = async (areaName, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete the area "${areaName}"? It is also cleared from any properties and vendors using it.`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/onboarding/suggestions/areas/${encodeURIComponent(areaName)}`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (json.success) fetchAreaSuggestions();
+      else window.alert(json.message || 'Could not remove the area.');
+    } catch {
+      window.alert('Could not remove the area. Please try again.');
+    }
+  };
+
   useEffect(() => {
     fetchServiceTypes();
     fetch(`${API_BASE}/api/onboarding/suggestions/zones`)
       .then(r => r.json())
       .then(res => { if (res.success) setZoneSuggestions(res.data || []); })
       .catch(() => {});
-    fetch(`${API_BASE}/api/onboarding/suggestions/areas`)
-      .then(r => r.json())
-      .then(res => { if (res.success) setAreaSuggestions(res.data || []); })
-      .catch(() => {});
+    fetchAreaSuggestions();
   }, []);
 
   const filteredZones = zoneSuggestions.filter(z =>
@@ -478,19 +497,19 @@ const AddVendor = ({ admin }) => {
               />
               <DismissPanel open={showAreaDropdown && filteredAreas.length > 0} onDismiss={() => setShowAreaDropdown(false)} className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredAreas.map(a => (
-                    <button
-                      key={a}
-                      type="button"
-                      onMouseDown={() => {
-                        updateField('areaName', a);
-                        setShowAreaDropdown(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors ${
-                        formData.areaName === a ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                      }`}
-                    >
-                      {a}
-                    </button>
+                    <div key={a} className={`flex items-center justify-between px-3 py-2 hover:bg-blue-50 ${formData.areaName === a ? 'bg-blue-50' : ''}`}>
+                        <button
+                          type="button"
+                          onMouseDown={() => {
+                            updateField('areaName', a);
+                            setShowAreaDropdown(false);
+                          }}
+                          className={`flex-1 text-left text-sm ${formData.areaName === a ? 'text-blue-700 font-medium' : 'text-gray-700'}`}
+                        >
+                          {a}
+                        </button>
+                        <button type="button" onMouseDown={(e) => handleDeleteArea(a, e)} className="p-1 text-red-400 hover:text-red-600 rounded"><span className="text-xs">✕</span></button>
+                      </div>
                   ))}
                 </DismissPanel>
               {errors.areaName && <p className="text-xs text-red-500 mt-1">{errors.areaName}</p>}

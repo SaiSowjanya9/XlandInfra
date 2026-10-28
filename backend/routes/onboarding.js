@@ -666,6 +666,39 @@ router.get('/suggestions/areas', async (req, res) => {
 });
 
 // ============================================
+// DELETE /api/onboarding/suggestions/areas/:name — Remove an area from every record using it
+// ============================================
+// Areas are not a managed list the way zones are: the suggestion box reads the distinct
+// area_name stored on onboarded properties and vendors, so removing a suggestion means
+// clearing that field on the records that carry it. area_name is NOT NULL on
+// onboarded_properties, so detach with '' rather than NULL. Staff only.
+router.delete('/suggestions/areas/:name', authenticate, async (req, res) => {
+  if (req.user?.role === 'customer') {
+    return res.status(403).json({ success: false, message: 'Not allowed' });
+  }
+  const name = (req.params.name || '').trim();
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Area name is required' });
+  }
+  try {
+    const [propResult] = await pool.execute(
+      `UPDATE onboarded_properties SET area_name = '' WHERE area_name = ?`, [name]
+    );
+    let vendorCount = 0;
+    try {
+      const [vendorResult] = await pool.execute(
+        `UPDATE onboarded_vendors SET area_name = '' WHERE area_name = ?`, [name]
+      );
+      vendorCount = vendorResult.affectedRows || 0;
+    } catch (_) {}
+    res.json({ success: true, message: `Removed "${name}" from ${propResult.affectedRows + vendorCount} record(s)` });
+  } catch (error) {
+    console.error('Error deleting area suggestion:', error);
+    res.status(500).json({ success: false, message: 'Could not remove the area. Please try again.' });
+  }
+});
+
+// ============================================
 // GET /api/onboarding/suggestions/cities — Distinct cities from properties + vendors
 // ============================================
 router.get('/suggestions/cities', async (req, res) => {
