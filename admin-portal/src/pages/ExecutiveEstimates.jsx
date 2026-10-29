@@ -1748,13 +1748,12 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
       {viewEstimate && (
         <div className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <div className="bg-white border border-gray-200 rounded-xl px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 py-2">
               <button onClick={() => setViewEstimate(null)}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <ArrowLeft className="w-4 h-4" />
                 Back to {activeTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
               </button>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Estimate Details</h3>
               {/* Print/Download live on the opened document -- the list rows no longer carry a
                   download of their own. This bar is outside .print-document so neither prints. */}
               <div className="ml-auto flex items-center gap-2">
@@ -1764,7 +1763,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                 </button>
                 <button onClick={() => handleDownloadPDF(viewEstimate)} title="Download PDF"
                   className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700">
-                  <Download className="w-4 h-4" />Download
+                  <Download className="w-4 h-4" />Download PDF
                 </button>
               </div>
             </div>
