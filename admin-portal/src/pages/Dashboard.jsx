@@ -16,7 +16,6 @@ import {
   Download,
   ChevronDown,
   Shield,
-  ArrowLeft,
   ArrowRight
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
@@ -601,34 +600,6 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-warm-page">
       <div className="p-4 lg:p-6 space-y-5">
-        {/* FP Info Banner - Light Theme */}
-        <div className="bg-gradient-to-r from-slate-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-              {/* Back/Switch Button */}
-              <button
-                onClick={() => selectFp(null)}
-                className="p-2 hover:bg-white rounded-lg border border-gray-200 transition-colors group"
-                title="Switch Franchise Partner"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
-              </button>
-              <div>
-                <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">Viewing Data For</p>
-                <h2 className="text-xl font-bold text-gray-800">
-                  {selectedFp.id === 'all' ? 'Admin (All FPs)' : `${selectedFp.fpId} - ${selectedFp.companyName}`}
-                </h2>
-                {selectedFp.id !== 'all' && (
-                  <p className="text-gray-500 text-sm">
-                    {selectedFp.ownerName || `${stats?.fpInfo?.city || ''}, ${stats?.fpInfo?.state || ''}`}
-                  </p>
-                )}
-              </div>
-            </div>
-            <Building2 className="w-12 h-12 text-gray-200" />
-          </div>
-        </div>
-
         {/* The shared section header, as on Work Orders and Estimates */}
         <PageHeader icon={LayoutDashboard} title="Operations Dashboard"
           subtitle={`Real-time overview for ${selectedFp.companyName || 'All FPs'}`}>
