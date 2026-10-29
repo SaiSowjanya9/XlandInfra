@@ -75,8 +75,10 @@ const serviceColumns = (decode, internal, showTag = true) => {
     render: row => <p className="text-xs text-warm-text">{row.frequency_type || row.frequencyType || 'Monthly'}</p> };
   const visits = { label: 'Visits / Year', head: 'text-center', cell: 'text-center',
     render: row => <p className="text-xs text-warm-text font-semibold">{row.frequency_count ?? row.frequencyCount ?? 1}</p> };
+  // A figure is atomic: a column too narrow for "₹1,00,869.9" must overflow its cell rather than
+  // split the number mid-digit ("₹1,00,869." / "9"), which break-words used to allow
   const money = (value, cls = 'text-gray-700') =>
-    <p className={`text-[11px] tabular-nums ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
+    <p className={`whitespace-nowrap text-[11px] tabular-nums ${cls}`}>{value != null ? formatCurrency(value) : '—'}</p>;
   // The three internal figures are print:hidden throughout: a browser print of the internal
   // detail view is still the customer's document, so it prices like the customer-facing one
   // A package's own service is sold as part of the package, so its XLAND Cost and Margin % are read
@@ -100,13 +102,13 @@ const serviceColumns = (decode, internal, showTag = true) => {
       const value = inPackage(row) ? row.packageShare : getAddonPrice(row);
       return value == null
         ? <p className="text-xs text-warm-muted">—</p>
-        : <p className="text-[11px] font-semibold tabular-nums text-gray-800">{formatCurrency(value)}</p>;
+        : <p className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-gray-800">{formatCurrency(value)}</p>;
     } };
   const margin = { label: 'Margin %', head: 'text-center print:hidden', cell: 'text-center print:hidden',
     render: row => {
       if (!priced(row)) return <p className="text-xs text-warm-muted">—</p>;
       const value = getServiceMarginPercent(priced(row));
-      return <p className={`text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
+      return <p className={`whitespace-nowrap text-xs font-semibold ${value != null && value < 0 ? 'text-red-600' : 'text-warm-accent-hover'}`}>{value != null ? `${Math.round(value)}%` : '—'}</p>;
     } };
   return internal
     // One order for every list of an estimate's services, here and in its PDFs and emails:
@@ -117,8 +119,8 @@ const serviceColumns = (decode, internal, showTag = true) => {
 
 // Each column's share of the table's width, per layout; each set adds up to 100
 const COLUMN_SHARE = {
-  internal: { '#': 3, Service: 12, Description: 17, 'Input / Details': 11, Method: 8, Frequency: 8, 'Visits / Year': 6,
-    'Vendor Cost': 9, 'XLAND Cost': 9, 'Customer Price': 9, 'Margin %': 8 },
+  internal: { '#': 3, Service: 12, Description: 16, 'Input / Details': 11, Method: 8, Frequency: 8, 'Visits / Year': 6,
+    'Vendor Cost': 9, 'XLAND Cost': 9, 'Customer Price': 10, 'Margin %': 8 },
   plain: { '#': 4, Service: 16, Description: 28, 'Input / Details': 14, Method: 10, Frequency: 10, 'Visits / Year': 7, 'Customer Price': 11 }
 };
 
@@ -161,7 +163,7 @@ export function TotalsCells({ columns, label, totals, internal, cell, strong = f
   const known = !totals.uncosted?.length;
   const xland = known ? Math.round((totals.price - totals.vendor - (totals.operating || 0)) * 100) / 100 : null;
   const margin = known && totals.price ? Math.round((xland / totals.price) * 10000) / 100 : null;
-  const figure = (value, extra = '') => <td className={`${cell} text-[11px] tabular-nums ${extra}`}>{value}</td>;
+  const figure = (value, extra = '') => <td className={`${cell} whitespace-nowrap text-[11px] tabular-nums ${extra}`}>{value}</td>;
   const unknown = known ? null : `No vendor cost on record for ${totals.uncosted.join(', ')}`;
   return (
     <tr className={strong ? 'border-t-2 border-warm-border' : ''}>
