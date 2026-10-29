@@ -4800,6 +4800,34 @@ router.get('/zones', authenticate, async (req, res) => {
       });
     } catch (_) {}
 
+    // Zones that live only on FP-created properties, and zones that live only as employee
+    // assignments -- the admin list is the complete company-wide set, so neither can be skipped
+    // or an "All Zones" employee's popup disagrees with what colleagues were assigned
+    try {
+      const [propertyZones] = await pool.execute(
+        `SELECT DISTINCT zone_id FROM properties WHERE zone_id IS NOT NULL AND zone_id != ''
+         AND (status = 'active' OR status IS NULL)`
+      );
+      propertyZones.forEach(z => {
+        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
+          allZoneNames.add(z.zone_id);
+          combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
+        }
+      });
+    } catch (_) {}
+
+    try {
+      const [assignedZones] = await pool.execute(
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL AND zone_name != ''`
+      );
+      assignedZones.forEach(z => {
+        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
+          allZoneNames.add(z.zone_name);
+          combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
+        }
+      });
+    } catch (_) {}
+
     combinedZones.sort((a, b) => a.name.localeCompare(b.name));
     res.json({ success: true, data: combinedZones });
   } catch (error) {
