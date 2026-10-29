@@ -522,8 +522,10 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          {/* A customer request has not moved the visit yet, so there is nothing to restore */}
-                          {(schedule.actualDate || schedule.originalDate) && (
+                          {/* Read-only portals (supervisor, coordinator, executive) get no
+                              buttons: the restore call has no route on their API and the
+                              reschedule PUT is refused, so either click could only fail */}
+                          {permissions.canReschedule && (schedule.actualDate || schedule.originalDate) && (
                             <button
                               onClick={() => handleRestoreClick(schedule)}
                               className="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
@@ -533,17 +535,19 @@ const RescheduleServicePage = ({ portalType = 'admin', user }) => {
                               Restore
                             </button>
                           )}
-                          <button
-                            onClick={() => {
-                              setSelectedSchedule(schedule);
-                              setShowReschedulePanel(true);
-                            }}
-                            className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
-                            title="Reschedule again"
-                          >
-                            <Calendar className="w-3 h-3" />
-                            Reschedule
-                          </button>
+                          {permissions.canReschedule && (
+                            <button
+                              onClick={() => {
+                                setSelectedSchedule(schedule);
+                                setShowReschedulePanel(true);
+                              }}
+                              className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
+                              title="Reschedule again"
+                            >
+                              <Calendar className="w-3 h-3" />
+                              Reschedule
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
