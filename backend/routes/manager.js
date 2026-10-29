@@ -3267,7 +3267,7 @@ router.get('/zones', requireManagerScope, async (req, res) => {
       try {
         const [az] = await pool.execute(
           `SELECT DISTINCT zone_name FROM fp_employee_zones
-           WHERE franchise_partner_id = ? AND zone_name IS NOT NULL AND zone_name != ''`,
+           WHERE franchise_partner_id = ? AND zone_name IS NOT NULL AND zone_name != '' AND LOWER(zone_name) != 'all'`,
           [req.franchisePartnerId]
         );
         assignedZones = az;

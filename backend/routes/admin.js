@@ -4818,7 +4818,7 @@ router.get('/zones', authenticate, async (req, res) => {
 
     try {
       const [assignedZones] = await pool.execute(
-        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL AND zone_name != ''`
+        `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL AND zone_name != '' AND LOWER(zone_name) != 'all'`
       );
       assignedZones.forEach(z => {
         if (z.zone_name && !allZoneNames.has(z.zone_name)) {
