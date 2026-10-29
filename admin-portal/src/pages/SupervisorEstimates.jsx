@@ -2103,32 +2103,30 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
       <div className="max-w-7xl mx-auto px-6 py-6">{viewEstimate ? (
         <div>
-          <div className="mx-auto w-full max-w-5xl">
-            <div className="flex items-center gap-3 py-2">
-              <button onClick={() => setViewEstimate(null)}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                <ArrowLeft className="w-4 h-4" />
-                Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <button onClick={() => setViewEstimate(null)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[10px] text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <ArrowLeft className="w-4 h-4" />
+              Back to {defaultTab === 'archived' ? 'Archived Estimates' : 'All Estimates'}
+            </button>
+            {/* Print/Download live on the opened document -- the list rows no longer carry a
+                download of their own. This bar is outside .print-document so neither prints. */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => { if (!printEstimatePDF(viewEstimate)) window.print(); }} title="Print estimate"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-[10px] text-sm font-medium text-gray-600 hover:bg-gray-50">
+                <Printer className="w-4 h-4" />Print
               </button>
-              {/* Print/Download live on the opened document -- the list rows no longer carry a
-                  download of their own. This bar is outside .print-document so neither prints. */}
-              <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => { if (!printEstimatePDF(viewEstimate)) window.print(); }} title="Print estimate"
-                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  <Printer className="w-4 h-4" />Print
-                </button>
-                <button onClick={() => handleDownloadPDF(viewEstimate)} title="Download PDF"
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700">
-                  <Download className="w-4 h-4" />Download PDF
-                </button>
-              </div>
+              <button onClick={() => handleDownloadPDF(viewEstimate)} title="Download PDF"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-[10px] text-sm font-semibold hover:bg-emerald-700">
+                <Download className="w-4 h-4" />Download PDF
+              </button>
             </div>
-            {/* print-document: a browser print is this document alone -- index.css drops the
-                back bar above and the portal chrome around it */}
-            <div className="print-document p-4 sm:p-6">
-              {/* The shared document view every portal renders -- FP and Manager open the same panel */}
-              <EstimateDetailPanel estimate={viewEstimate} decode={decodeHtml} internal onPrint={() => printEstimatePDF(viewEstimate)} />
-            </div>
+          </div>
+          {/* print-document: a browser print is this document alone -- index.css drops the
+              back bar above and the portal chrome around it */}
+          <div className="print-document bg-white rounded-xl border border-gray-200 shadow-warm overflow-x-auto">
+            {/* The shared document view every portal renders -- FP and Manager open the same panel */}
+            <EstimateDetailPanel estimate={viewEstimate} decode={decodeHtml} internal onPrint={() => printEstimatePDF(viewEstimate)} />
           </div>
         </div>
         ) : renderContent()}
