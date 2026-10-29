@@ -32,6 +32,9 @@ export const getPackageBillingDuration = (pkg) => {
 
 // Kept local so this module stays dependency-free; mirrors estimateStore's normalizePropertyType
 const normalizeType = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
   if (!type) return '';
   const upper = String(type).toUpperCase().replace(/[_\s-]/g, '');
   if (upper.includes('GATED') || upper === 'GC') return 'GC';
@@ -477,6 +480,9 @@ export const getPropertyTypeLabel = (type) => {
 
 // Normalize property type to short code - for filtering/matching
 export const normalizePropertyTypeCode = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
   if (!type) return '';
   const upper = type.toUpperCase();
   if (upper.includes('GATED') || upper === 'GC') return 'GC';

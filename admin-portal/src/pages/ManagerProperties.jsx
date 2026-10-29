@@ -96,6 +96,9 @@ const ManagerProperties = ({ user }) => {
 
   // Normalize property type for consistent filtering (handles both uppercase and lowercase)
   const normalizePropertyType = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
     if (!type) return '';
     const lower = type.toLowerCase().replace(/[_\s-]/g, '');
     if (lower === 'gc' || lower.includes('gated')) return 'gated_community';

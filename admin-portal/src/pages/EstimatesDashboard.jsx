@@ -44,6 +44,9 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Helper to normalize property type - also checks property_code prefix
 const normalizePropertyType = (type, propertyCode) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
   // First check property_code prefix (e.g., GC-xxx, APT-xxx)
   if (propertyCode) {
     const codeUpper = propertyCode.toUpperCase();

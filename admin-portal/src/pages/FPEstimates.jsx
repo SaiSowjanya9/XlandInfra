@@ -686,6 +686,9 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // Helper to normalize property type to match PROPERTY_TYPE_OPTIONS IDs
   const normalizePropertyType = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
     if (!type) return '';
     const upper = type.toUpperCase().replace(/[_\s-]/g, '');
     // Map full names to short codes (matching PROPERTY_TYPE_OPTIONS IDs)
@@ -1145,7 +1148,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
     if (typeof svc === 'string') { try { svc = JSON.parse(svc); } catch(e) { svc = null; } }
     const list = svc?.property_types || pkg.property_types || pkg.propertyTypes;
     if (Array.isArray(list) && list.length) return [...new Set(list.map(normalizePropertyType).filter(Boolean))];
-    const single = normalizePropertyType(svc?.property_type || pkg.property_type || '');
+    const single = normalizePropertyType(svc?.property_type || pkg.property_type || pkg.propertyType || '');
     return single ? [single] : [];
   };
   const getPkgPropertyType = (pkg) => getPkgPropertyTypes(pkg)[0] || '';
