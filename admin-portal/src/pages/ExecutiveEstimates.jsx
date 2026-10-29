@@ -106,6 +106,9 @@ const handleDateInput = (value, setter) => {
 
 // Helper to normalize property type to standard format
 const normalizePropertyType = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
   if (!type) return '';
   const upper = type.toUpperCase().replace(/[_\s-]/g, '');
   if (upper === 'GC' || upper.includes('GATED')) return 'GC';

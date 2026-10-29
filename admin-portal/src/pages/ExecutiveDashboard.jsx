@@ -195,6 +195,9 @@ const ExecutiveDashboard = ({ user }) => {
 
   const filteredProperties = getFilteredProperties();
   const normalizePropertyType = (type) => {
+  // The database's short codes resolve to the word the checks below match.
+  type = ({ AP: 'apartment', VL: 'villa', V: 'villa', FL: 'flat', PL: 'plot' })[String(type).toUpperCase().replace(/[_\s-]/g, '')] || type;
+
     if (!type) return 'Other';
     const t = type.toLowerCase().trim();
     if (t.includes('gated') || t === 'gc') return 'Gated Community';
