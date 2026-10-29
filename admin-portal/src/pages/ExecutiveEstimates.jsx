@@ -8,7 +8,7 @@ import CustomServicesTable, { buildCustomService, customServicesTotal } from '..
 import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
-import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer } from 'lucide-react';
+import { FileText, Plus, Search, RefreshCw, X, Save, AlertCircle, CheckCircle, Package, PlusCircle, Archive, List, Trash2, Eye, Layers, Edit, Edit2, Calendar, Filter, Home, Building2, User, FolderOpen, ExternalLink, Link, ChevronLeft, ChevronRight, ArrowLeft, Download, Printer, CheckSquare, Square, Send, Loader2, ChevronDown } from 'lucide-react';
 import EstimateStatCards from '../components/estimates/EstimateStatCards';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -187,6 +187,9 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [estimateTypeFilter, setEstimateTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedEstimates, setSelectedEstimates] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -551,6 +554,102 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
 
   const token = getAuthToken();
 
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedEstimates.length === paginatedEstimates.length) {
+      setSelectedEstimates([]);
+    } else {
+      setSelectedEstimates(paginatedEstimates.map(e => e.id));
+    }
+  };
+
+  const handleSelectEstimate = (id) => {
+    setSelectedEstimates(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk archive selected estimates
+  const handleBulkArchive = async () => {
+    if (selectedEstimates.length === 0) {
+      showToast('No estimates selected', 'error');
+      return;
+    }
+
+    setArchivingSelected(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/executive/estimates/bulk-archive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateIds: selectedEstimates })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Archived ${selectedEstimates.length} estimates`);
+        setSelectedEstimates([]);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to archive estimates', 'error');
+      }
+    } catch (e) {
+      console.error('Bulk archive error:', e);
+      showToast('Failed to archive estimates', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
+  // Send email with estimate
+  const handleSendEmail = async (estimate) => {
+    if (sendingEmailId === estimate.id) return;
+    const clientEmail = estimate.client_email;
+    if (!clientEmail) {
+      showToast('No email address found for this customer', 'error');
+      return;
+    }
+
+    setSendingEmailId(estimate.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/executive/estimates/send-email`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateId: estimate.id, email: clientEmail })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Email sent to ${clientEmail}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to send email', 'error');
+      }
+    } catch (e) {
+      console.error('Send email error:', e);
+      showToast('Failed to send email', 'error');
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  const handleStatusChange = async (estimateId, newStatus) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/executive/estimates/${estimateId}/status`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(newStatus === 'sent' && result.message ? result.message : `Status updated to ${getStatusLabel(newStatus)}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (e) {
+      console.error('Status update error:', e);
+      showToast('Failed to update status', 'error');
+    }
+  };
+
   const tabs = [
     { id: 'list', label: 'All Estimates', icon: List },
     { id: 'create', label: 'Create Estimate', icon: Plus },
@@ -709,7 +808,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
   const removeLineItem = (index) => { if (estimateForm.items.length > 1) setEstimateForm({ ...estimateForm, items: estimateForm.items.filter((_, i) => i !== index) }); };
   const updateLineItem = (index, field, value) => { const updatedItems = [...estimateForm.items]; updatedItems[index][field] = value; setEstimateForm({ ...estimateForm, items: updatedItems }); };
 
-  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
+  const getStatusColor = (status) => { const colors = { draft: 'bg-gray-100 text-gray-700', pending_approval: 'bg-yellow-100 text-yellow-700', sent: 'bg-blue-100 text-blue-700', pending: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', archived: 'bg-gray-100 text-gray-500' }; return colors[status] || 'bg-gray-100 text-gray-700'; };
   const calculateTotals = () => { const subtotal = estimateForm.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0); const tax = (subtotal * estimateForm.taxPercentage) / 100; const discount = (subtotal * estimateForm.discountPercentage) / 100; return { subtotal, tax, discount, total: subtotal + tax - discount }; };
   const getPackageServices = (pkg) => {
     let servicesData = pkg?.services || pkg?.services_data || pkg?.serviceRows;
@@ -1031,13 +1130,23 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
               <div className="flex gap-4">
                 <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" /></div>
                 <button onClick={() => setShowFilters(!showFilters)} className={`px-4 py-2.5 rounded-lg border font-medium flex items-center gap-2 ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}><Filter className="w-4 h-4" />Filters</button>
+                {selectedEstimates.length > 0 && (
+                  <button
+                    onClick={handleBulkArchive}
+                    disabled={archivingSelected}
+                    className="px-4 py-2.5 bg-amber-100 text-amber-700 rounded-lg font-medium flex items-center gap-2 hover:bg-amber-200 disabled:opacity-50"
+                  >
+                    {archivingSelected ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                    Archive ({selectedEstimates.length})
+                  </button>
+                )}
                 <button onClick={exportAllEstimates} className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-emerald-700 transition-colors"><Download className="w-4 h-4" />Export All</button>
                 <button onClick={clearAllFilters} className="px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-600 font-medium flex items-center gap-2 hover:bg-gray-50 transition-colors whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
               </div>
               {showFilters && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label><select value={estimateTypeFilter} onChange={(e) => setEstimateTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Estimates</option><option value="property_based">Property Based</option><option value="direct">Direct</option></select></div>
+                    <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimate Type</label><select value={estimateTypeFilter} onChange={(e) => setEstimateTypeFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Estimates</option><option value="property_based">Property Based</option><option value="direct">Direct</option><option value="custom">Custom Estimate</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Status</label><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">Property Category</label><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"><option value="all">All Categories</option>{PROPERTY_TYPE_OPTIONS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">From Date</label><div className="relative"><input type="text" placeholder="dd/mm/yyyy" value={fromDateDisplay} onChange={(e) => { handleDateInput(e.target.value, setFromDateDisplay); const parsed = parseISTDate(e.target.value); if (parsed) setFromDate(parsed); }} onBlur={() => { const parsed = parseISTDate(fromDateDisplay); if (parsed) setFromDate(parsed); else if (fromDateDisplay && fromDateDisplay.length < 10) setFromDateDisplay(''); }} className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm" /><div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center cursor-pointer"><input type="date" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.value) { setFromDate(e.target.value); setFromDateDisplay(formatDateIST(e.target.value)); }}} /><Calendar className="w-4 h-4 text-gray-400 pointer-events-none" /></div></div></div>
@@ -1052,21 +1161,22 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                   <div className="overflow-x-auto">
                     <table className="list-table w-full">
                       <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created By</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
+                        <tr><th className="py-3 px-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-10"><button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded" title={selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? 'Deselect all' : 'Select all'}>{selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimate ID</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created By</th><th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th></tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {paginatedEstimates.map((estimate) => {
                           const TypeIcon = estimate.property_type === 'Apt' ? Home : Building2;
                           return (
                             <tr key={estimate.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(estimate)} title="View details">
+                              <td className="py-4 px-2 text-center" onClick={(e) => e.stopPropagation()}><button onClick={() => handleSelectEstimate(estimate.id)} className="p-1 hover:bg-gray-200 rounded">{selectedEstimates.includes(estimate.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></td>
                               <td className="py-4 px-4"><button type="button" onClick={() => setViewEstimate(estimate)} className="font-medium text-gray-900 hover:text-blue-600" title="View details">{estimate.estimate_id || `EST-${estimate.id}`}</button></td>
-                              <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
+                              <td className="py-4 px-4"><div className="flex items-center gap-2"><TypeIcon className="w-4 h-4 text-gray-400" /><span className={`px-2 py-0.5 text-xs font-medium rounded ${estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{estimate.estimate_type === 'custom' ? 'Custom' : estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></div></td>
                               <td className="py-4 px-4"><span className="text-gray-600">{(estimate.estimate_type === 'property_based' || estimate.estimate_type === 'property-based') ? (shortDivision(estimate.division || estimate.property_division) || '-') : '-'}</span></td>
-                              <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
+                              <td className="py-4 px-4"><div className="font-medium text-gray-900">{estimate.client_name || '-'}</div>{estimate.client_phone && <div className="text-xs text-gray-500">{estimate.client_phone}</div>}{estimate.client_email && <div className="text-xs text-gray-400 truncate max-w-[160px]">{estimate.client_email}</div>}{estimate.property_code && <div className="text-xs text-gray-400">{estimate.property_code}</div>}</td>
                               <td className="py-4 px-4"><div className="flex items-center gap-1.5 text-gray-600"><Calendar className="w-4 h-4" />{formatDateIST(estimate.created_at)}</div></td>
                               <td className="py-4 px-4"><div><p className="font-medium text-gray-900">{estimate.created_by_name || (estimate.created_by_role ? estimate.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</p>{estimate.created_by_name && estimate.created_by_role && <p className="text-xs text-gray-400 capitalize">{estimate.created_by_role.replace(/_/g, ' ')}</p>}</div></td>
-                              <td className="py-4 px-4"><span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(estimate.status)}`}>{getStatusLabel(estimate.status)}</span></td>
-                              <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-center gap-1"><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>{(estimate.estimate_type === 'direct' || (estimate.estimate_type && !estimate.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td>
+                              <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}><div className="relative inline-block"><select value={(estimate.status || 'draft').toLowerCase()} onChange={(e) => handleStatusChange(estimate.id, e.target.value)} className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${getStatusColor(estimate.status)}`}><option value="draft" className="bg-white text-gray-900">Draft</option><option value="sent" className="bg-white text-gray-900">Sent</option><option value="approved" className="bg-white text-gray-900">Approved</option><option value="rejected" className="bg-white text-gray-900">Rejected</option></select><ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" /></div></td>
+                              <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-center gap-1"><button onClick={() => handleSendEmail(estimate)} disabled={sendingEmailId === estimate.id || !estimate.client_email} className={`p-2 rounded-lg transition-colors ${!estimate.client_email ? 'text-gray-300 cursor-not-allowed' : sendingEmailId === estimate.id ? 'text-blue-400' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`} title={!estimate.client_email ? 'No email address' : 'Send Email'}>{sendingEmailId === estimate.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button><button onClick={() => setViewEstimate(estimate)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View"><Eye className="w-4 h-4" /></button>{(estimate.estimate_type === 'direct' || (estimate.estimate_type && !estimate.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(estimate)} className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td>
                             </tr>
                           );
                         })}
