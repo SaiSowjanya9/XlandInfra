@@ -23,6 +23,7 @@ const {
 } = require('../middleware/rbac');
 const { WORK_ORDER_STATUS } = require('../config/roles');
 const { requireCustomer } = require('../middleware/customerAuth');
+const { uploadRateLimiter } = require('../middleware/security');
 
 // Secure file upload configuration
 // SECURITY: Whitelist both MIME types AND file extensions to prevent upload attacks
@@ -89,7 +90,7 @@ router.get('/categories', async (req, res) => {
 // The account is checked before multer runs, so an anonymous upload never reaches the disk, and
 // who raised it and for which property come from the account -- never from the form.
 // ============================================
-router.post('/', requireCustomer, (req, res, next) => {
+router.post('/', requireCustomer, uploadRateLimiter, (req, res, next) => {
   upload.array('attachments', 5)(req, res, (err) => {
     if (err) {
       console.error('Multer upload error:', err);
@@ -704,7 +705,7 @@ router.patch('/:id/status', authenticate, managerOrAdmin, async (req, res) => {
 // CREATE WORK ORDER FROM ADMIN PORTAL
 // ============================================
 // The login is checked before multer runs, so an anonymous upload never reaches the disk.
-router.post('/admin/create', authenticate, managerOrAdmin, upload.array('attachments', 5), async (req, res) => {
+router.post('/admin/create', authenticate, managerOrAdmin, uploadRateLimiter, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
       categoryId,

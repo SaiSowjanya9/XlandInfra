@@ -39,7 +39,7 @@ async function createAdmin() {
 
     // Generate password hash
     console.log('Generating password hash...');
-    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
     console.log('✓ Password hash generated\n');
 
     // Check if user already exists

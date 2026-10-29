@@ -25,7 +25,7 @@ async function fixRoles() {
     console.log('✅ Role column updated to VARCHAR(50)');
 
     // Now create the coordinator user
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    const hashedPassword = await bcrypt.hash('password123', 12);
     
     // Check if coordinator exists
     const [existing] = await conn.query(

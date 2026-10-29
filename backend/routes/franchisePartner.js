@@ -9,7 +9,7 @@ const { generateWorkOrderId } = require('../utils/workOrderId');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
-const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
+const { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName } = require('../utils/zoneDelete');
 const { normalizeAssignVendor, applyEstimateVendorAssignments, hasAssignVendorColumn } = require('../utils/estimateScheduling');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -36,7 +36,7 @@ const {
 const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActivationEmail } = require('../services/emailService');
 const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
 // Rate limiting for login endpoints (5 attempts per 15 minutes)
-const { loginRateLimiter } = require('../middleware/security');
+const { loginRateLimiter, uploadRateLimiter } = require('../middleware/security');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -1405,7 +1405,7 @@ router.get('/work-orders', requireFPScope, async (req, res) => {
 });
 
 // Create work order (with file upload support)
-router.post('/work-orders', requireFPScope, upload.array('attachments', 5), async (req, res) => {
+router.post('/work-orders', requireFPScope, uploadRateLimiter, upload.array('attachments', 5), async (req, res) => {
   try {
     const {
       propertyId, categoryId, subcategoryId, customSubcategory, description, priority,
@@ -2181,7 +2181,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
       let emailNote = '';
       if (contactEmail) {
         const tempPassword = generateCustomerTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -2288,7 +2288,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
       let emailNote = '';
       if (email) {
         const tempPassword = generateCustomerTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -2378,7 +2378,7 @@ router.post('/customer-accounts/:id/activate', requireFPScope, async (req, res) 
     
     // Generate new temp password
     const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
     
     await pool.execute(
       `UPDATE customer_accounts 
@@ -2430,7 +2430,7 @@ router.post('/customer-accounts/:id/resend-activation', requireFPScope, async (r
     
     // Generate new temp password
     const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
     
     await pool.execute(
       `UPDATE customer_accounts SET password_hash = ?, temp_password = ?, updated_at = NOW()
@@ -2809,12 +2809,13 @@ router.post('/vendors', requireFPScope, async (req, res) => {
 
     const vendorId = `VND-${Date.now()}`;
     const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
-    const tempPassword = await bcrypt.hash('temp123', 10);
+    const tempPassword = await bcrypt.hash('temp123', 12);
 
     const creatorName = req.user.name || req.user.username || req.user.full_name || 'Franchise Partner';
     // Use companyName if provided, otherwise use ownerName as the company name
     const vendorCompanyName = companyName || ownerName || '';
-    
+    const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.franchisePartnerId || req.fpId || null });
+
     const [result] = await pool.execute(
       `INSERT INTO onboarded_vendors (
         vendor_id, username, password_hash,
@@ -2828,7 +2829,7 @@ router.post('/vendors', requireFPScope, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         vendorId, username, tempPassword,
-        vendorCompanyName, serviceType || '', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        vendorCompanyName, serviceType || '', serviceVerified ? 1 : 0, canonicalZone, areaName || '', division || '',
         ownerName || '', ownerMobile || '', ownerEmail || '', ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
@@ -3308,7 +3309,7 @@ router.post('/employees', requireFPScope, async (req, res) => {
     
     const userId = await generateUserId(role || 'executive');  // Global sequential ID
     const tempPassword = generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     // Use provided username or generate from email (part before @)
     const username = providedUsername?.trim() || (email.trim().toLowerCase().split('@')[0] + '_' + Date.now().toString(36));
@@ -3525,7 +3526,7 @@ router.put('/employees/:id', requireFPScope, async (req, res) => {
     // If email is changed, generate new temp password
     if (isEmailChanged) {
       tempPassword = generateTempPassword();
-      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
       
       // Update fp_employees table with new email and password
       await pool.execute(
@@ -3948,7 +3949,7 @@ router.post('/staff', requireFPScope, async (req, res) => {
     // Generate unique User ID (global sequential) and temporary password
     const userId = await generateStaffUserId(role);
     const tempPassword = generateStaffTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     // Insert new staff member
     const [result] = await pool.execute(
@@ -4086,7 +4087,7 @@ router.put('/staff/:id', requireFPScope, async (req, res) => {
 
     // Update password if provided
     if (password) {
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = await bcrypt.hash(password, 12);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
       updateFields.push('must_change_password = FALSE');
@@ -4227,7 +4228,7 @@ router.post('/users', requireFPScope, async (req, res) => {
       username, email, password, firstName, lastName, phone, role
     } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const [result] = await pool.execute(
       `INSERT INTO fp_users (
@@ -5785,8 +5786,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
           [req.fpId]
         );
         scheduleZones.forEach(z => {
-          if (z.zone && !allZoneNames.has(z.zone)) {
-            allZoneNames.add(z.zone);
+          if (z.zone && !allZoneNames.has(zoneKey(z.zone))) {
+            allZoneNames.add(zoneKey(z.zone));
             combinedZones.push({ id: `schedule-${z.zone}`, name: z.zone });
           }
         });
@@ -5807,8 +5808,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
     try {
       const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
       globalZones.forEach(z => {
-        if (!allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (!allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
@@ -5821,8 +5822,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
         [req.fpId]
       );
       fpZones.forEach(z => {
-        if (!allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (!allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
@@ -5836,8 +5837,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
         [req.fpId]
       );
       propertyZones.forEach(z => {
-        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
-          allZoneNames.add(z.zone_id);
+        if (z.zone_id && !allZoneNames.has(zoneKey(z.zone_id))) {
+          allZoneNames.add(zoneKey(z.zone_id));
           combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
         }
       });
@@ -5851,8 +5852,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
         [req.fpId]
       );
       onboardedZones.forEach(z => {
-        if (z.zone && !allZoneNames.has(z.zone)) {
-          allZoneNames.add(z.zone);
+        if (z.zone && !allZoneNames.has(zoneKey(z.zone))) {
+          allZoneNames.add(zoneKey(z.zone));
           combinedZones.push({ id: `onboarded-${z.zone}`, name: z.zone });
         }
       });
@@ -5868,8 +5869,8 @@ router.get('/zones', requireFPScope, async (req, res) => {
         [req.fpId]
       );
       assignedZones.forEach(z => {
-        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-          allZoneNames.add(z.zone_name);
+        if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+          allZoneNames.add(zoneKey(z.zone_name));
           combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
         }
       });
@@ -5973,7 +5974,7 @@ router.get('/services', authenticate, attachFPScope, async (req, res) => {
 // Create zone - FP can create zones
 router.post('/zones', requireFPScope, async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = String(req.body?.name ?? '').trim();
     if (!name) {
       return res.status(400).json({ success: false, message: 'Zone name is required' });
     }
@@ -5985,7 +5986,7 @@ router.post('/zones', requireFPScope, async (req, res) => {
     
     // Check if zone already exists for this FP
     const [existing] = await pool.execute(
-      'SELECT id FROM fp_zones WHERE name = ? AND franchise_partner_id = ?',
+      'SELECT id FROM fp_zones WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND franchise_partner_id = ?',
       [name, req.fpId]
     );
     

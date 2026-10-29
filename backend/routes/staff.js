@@ -13,7 +13,7 @@ const { adminOnly, managerOrAdmin, requireRole, ROLES } = require('../middleware
 const { ROLE_NAMES } = require('../config/roles');
 const { sendEmployeeWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccess, sendPasswordUpdatedByAdminEmail } = require('../services/emailService');
 // Rate limiting for login and password reset endpoints
-const { loginRateLimiter, passwordResetLimiter } = require('../middleware/security');
+const { loginRateLimiter, passwordResetLimiter, sensitiveOperationLimiter } = require('../middleware/security');
 
 // Password reset expiry (48 hours)
 const PASSWORD_RESET_EXPIRY_HOURS = 48;
@@ -338,7 +338,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // ============================================
 // POST /api/staff/forgot-password - Request password reset for staff/admin users
 // ============================================
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -402,7 +402,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Generate temporary password and reset token
     const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -544,7 +544,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
 // ============================================
 // POST /api/staff/reset-password - Reset password with temp password
 // ============================================
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', sensitiveOperationLimiter, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -642,7 +642,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Hash new password and update
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
     await conn.execute(
       `UPDATE ${tableName} 
@@ -778,7 +778,7 @@ router.post('/set-password', async (req, res) => {
     }
 
     // Hash new password and update
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
     
     if (userType === 'user') {
       // Store new password in visible_password for admin visibility
@@ -1230,7 +1230,7 @@ router.post('/', authenticate, adminOnly, async (req, res) => {
     // Generate unique User ID and temporary password
     const userId = await generateUserId(role);
     const tempPassword = generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     // Insert new user with must_change_password flag and visible_password for admin
     const [result] = await pool.execute(
@@ -1405,7 +1405,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     if (isEmailChanged) {
       console.log('📧 Email IS being changed - generating new temp password');
       tempPassword = generateTempPassword();
-      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
       updateFields.push('visible_password = ?');
@@ -1419,7 +1419,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
       }
     } else if (password) {
       // Update password if provided (also store visible_password for admin)
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = await bcrypt.hash(password, 12);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
       updateFields.push('visible_password = ?');
@@ -1443,7 +1443,7 @@ router.put('/:id', authenticate, adminOnly, async (req, res) => {
     // Also update franchise_partners table if this is an FP user
     if (isEmailChanged && (currentUser.role === 'franchise_partner' || currentUser.role === 'franchise')) {
       try {
-        const fpPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const fpPasswordHash = await bcrypt.hash(tempPassword, 12);
         await pool.execute(
           `UPDATE franchise_partners SET email = ?, username = ?, password_hash = ?, visible_password = ?, must_change_password = TRUE WHERE email = ?`,
           [email, email, fpPasswordHash, tempPassword, currentUser.email]
@@ -1546,7 +1546,7 @@ router.post('/:id/reset-password', authenticate, adminOnly, async (req, res) => 
 
     const user = existing[0];
     const tempPassword = generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     await pool.execute(
       `UPDATE users SET password_hash = ?, must_change_password = TRUE, visible_password = ? WHERE id = ?`,

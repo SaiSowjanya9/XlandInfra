@@ -14,6 +14,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const { uploadRateLimiter } = require('../middleware/security');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -322,7 +323,7 @@ router.post('/:workOrderId/start', authenticate, async (req, res) => {
 });
 
 // Upload photos
-router.post('/:workOrderId/photos', authenticate, upload.array('photos', 10), async (req, res) => {
+router.post('/:workOrderId/photos', authenticate, uploadRateLimiter, upload.array('photos', 10), async (req, res) => {
   try {
     const { workOrderId } = req.params;
 

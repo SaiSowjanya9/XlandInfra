@@ -27,7 +27,7 @@ async function reactivateAdmin() {
 
     // Generate password hash
     console.log('Generating password hash...');
-    const PASSWORD_HASH = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    const PASSWORD_HASH = await bcrypt.hash(ADMIN_PASSWORD, 12);
     console.log('✓ Password hash generated\n');
 
     // ========== FIX USERS TABLE (Employee Portal) ==========

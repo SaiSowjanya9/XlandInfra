@@ -8,7 +8,8 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const dbConfig = require('../config/database');
+const { pool } = dbConfig;
 const { ROLES } = require('../config/roles');
 const { resolveJwtSecret } = require('../config/jwtSecret');
 
@@ -28,6 +29,28 @@ try {
   console.error(`FATAL: ${error.message}`);
   process.exit(1);
 }
+
+// A missing table/column is schema drift the code is built to survive, but a dead
+// connection means is_active cannot be verified at all — trusting the token then
+// lets a deactivated user keep working for the rest of the outage. Only treat it
+// as fatal when the database was connected at boot (demo mode has no DB at all).
+const isDbFatalError = (e) => {
+  if (!e) return false;
+  if (e.fatal) return true;
+  const fatalCodes = [
+    'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'ENOTFOUND',
+    'PROTOCOL_CONNECTION_LOST', 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR',
+    'ER_ACCESS_DENIED_ERROR', 'ER_CON_COUNT_ERROR', 'POOL_CLOSED',
+    'ER_GET_CONNECTION_TIMEOUT'
+  ];
+  if (fatalCodes.includes(e.code)) return true;
+  return /pool is closed|connection.*(lost|refused|closed|timeout)|cannot enqueue/i.test(String(e.message || ''));
+};
+
+const dbUnavailable = (res) => res.status(503).json({
+  success: false,
+  message: 'Service temporarily unavailable. Please try again.'
+});
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -104,6 +127,7 @@ const authenticate = async (req, res, next) => {
           );
           user = vendors[0];
         } catch (e) {
+          if (dbConfig.isDbConnected && isDbFatalError(e)) return dbUnavailable(res);
           console.log('Vendors table check skipped:', e.message);
           user = { id: decoded.id, is_active: 1 }; // Continue with token
         }
@@ -116,6 +140,7 @@ const authenticate = async (req, res, next) => {
           );
           user = fps[0];
         } catch (e) {
+          if (dbConfig.isDbConnected && isDbFatalError(e)) return dbUnavailable(res);
           console.log('franchise_partners table not found, trying users:', e.message);
           try {
             const [users] = await pool.execute(
@@ -124,6 +149,7 @@ const authenticate = async (req, res, next) => {
             );
             user = users[0];
           } catch (e2) {
+            if (dbConfig.isDbConnected && isDbFatalError(e2)) return dbUnavailable(res);
             console.log('Users table check also failed:', e2.message);
             user = { id: decoded.id, is_active: 1 }; // Continue with token
           }
@@ -144,6 +170,7 @@ const authenticate = async (req, res, next) => {
             req.fpId = user.franchise_partner_id;
           }
         } catch (e) {
+          if (dbConfig.isDbConnected && isDbFatalError(e)) return dbUnavailable(res);
           console.log('fp_employees table check skipped:', e.message);
           user = { id: decoded.id, is_active: 1 };
           req.fpId = decoded.franchisePartnerId || decoded.fpId;
@@ -156,6 +183,7 @@ const authenticate = async (req, res, next) => {
           );
           user = users[0];
         } catch (e) {
+          if (dbConfig.isDbConnected && isDbFatalError(e)) return dbUnavailable(res);
           console.log('Users table check skipped:', e.message);
           user = { id: decoded.id, is_active: 1 }; // Continue with token
         }
@@ -177,6 +205,7 @@ const authenticate = async (req, res, next) => {
         });
       }
     } catch (dbError) {
+      if (dbConfig.isDbConnected && isDbFatalError(dbError)) return dbUnavailable(res);
       // If database is not available, continue with token data and set fpId from token
       console.log('Database check skipped:', dbError.message);
       // Still set fpId from token if available

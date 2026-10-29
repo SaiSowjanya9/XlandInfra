@@ -9,7 +9,7 @@ const express = require('express');
 const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
-const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
+const { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName } = require('../utils/zoneDelete');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -20,7 +20,7 @@ const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
 // Rate limiting for login endpoints
-const { loginRateLimiter } = require('../middleware/security');
+const { loginRateLimiter, uploadRateLimiter } = require('../middleware/security');
 // Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
 const { generateToken } = require('../middleware/auth');
 
@@ -1292,7 +1292,7 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
   }
 });
 
-router.post('/work-orders', requireSupervisorScope, (req, res, next) => {
+router.post('/work-orders', requireSupervisorScope, uploadRateLimiter, (req, res, next) => {
   // Use multer to parse FormData with attachments
   upload.array('attachments', 5)(req, res, (err) => {
     if (err) {
@@ -1830,6 +1830,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       const contactPhone = contact.phone || '';
       const contactCountryCode = contact.countryCode || '+91';
 
+      const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.franchisePartnerId || req.fpId || null });
       const [propertyResult] = await pool.query(
         `INSERT INTO onboarded_properties (
           property_id, community_name, property_type, address, city, state, postal_code,
@@ -1843,7 +1844,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
         [
           propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
-          zone || null, division || null,
+          canonicalZone, division || null,
           supervisorId, franchisePartnerId, req.user?.username || req.user?.email || req.user.id, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
@@ -1904,7 +1905,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       let emailNote = '';
       if (contactEmail) {
         const tempPassword = generateTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -1993,7 +1994,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       let emailNote = '';
       if (email) {
         const tempPassword = generateTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+        const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -2199,6 +2200,7 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
     const vendorId = `VND-${Date.now()}`;
     const username = (ownerEmail || email) ? (ownerEmail || email).split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
 
+    const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.franchisePartnerId || req.fpId || null });
     const [result] = await pool.query(
       `INSERT INTO onboarded_vendors (
         vendor_id, username, company_name, contact_person, owner_name, email, owner_email, phone, owner_mobile, alternate_phone,
@@ -2215,7 +2217,7 @@ router.post('/vendors', requireSupervisorScope, async (req, res) => {
         ownerName || companyName || '', email || ownerEmail || '', ownerEmail || email || '', 
         phone || ownerMobile || '', ownerMobile || phone || '', alternatePhone || null,
         address || null, city || null, state || null, zipCode || null, gstNumber || null, panNumber || null, licenseNumber || null,
-        serviceType || 'General', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        serviceType || 'General', serviceVerified ? 1 : 0, canonicalZone, areaName || '', division || '',
         ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
@@ -3145,38 +3147,38 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
     const combinedZones = [];
 
     globalZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (!allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: z.id, name: z.name });
       }
     });
 
     fpZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (!allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         // 'fp-' marks an fp_zones row for utils/zoneDelete; a bare number is a company-wide zone
         combinedZones.push({ id: `fp-${z.id}`, name: z.name });
       }
     });
 
     propertyZones.forEach(z => {
-      if (z.name && !allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: `custom-${z.name}`, name: z.name });
       }
     });
 
     onboardedZones.forEach(z => {
-      if (z.name && !allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: `onboarded-${z.name}`, name: z.name });
       }
     });
 
     // 'emp-' marks a zone that only exists as an employee assignment for utils/zoneDelete
     assignedZones.forEach(z => {
-      if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-        allZoneNames.add(z.zone_name);
+      if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+        allZoneNames.add(zoneKey(z.zone_name));
         combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
       }
     });
@@ -3192,7 +3194,7 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
 // Create zone
 router.post('/zones', requireSupervisorScope, async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = String(req.body?.name ?? '').trim();
     if (!name) {
       return res.status(400).json({ success: false, message: 'Zone name is required' });
     }
@@ -3201,7 +3203,7 @@ router.post('/zones', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     
     const [existing] = await pool.execute(
-      'SELECT id FROM fp_zones WHERE name = ? AND (franchise_partner_id = ? OR supervisor_id = ?)',
+      'SELECT id FROM fp_zones WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND (franchise_partner_id = ? OR supervisor_id = ?)',
       [name, franchisePartnerId, supervisorId]
     );
     

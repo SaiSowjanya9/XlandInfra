@@ -12,6 +12,7 @@
 
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../config/database');
+const { MySQLRateLimitStore } = require('../utils/rateLimitStore');
 const {
   validatePaymentAmount,
   generatePaymentFingerprint,
@@ -30,6 +31,7 @@ const {
  * Prevents rapid payment attempts - 10 per 15 minutes per IP
  */
 const paymentCreationLimiter = rateLimit({
+  store: new MySQLRateLimitStore('pay-create'),
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // 10 payment creation attempts
   message: {
@@ -56,6 +58,7 @@ const paymentCreationLimiter = rateLimit({
  * Prevents abuse of payment link generation - 50 per hour
  */
 const paymentLinkLimiter = rateLimit({
+  store: new MySQLRateLimitStore('pay-link'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 50, // 50 payment links per hour
   message: {
@@ -77,6 +80,7 @@ const paymentLinkLimiter = rateLimit({
  * Prevents QR code scanning abuse - 30 per 5 minutes per IP
  */
 const qrAccessLimiter = rateLimit({
+  store: new MySQLRateLimitStore('qr'),
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: 30, // 30 scans per 5 minutes (generous for legitimate use)
   message: {
@@ -94,6 +98,7 @@ const qrAccessLimiter = rateLimit({
  * Prevents webhook flooding - 100 per minute from same IP
  */
 const webhookLimiter = rateLimit({
+  store: new MySQLRateLimitStore('webhook'),
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 webhooks per minute (Razorpay can send multiple)
   message: {

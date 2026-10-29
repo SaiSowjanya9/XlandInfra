@@ -12,7 +12,7 @@ const NEW_PASSWORD = 'Password@123';
 async function updatePasswords() {
   try {
     console.log('Generating password hash for:', NEW_PASSWORD);
-    const passwordHash = await bcrypt.hash(NEW_PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(NEW_PASSWORD, 12);
     console.log('Password hash generated');
 
     // Update users table

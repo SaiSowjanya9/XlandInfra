@@ -9,6 +9,7 @@ const { paymentHistoryAction } = require('../utils/paymentHistoryAction');
 // Payment Security Middleware
 const {
   paymentLinkLimiter,
+  qrAccessLimiter,
   webhookLimiter,
   validatePaymentAmountMiddleware,
   fraudDetectionMiddleware,
@@ -1396,7 +1397,7 @@ router.post('/verify-recaptcha', async (req, res) => {
 // Token-only URL - invoice ID extracted from token
 // Protected by IP blacklisting
 // ============================================
-router.get('/public/pay', ipBlacklistMiddleware, async (req, res) => {
+router.get('/public/pay', ipBlacklistMiddleware, qrAccessLimiter, async (req, res) => {
   try {
     const { token } = req.query;
     const ip = getClientIP(req);

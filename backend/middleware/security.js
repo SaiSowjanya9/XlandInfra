@@ -6,6 +6,7 @@
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
+const { MySQLRateLimitStore } = require('../utils/rateLimitStore');
 
 // =============================================================================
 // HELMET CONFIGURATION - HTTP Security Headers
@@ -15,7 +16,7 @@ const helmetConfig = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // React needs unsafe-eval in dev
+      scriptSrc: ["'self'"], // API serves JSON only — the React portals set their own headers
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
@@ -73,6 +74,7 @@ const apiRateLimiter = rateLimit({
 
 // Strict Login Rate Limiter - 5 attempts per 15 minutes
 const loginRateLimiter = rateLimit({
+  store: new MySQLRateLimitStore('login'), // persist across restarts/instances
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Only 5 login attempts per window
   message: {
@@ -88,6 +90,7 @@ const loginRateLimiter = rateLimit({
 
 // Password Reset Rate Limiter - 3 attempts per hour
 const passwordResetLimiter = rateLimit({
+  store: new MySQLRateLimitStore('pwd-reset'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // Only 3 password reset requests per hour
   message: {
@@ -114,6 +117,7 @@ const uploadRateLimiter = rateLimit({
 
 // Strict Rate Limiter for sensitive operations - 10 per hour
 const sensitiveOperationLimiter = rateLimit({
+  store: new MySQLRateLimitStore('sensitive'),
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   message: {

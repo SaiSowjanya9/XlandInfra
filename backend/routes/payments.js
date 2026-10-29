@@ -25,6 +25,7 @@ const {
   fraudDetectionMiddleware,
   logSecurityEvent
 } = require('../middleware/paymentSecurity');
+const { uploadRateLimiter } = require('../middleware/security');
 const {
   validatePaymentAmount,
   getClientIP,
@@ -2492,7 +2493,7 @@ router.get('/payments', authenticate, canViewPayments, async (req, res) => {
 });
 
 // Record manual payment
-router.post('/payments', authenticate, canEditPayments, upload.single('paymentProof'), async (req, res) => {
+router.post('/payments', authenticate, canEditPayments, uploadRateLimiter, upload.single('paymentProof'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await ensurePaymentColumns();
@@ -2737,7 +2738,7 @@ router.post('/payments', authenticate, canEditPayments, upload.single('paymentPr
 });
 
 // Alias for record payment (frontend uses /record)
-router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, upload.single('paymentProof'), async (req, res) => {
+router.post('/record', authenticate, canEditPayments, paymentCreationLimiter, uploadRateLimiter, upload.single('paymentProof'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await ensurePaymentColumns();
