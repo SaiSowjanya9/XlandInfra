@@ -10,7 +10,7 @@ import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import {
-  FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive, CheckSquare, Square, Loader2,
+  FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive, CheckSquare, Square, Loader2, Send,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, RefreshCw, FolderOpen, ExternalLink, Link, ArrowLeft, Printer
 } from 'lucide-react';
@@ -206,6 +206,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEstimates, setSelectedEstimates] = useState([]);
   const [archivingSelected, setArchivingSelected] = useState(false);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -1453,6 +1454,63 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
+  // Send email with estimate
+  const handleSendEmail = async (estimate) => {
+    if (sendingEmailId === estimate.id) {
+      console.log('Email already being sent for this estimate');
+      return;
+    }
+
+    const clientEmail = estimate.client_email;
+    if (!clientEmail) {
+      showToast('No email address found for this customer', 'error');
+      return;
+    }
+
+    setSendingEmailId(estimate.id);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/coordinator/estimates/send-email`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateId: estimate.id, email: clientEmail })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Email sent to ${clientEmail}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to send email', 'error');
+      }
+    } catch (e) {
+      console.error('Send email error:', e);
+      showToast('Failed to send email', 'error');
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  const handleStatusChange = async (estimateId, newStatus) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/coordinator/estimates/${estimateId}/status`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Moving to Sent emails the estimate; the server says to whom
+        showToast(newStatus === 'sent' && result.message ? result.message : `Status updated to ${getStatusLabel(newStatus)}`);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to update status', 'error');
+      }
+    } catch (e) {
+      console.error('Status update error:', e);
+      showToast('Failed to update status', 'error');
+    }
+  };
+
   const renderAllEstimates = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -1534,7 +1592,7 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
           <div className="overflow-x-auto">
             <table className="list-table w-full text-sm min-w-[700px]">
               <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-2 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs w-10"><button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded" title={selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? 'Deselect all' : 'Select all'}>{selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Customer</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Division</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created By</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(est)} title="View details"><td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}><button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">{selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></td><td className="px-3 py-3 whitespace-nowrap"><button type="button" onClick={() => setViewEstimate(est)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{est.estimate_id}</button></td><td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[140px]">{est.client_name}</div>{est.client_phone && <div className="text-xs text-gray-500">{est.client_phone}</div>}{est.client_email && <div className="text-xs text-gray-400 truncate max-w-[160px]">{est.client_email}</div>}{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'custom' ? 'Custom' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (shortDivision(est.division || est.property_division) || '-') : '-'}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{getStatusLabel(est.status)}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td><td className="px-3 py-3" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button>{(est.estimate_type === 'direct' || (est.estimate_type && !est.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td></tr>)}</tbody>
+              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(est)} title="View details"><td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}><button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">{selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></td><td className="px-3 py-3 whitespace-nowrap"><button type="button" onClick={() => setViewEstimate(est)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{est.estimate_id}</button></td><td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[140px]">{est.client_name}</div>{est.client_phone && <div className="text-xs text-gray-500">{est.client_phone}</div>}{est.client_email && <div className="text-xs text-gray-400 truncate max-w-[160px]">{est.client_email}</div>}{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'custom' ? 'Custom' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (shortDivision(est.division || est.property_division) || '-') : '-'}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell" onClick={(e) => e.stopPropagation()}><div className="relative inline-block"><select value={(est.status || 'draft').toLowerCase()} onChange={(e) => handleStatusChange(est.id, e.target.value)} className={`appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-medium border-0 cursor-pointer focus:ring-2 focus:ring-blue-200 ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}><option value="draft" className="bg-white text-gray-900">Draft</option><option value="sent" className="bg-white text-gray-900">Sent</option><option value="approved" className="bg-white text-gray-900">Approved</option><option value="rejected" className="bg-white text-gray-900">Rejected</option></select><ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" /></div></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td><td className="px-3 py-3" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-center gap-1"><button onClick={() => handleSendEmail(est)} disabled={sendingEmailId === est.id || !est.client_email} className={`p-1.5 rounded ${!est.client_email ? 'text-gray-300 cursor-not-allowed' : sendingEmailId === est.id ? 'text-blue-400' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`} title={!est.client_email ? 'No email address' : 'Send Email'}>{sendingEmailId === est.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button>{(est.estimate_type === 'direct' || (est.estimate_type && !est.estimate_type.includes('property'))) && <button onClick={() => openEditEstimate(est)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button>}</div></td></tr>)}</tbody>
             </table>
           </div>
         )}

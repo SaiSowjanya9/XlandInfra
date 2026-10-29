@@ -7,7 +7,7 @@ const { createStaffCatalogRouter, validateStaffCatalogEstimate } = require('./st
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const express = require('express');
 const { attachPackageSnapshot } = require('../utils/packageSnapshot');
-const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
+const { normalizeEstimateData, enrichLegacyEstimateAddon, canEmailEstimate } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
 const { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName } = require('../utils/zoneDelete');
 const router = express.Router();
@@ -3064,6 +3064,50 @@ router.post('/estimates/bulk-archive', requireExecutiveScope, async (req, res) =
   } catch (error) {
     console.error('Executive bulk archive estimates error:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
+// Send the estimate's PDF to the customer email on record. Scoped the way the estimate
+// list is: an FP employee reaches fp_estimates under the partner; the shared FP handler
+// does the send.
+router.post('/estimates/send-email', requireExecutiveScope, async (req, res) => {
+  try {
+    const id = Number(req.body.estimateId);
+    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    const creator = getCreatorIdentifier(req);
+    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'executive'), creator);
+    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.executiveId, role: 'executive',
+      creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
+      return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
+    }
+    req.fpId = req.franchisePartnerId;
+    req.body = { estimateId: id, email: estimate.client_email };
+    return require('./franchisePartner').sendEstimateEmailHandler(req, res);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to send estimate email.' });
+  }
+});
+
+// Change an estimate's status -- the All Estimates row's dropdown posts here. Scoped as
+// sending is; the shared FP handler does the rest, including emailing the customer
+// whenever the estimate moves into Sent.
+router.put('/estimates/:id/status', requireExecutiveScope, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    const creator = getCreatorIdentifier(req);
+    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'executive'), creator);
+    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.executiveId, role: 'executive',
+      creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
+      return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
+    }
+    req.fpId = req.franchisePartnerId;
+    return require('./franchisePartner').updateEstimateStatusHandler(req, res);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Unable to update the estimate status.' });
   }
 });
 
