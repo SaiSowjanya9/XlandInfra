@@ -762,12 +762,13 @@ router.post('/properties', requireManagerScope, async (req, res) => {
       console.log('Could not fetch creator name:', e.message);
     }
     
+    const canonicalZone = await canonicalZoneName(zoneId, { franchisePartnerId: franchisePartnerId || null });
     const [result] = await pool.execute(
-      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
+      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code,
         contact_person, contact_phone, contact_email, zone_id, division, manager_id, franchise_partner_id, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [propertyId, name, propertyType || 'residential', address, city, state, zipCode, 
-       contactPerson, contactPhone, contactEmail, zoneId || null, division || null, managerId, franchisePartnerId, creatorName]
+      [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
+       contactPerson, contactPhone, contactEmail, canonicalZone || null, division || null, managerId, franchisePartnerId, creatorName]
     );
 
     res.json({ success: true, message: 'Property created', data: { id: result.insertId, propertyId } });

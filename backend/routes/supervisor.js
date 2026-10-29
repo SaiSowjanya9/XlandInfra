@@ -831,12 +831,13 @@ router.post('/properties', requireSupervisorScope, async (req, res) => {
       console.log('Could not fetch creator name:', e.message);
     }
 
+    const canonicalZone = await canonicalZoneName(zoneId, { franchisePartnerId: franchisePartnerId || null });
     const [result] = await pool.query(
-      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
+      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code,
         contact_person, contact_phone, contact_email, zone_id, supervisor_id, franchise_partner_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, supervisorId, franchisePartnerId, creatorName]
+        contactPerson, contactPhone, contactEmail, canonicalZone || null, supervisorId, franchisePartnerId, creatorName]
     );
 
     res.json({

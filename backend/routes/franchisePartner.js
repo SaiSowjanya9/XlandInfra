@@ -627,6 +627,7 @@ router.post('/properties', requireFPScope, async (req, res) => {
       console.log('Could not fetch creator name:', e.message);
     }
 
+    const canonicalZone = await canonicalZoneName(zoneId, { franchisePartnerId: req.fpId || null });
     const [result] = await pool.execute(
       `INSERT INTO properties (
         property_id, name, property_type, address, city, state, zip_code,
@@ -635,7 +636,7 @@ router.post('/properties', requireFPScope, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, divisionId || null,
+        contactPerson, contactPhone, contactEmail, canonicalZone || null, divisionId || null,
         req.fpId, creatorName
       ]
     );
@@ -2147,6 +2148,7 @@ router.post('/customers', requireFPScope, async (req, res) => {
         : entryType === 'APT' ? (parseInt(numberOfUnits) || 0) : 1;
 
       // Create property first (zone_id and division_id store names as VARCHAR)
+      const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.fpId || null });
       const [propertyResult] = await pool.execute(
         `INSERT INTO properties (
           property_id, name, property_type, address, city, state, zip_code,
@@ -2159,9 +2161,9 @@ router.post('/customers', requireFPScope, async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           propertyIdGen, communityName, propertyType || 'residential', address, city, state, postalCode || '',
-          contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
-          zone || null, division || null,
-          req.fpId, req.user.id, 
+          contactName, `${contactCountryCode}${contactPhone}`, contactEmail,
+          canonicalZone || null, division || null,
+          req.fpId, req.user.id,
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
           numberOfBlocks || 1, JSON.stringify(unitsPerBlock || {}),

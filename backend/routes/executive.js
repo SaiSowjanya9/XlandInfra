@@ -700,12 +700,13 @@ router.post('/properties', requireExecutiveScope, async (req, res) => {
     // This is used for zone filtering to show "own created data"
     const creatorId = req.user?.username || req.user?.email || 'System';
 
+    const canonicalZone = await canonicalZoneName(zoneId, { franchisePartnerId: franchisePartnerId || null });
     const [result] = await pool.query(
-      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code, 
+      `INSERT INTO properties (property_id, name, property_type, address, city, state, zip_code,
         contact_person, contact_phone, contact_email, zone_id, executive_id, franchise_partner_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [propertyId, name, propertyType || 'residential', address, city, state, zipCode,
-        contactPerson, contactPhone, contactEmail, zoneId || null, executiveId, franchisePartnerId, creatorId]
+        contactPerson, contactPhone, contactEmail, canonicalZone || null, executiveId, franchisePartnerId, creatorId]
     );
 
     res.json({
