@@ -5858,6 +5858,23 @@ router.get('/zones', requireFPScope, async (req, res) => {
       });
     } catch (_) {}
 
+    // 5. Zones that only exist as employee assignments still belong in the list -- an "All
+    // Zones" employee covers every zone any colleague was assigned, and the pickers must offer
+    // them too ('emp-' resolves the name for utils/zoneDelete)
+    try {
+      const [assignedZones] = await pool.execute(
+        `SELECT DISTINCT zone_name FROM fp_employee_zones
+         WHERE franchise_partner_id = ? AND zone_name IS NOT NULL AND zone_name != ''`,
+        [req.fpId]
+      );
+      assignedZones.forEach(z => {
+        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
+          allZoneNames.add(z.zone_name);
+          combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
+        }
+      });
+    } catch (_) {}
+
     // Sort by name
     combinedZones.sort((a, b) => a.name.localeCompare(b.name));
 

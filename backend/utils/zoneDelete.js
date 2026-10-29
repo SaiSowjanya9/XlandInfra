@@ -1,7 +1,8 @@
 // The zone pickers merge several sources into one list and stamp each row with a
-// prefixed id: a bare number is a global `zones` row, 'fp-<id>' an `fp_zones` row, and
+// prefixed id: a bare number is a global `zones` row, 'fp-<id>' an `fp_zones` row,
 // 'onboarded-'/'prop-'/'schedule-'/'custom-' ids are names that only exist as text on a
-// property. Deleting therefore means resolving the name behind the id and removing it
+// property, and 'emp-' ids are names that only exist as an employee's zone assignment.
+// Deleting therefore means resolving the name behind the id and removing it
 // from every source -- a row deleted from only one table resurfaces on the next fetch.
 
 const { pool } = require('../config/database');
@@ -32,7 +33,7 @@ const resolveZoneName = async (rawId, { franchisePartnerId = null, ownerColumn =
       return null;
     }
   }
-  for (const prefix of ['onboarded-', 'prop-', 'schedule-', 'custom-']) {
+  for (const prefix of ['onboarded-', 'prop-', 'schedule-', 'custom-', 'emp-']) {
     if (id.startsWith(prefix)) return id.slice(prefix.length) || null;
   }
   return null;

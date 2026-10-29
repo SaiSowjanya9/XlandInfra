@@ -2923,6 +2923,32 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
       fpZones = fz;
     } catch (_) {}
 
+    // Zones that live only on onboarded properties, and zones that live only as employee
+    // assignments -- both belong in the list or an "All Zones" employee's popup disagrees with
+    // what colleagues were assigned. fp_employee_zones is FP-scoped, so a standalone supervisor
+    // has none to add.
+    let onboardedZones = [];
+    let assignedZones = [];
+    try {
+      const [oz] = await pool.query(
+        `SELECT DISTINCT zone as name FROM onboarded_properties 
+         WHERE ${scopeColumn} = ? AND zone IS NOT NULL AND zone != ''
+         AND (status = 'active' OR status IS NULL)`,
+        [scopeId]
+      );
+      onboardedZones = oz;
+    } catch (_) {}
+    if (req.franchisePartnerId) {
+      try {
+        const [az] = await pool.query(
+          `SELECT DISTINCT zone_name FROM fp_employee_zones
+           WHERE franchise_partner_id = ? AND zone_name IS NOT NULL AND zone_name != ''`,
+          [req.franchisePartnerId]
+        );
+        assignedZones = az;
+      } catch (_) {}
+    }
+
     // Combine and deduplicate
     const allZoneNames = new Set();
     const combinedZones = [];
@@ -2946,6 +2972,21 @@ router.get('/zones', requireSupervisorScope, async (req, res) => {
       if (z.name && !allZoneNames.has(z.name)) {
         allZoneNames.add(z.name);
         combinedZones.push({ id: `custom-${z.name}`, name: z.name });
+      }
+    });
+
+    onboardedZones.forEach(z => {
+      if (z.name && !allZoneNames.has(z.name)) {
+        allZoneNames.add(z.name);
+        combinedZones.push({ id: `onboarded-${z.name}`, name: z.name });
+      }
+    });
+
+    // 'emp-' marks a zone that only exists as an employee assignment for utils/zoneDelete
+    assignedZones.forEach(z => {
+      if (z.zone_name && !allZoneNames.has(z.zone_name)) {
+        allZoneNames.add(z.zone_name);
+        combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
       }
     });
 
