@@ -464,13 +464,22 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       recentWorkOrders = rows;
     } catch (e) { console.log('Recent work orders error:', e.message); }
 
-    // Get zone names for display
-    let zoneNames = [];
-    if (hasZones) {
+    // Zone names for display. fp_employee_zones stores the zone *name*, so the assignment already is
+    // the list -- looking the names up as `zones.id` found nothing and the Zones card always read 0.
+    // An unrestricted employee covers every zone the partner's properties sit in.
+    let zoneNames = hasZones ? [...assignedZones] : [];
+    if (hasUnrestrictedAccess) {
       try {
-        const [zones] = await pool.query(`SELECT id, name FROM zones WHERE id IN (${zonePlaceholders})`, assignedZones);
+        const [zones] = await pool.query(
+          `SELECT DISTINCT zone AS name FROM onboarded_properties
+           WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''
+           UNION
+           SELECT DISTINCT zone_id AS name FROM properties
+           WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+          [franchisePartnerId, franchisePartnerId]
+        );
         zoneNames = zones.map(z => z.name);
-      } catch (e) {}
+      } catch (e) { console.log('Dashboard zones error:', e.message); }
     }
 
     res.json({
@@ -478,6 +487,7 @@ router.get('/dashboard', requireCoordinatorScope, async (req, res) => {
       data: {
         stats: {
           properties: propertiesCount + onboardedPropsCount,
+          zones: zoneNames.length,
           vendors: vendorsCount,
           customers: customersCount,
           employees: employeesCount,
@@ -1955,15 +1965,19 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
     
     // Get employee's assigned zones
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    
+    // '__ALL__' is the "every zone" assignment -- it must add no narrowing at all. Without this
+    // check an unrestricted coordinator was matched against a zone literally named '__ALL__' and
+    // the dashboard's Vendors card saw only the vendors they had created themselves.
+    const unrestricted = assignedZones.includes('__ALL__');
+
     // Build zone + creator filter
     let zoneClause = '';
     let zoneParams = [];
-    if (assignedZones.length > 0) {
+    if (!unrestricted && assignedZones.length > 0) {
       const placeholders = assignedZones.map(() => '?').join(',');
       zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by = ? OR ov.created_by = ?)`;
       zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
-    } else {
+    } else if (!unrestricted) {
       // No zones = only see own created
       zoneClause = ` AND (ov.created_by = ? OR ov.created_by = ?)`;
       zoneParams = [creatorEmail, req.user?.username || ''];
@@ -2271,9 +2285,12 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
       } else {
         // Get assigned zones only when not filtering by property
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-        
+
         // Build zone + creator filter - match by created_by_id OR created_by_name (name, email, or username)
-        if (assignedZones.length > 0) {
+        if (assignedZones.includes('__ALL__')) {
+          // '__ALL__' is the "every zone" assignment -- no narrowing, or the coordinator would only
+          // ever see the estimates they created and the dashboard's Estimates card undercounted
+        } else if (assignedZones.length > 0) {
           const placeholders = assignedZones.map(() => '?').join(',');
           propertyClause = ` AND (e.zone IN (${placeholders}) OR e.created_by_id = ? OR e.created_by_name = ? OR e.created_by_name = ? OR e.created_by_name LIKE ?)`;
           // A blank first name must not become LIKE '%%', which matched every estimate of the FP
