@@ -1,4 +1,4 @@
-import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
+import ViewModal from '../components/common/ViewModal';
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -646,18 +646,18 @@ const CoordinatorEmployees = ({ user }) => {
       {showDetailsModal && selectedEmployee && (
         <ViewModal onClose={() => setShowDetailsModal(false)}
           maxWidth="max-w-md"
-          title="Employee Details"
+          id={selectedEmployee.id}
+          title={selectedEmployee.name || selectedEmployee.first_name || ''}
+          subtitle="Employee Details"
+          badge={
+            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>
+              {selectedEmployee.role || 'Employee'}
+            </span>
+          }
         >
 
             <div className="space-y-3">
-              <ViewSection title={selectedEmployee.name || selectedEmployee.first_name || ''} className="text-center">
-                <p className="text-sm text-gray-500">ID: {selectedEmployee.id}</p>
-                <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>
-                  {selectedEmployee.role || 'Employee'}
-                </span>
-              </ViewSection>
-
-              <div className="space-y-2.5 pt-3 border-t border-warm-border">
+              <div className="space-y-2.5">
                 {selectedEmployee.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-400" />
