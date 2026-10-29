@@ -4,6 +4,8 @@ import { getAuthToken } from '../utils/safeStorage';
 import {
   Building2,
   Store,
+  ClipboardList,
+  FileText,
   RefreshCw,
   MapPin,
   ArrowRight,
@@ -14,6 +16,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { ChartTooltipContent } from '../components/common/ChartTooltip';
 import EstimatesOverviewBlocks from '../components/EstimatesOverviewBlocks';
 import DateRangeFilter from '../components/common/DateRangeFilter';
+import DashboardStatCards from '../components/common/DashboardStatCards';
 import { WORK_ORDER_STATUS_COLORS, STATUS_COLORS, PROPERTY_TYPE_COLORS } from '../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -222,60 +225,38 @@ const SupervisorDashboard = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* The shared section header, as on Work Orders and Estimates */}
-      <PageHeader icon={LayoutDashboard}
-        title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Supervisor'}!`}
-        subtitle="Here's what's happening with your supervised areas today.">
-          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:gap-3">
-            <button onClick={() => navigate('/supervisor/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-blue-200 transition-all duration-200 group text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Properties</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.properties || 0}</p>
-                  <p className="text-[10px] text-gray-400">Assigned Properties</p>
-                </div>
-              </div>
-            </button>
-            <button onClick={() => navigate('/supervisor/vendors')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-purple-200 transition-all duration-200 group text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Store className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Vendors</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.vendors || 0}</p>
-                  <p className="text-[10px] text-gray-400">Available Vendors</p>
-                </div>
-              </div>
-            </button>
-            {/* /supervisor/employees/zones is not a route in this portal (it bounced back to this
-                dashboard), so the Zones figure goes to Property Management, where those zones' properties are */}
-            <button onClick={() => navigate('/supervisor/properties')} className="bg-white rounded-xl border border-gray-100 px-4 py-3 min-w-0 flex-[1_1_9rem] sm:flex-none hover:shadow-lg hover:border-orange-200 transition-all duration-200 group text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MapPin className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Zones</p>
-                  <p className="text-xl font-bold text-gray-900">{stats?.zones || 0}</p>
-                  <p className="text-[10px] text-gray-400">Assigned Zones</p>
-                </div>
-              </div>
+      <div className="flex flex-col gap-4 overflow-visible">
+        <PageHeader icon={LayoutDashboard}
+          title={`Welcome, ${user?.firstName || user?.name?.split(' ')[0] || 'Supervisor'}!`}
+          subtitle="Here's what's happening with your supervised areas today.">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+            />
+            <button
+              onClick={() => fetchDashboard(false)}
+              title="Refresh"
+              className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw className="w-5 h-5 text-gray-600" />
             </button>
           </div>
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(start, end) => {
-            setStartDate(start);
-            setEndDate(end);
-          }}
-          onRefresh={() => fetchDashboard(false)}
-          showRefreshButton={true}
-        />
-      </PageHeader>
+        </PageHeader>
+        <DashboardStatCards cards={[
+          { label: 'Properties', value: stats?.properties || 0, to: '/supervisor/properties', icon: Building2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', hoverBorder: 'hover:border-blue-200' },
+          { label: 'Vendors', value: stats?.vendors || 0, to: '/supervisor/vendors', icon: Store, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', hoverBorder: 'hover:border-amber-200' },
+          // /supervisor/employees/zones is not a route in this portal (it bounced back to this
+          // dashboard), so the Zones figure goes to Property Management, where those zones' properties are
+          { label: 'Zones', value: stats?.zones || 0, to: '/supervisor/properties', icon: MapPin, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', hoverBorder: 'hover:border-orange-200' },
+          { label: 'Work Orders', value: realTimeStats.workOrders, to: '/supervisor/work-orders', icon: ClipboardList, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-200' },
+          { label: 'Estimates', value: realTimeStats.estimates, to: '/supervisor/estimates', icon: FileText, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', hoverBorder: 'hover:border-teal-200' },
+        ]} />
+      </div>
 
       {/* Properties Overview Chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
