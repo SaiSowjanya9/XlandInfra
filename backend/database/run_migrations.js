@@ -88,7 +88,7 @@ async function runMigrations() {
       { username: 'executive_admin', email: 'executive@test.com', role: 'executive', firstName: 'Test', lastName: 'Executive' }
     ];
 
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    const hashedPassword = await bcrypt.hash('password123', 12);
 
     for (const user of testUsers) {
       try {

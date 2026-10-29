@@ -48,7 +48,7 @@ const generateActivationToken = () => crypto.randomBytes(32).toString('hex');
  */
 const issueActivation = async (pool, account) => {
   const tempPassword = generateTempPassword();
-  const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+  const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
   const activationToken = generateActivationToken();
   const expiresAt = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 

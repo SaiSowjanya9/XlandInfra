@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { canonicalZoneName } = require('../utils/zoneDelete');
 
 // Generate unique vendor ID: PREFIX-XXXX-YYYYMMDD (matching client ID format)
 const generateVendorId = (serviceType) => {
@@ -76,6 +77,7 @@ router.post('/', async (req, res) => {
     // Generate username from email or name
     const username = ownerEmail ? ownerEmail.split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
 
+    const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: franchisePartnerId || null });
     const [result] = await conn.execute(
       `INSERT INTO onboarded_vendors
         (vendor_id, username, service_type, service_verified, zone, area_name, division,
@@ -91,7 +93,7 @@ router.post('/', async (req, res) => {
         username,
         serviceType || 'General',
         serviceVerified ? 1 : 0,
-        toNull(zone),
+        toNull(canonicalZone),
         toNull(areaName),
         toNull(division),
         ownerName || 'Unknown',

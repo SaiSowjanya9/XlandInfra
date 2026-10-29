@@ -9,7 +9,7 @@ const { authenticate, generateToken } = require('../middleware/auth');
 const { fetchScheduleStats, fetchScheduledVendors, derivedStatusFilter, fetchScheduledServices, fetchScheduledZones } = require('../utils/scheduleStats');
 const { resolveVendor, upsertPropertyVendorAssignment } = require('../utils/vendorAssignments');
 const { packagePropertyTypes, assertUniquePackageName } = require('../utils/packagePropertyTypes');
-const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
+const { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName } = require('../utils/zoneDelete');
 const {
   orNull, isRecentlyAdded, formatPaymentStatus, fetchServiceVendorMap, mapPendingServices, fetchVendorlessServiceNames
 } = require('../utils/pendingProperties');
@@ -2667,8 +2667,8 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       );
       console.log('[Admin] Global zones from zones table:', globalZones.length, globalZones.map(z => z.name));
       globalZones.forEach(z => {
-        if (z.name && !allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
@@ -2683,8 +2683,8 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       );
       console.log('[Admin] FP zones from fp_zones table:', fpZones.length, fpZones.map(z => z.name));
       fpZones.forEach(z => {
-        if (z.name && !allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
@@ -2701,8 +2701,8 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       console.log('[Admin] Property zones:', propertyZones.length, propertyZones.map(z => z.zone_id));
       propertyZones.forEach(z => {
         const zoneName = String(z.zone_id);
-        if (zoneName && !allZoneNames.has(zoneName)) {
-          allZoneNames.add(zoneName);
+        if (zoneName && !allZoneNames.has(zoneKey(zoneName))) {
+          allZoneNames.add(zoneKey(zoneName));
           combinedZones.push({ id: `prop-${zoneName}`, name: zoneName });
         }
       });
@@ -2719,8 +2719,8 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       console.log('[Admin] Onboarded property zones:', onboardedZones.length, onboardedZones.map(z => z.zone));
       onboardedZones.forEach(z => {
         const zoneName = String(z.zone);
-        if (zoneName && !allZoneNames.has(zoneName)) {
-          allZoneNames.add(zoneName);
+        if (zoneName && !allZoneNames.has(zoneKey(zoneName))) {
+          allZoneNames.add(zoneKey(zoneName));
           combinedZones.push({ id: `onboarded-${zoneName}`, name: zoneName });
         }
       });
@@ -2735,8 +2735,8 @@ router.get('/all-employee-zones', authenticate, adminOnly, async (req, res) => {
       );
       console.log('[Admin] Assigned zones from fp_employee_zones:', assignedZones.length, assignedZones.map(z => z.zone_name));
       assignedZones.forEach(z => {
-        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-          allZoneNames.add(z.zone_name);
+        if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+          allZoneNames.add(zoneKey(z.zone_name));
           combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
         }
       });
@@ -3365,8 +3365,8 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       );
       console.log(`[Admin FP ${fpIdNum}] Global zones:`, globalZones.length, globalZones.map(z => z.name));
       globalZones.forEach(z => {
-        if (z.name && !allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
@@ -3382,8 +3382,8 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       );
       console.log(`[Admin FP ${fpIdNum}] FP zones:`, fpZones.length, fpZones.map(z => z.name));
       fpZones.forEach(z => {
-        if (z.name && !allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
@@ -3401,8 +3401,8 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       console.log(`[Admin FP ${fpIdNum}] Property zones:`, propertyZones.length, propertyZones.map(z => z.zone_id));
       propertyZones.forEach(z => {
         const zoneName = String(z.zone_id);
-        if (zoneName && !allZoneNames.has(zoneName)) {
-          allZoneNames.add(zoneName);
+        if (zoneName && !allZoneNames.has(zoneKey(zoneName))) {
+          allZoneNames.add(zoneKey(zoneName));
           combinedZones.push({ id: `prop-${zoneName}`, name: zoneName });
         }
       });
@@ -3420,8 +3420,8 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       console.log(`[Admin FP ${fpIdNum}] Onboarded property zones:`, onboardedZones.length, onboardedZones.map(z => z.zone));
       onboardedZones.forEach(z => {
         const zoneName = String(z.zone);
-        if (zoneName && !allZoneNames.has(zoneName)) {
-          allZoneNames.add(zoneName);
+        if (zoneName && !allZoneNames.has(zoneKey(zoneName))) {
+          allZoneNames.add(zoneKey(zoneName));
           combinedZones.push({ id: `onboarded-${zoneName}`, name: zoneName });
         }
       });
@@ -3437,8 +3437,8 @@ router.get('/fp-view/:fpId/employee-zones', authenticate, adminOnly, async (req,
       );
       console.log(`[Admin FP ${fpIdNum}] Assigned zones:`, assignedZones.length, assignedZones.map(z => z.zone_name));
       assignedZones.forEach(z => {
-        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-          allZoneNames.add(z.zone_name);
+        if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+          allZoneNames.add(zoneKey(z.zone_name));
           combinedZones.push({ id: `assigned-${z.zone_name}`, name: z.zone_name });
         }
       });
@@ -4756,8 +4756,8 @@ router.get('/zones', authenticate, async (req, res) => {
         params
       );
       scheduleZones.forEach(z => {
-        if (z.zone && !allZoneNames.has(z.zone)) {
-          allZoneNames.add(z.zone);
+        if (z.zone && !allZoneNames.has(zoneKey(z.zone))) {
+          allZoneNames.add(zoneKey(z.zone));
           combinedZones.push({ id: `schedule-${z.zone}`, name: z.zone });
         }
       });
@@ -4770,8 +4770,8 @@ router.get('/zones', authenticate, async (req, res) => {
     try {
       const [globalZones] = await pool.execute('SELECT id, name FROM zones WHERE is_active = 1');
       globalZones.forEach(z => {
-        if (!allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (!allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: z.id, name: z.name });
         }
       });
@@ -4780,8 +4780,8 @@ router.get('/zones', authenticate, async (req, res) => {
     try {
       const [fpZones] = await pool.execute('SELECT id, name FROM fp_zones WHERE is_active = 1 ORDER BY name');
       fpZones.forEach(z => {
-        if (!allZoneNames.has(z.name)) {
-          allZoneNames.add(z.name);
+        if (!allZoneNames.has(zoneKey(z.name))) {
+          allZoneNames.add(zoneKey(z.name));
           combinedZones.push({ id: `fp-${z.id}`, name: z.name });
         }
       });
@@ -4793,8 +4793,8 @@ router.get('/zones', authenticate, async (req, res) => {
          AND (status = 'active' OR status IS NULL)`
       );
       onboardedZones.forEach(z => {
-        if (z.zone && !allZoneNames.has(z.zone)) {
-          allZoneNames.add(z.zone);
+        if (z.zone && !allZoneNames.has(zoneKey(z.zone))) {
+          allZoneNames.add(zoneKey(z.zone));
           combinedZones.push({ id: `onboarded-${z.zone}`, name: z.zone });
         }
       });
@@ -4809,8 +4809,8 @@ router.get('/zones', authenticate, async (req, res) => {
          AND (status = 'active' OR status IS NULL)`
       );
       propertyZones.forEach(z => {
-        if (z.zone_id && !allZoneNames.has(z.zone_id)) {
-          allZoneNames.add(z.zone_id);
+        if (z.zone_id && !allZoneNames.has(zoneKey(z.zone_id))) {
+          allZoneNames.add(zoneKey(z.zone_id));
           combinedZones.push({ id: `prop-${z.zone_id}`, name: z.zone_id });
         }
       });
@@ -4821,8 +4821,8 @@ router.get('/zones', authenticate, async (req, res) => {
         `SELECT DISTINCT zone_name FROM fp_employee_zones WHERE zone_name IS NOT NULL AND zone_name != '' AND LOWER(zone_name) != 'all'`
       );
       assignedZones.forEach(z => {
-        if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-          allZoneNames.add(z.zone_name);
+        if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+          allZoneNames.add(zoneKey(z.zone_name));
           combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
         }
       });
@@ -4850,7 +4850,7 @@ router.post('/zones', authenticate, adminOnly, adminWriteRoles, async (req, res)
     }
 
     const [existing] = await pool.execute(
-      'SELECT id, is_active FROM zones WHERE name = ? LIMIT 1',
+      'SELECT id, is_active FROM zones WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1',
       [name]
     );
     if (existing.length > 0) {

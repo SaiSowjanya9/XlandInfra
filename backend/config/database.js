@@ -765,7 +765,7 @@ const initOnboardingTables = async () => {
     if (userCount[0].cnt === 0) {
       console.log('  ⏳ Seeding default users...');
       // Generate Password@123 bcrypt hash
-      const passwordHash = await bcrypt.hash('Password@123', 10);
+      const passwordHash = await bcrypt.hash('Password@123', 12);
       
       const defaultUsers = [
         ['admin', 'admin@pmportal.com', 'System', 'Admin', '+91 9999999901', 'admin'],
@@ -813,7 +813,7 @@ const initOnboardingTables = async () => {
     // Seed admin user if table is empty
     const [adminCount] = await conn.execute('SELECT COUNT(*) as cnt FROM admin_users');
     if (adminCount[0].cnt === 0) {
-      const adminPasswordHash = await bcrypt.hash('Password@123', 10);
+      const adminPasswordHash = await bcrypt.hash('Password@123', 12);
       await conn.execute(
         `INSERT INTO admin_users (username, email, password_hash, first_name, last_name, role, is_active) 
          VALUES (?, ?, ?, ?, ?, ?, TRUE)`,

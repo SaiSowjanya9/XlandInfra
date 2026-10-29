@@ -6,6 +6,7 @@ const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
+const { canonicalZoneName } = require('../utils/zoneDelete');
 
 // Constants for customer activation
 const ACTIVATION_EXPIRY_HOURS = 72;
@@ -28,6 +29,22 @@ const generateActivationToken = () => crypto.randomBytes(32).toString('hex');
 const generatePropertyId = (entryType) => {
   const prefix = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' }[entryType] || 'PROP';
   return `${prefix}-${Date.now()}`;
+};
+
+// Suggestion lists merge names stored free-text on records, so 'zone C' and 'Zone C'
+// arrive as two entries though they are one zone. Group on the lower-cased spelling and
+// keep the variant used most; a tie takes the capitalized one over the all-lower one.
+const dedupeNames = (names) => {
+  const groups = new Map();
+  names.map(n => String(n ?? '').trim()).filter(Boolean).forEach(name => {
+    const key = name.toLowerCase();
+    const group = groups.get(key) || new Map();
+    group.set(name, (group.get(name) || 0) + 1);
+    groups.set(key, group);
+  });
+  return [...groups.values()]
+    .map(group => [...group.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0][0])
+    .sort((a, b) => a.localeCompare(b));
 };
 
 // ============================================
@@ -112,6 +129,9 @@ router.post('/', authenticate, async (req, res) => {
 
     const propertyId = generatePropertyId(entryType);
 
+    // Store the zone's canonical spelling so a typed variant does not start a second zone
+    const canonicalZone = await canonicalZoneName(zone);
+
     // Primary contact denormalized onto the property row (staff portals do the same)
     const primaryContact = associationContacts?.[0] || {};
 
@@ -129,7 +149,7 @@ router.post('/', authenticate, async (req, res) => {
         propertyId,
         entryType,
         category || 'residential',
-        zone,
+        canonicalZone,
         areaName,
         division,
         propertyType,
@@ -243,7 +263,7 @@ router.post('/', authenticate, async (req, res) => {
       if (primaryContact.email) {
         try {
           const tempPassword = generateCustomerTempPassword();
-          const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+          const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
           const activationToken = generateActivationToken();
           const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
           const customerId = `CUST-${Date.now()}`;
@@ -634,8 +654,7 @@ router.get('/suggestions/zones', async (req, res) => {
       );
       vendorZones = vRows;
     } catch (_) {}
-    const allZones = [...new Set([...propRows.map(r => r.zone), ...vendorZones.map(r => r.zone)])].filter(Boolean).sort();
-    res.json({ success: true, data: allZones });
+    res.json({ success: true, data: dedupeNames([...propRows.map(r => r.zone), ...vendorZones.map(r => r.zone)]) });
   } catch (error) {
     console.error('Error fetching zone suggestions:', error);
     res.json({ success: true, data: [] });
@@ -657,8 +676,7 @@ router.get('/suggestions/areas', async (req, res) => {
       );
       vendorAreas = vRows;
     } catch (_) {}
-    const allAreas = [...new Set([...propRows.map(r => r.area_name), ...vendorAreas.map(r => r.area_name)])].filter(Boolean).sort();
-    res.json({ success: true, data: allAreas });
+    res.json({ success: true, data: dedupeNames([...propRows.map(r => r.area_name), ...vendorAreas.map(r => r.area_name)]) });
   } catch (error) {
     console.error('Error fetching area suggestions:', error);
     res.json({ success: true, data: [] });

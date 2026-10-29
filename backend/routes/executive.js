@@ -9,7 +9,7 @@ const express = require('express');
 const { attachPackageSnapshot } = require('../utils/packageSnapshot');
 const { normalizeEstimateData, enrichLegacyEstimateAddon } = require('../utils/estimateData');
 const { estimateTermsColumns } = require('../utils/estimateTerms');
-const { resolveZoneName, deleteZoneByName } = require('../utils/zoneDelete');
+const { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName } = require('../utils/zoneDelete');
 const router = express.Router();
 const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -1316,7 +1316,7 @@ async function createCustomerAccountAndSendEmail(customerData) {
   try {
     const emailLower = customerEmail.toLowerCase().trim();
     const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
     const activationToken = generateActivationToken();
     const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
     const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
@@ -1434,6 +1434,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       console.log('📋 [Executive] Contact info - name:', contactName, 'email:', contactEmail);
 
       // Create property in onboarded_properties (same as FP portal)
+      const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.franchisePartnerId || req.fpId || null });
       const [propertyResult] = await pool.query(
         `INSERT INTO onboarded_properties (
           property_id, community_name, property_type, address, city, state, postal_code,
@@ -1447,7 +1448,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         [
           propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
-          zone || null, division || null,
+          canonicalZone, division || null,
           executiveId, franchisePartnerId, creatorId, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
@@ -1713,6 +1714,7 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
     const vendorId = `VND-${Date.now()}`;
     const username = (ownerEmail || email) ? (ownerEmail || email).split('@')[0] + '_' + Date.now() : `vendor_${Date.now()}`;
 
+    const canonicalZone = await canonicalZoneName(zone, { franchisePartnerId: req.franchisePartnerId || req.fpId || null });
     const [result] = await pool.query(
       `INSERT INTO onboarded_vendors (
         vendor_id, username, company_name, contact_person, owner_name, email, owner_email, phone, owner_mobile, alternate_phone,
@@ -1729,7 +1731,7 @@ router.post('/vendors', requireExecutiveScope, async (req, res) => {
         ownerName || companyName || '', email || ownerEmail || '', ownerEmail || email || '', 
         phone || ownerMobile || '', ownerMobile || phone || '', alternatePhone || null,
         address || null, city || null, state || null, zipCode || null, gstNumber || null, panNumber || null, licenseNumber || null,
-        serviceType || 'General', serviceVerified ? 1 : 0, zone || '', areaName || '', division || '',
+        serviceType || 'General', serviceVerified ? 1 : 0, canonicalZone, areaName || '', division || '',
         ownerAadhar || '', ownerCountryCode || '+91',
         managerName || '', managerMobile || '', managerEmail || '', managerCountryCode || '+91',
         pocName || '', pocMobile || '', pocEmail || '', pocCountryCode || '+91',
@@ -2529,38 +2531,38 @@ router.get('/zones', requireExecutiveScope, async (req, res) => {
     const combinedZones = [];
 
     globalZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (!allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: z.id, name: z.name });
       }
     });
 
     fpZones.forEach(z => {
-      if (!allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (!allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         // 'fp-' marks an fp_zones row for utils/zoneDelete; a bare number is a company-wide zone
         combinedZones.push({ id: `fp-${z.id}`, name: z.name });
       }
     });
 
     propertyZones.forEach(z => {
-      if (z.name && !allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: `custom-${z.name}`, name: z.name });
       }
     });
 
     onboardedZones.forEach(z => {
-      if (z.name && !allZoneNames.has(z.name)) {
-        allZoneNames.add(z.name);
+      if (z.name && !allZoneNames.has(zoneKey(z.name))) {
+        allZoneNames.add(zoneKey(z.name));
         combinedZones.push({ id: `onboarded-${z.name}`, name: z.name });
       }
     });
 
     // 'emp-' marks a zone that only exists as an employee assignment for utils/zoneDelete
     assignedZones.forEach(z => {
-      if (z.zone_name && !allZoneNames.has(z.zone_name)) {
-        allZoneNames.add(z.zone_name);
+      if (z.zone_name && !allZoneNames.has(zoneKey(z.zone_name))) {
+        allZoneNames.add(zoneKey(z.zone_name));
         combinedZones.push({ id: `emp-${z.zone_name}`, name: z.zone_name });
       }
     });
@@ -2576,7 +2578,7 @@ router.get('/zones', requireExecutiveScope, async (req, res) => {
 // Create zone
 router.post('/zones', requireExecutiveScope, async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = String(req.body?.name ?? '').trim();
     if (!name) {
       return res.status(400).json({ success: false, message: 'Zone name is required' });
     }
@@ -2585,7 +2587,7 @@ router.post('/zones', requireExecutiveScope, async (req, res) => {
     const executiveId = req.executiveId;
     
     const [existing] = await pool.execute(
-      'SELECT id FROM fp_zones WHERE name = ? AND (franchise_partner_id = ? OR executive_id = ?)',
+      'SELECT id FROM fp_zones WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND (franchise_partner_id = ? OR executive_id = ?)',
       [name, franchisePartnerId, executiveId]
     );
     

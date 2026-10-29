@@ -12,6 +12,33 @@ const { pool } = require('../config/database');
 // from a request.
 const FP_ZONE_OWNER_COLUMNS = new Set(['manager_id', 'coordinator_id', 'supervisor_id', 'executive_id']);
 
+// Zone names are one name regardless of letter case: 'zone C' and 'Zone C' stored on
+// different records are the same zone. Every merge list and duplicate check keys on
+// this, so a spelling variant can neither list twice nor be created twice.
+const zoneKey = name => String(name ?? '').trim().toLowerCase();
+
+// The spelling a new record should carry. A zone that already exists in `zones` or
+// `fp_zones` has one canonical name; a value typed 'zone c' stores as 'Zone C' instead
+// of starting a second spelling. `franchisePartnerId` limits the fp_zones lookup to that
+// partner's zones. Returns the trimmed input when no stored zone matches.
+const canonicalZoneName = async (name, { franchisePartnerId = null } = {}) => {
+  const typed = String(name ?? '').trim();
+  if (!typed) return typed;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT name FROM zones WHERE is_active = 1 AND LOWER(TRIM(name)) = LOWER(TRIM(?))
+       UNION
+       SELECT name FROM fp_zones WHERE is_active = 1 AND LOWER(TRIM(name)) = LOWER(TRIM(?))
+         ${franchisePartnerId ? 'AND franchise_partner_id = ?' : ''}
+       LIMIT 1`,
+      franchisePartnerId ? [typed, typed, franchisePartnerId] : [typed, typed]
+    );
+    return rows[0]?.name || typed;
+  } catch (_) {
+    return typed;
+  }
+};
+
 const resolveZoneName = async (rawId, { franchisePartnerId = null, ownerColumn = null, ownerId = null } = {}) => {
   const id = String(rawId);
   if (/^\d+$/.test(id)) {
@@ -76,4 +103,4 @@ const deleteZoneByName = async (zoneName, { includeGlobal = false, franchisePart
   try { await pool.execute(`DELETE FROM fp_employee_zones WHERE zone_name = ?${scope}`, params); } catch (_) {}
 };
 
-module.exports = { resolveZoneName, deleteZoneByName };
+module.exports = { resolveZoneName, deleteZoneByName, zoneKey, canonicalZoneName };

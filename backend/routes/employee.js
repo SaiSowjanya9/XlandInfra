@@ -322,7 +322,7 @@ router.post('/set-password', async (req, res) => {
     }
 
     // Hash new password
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
     
     // Update password in users table with visible_password for admin visibility
     if (user.id && !user.fp_employee_id) {
@@ -523,7 +523,7 @@ router.post('/reset-temp-password', async (req, res) => {
       tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     // Update password and set must_change_password flag
     await pool.query(

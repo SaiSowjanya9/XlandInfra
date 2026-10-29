@@ -9,7 +9,7 @@ const { issueActivation } = require('../utils/customerActivation');
 const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
 const { fetchPartnerName } = require('../utils/franchisePartnerName');
 // Rate limiting for login and password reset endpoints
-const { loginRateLimiter, passwordResetLimiter, sanitizeString } = require('../middleware/security');
+const { loginRateLimiter, passwordResetLimiter, sensitiveOperationLimiter, sanitizeString } = require('../middleware/security');
 const {
   COMPLAINT_TABLE, COMPLAINT_SELECT, ensureMarketingComplaintsTable, parseCustomerComplaintBody
 } = require('../utils/marketingComplaints');
@@ -331,7 +331,7 @@ router.post('/create', authenticate, requireCustomerCreator, async (req, res) =>
 
       // If exists but not activated, resend activation email
       const tempPassword = generateTempPassword();
-      const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+      const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
       const activationToken = generateActivationToken();
       const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -381,7 +381,7 @@ router.post('/create', authenticate, requireCustomerCreator, async (req, res) =>
     // Generate credentials
     const customerId = generateCustomerId();
     const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
     const activationToken = generateActivationToken();
     const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -608,7 +608,7 @@ router.post('/set-password', async (req, res) => {
     }
 
     // Hash new password and activate account
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
     await conn.execute(
       `UPDATE customer_accounts 
@@ -923,7 +923,7 @@ router.post('/verify-session', async (req, res) => {
 // ============================================
 // POST /api/customers/forgot-password - Request password reset
 // ============================================
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
   try {
     // Ensure required columns exist
     const columnsToAdd = [
@@ -1006,7 +1006,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Generate temporary password and reset token
     const tempPassword = generateTempPassword();
-    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_HOURS * 60 * 60 * 1000);
 
@@ -1122,7 +1122,7 @@ router.get('/verify-reset-token/:token', async (req, res) => {
 // ============================================
 // POST /api/customers/reset-password - Reset password with temp password
 // ============================================
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', sensitiveOperationLimiter, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -1183,7 +1183,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Hash new password and update
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
     await conn.execute(
       `UPDATE customer_accounts 

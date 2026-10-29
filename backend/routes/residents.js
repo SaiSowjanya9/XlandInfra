@@ -83,7 +83,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Update resident as registered
     const [result] = await pool.execute(

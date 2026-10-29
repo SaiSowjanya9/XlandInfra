@@ -504,7 +504,7 @@ router.post('/', authenticate, managerOrAdmin, async (req, res) => {
     const vendorId = `VEN-${Date.now().toString(36).toUpperCase()}`;
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Insert vendor into onboarded_vendors
     const [result] = await pool.execute(
@@ -630,7 +630,7 @@ router.put('/:id', authenticate, managerOrAdmin, async (req, res) => {
     if (isVerified !== undefined) { updateFields.push('is_verified = ?'); params.push(isVerified); }
 
     if (body.password) {
-      const passwordHash = await bcrypt.hash(body.password, 10);
+      const passwordHash = await bcrypt.hash(body.password, 12);
       updateFields.push('password_hash = ?');
       params.push(passwordHash);
     }
