@@ -65,7 +65,13 @@ const CoordinatorDashboard = ({ user }) => {
       if (estResult.success && Array.isArray(estResult.data)) setEstimates(estResult.data);
       if (propResult.success && Array.isArray(propResult.data)) setProperties(propResult.data);
       if (woResult.success && Array.isArray(woResult.data)) setWorkOrders(woResult.data);
-      if (vendorResult.success && Array.isArray(vendorResult.data)) setVendors(vendorResult.data);
+      if (vendorResult.success) {
+        // The vendors endpoint answers { own, assigned, all }, not a bare array
+        const vendorList = Array.isArray(vendorResult.data)
+          ? vendorResult.data
+          : vendorResult.data?.all || vendorResult.data?.own || [];
+        setVendors(vendorList);
+      }
     } catch (error) {
       console.error('Dashboard fetch error:', error);
     } finally {
