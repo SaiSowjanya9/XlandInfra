@@ -1124,7 +1124,7 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
         </button>
       </div>
 
-      {loading ? (
+      {!viewEstimate && (loading ? (
         <div className="flex items-center justify-center py-12"><RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" /></div>
       ) : (
         <>
@@ -1742,13 +1742,13 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           )}
         </>
-      )}
+      ))}
 
-      {/* View Estimate: the document fills the screen as its own page; Back returns to the list */}
+      {/* View Estimate: the document fills the content area; Back returns to the list */}
       {viewEstimate && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+        <div className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
+            <div className="bg-white border border-gray-200 rounded-xl px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
               <button onClick={() => setViewEstimate(null)}
                 className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <ArrowLeft className="w-4 h-4" />

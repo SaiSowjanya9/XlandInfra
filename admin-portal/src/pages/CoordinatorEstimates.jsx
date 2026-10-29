@@ -2163,14 +2163,10 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">{renderContent()}</div>
-      {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
-      
-      {/* View Estimate: the document fills the screen as its own page; Back returns to the list */}
-      {viewEstimate && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-6">{viewEstimate ? (
+        <div>
           <div className="mx-auto w-full max-w-5xl">
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
+            <div className="bg-white border border-gray-200 rounded-xl px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
               <button onClick={() => setViewEstimate(null)}
                 className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
                 <ArrowLeft className="w-4 h-4" />
@@ -2198,7 +2194,9 @@ const CoordinatorEstimates = ({ user, defaultTab = 'list' }) => {
             </div>
           </div>
         </div>
-      )}
+        ) : renderContent()}
+      </div>
+      {toast && <div className="fixed bottom-6 right-6 z-50"><div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>{toast.type === 'success' ? <Check className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}<span>{toast.message}</span><button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-white/20 rounded"><X className="w-4 h-4" /></button></div></div>}
 
 
       {/* View Service Modal */}
