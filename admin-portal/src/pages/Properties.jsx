@@ -1081,6 +1081,28 @@ const Properties = () => {
                   onClick={() => { setDeleteConfirm(viewProperty); handleClosePropertyView(); }}
                   className="mr-auto flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors"
                 >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+              {hasFullAccess && (
+                <button
+                  onClick={() => handleExportProperty(viewProperty)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" /> Export
+                </button>
+              )}
+              {hasFullAccess && (
+                <button
+                  onClick={() => openEditModal(viewProperty)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" /> Modify
+                </button>
+              )}
+            </>
+          }
+        >
           <PropertyViewBody property={viewProperty} typeLabel={getTypeLabel(viewProperty.property_type || viewProperty.entryType || viewProperty.propertyType || viewProperty.entry_type)} estimates={propertyEstimates} vendorAssignments={propertyVendorAssignments} loadingVendorAssignments={loadingVendorAssignments} />
         </ViewModal>
       )}
