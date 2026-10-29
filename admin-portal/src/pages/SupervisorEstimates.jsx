@@ -10,7 +10,7 @@ import CustomServiceDialog from '../components/estimates/CustomServiceDialog';
 import ServiceCatalogPicker from '../components/estimates/ServiceCatalogPicker';
 import EstimateDraftServicesTable from '../components/estimates/EstimateDraftServicesTable';
 import {
-  FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive,
+  FileText, Plus, Search, X, Check, AlertCircle, Package, PlusCircle, Archive, CheckSquare, Square, Loader2,
   List, ChevronDown, ChevronLeft, ChevronRight, Building2, User, Trash2, Edit2, Eye, RotateCcw, Calendar,
   DollarSign, Layers, Filter, Download, Mail, Save, Edit, FolderOpen, ExternalLink, Link, ArrowLeft, Printer
 } from 'lucide-react';
@@ -192,6 +192,53 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedEstimates, setSelectedEstimates] = useState([]);
+  const [archivingSelected, setArchivingSelected] = useState(false);
+
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedEstimates.length === paginatedEstimates.length) {
+      setSelectedEstimates([]);
+    } else {
+      setSelectedEstimates(paginatedEstimates.map(e => e.id));
+    }
+  };
+
+  const handleSelectEstimate = (id) => {
+    setSelectedEstimates(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk archive selected estimates
+  const handleBulkArchive = async () => {
+    if (selectedEstimates.length === 0) {
+      showToast('No estimates selected', 'error');
+      return;
+    }
+
+    setArchivingSelected(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/supervisor/estimates/bulk-archive`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimateIds: selectedEstimates })
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Archived ${selectedEstimates.length} estimates`);
+        setSelectedEstimates([]);
+        loadData();
+      } else {
+        showToast(result.message || 'Failed to archive estimates', 'error');
+      }
+    } catch (e) {
+      console.error('Bulk archive error:', e);
+      showToast('Failed to archive estimates', 'error');
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -1348,6 +1395,16 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         <div className="flex gap-3">
           <div className="relative w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input type="text" placeholder="Search by Property ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm" /></div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"><Filter className="w-4 h-4" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
+          {selectedEstimates.length > 0 && (
+            <button
+              onClick={handleBulkArchive}
+              disabled={archivingSelected}
+              className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg flex items-center gap-2 hover:bg-amber-200 disabled:opacity-50 text-sm font-medium"
+            >
+              {archivingSelected ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+              Archive ({selectedEstimates.length})
+            </button>
+          )}
           <button onClick={exportAllEstimates} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition-colors text-sm font-medium"><Download className="w-4 h-4" />Export All</button>
           <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap"><X className="w-4 h-4" />Clear all filters</button>
         </div>
@@ -1360,6 +1417,7 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
                   <option value="all">All Estimates</option>
                   <option value="property_based">Property Based</option>
                   <option value="direct">Direct</option>
+                  <option value="custom">Custom Estimate</option>
                 </select>
               </div>
               <div>
@@ -1411,8 +1469,8 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         {loading ? <div className="py-16 text-center"><div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : filteredEstimates.length === 0 ? <div className="py-16 text-center"><DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No estimates found</p><p className="text-gray-400 text-sm mt-1">Try adjusting your search or filters</p></div> : (
           <div className="overflow-x-auto">
             <table className="list-table w-full text-sm min-w-[700px]">
-              <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Client</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Division</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created By</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(est)} title="View details"><td className="px-3 py-3 whitespace-nowrap"><button type="button" onClick={() => setViewEstimate(est)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{est.estimate_id}</button></td><td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[120px]">{est.client_name}</div>{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (shortDivision(est.division || est.property_division) || '-') : '-'}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{getStatusLabel(est.status)}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td><td className="px-3 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+              <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-2 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs w-10"><button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded" title={selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? 'Deselect all' : 'Select all'}>{selectedEstimates.length === paginatedEstimates.length && paginatedEstimates.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Estimate ID</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Customer</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden sm:table-cell">Type</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Division</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs">Amount</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden md:table-cell">Status</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created By</th><th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap text-xs hidden lg:table-cell">Created</th><th className="px-3 py-3 text-center font-medium text-gray-600 whitespace-nowrap text-xs">Actions</th></tr></thead>
+              <tbody className="divide-y divide-gray-100">{paginatedEstimates.map((est) => <tr key={est.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewEstimate(est)} title="View details"><td className="px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}><button onClick={() => handleSelectEstimate(est.id)} className="p-1 hover:bg-gray-200 rounded">{selectedEstimates.includes(est.id) ? <CheckSquare className="w-4 h-4 text-blue-600" /> : <Square className="w-4 h-4 text-gray-400" />}</button></td><td className="px-3 py-3 whitespace-nowrap"><button type="button" onClick={() => setViewEstimate(est)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{est.estimate_id}</button></td><td className="px-3 py-3"><div className="font-medium text-gray-900 truncate max-w-[120px]">{est.client_name}</div>{est.property_code && <div className="text-xs text-gray-400">{est.property_code}</div>}</td><td className="px-3 py-3 whitespace-nowrap hidden sm:table-cell"><span className={`px-2 py-0.5 rounded text-xs font-medium ${est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{est.estimate_type === 'custom' ? 'Custom' : est.estimate_type === 'property_based' || est.estimate_type === 'property-based' ? 'Property' : 'Direct'}</span></td><td className="px-3 py-3 text-gray-600 whitespace-nowrap hidden md:table-cell">{(est.estimate_type === 'property_based' || est.estimate_type === 'property-based') ? (shortDivision(est.division || est.property_division) || '-') : '-'}</td><td className="px-3 py-3 font-semibold whitespace-nowrap">{formatCurrency(est.total_amount)}</td><td className="px-3 py-3 hidden md:table-cell"><span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${est.status === 'approved' ? 'bg-green-100 text-green-700' : est.status === 'rejected' ? 'bg-red-100 text-red-700' : est.status === 'sent' ? 'bg-blue-100 text-blue-700' : est.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{getStatusLabel(est.status)}</span></td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell truncate max-w-[100px]">{est.created_by_name || (est.created_by_role ? est.created_by_role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-')}</td><td className="px-3 py-3 text-gray-500 whitespace-nowrap hidden lg:table-cell">{formatDateIST(est.created_at)}</td><td className="px-3 py-3"><div className="flex items-center justify-center"><button onClick={() => setViewEstimate(est)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details"><Eye className="w-4 h-4" /></button></div></td></tr>)}</tbody>
             </table>
           </div>
         )}

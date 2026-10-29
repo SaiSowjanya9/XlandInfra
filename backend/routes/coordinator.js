@@ -3479,4 +3479,32 @@ const coordinatorMarketingScope = async (req) => {
 
 router.use('/marketing', requireCoordinatorScope, createMarketingRouter({ resolveScope: coordinatorMarketingScope }));
 
+
+// Archive several estimates in one request -- the All Estimates checkbox column posts the
+// picked ids here. FP employees settle fp_estimates under their partner; a standalone
+// coordinator owns the rows they created.
+router.post('/estimates/bulk-archive', requireCoordinatorScope, async (req, res) => {
+  try {
+    const ids = (Array.isArray(req.body.estimateIds) ? req.body.estimateIds : req.body.ids || [])
+      .map(Number).filter(id => Number.isSafeInteger(id) && id > 0);
+    if (!ids.length) return res.status(400).json({ success: false, message: 'No estimates selected' });
+    const placeholders = ids.map(() => '?').join(',');
+    const franchisePartnerId = req.franchisePartnerId || null;
+    let result;
+    if (franchisePartnerId) {
+      [result] = await pool.execute(
+        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders}) AND franchise_partner_id = ?`,
+        [...ids, franchisePartnerId]);
+    } else {
+      [result] = await pool.execute(
+        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders}) AND created_by_id = ? AND created_by_role = 'coordinator'`,
+        [...ids, req.coordinatorId]);
+    }
+    res.json({ success: true, message: `${result.affectedRows} estimate(s) archived`, archivedCount: result.affectedRows });
+  } catch (error) {
+    console.error('Coordinator bulk archive estimates error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
