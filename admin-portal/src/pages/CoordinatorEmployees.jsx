@@ -319,13 +319,6 @@ const CoordinatorEmployees = ({ user }) => {
       {/* The shared section header, as on Work Orders and Estimates */}
       <PageHeader icon={MapPin} title="Employee Zone Management"
         subtitle={`View team zone assignments • ${totalEmployees} employees`} />
-      {isFPCoordinator && (
-        <p className="text-sm text-orange-600 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
-          Zone assignments are managed by your Franchise Partner
-        </p>
-      )}
-
       {/* Stats Cards */}
       <div className="flex flex-wrap gap-3">
         <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-3">
@@ -656,7 +649,7 @@ const CoordinatorEmployees = ({ user }) => {
           title="Employee Details"
         >
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <ViewSection title={selectedEmployee.name || selectedEmployee.first_name || ''} className="text-center">
                 <p className="text-sm text-gray-500">ID: {selectedEmployee.id}</p>
                 <span className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-medium capitalize ${getRoleColor(selectedEmployee.role)}`}>
@@ -664,34 +657,51 @@ const CoordinatorEmployees = ({ user }) => {
                 </span>
               </ViewSection>
 
-              <div className="space-y-3 pt-4 border-t border-warm-border">
+              <div className="space-y-2.5 pt-3 border-t border-warm-border">
                 {selectedEmployee.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedEmployee.phone}</span>
+                    <span className="text-sm text-gray-700">{selectedEmployee.phone}</span>
                   </div>
                 )}
                 {selectedEmployee.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-700">{selectedEmployee.email}</span>
+                    <span className="text-sm text-gray-700 break-all">{selectedEmployee.email}</span>
                   </div>
                 )}
                 <div className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Assigned Zones</p>
-                    <span className="text-gray-700">
-                      {selectedEmployee.zone_names && selectedEmployee.zone_names !== 'No zones assigned' 
-                        ? selectedEmployee.zone_names 
-                        : 'No zones assigned'}
-                    </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-500 mb-1.5">Assigned Zones</p>
+                    {(() => {
+                      const zn = selectedEmployee.zone_names;
+                      const empZones = selectedEmployee.assigned_zones;
+                      const isAll = zn === 'all' || (Array.isArray(empZones) && empZones.length === 1 && empZones[0] === 'all');
+                      const chipList = isAll
+                        ? zones.map(z => z.name)
+                        : (zn && zn !== 'No zones assigned' ? zn.split(',').map(s => s.trim()).filter(Boolean) : []);
+                      return chipList.length ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {chipList.map((zoneName, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium border border-emerald-200">
+                              <MapPin className="w-3 h-3" />
+                              {zoneName}
+                            </span>
+                          ))}
+                        </div>
+                      ) : isAll ? (
+                        <span className="text-sm text-gray-700">All Zones</span>
+                      ) : (
+                        <span className="text-sm text-gray-400 italic">No zones assigned</span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
 
               {/* Status */}
-              <div className="pt-4 border-t border-warm-border">
+              <div className="pt-3 border-t border-warm-border">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Status</span>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${

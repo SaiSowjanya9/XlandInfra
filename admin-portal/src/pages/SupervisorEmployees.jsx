@@ -284,7 +284,29 @@ const SupervisorEmployees = ({ user }) => {
               <div className="space-y-3 pt-4 border-t border-warm-border">
                 {selectedEmployee.email && <div className="flex items-center gap-3"><Mail className="w-5 h-5 text-gray-400" /><span className="text-gray-600">{selectedEmployee.email}</span></div>}
                 {selectedEmployee.phone && <div className="flex items-center gap-3"><Phone className="w-5 h-5 text-gray-400" /><span className="text-gray-600">{selectedEmployee.phone}</span></div>}
-                <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-gray-400 mt-0.5" /><div><p className="text-sm font-medium text-gray-700">Assigned Zones</p><p className="text-gray-600">{selectedEmployee.zone_names || 'No zones assigned'}</p></div></div>
+                <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-gray-400 mt-0.5" /><div className="min-w-0 flex-1"><p className="text-sm font-medium text-gray-700 mb-1.5">Assigned Zones</p>
+                  {(() => {
+                    const zn = selectedEmployee.zone_names;
+                    const isAll = zn === 'all' || (Array.isArray(selectedEmployee.assigned_zones) && selectedEmployee.assigned_zones.length === 1 && selectedEmployee.assigned_zones[0] === 'all');
+                    const chipList = isAll
+                      ? zones.map(z => z.name)
+                      : (zn && zn !== 'No zones assigned' ? zn.split(',').map(s => s.trim()).filter(Boolean) : []);
+                    return chipList.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {chipList.map((zoneName, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium border border-emerald-200">
+                            <MapPin className="w-3 h-3" />
+                            {zoneName}
+                          </span>
+                        ))}
+                      </div>
+                    ) : isAll ? (
+                      <span className="text-sm text-gray-600">All Zones</span>
+                    ) : (
+                      <span className="text-sm text-gray-400 italic">No zones assigned</span>
+                    );
+                  })()}
+                </div></div>
               </div>
             </div>
           
