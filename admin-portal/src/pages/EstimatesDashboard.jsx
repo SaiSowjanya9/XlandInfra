@@ -108,6 +108,9 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const [filter9, setFilter9] = useState('all'); // Work Order Overview
   const [trendPeriod, setTrendPeriod] = useState('all'); // Default to All Time
   const [funnelFilter, setFunnelFilter] = useState('all'); // Default to All Time
+  // Invoices behind the funnel's last two stages; null until loaded (or refused: a role
+  // without payments access never sees invented numbers for them)
+  const [invoices, setInvoices] = useState(null);
 
   const token = getAuthToken();
   const apiPath = getApiPath(portalType);
@@ -176,6 +179,23 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Invoices feed the funnel's "Invoices Created" and "Paid" stages. The payments list is
+  // role-gated; where the role may not read it the fetch fails and the funnel keeps only
+  // the stages it can prove, rather than the 85%-of-approved figure it used to invent.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/payments/invoices`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        setInvoices(result.success ? (result.data || []) : []);
+      } catch (e) {
+        setInvoices([]);
+      }
+    })();
+  }, [token]);
 
   // Filter estimates by MAIN date range (controls entire dashboard)
   const getMainFilteredEstimates = () => {
@@ -306,9 +326,27 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
   const funnelTotal = funnelEstimates.length;
   const funnelSent = funnelEstimates.filter(e => ['sent', 'approved', 'rejected'].includes(getStatus(e))).length;
   const funnelApproved = funnelEstimates.filter(e => getStatus(e) === 'approved').length;
-  // Calculate invoices created (approved estimates) and paid (we'll assume some percentage)
-  const funnelInvoicesCreated = funnelApproved;
-  const funnelPaid = Math.floor(funnelApproved * 0.85); // Assuming 85% of approved are paid
+  // Invoices created and paid are counted from the real invoices, matched on the estimate's
+  // own id -- not assumed as "approved" and a flat 85% of it, which is what used to print.
+  const funnelInvoiceByEstimate = (() => {
+    if (invoices === null) return null;
+    const map = new Map();
+    invoices.forEach(inv => {
+      const key = inv.sourceEstimateId || inv.source_estimate_id;
+      if (key) map.set(key, inv);
+    });
+    return map;
+  })();
+  const funnelEstimateKey = e => e.estimate_id || e.estimateId;
+  const funnelInvoicesCreated = funnelInvoiceByEstimate === null ? funnelApproved
+    : funnelEstimates.filter(e => funnelInvoiceByEstimate.has(funnelEstimateKey(e))).length;
+  const funnelPaid = funnelInvoiceByEstimate === null ? 0
+    : funnelEstimates.filter(e => {
+        const inv = funnelInvoiceByEstimate.get(funnelEstimateKey(e));
+        return inv && (inv.status === 'paid' || inv.paymentStatus === 'paid' || inv.payment_status === 'paid');
+      }).length;
+  // Without invoices the last two stages are unverifiable -- draw only what can be proven
+  const showFunnelInvoiceStages = funnelInvoiceByEstimate !== null;
 
   // What the direct estimates counted in the cards cost and make, on the FP and Manager portals.
   // Only direct estimates feed it — property-based and work-order estimates are costed elsewhere.
@@ -1099,8 +1137,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   { label: 'Total Estimates', value: funnelTotal, width: '100%', color: '#5B8DEF', hoverColor: '#4A7DE0' },
                   { label: 'Sent', value: funnelSent, width: funnelTotal ? `${Math.max((funnelSent / funnelTotal) * 100, 20)}%` : '85%', color: '#14B8A6', hoverColor: '#0D9488' },
                   { label: 'Approved', value: funnelApproved, width: funnelTotal ? `${Math.max((funnelApproved / funnelTotal) * 100, 15)}%` : '70%', color: '#22C55E', hoverColor: '#16A34A' },
-                  { label: 'Invoices Created', value: funnelInvoicesCreated, width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#FBBF24', hoverColor: '#EAB308' },
-                  { label: 'Paid', value: funnelPaid, width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444', hoverColor: '#DC2626' }
+                  ...(showFunnelInvoiceStages ? [
+                    { label: 'Invoices Created', value: funnelInvoicesCreated, width: funnelTotal ? `${Math.max((funnelInvoicesCreated / funnelTotal) * 100, 10)}%` : '55%', color: '#FBBF24', hoverColor: '#EAB308' },
+                    { label: 'Paid', value: funnelPaid, width: funnelTotal ? `${Math.max((funnelPaid / funnelTotal) * 100, 5)}%` : '40%', color: '#EF4444', hoverColor: '#DC2626' }
+                  ] : [])
                 ].map((bar, idx) => (
                   <div 
                     key={idx}
@@ -1129,8 +1169,10 @@ const EstimatesDashboard = ({ user, portalType = 'franchise' }) => {
                   { label: 'Total Estimates', value: funnelTotal, percent: funnelTotal > 0 ? 100 : 0, color: '#5B8DEF' },
                   { label: 'Sent', value: funnelSent, percent: funnelTotal ? ((funnelSent / funnelTotal) * 100).toFixed(1) : 0, color: '#14B8A6' },
                   { label: 'Approved', value: funnelApproved, percent: funnelTotal ? ((funnelApproved / funnelTotal) * 100).toFixed(1) : 0, color: '#22C55E' },
-                  { label: 'Invoices Created', value: funnelInvoicesCreated, percent: funnelTotal ? ((funnelInvoicesCreated / funnelTotal) * 100).toFixed(1) : 0, color: '#FBBF24' },
-                  { label: 'Paid', value: funnelPaid, percent: funnelTotal ? ((funnelPaid / funnelTotal) * 100).toFixed(1) : 0, color: '#EF4444' }
+                  ...(showFunnelInvoiceStages ? [
+                    { label: 'Invoices Created', value: funnelInvoicesCreated, percent: funnelTotal ? ((funnelInvoicesCreated / funnelTotal) * 100).toFixed(1) : 0, color: '#FBBF24' },
+                    { label: 'Paid', value: funnelPaid, percent: funnelTotal ? ((funnelPaid / funnelTotal) * 100).toFixed(1) : 0, color: '#EF4444' }
+                  ] : [])
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center text-sm hover:bg-gray-50 rounded px-1 -mx-1 transition-colors cursor-default">
                     <span className="font-bold w-8" style={{ color: item.color }}>{item.value}</span>

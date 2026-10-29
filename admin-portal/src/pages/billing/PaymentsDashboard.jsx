@@ -341,8 +341,12 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
           .catch(error => console.error('[Payments Dashboard] Estimate margins request failed:', error));
       }
 
-      // Fetch ALL invoices data
-      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices${queryString ? '?' + queryString : ''}`, {
+      // Fetch ALL invoices data. /api/payments/invoices returns archived rows unless asked
+      // otherwise, and the totals below must not count them -- /api/payments/dashboard excludes
+      // archived from every figure for the same reason.
+      const invoicesParams = new URLSearchParams(queryString);
+      invoicesParams.append('archived', 'false');
+      const invoicesRes = await fetch(`${API_BASE}/api/payments/invoices?${invoicesParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const invoicesResult = await invoicesRes.json();

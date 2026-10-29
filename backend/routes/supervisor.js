@@ -291,11 +291,22 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
-    
+
     // Get employee ID and creator email for zone lookup
     const employeeId = await getEmployeeIdForZoneLookup(req, 'supervisor');
     const creatorEmail = getCreatorIdentifier(req);
-    const rawZones = await getAssignedZones(employeeId, creatorEmail);
+
+    // A standalone supervisor has no partner rows -- `franchise_partner_id = NULL` matched
+    // nothing and painted the whole dashboard zero. Each table scopes to whatever marks the
+    // row as theirs: supervisor_id on properties/vendors/clients, created_by on work orders,
+    // created_by_id + role on estimates.
+    const entityScopeId = franchisePartnerId || supervisorId;
+    const propScopeCol = franchisePartnerId ? 'franchise_partner_id' : 'supervisor_id';
+    const woScopeId = franchisePartnerId || creatorEmail;
+    const woScopeCol = franchisePartnerId ? 'franchise_partner_id' : 'created_by';
+    const estScopeSql = franchisePartnerId
+      ? 'fe.franchise_partner_id = ?'
+      : "fe.created_by_id = ? AND fe.created_by_role = 'supervisor'";
     
     // Check if employee has unrestricted access (__ALL__ marker)
     const hasUnrestrictedAccess = rawZones.includes('__ALL__');
@@ -322,14 +333,14 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     if (hasZones) {
       propertiesCount = await safeCount(
         `SELECT COUNT(*) as count FROM properties p
-         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status NOT IN ('deleted', 'inactive'))
+         WHERE p.${propScopeCol} = ? AND (p.status IS NULL OR p.status NOT IN ('deleted', 'inactive'))
          AND (p.zone_id IN (${zonePlaceholders}) OR p.zone_id IN (SELECT name FROM zones WHERE id IN (${zonePlaceholders})))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones]
+        [entityScopeId, ...assignedZones, ...assignedZones]
       );
     } else {
       propertiesCount = await safeCount(
-        `SELECT COUNT(*) as count FROM properties WHERE franchise_partner_id = ? AND (status IS NULL OR status NOT IN ('deleted', 'inactive'))`,
-        [franchisePartnerId]
+        `SELECT COUNT(*) as count FROM properties WHERE ${propScopeCol} = ? AND (status IS NULL OR status NOT IN ('deleted', 'inactive'))`,
+        [entityScopeId]
       );
     }
 
@@ -338,21 +349,21 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     if (hasZones) {
       onboardedPropsCount = await safeCount(
         `SELECT COUNT(*) as count FROM onboarded_properties op
-         WHERE op.franchise_partner_id = ? AND op.status = 'active'
+         WHERE op.${propScopeCol} = ? AND op.status = 'active'
          AND (op.zone IN (${zonePlaceholders}) OR op.zone IN (SELECT name FROM zones WHERE id IN (${zonePlaceholders})))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones]
+        [entityScopeId, ...assignedZones, ...assignedZones]
       );
     } else {
       onboardedPropsCount = await safeCount(
-        `SELECT COUNT(*) as count FROM onboarded_properties WHERE franchise_partner_id = ? AND status = 'active'`,
-        [franchisePartnerId]
+        `SELECT COUNT(*) as count FROM onboarded_properties WHERE ${propScopeCol} = ? AND status = 'active'`,
+        [entityScopeId]
       );
     }
 
     // Vendors count
     const vendorsCount = await safeCount(
-      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
-      [franchisePartnerId]
+      `SELECT COUNT(*) as count FROM onboarded_vendors WHERE ${propScopeCol} = ? AND status = 'active' AND vendor_id NOT LIKE '%SEED%'`,
+      [entityScopeId]
     );
 
     // Customers - zone-filtered
@@ -362,22 +373,29 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         `SELECT COUNT(DISTINCT c.id) as count FROM clients c
          LEFT JOIN properties p ON c.property_id = p.id
          LEFT JOIN onboarded_properties op ON c.property_id = op.id
-         WHERE c.franchise_partner_id = ?
+         WHERE c.${propScopeCol} = ?
          AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones]
+        [entityScopeId, ...assignedZones, ...assignedZones]
       );
     } else {
       customersCount = await safeCount(
-        `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
-        [franchisePartnerId]
+        `SELECT COUNT(*) as count FROM clients WHERE ${propScopeCol} = ?`,
+        [entityScopeId]
       );
     }
 
-    // Employees - ALL FP employees (not zone-filtered)
-    const employeesCount = await safeCount(
-      `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
-      [franchisePartnerId]
-    );
+    // Employees - ALL FP employees (not zone-filtered); a standalone's own crew instead
+    const employeesCount = franchisePartnerId
+      ? await safeCount(
+          `SELECT COUNT(*) as count FROM fp_employees WHERE franchise_partner_id = ? AND is_active = 1`,
+          [franchisePartnerId]
+        )
+      : (await schemaHas('supervisor_employees'))
+        ? await safeCount(
+            `SELECT COUNT(*) as count FROM supervisor_employees WHERE supervisor_id = ?`,
+            [supervisorId]
+          )
+        : 0;
 
     // Work orders - zone-filtered with detailed status breakdown
     let workOrderStats = { total: 0, pending: 0, under_review: 0, assigned: 0, in_progress: 0, completed: 0, cancelled: 0, closed: 0 };
@@ -394,8 +412,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
        FROM work_orders wo
        LEFT JOIN properties p ON wo.property_id = p.id
        LEFT JOIN onboarded_properties op ON wo.property_id = op.id
-       WHERE wo.franchise_partner_id = ?`;
-      let woParams = [franchisePartnerId];
+       WHERE wo.${woScopeCol} = ?`;
+      let woParams = [woScopeId];
       if (hasZones) {
         woQuery += ` AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
         woParams = [...woParams, ...assignedZones, ...assignedZones];
@@ -415,16 +433,16 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         `SELECT COUNT(*) as count FROM fp_estimates fe
          LEFT JOIN properties p ON fe.property_id = p.id
          LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) 
+         WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL)
          AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND fe.estimate_type = 'direct'
          AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones, ...assignedZones]
+        [entityScopeId, ...assignedZones, ...assignedZones, ...assignedZones]
       );
     } else {
       directEstimatesCount = await safeCount(
-        `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-         AND status NOT IN ('archived', 'rejected', 'deleted') AND estimate_type = 'direct'`,
-        [franchisePartnerId]
+        `SELECT COUNT(*) as count FROM fp_estimates fe WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL)
+         AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND fe.estimate_type = 'direct'`,
+        [entityScopeId]
       );
     }
 
@@ -435,16 +453,16 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
         `SELECT COUNT(*) as count FROM fp_estimates fe
          LEFT JOIN properties p ON fe.property_id = p.id
          LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-         WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) 
+         WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL)
          AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based')
          AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones, ...assignedZones]
+        [entityScopeId, ...assignedZones, ...assignedZones, ...assignedZones]
       );
     } else {
       propertyEstimatesCount = await safeCount(
-        `SELECT COUNT(*) as count FROM fp_estimates WHERE franchise_partner_id = ? AND (is_archived = 0 OR is_archived IS NULL) 
-         AND status NOT IN ('archived', 'rejected', 'deleted') AND (estimate_type = 'property_based' OR estimate_type = 'property-based')`,
-        [franchisePartnerId]
+        `SELECT COUNT(*) as count FROM fp_estimates fe WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL)
+         AND fe.status NOT IN ('archived', 'rejected', 'deleted') AND (fe.estimate_type = 'property_based' OR fe.estimate_type = 'property-based')`,
+        [entityScopeId]
       );
     }
 
@@ -466,8 +484,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       FROM fp_estimates fe
       LEFT JOIN properties p ON fe.property_id = p.id
       LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-      WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')`;
-      let estParams = [franchisePartnerId];
+      WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL) AND fe.status NOT IN ('archived', 'rejected', 'deleted')`;
+      let estParams = [entityScopeId];
       if (hasZones) {
         estQuery += ` AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
         estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
@@ -494,8 +512,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       FROM fp_estimates fe
       LEFT JOIN properties p ON fe.property_id = p.id
       LEFT JOIN onboarded_properties op ON fe.property_id = op.id
-      WHERE fe.franchise_partner_id = ? AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
-      let estParams = [franchisePartnerId];
+      WHERE ${estScopeSql} AND (fe.is_archived = 0 OR fe.is_archived IS NULL)`;
+      let estParams = [entityScopeId];
       if (hasZones) {
         estQuery += ` AND (fe.zone IN (${zonePlaceholders}) OR p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
         estParams = [...estParams, ...assignedZones, ...assignedZones, ...assignedZones];
@@ -520,8 +538,8 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
        LEFT JOIN categories c ON wo.category_id = c.id
        LEFT JOIN fp_employees fpe ON wo.created_by = fpe.id OR wo.created_by = fpe.email
        LEFT JOIN users pma ON wo.created_by = pma.id OR wo.created_by = pma.email
-       WHERE wo.franchise_partner_id = ?`;
-      let woParams = [franchisePartnerId];
+       WHERE wo.${woScopeCol} = ?`;
+      let woParams = [woScopeId];
       if (hasZones) {
         woQuery += ` AND (p.zone_id IN (${zonePlaceholders}) OR op.zone IN (${zonePlaceholders}))`;
         woParams = [...woParams, ...assignedZones, ...assignedZones];
@@ -539,11 +557,11 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
       try {
         const [zones] = await pool.query(
           `SELECT DISTINCT zone AS name FROM onboarded_properties
-           WHERE franchise_partner_id = ? AND zone IS NOT NULL AND zone != ''
+           WHERE ${propScopeCol} = ? AND zone IS NOT NULL AND zone != ''
            UNION
            SELECT DISTINCT zone_id AS name FROM properties
-           WHERE franchise_partner_id = ? AND zone_id IS NOT NULL AND zone_id != ''`,
-          [franchisePartnerId, franchisePartnerId]
+           WHERE ${propScopeCol} = ? AND zone_id IS NOT NULL AND zone_id != ''`,
+          [entityScopeId, entityScopeId]
         );
         zoneNames = zones.map(z => z.name);
       } catch (e) { console.log('Dashboard zones error:', e.message); }
@@ -1625,6 +1643,63 @@ router.patch('/work-orders/:id/assign-vendor', requireSupervisorScope, async (re
   }
 });
 
+// The assign modal's Employee half calls this; only the vendor route existed, so every
+// employee assignment answered 404. Access follows the status route, as assign-vendor does.
+router.patch('/work-orders/:id/assign-employee', requireSupervisorScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeId } = req.body;
+    const franchisePartnerId = req.franchisePartnerId || req.fpId;
+
+    const workOrder = await findSupervisorWorkOrder(req, id);
+    if (!workOrder) {
+      return res.status(403).json({ success: false, message: 'Access denied: Record does not belong to your account' });
+    }
+
+    const numericEmployeeId = Number(employeeId);
+    if (!Number.isSafeInteger(numericEmployeeId) || numericEmployeeId <= 0) {
+      return res.status(400).json({ success: false, message: 'Select an employee' });
+    }
+    // The employee must be one this portal lists: the partner's staff for an FP supervisor,
+    // the standalone's own supervisor_employees otherwise (that table may not exist at all).
+    if (franchisePartnerId) {
+      const [emp] = await pool.query(
+        'SELECT id FROM fp_employees WHERE id = ? AND franchise_partner_id = ?',
+        [numericEmployeeId, franchisePartnerId]
+      );
+      if (emp.length === 0) return res.status(404).json({ success: false, message: 'Employee not found' });
+    } else if (await schemaHas('supervisor_employees')) {
+      const [emp] = await pool.query(
+        'SELECT id FROM supervisor_employees WHERE id = ? AND supervisor_id = ?',
+        [numericEmployeeId, req.supervisorId]
+      );
+      if (emp.length === 0) return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // work_orders.assigned_employee_id is created by no CREATE TABLE, so every assignment used to
+    // fail with "Unknown column". It is ensured here, the same way the Coordinator route does it.
+    const [[col]] = await pool.query(
+      `SELECT COUNT(*) AS n FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = 'work_orders' AND column_name = 'assigned_employee_id'`
+    );
+    if (Number(col.n) === 0) await pool.query('ALTER TABLE work_orders ADD COLUMN assigned_employee_id INT NULL');
+
+    // A pending order becomes assigned; one already under way keeps its status
+    await pool.query(
+      `UPDATE work_orders SET assigned_employee_id = ?,
+              status = CASE WHEN status IN ('pending', 'requested') THEN 'assigned' ELSE status END,
+              updated_at = NOW()
+       WHERE id = ?`,
+      [numericEmployeeId, id]
+    );
+
+    res.json({ success: true, message: 'Employee assigned successfully' });
+  } catch (error) {
+    console.error('Supervisor assign employee error:', error);
+    res.status(500).json({ success: false, message: 'Failed to assign employee' });
+  }
+});
+
 router.put('/work-orders/:id', requireSupervisorScope, async (req, res) => {
   try {
     const { id } = req.params;
@@ -2290,6 +2365,20 @@ router.get('/employees', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
 
+    // The assignable pool is the partner's staff: a supervisor under a partner has no
+    // supervisor_employees rows of their own, so the Assign Employee picker always read
+    // "No employees available" even though fp_employees held the whole team.
+    if (req.franchisePartnerId) {
+      const [employees] = await pool.query(
+        `SELECT id, first_name, last_name, email, role, is_active
+         FROM fp_employees
+         WHERE franchise_partner_id = ? AND is_active = 1
+         ORDER BY first_name, last_name`,
+        [req.franchisePartnerId]
+      );
+      return res.json({ success: true, data: employees });
+    }
+
     const [employees] = await pool.query(
       `SELECT se.*, GROUP_CONCAT(z.name) as zone_names
        FROM supervisor_employees se
@@ -2604,8 +2693,26 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
         
         return { ...est, addons, client_phone, client_email };
       }));
+    } else {
+      // A standalone supervisor has no partner's estimates to read -- only the ones they
+      // created themselves, which POST writes with created_by_role 'supervisor'. The list
+      // used to answer [] whatever they saved.
+      const [own] = await pool.query(
+        `SELECT e.* FROM fp_estimates e
+         WHERE e.created_by_id = ? AND e.created_by_role = 'supervisor'
+         AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}
+         ORDER BY e.created_at DESC`,
+        [supervisorId]
+      );
+      estimates = own.map(est => {
+        let addons = [];
+        if (est.addons_data) {
+          try { addons = typeof est.addons_data === 'string' ? JSON.parse(est.addons_data) : est.addons_data; } catch (e) {}
+        }
+        return { ...est, addons };
+      });
     }
-    
+
     res.json({ success: true, data: estimates.map(normalizeEstimateData) });
   } catch (error) {
     console.error('Estimates fetch error:', error);
@@ -2738,6 +2845,27 @@ router.put('/estimates/:id/restore', requireSupervisorScope, async (req, res) =>
   }
 });
 
+// Permanently delete an archived estimate -- the Archived tab's "Delete Permanently" calls
+// this, and the route never existed, so it always 404'd. Only an archived row inside the
+// supervisor's scope may be destroyed; an active estimate is archived, never deleted.
+router.delete('/estimates/:id', requireSupervisorScope, async (req, res) => {
+  try {
+    const franchisePartnerId = req.franchisePartnerId;
+    const scopeSql = franchisePartnerId ? 'franchise_partner_id = ?' : 'created_by_id = ?';
+    const [result] = await pool.query(
+      `DELETE FROM fp_estimates WHERE id = ? AND ${scopeSql} AND is_archived = 1`,
+      [req.params.id, franchisePartnerId || req.supervisorId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Archived estimate not found' });
+    }
+    res.json({ success: true, message: 'Estimate permanently deleted' });
+  } catch (error) {
+    console.error('Delete estimate error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // =====================================================
 // AMC PACKAGES - FP Supervisors use FP packages
 // =====================================================
@@ -2771,8 +2899,20 @@ router.get('/amc-packages', requireSupervisorScope, async (req, res) => {
       );
       return res.json({ success: true, data: packages.map(transformPackage) });
     }
-    
-    res.json({ success: true, data: [] });
+
+    // A standalone supervisor's POST writes supervisor_amc_packages, so the GET has to read it --
+    // answering [] made every package they created vanish on save. schema_v11 can stop before the
+    // table exists, which is "no packages", not a 500.
+    try {
+      const [packages] = await pool.query(
+        `SELECT * FROM supervisor_amc_packages WHERE supervisor_id = ? ORDER BY created_at DESC`,
+        [req.supervisorId]
+      );
+      return res.json({ success: true, data: packages.map(transformPackage) });
+    } catch (e) {
+      if (e.code === 'ER_NO_SUCH_TABLE') return res.json({ success: true, data: [] });
+      throw e;
+    }
   } catch (error) {
     console.error('AMC packages fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch AMC packages' });
@@ -2806,6 +2946,27 @@ router.post('/amc-packages', requireSupervisorScope, async (req, res) => {
   } catch (error) {
     console.error('AMC package create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create AMC package' });
+  }
+});
+
+// Delete AMC package - the route never existed, so the package card's delete always 404'd.
+// The partner's packages are not a supervisor's to remove, as with POST above.
+router.delete('/amc-packages/:id', requireSupervisorScope, async (req, res) => {
+  if (req.isFPSupervisor) {
+    return res.status(403).json({ success: false, message: 'Delete package not allowed for this role' });
+  }
+  try {
+    const [result] = await pool.query(
+      'DELETE FROM supervisor_amc_packages WHERE id = ? AND supervisor_id = ?',
+      [req.params.id, req.supervisorId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+    res.json({ success: true, message: 'Package deleted' });
+  } catch (error) {
+    console.error('AMC package delete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete AMC package' });
   }
 });
 
@@ -2846,8 +3007,18 @@ router.get('/addons', requireSupervisorScope, async (req, res) => {
       );
       return res.json({ success: true, data: addons.map(transformAddon) });
     }
-    
-    res.json({ success: true, data: [] });
+
+    // Standalone: read back supervisor_addons, where POST writes -- same vanish-on-save bug
+    try {
+      const [addons] = await pool.query(
+        `SELECT * FROM supervisor_addons WHERE supervisor_id = ? ORDER BY created_at DESC`,
+        [req.supervisorId]
+      );
+      return res.json({ success: true, data: addons.map(transformAddon) });
+    } catch (e) {
+      if (e.code === 'ER_NO_SUCH_TABLE') return res.json({ success: true, data: [] });
+      throw e;
+    }
   } catch (error) {
     console.error('Addons fetch error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch addons' });
@@ -2878,6 +3049,26 @@ router.post('/addons', requireSupervisorScope, async (req, res) => {
   } catch (error) {
     console.error('Addon create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create addon' });
+  }
+});
+
+// Delete add-on - same gap as packages: the button called a route that did not exist
+router.delete('/addons/:id', requireSupervisorScope, async (req, res) => {
+  if (req.isFPSupervisor) {
+    return res.status(403).json({ success: false, message: 'Delete add-on not allowed for this role' });
+  }
+  try {
+    const [result] = await pool.query(
+      'DELETE FROM supervisor_addons WHERE id = ? AND supervisor_id = ?',
+      [req.params.id, req.supervisorId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Add-on not found' });
+    }
+    res.json({ success: true, message: 'Add-on deleted' });
+  } catch (error) {
+    console.error('Addon delete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete addon' });
   }
 });
 
