@@ -16,8 +16,7 @@ import { getMarketingApiPath, marketingFpId, withMarketingFp } from '../../utils
 import { LEAD_STATUSES, LEAD_SOURCES } from '../../utils/followUpDates';
 import {
   MARKETING_PHASE_COLORS, MARKETING_PRIORITY_COLORS,
-  MARKETING_LEAD_STATUS_COLORS, MARKETING_OWNER_COLORS,
-  MARKETING_CATEGORICAL
+  MARKETING_LEAD_STATUS_COLORS, MARKETING_CATEGORICAL
 } from '../../utils/chartColors';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -162,10 +161,7 @@ const chartsFromRows = (rows) => {
       .map((s, i) => ({ ...s, fill: SOURCE_PALETTE[i % SOURCE_PALETTE.length] })),
     priorities: byField('priority', PRIORITY_ORDER)
       .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
-    trend: buildTrendFrom(rows, monthsSinceEarliest(rows.map(r => r.created_at))),
-    nextActions: byField('next_action')
-      .sort((a, b) => b.value - a.value)
-      .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator }))
+    trend: buildTrendFrom(rows, monthsSinceEarliest(rows.map(r => r.created_at)))
   };
 };
 
@@ -180,9 +176,6 @@ const orderMerge = (agg, order) => {
   for (const e of agg || []) if (!order.includes(e.name)) out.push({ name: e.name, value: e.value });
   return out;
 };
-
-// Who the next action belongs to, so the queue says at a glance whose day it is.
-const EXECUTIVE_ACTIONS = ['Executive Call', 'Executive Visit', 'Onboard Property', 'Start Service'];
 
 const axisProps = { tick: { fontSize: 11, fill: '#6B7280' }, stroke: '#EADFCF' };
 
@@ -347,11 +340,7 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
         .map(p => ({ ...p, fill: PRIORITY_COLORS[p.name] || '#94A3B8' })),
       trend: Array.isArray(data.rows)
         ? buildTrendFrom(data.rows, monthsSinceEarliest(data.rows.map(r => r.created_at)))
-        : (data.trend || []).map(t => (t.year && !/\d{4}$/.test(t.month) ? { ...t, month: `${t.month} ${t.year}` } : t)),
-      nextActions: (data.byNextAction || [])
-        .slice()
-        .sort((a, b) => b.value - a.value)
-        .map(a => ({ ...a, fill: EXECUTIVE_ACTIONS.includes(a.name) ? MARKETING_OWNER_COLORS.Executive : MARKETING_OWNER_COLORS.Coordinator }))
+        : (data.trend || []).map(t => (t.year && !/\d{4}$/.test(t.month) ? { ...t, month: `${t.month} ${t.year}` } : t))
     };
   }, [data]);
 
@@ -411,7 +400,6 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
   const cPriorities = chartFor('priorities');
   const cStatuses = chartFor('leadStatuses');
   const cTrend = chartFor('trend');
-  const cActions = chartFor('nextActions');
 
   if (loading) {
     return (
@@ -551,64 +539,38 @@ const MarketingDashboard = ({ user, portalType = 'franchise' }) => {
             ) : <NoData height={430} note="No lead status set yet" />}
           </Card>
 
-          {/* Trend and the day's workload */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card title="Lead Trend" subtitle={trendSpanLabel(cTrend.trend, 'month') || 'Leads, estimates and approvals over time'} right={periodSelect('trend')}>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={cTrend.trend} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="fpMktLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#9B8AA6" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#9B8AA6" stopOpacity={0.03} />
-                    </linearGradient>
-                    <linearGradient id="fpMktEstimates" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#BFA56B" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#BFA56B" stopOpacity={0.03} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3EDE3" />
-                  <XAxis dataKey="month" stroke={axisProps.stroke} {...TREND_X_AXIS} />
-                  <YAxis allowDecimals={false} {...axisProps} />
-                  <Tooltip content={<ChartTip />} />
-                  <Area type="monotone" dataKey="leads" name="Leads" stroke="#9B8AA6" strokeWidth={2}
-                        fill="url(#fpMktLeads)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
-                  <Area type="monotone" dataKey="estimates" name="Estimates" stroke="#BFA56B" strokeWidth={2}
-                        fill="url(#fpMktEstimates)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="approved" name="Approved" stroke="#7FA7A3" strokeWidth={2}
-                        dot={trendDot(cTrend.trend)} activeDot={{ r: 4 }} isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-              <div className="flex items-center gap-4 mt-2 text-xs text-warm-muted">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#9B8AA6]" />Leads</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#BFA56B]" />Estimates</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#7FA7A3]" />Approved</span>
-              </div>
-            </Card>
-
-            <Card title="Next Action Workload" subtitle="Who has to do what next" right={periodSelect('nextActions')}>
-              {cActions.nextActions.some(a => a.value > 0) ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={cActions.nextActions.filter(a => a.value > 0)} margin={{ left: 0, right: 12, top: 8, bottom: 52 }}>
-                    <CartesianGrid vertical={false} stroke="#F3EDE3" />
-                    <XAxis dataKey="name" {...axisProps} angle={-35} textAnchor="end" interval={0} height={70} />
-                    <YAxis allowDecimals={false} {...axisProps} />
-                    <Tooltip content={<ChartTip total={sumOf(cActions.nextActions)} />} cursor={{ fill: '#FFF9EE' }} />
-                    <Bar dataKey="value" name="Pending" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                      {cActions.nextActions.filter(a => a.value > 0).map((a, i) => <Cell key={i} fill={a.fill} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <NoData height={280} note="No next action set yet" />}
-              <div className="flex items-center gap-4 mt-3 text-xs text-warm-muted">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm" style={{ background: MARKETING_OWNER_COLORS.Coordinator }} />Employee
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm" style={{ background: MARKETING_OWNER_COLORS.Executive }} />Executive
-                </span>
-              </div>
-            </Card>
-          </div>
+          {/* Lead trend takes the full bottom row */}
+          <Card title="Lead Trend" subtitle={trendSpanLabel(cTrend.trend, 'month') || 'Leads, estimates and approvals over time'} right={periodSelect('trend')}>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={cTrend.trend} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fpMktLeads" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#9B8AA6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#9B8AA6" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="fpMktEstimates" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#BFA56B" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#BFA56B" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3EDE3" />
+                <XAxis dataKey="month" stroke={axisProps.stroke} {...TREND_X_AXIS} />
+                <YAxis allowDecimals={false} {...axisProps} />
+                <Tooltip content={<ChartTip />} />
+                <Area type="monotone" dataKey="leads" name="Leads" stroke="#9B8AA6" strokeWidth={2}
+                      fill="url(#fpMktLeads)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
+                <Area type="monotone" dataKey="estimates" name="Estimates" stroke="#BFA56B" strokeWidth={2}
+                      fill="url(#fpMktEstimates)" dot={trendDot(cTrend.trend)} isAnimationActive={false} />
+                <Line type="monotone" dataKey="approved" name="Approved" stroke="#7FA7A3" strokeWidth={2}
+                      dot={trendDot(cTrend.trend)} activeDot={{ r: 4 }} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-6 mt-3 text-xs text-warm-muted">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#9B8AA6]" />Leads</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#BFA56B]" />Estimates</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#7FA7A3]" />Approved</span>
+            </div>
+          </Card>
         </>
       )}
     </div>
