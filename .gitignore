@@ -31,6 +31,9 @@ yarn-error.log*
 Thumbs.db
 *.swp
 *.swo
+# Word lock and recovery files, left behind while a .docx in the repo is open
+~$*
+~WRL*.tmp
 
 # IDE
 .vscode/
