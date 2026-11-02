@@ -173,6 +173,19 @@ const isPrivateIP = (ip) => {
 // claiming a city.
 const UNKNOWN_LOCATION = normalizeGeoLocation({});
 
+// A scan must never wait on a third party for longer than this.
+//
+// The visitor is not redirected until the lookup returns -- the row is written first, deliberately,
+// so that a scan is recorded even if the browser gives up -- which means a hanging geo service
+// holds the phone on a blank page for as long as the socket takes to die. `fetch` has no default
+// timeout, so that could be minutes, and a QR code that opens nothing for minutes is a QR code the
+// person scanning it decides is broken. Each service gets a short budget and the chain a total one;
+// running out costs a city name, which is the cheapest thing here.
+const GEO_SERVICE_TIMEOUT_MS = Number(process.env.QR_GEO_TIMEOUT_MS) || 1500;
+const GEO_TOTAL_BUDGET_MS = Number(process.env.QR_GEO_BUDGET_MS) || 3000;
+
+const geoFetch = (url) => fetch(url, { signal: AbortSignal.timeout(GEO_SERVICE_TIMEOUT_MS) });
+
 const getGeoLocation = async (ip) => {
   // Skip lookup for private IPs: a LAN address has no location to report
   if (isPrivateIP(ip) || ip === 'unknown') {
@@ -184,7 +197,7 @@ const getGeoLocation = async (ip) => {
   const services = [
     // Service 1: ipwho.is (free, no key required, accurate)
     async () => {
-      const res = await fetch(`https://ipwho.is/${ip}`);
+      const res = await geoFetch(`https://ipwho.is/${ip}`);
       const data = await res.json();
       if (data.success) {
         return normalizeGeoLocation({
@@ -201,7 +214,7 @@ const getGeoLocation = async (ip) => {
     },
     // Service 2: ip-api.com (free, 45 requests/min)
     async () => {
-      const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone`);
+      const res = await geoFetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone`);
       const data = await res.json();
       if (data.status === 'success') {
         return normalizeGeoLocation(data);
@@ -210,7 +223,7 @@ const getGeoLocation = async (ip) => {
     },
     // Service 3: ipapi.co (free, 1000/day)
     async () => {
-      const res = await fetch(`https://ipapi.co/${ip}/json/`);
+      const res = await geoFetch(`https://ipapi.co/${ip}/json/`);
       const data = await res.json();
       if (!data.error) {
         return normalizeGeoLocation({
@@ -227,8 +240,14 @@ const getGeoLocation = async (ip) => {
     }
   ];
   
-  // Try each service until one succeeds
+  // Try each service until one succeeds, and stop trying once the budget is spent rather than
+  // paying each service's timeout in turn while the visitor waits.
+  const deadline = Date.now() + GEO_TOTAL_BUDGET_MS;
   for (const service of services) {
+    if (Date.now() >= deadline) {
+      console.log(`[GeoIP] Gave up on ${ip} after ${GEO_TOTAL_BUDGET_MS}ms; the scan is recorded without a location`);
+      return UNKNOWN_LOCATION;
+    }
     try {
       const result = await service();
       console.log(`[GeoIP] Located ${ip}: ${result.city}, ${result.state}, ${result.country}`);

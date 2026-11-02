@@ -8,7 +8,8 @@ import {
   TrendingUp, X, Check, AlertCircle, Repeat
 } from 'lucide-react';
 import PageHeader, { HEADER_ACTION_CLASS, HEADER_GHOST_CLASS } from '../components/common/PageHeader';
-import { formatDate } from '../utils/dateFormat';
+import { formatDate, formatTime } from '../utils/dateFormat';
+import { qrScanUrl, unscannableReason } from '../utils/qrScanUrl';
 import Modal from '../components/common/Modal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -50,10 +51,10 @@ const QRManagement = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  // Base URL for QR redirects
-  const QR_BASE_URL = window.location.hostname === 'localhost' 
-    ? `http://localhost:5000/api/qr/r`
-    : `https://admin.xlandinfra.com/api/qr/r`;
+  // What a QR code encodes: the tracked redirect, built from configuration rather than from the
+  // browser this page happens to be open in. See utils/qrScanUrl.js -- a code is printed once, and
+  // only /api/qr/r/:slug records a scan.
+  const scanUrlFor = (slug) => qrScanUrl(slug, import.meta.env, window.location.origin);
 
   const fetchQRCodes = useCallback(async () => {
     try {
@@ -195,8 +196,14 @@ const QRManagement = () => {
   };
 
   const downloadQR = async (qr, format = 'svg') => {
-    // Generate QR code SVG/PNG
-    const qrUrl = `${QR_BASE_URL}/${qr.slug}`;
+    const qrUrl = scanUrlFor(qr.slug);
+    // A printed code cannot be corrected, so refuse rather than hand over a dead one. Downloading
+    // from a dev machine used to bake in http://localhost:5000, which resolves to the phone itself.
+    const unprintable = unscannableReason(qrUrl);
+    if (unprintable) {
+      showNotification(unprintable, 'error');
+      return;
+    }
     const qrSize = 400;
     const errorLevel = qr.error_correction || 'H';
     
@@ -221,12 +228,10 @@ const QRManagement = () => {
   };
 
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // formatTime comes from utils/dateFormat: it renders in IST, as formatDate does. The local copy
+  // that used to live here asked the browser for the time with no timezone given, so every
+  // timestamp on this page paired an IST date with the viewer's own clock -- two different days,
+  // either side of midnight.
 
   if (loading && !qrCodes.length) {
     return (
@@ -422,7 +427,7 @@ const QRManagement = () => {
                   <QRCard
                     key={qr.id}
                     qr={qr}
-                    baseUrl={QR_BASE_URL}
+                    scanUrl={scanUrlFor(qr.slug)}
                     onSelect={() => { setSelectedQR(qr); setActiveTab('analytics'); }}
                     onEdit={() => { setEditingQR(qr); setShowEditModal(true); }}
                     onToggle={() => handleToggleActive(qr)}
@@ -672,7 +677,7 @@ const QRManagement = () => {
                 <thead>
                   <tr className="text-left text-gray-500 text-sm bg-gray-50 border-b border-gray-200">
                     <th className="px-6 py-4 font-medium">QR Code</th>
-                    <th className="px-6 py-4 font-medium">Redirect URL</th>
+                    <th className="px-6 py-4 font-medium">Scan URL / Destination</th>
                     <th className="px-6 py-4 font-medium">Status</th>
                     <th className="px-6 py-4 font-medium">Scans</th>
                     <th className="px-6 py-4 font-medium">Visitors</th>
@@ -696,15 +701,23 @@ const QRManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {/* The scan URL is what gets printed and is the only URL that records a
+                            scan, so it is the one on top and the one Copy hands over. */}
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 text-sm truncate max-w-xs">{qr.current_url}</span>
+                          <span className="text-gray-700 text-sm truncate max-w-xs" title={scanUrlFor(qr.slug)}>
+                            {scanUrlFor(qr.slug)}
+                          </span>
                           <button
-                            onClick={() => copyToClipboard(qr.current_url)}
+                            onClick={() => copyToClipboard(scanUrlFor(qr.slug))}
                             className="p-1 hover:bg-gray-100 rounded"
+                            title="Copy scan URL"
                           >
                             <Copy className="w-3 h-3 text-gray-400" />
                           </button>
                         </div>
+                        <p className="text-gray-400 text-xs truncate max-w-xs" title={qr.current_url}>
+                          → {qr.current_url}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <button
@@ -832,8 +845,8 @@ const StatCard = ({ icon: Icon, label, value, subtext, color = 'indigo' }) => {
   );
 };
 
-const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload, isOpsManager }) => {
-  const qrUrl = `${baseUrl}/${qr.slug}`;
+const QRCard = ({ qr, scanUrl, onSelect, onEdit, onToggle, onCopy, onDownload, isOpsManager }) => {
+  const printable = !unscannableReason(scanUrl);
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-md transition-all group shadow-sm">
@@ -854,9 +867,21 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload, i
         </span>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100">
-        <p className="text-gray-400 text-xs mb-1">Redirect URL</p>
-        <p className="text-sm text-gray-700 truncate">{qr.current_url}</p>
+      {/* What the code encodes, and where it sends the visitor. Both, labelled: the card used to
+          show only the destination, so a code that never passed through the tracked redirect --
+          and so could never be counted -- was indistinguishable from one that did. */}
+      <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100 space-y-2">
+        <div>
+          <p className="text-gray-400 text-xs mb-1">Scan URL (what the QR encodes)</p>
+          <p className="text-sm text-gray-700 truncate" title={scanUrl}>{scanUrl}</p>
+          {!printable && (
+            <p className="mt-1 text-xs text-amber-700">Local address — not scannable from a phone</p>
+          )}
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs mb-1">Redirects to</p>
+          <p className="text-sm text-gray-700 truncate" title={qr.current_url}>{qr.current_url}</p>
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
@@ -873,9 +898,9 @@ const QRCard = ({ qr, baseUrl, onSelect, onEdit, onToggle, onCopy, onDownload, i
           Analytics
         </button>
         <button
-          onClick={() => onCopy(qrUrl)}
+          onClick={() => onCopy(scanUrl)}
           className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all"
-          title="Copy URL"
+          title="Copy scan URL"
         >
           <Copy className="w-4 h-4 text-gray-500" />
         </button>
@@ -1029,6 +1054,38 @@ const QRModal = ({ title, qr, onClose, onSubmit }) => {
   );
 };
 
+const BUCKET_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const BUCKET_SHAPE = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}))?/;
+
+/**
+ * A bar's label, read from the bucket string SQL grouped by -- "2026-11-02 17:00:00" or
+ * "2026-11-02" -- and never put through a Date.
+ *
+ * Those buckets are the server's own wall clock: `scanWindow`/`hourKey` in backend/utils/qrScan.js
+ * build them from local getHours() precisely to match MySQL's DATE_FORMAT on the same host. Asking
+ * the browser to render the matching instant instead slides every bar off the hour it counts by the
+ * offset between the two machines -- and onto the half hour where that offset is not whole.
+ * This is the same rule utils/dateFormat.js follows for a date-only value.
+ */
+const bucketLabel = (bucket, granularity) => {
+  const match = String(bucket ?? '').match(BUCKET_SHAPE);
+  if (!match) return '';
+  const [, , month, day, hour] = match;
+  if (granularity !== 'hour') return `${Number(day)} ${BUCKET_MONTHS[Number(month) - 1]}`;
+  if (hour === undefined) return '';
+  const h = Number(hour);
+  return `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`;
+};
+
+/** The same bucket, named in full for the hover. */
+const bucketTitle = (bucket, granularity) => {
+  const match = String(bucket ?? '').match(BUCKET_SHAPE);
+  if (!match) return '';
+  const [, , month, day] = match;
+  const date = `${Number(day)} ${BUCKET_MONTHS[Number(month) - 1]}`;
+  return granularity === 'hour' ? `${date}, ${bucketLabel(bucket, 'hour')}` : date;
+};
+
 /**
  * The scan trend.
  *
@@ -1048,9 +1105,6 @@ const ScanTrendChart = ({ series, granularity = 'day' }) => {
   const maxScans = Math.max(...series.map(d => d.scans), 1);
   // Labels only where they can be read; the hover answers for the rest
   const showLabels = series.length <= 10;
-  const label = (at) => granularity === 'hour'
-    ? new Date(at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    : new Date(at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
   return (
     <div className="overflow-x-auto">
@@ -1061,9 +1115,7 @@ const ScanTrendChart = ({ series, granularity = 'day' }) => {
             className="flex flex-1 cursor-pointer flex-col justify-end gap-1"
             style={{ minWidth: '20px' }}
             {...chart.hover({
-              title: granularity === 'hour'
-                ? new Date(item.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-                : formatDate(new Date(item.at)),
+              title: bucketTitle(item.bucket, granularity),
               rows: [
                 { label: 'Scans', value: item.scans.toLocaleString('en-IN'), color: '#6366F1' },
                 { label: 'Visitors', value: item.visitors.toLocaleString('en-IN'), color: '#A5B4FC' }
@@ -1077,7 +1129,7 @@ const ScanTrendChart = ({ series, granularity = 'day' }) => {
               />
             </div>
             <span className="h-4 w-full truncate text-center text-[10px] text-gray-500">
-              {showLabels ? label(item.at) : ''}
+              {showLabels ? bucketLabel(item.bucket, granularity) : ''}
             </span>
           </div>
         ))}
