@@ -131,7 +131,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   
   // Section 2: Items & Services
   const [lineItems, setLineItems] = useState([
-    { id: 1, serviceName: '', description: '', uom: 'Visit', qty: 1, rate: 0, discount: 0, taxPercent: 0, amount: 0 }
+    { id: 1, serviceName: '', description: '', uom: 'Visit', qty: 1, rate: 0, discount: 0, amount: 0 }
   ]);
   const [showEstimateModal, setShowEstimateModal] = useState(false);
   const [estimates, setEstimates] = useState([]);
@@ -305,8 +305,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
         qty: parseFloat(item.qty || item.quantity || 1),
         rate: parseFloat(item.rate || item.unitPrice || item.price || 0),
         discount: parseFloat(item.discount || 0),
-        // The invoice's GST is entered here, never taken from the estimate
-        taxPercent: 0,
         amount: 0
       }));
 
@@ -321,9 +319,7 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       
       // Calculate amounts
       importedItems.forEach(item => {
-        const subtotal = item.qty * item.rate;
-        const afterDiscount = subtotal - item.discount;
-        item.amount = afterDiscount + (afterDiscount * item.taxPercent / 100);
+        item.amount = item.qty * item.rate - item.discount;
       });
       
       setLineItems(importedItems);
@@ -342,7 +338,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       qty: 1,
       rate: 0,
       discount: 0,
-      taxPercent: 0,
       amount: 0
     }]);
   };
@@ -358,27 +353,20 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
         // Recalculate amount
-        const subtotal = updated.qty * updated.rate;
-        const afterDiscount = subtotal - updated.discount;
-        updated.amount = afterDiscount + (afterDiscount * updated.taxPercent / 100);
+        updated.amount = updated.qty * updated.rate - updated.discount;
         return updated;
       }
       return item;
     }));
   };
 
-  // Calculate totals
+  // Calculate totals. An invoice carries no GST.
   const calculateTotals = () => {
     const subtotal = lineItems.reduce((sum, item) => sum + (item.qty * item.rate), 0);
     const totalDiscount = lineItems.reduce((sum, item) => sum + parseFloat(item.discount || 0), 0);
     const afterDiscount = subtotal - totalDiscount;
-    const totalTax = lineItems.reduce((sum, item) => {
-      const itemSubtotal = item.qty * item.rate - item.discount;
-      return sum + (itemSubtotal * item.taxPercent / 100);
-    }, 0);
-    const grandTotal = afterDiscount + totalTax;
     
-    return { subtotal, totalDiscount, afterDiscount, totalTax, grandTotal };
+    return { subtotal, totalDiscount, afterDiscount, grandTotal: afterDiscount };
   };
 
   const totals = calculateTotals();
@@ -439,14 +427,12 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
             quantity: item.qty,
             unitPrice: item.rate,
             discount: item.discount,
-            taxPercent: item.taxPercent,
             amount: item.amount
           })),
         
         // Totals
         subtotal: totals.subtotal,
         discountAmount: totals.totalDiscount,
-        taxAmount: totals.totalTax,
         totalAmount: totals.grandTotal,
         
         // Notes
@@ -778,7 +764,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-16">Qty</th>
                     <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Rate</th>
                     <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-24">Discount</th>
-                    <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-16">Tax %</th>
                     <th className="text-right text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-28">Amount</th>
                     <th className="text-center text-xs font-semibold text-gray-500 uppercase py-3 px-2 w-20">Action</th>
                   </tr>
@@ -841,14 +826,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                           onChange={(e) => updateLineItem(item.id, 'discount', parseFloat(e.target.value) || 0)}
                           placeholder="0.00"
                           className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-right focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="py-3 px-2">
-                        <input
-                          type="number"
-                          value={item.taxPercent}
-                          onChange={(e) => updateLineItem(item.id, 'taxPercent', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
                       <td className="py-3 px-2 text-right text-sm font-medium text-gray-900">
@@ -1036,10 +1013,6 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
                       <span className="text-green-600">-₹{formatCurrency(totals.totalDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax (GST)</span>
-                    <span className="text-gray-900">₹{formatCurrency(totals.totalTax)}</span>
-                  </div>
                   <div className="flex justify-between text-lg font-semibold pt-2 border-t border-gray-200">
                     <span className="text-gray-900">Grand Total</span>
                     <span className="text-blue-600">₹{formatCurrency(totals.grandTotal)}</span>

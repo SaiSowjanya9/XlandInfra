@@ -146,7 +146,6 @@ const NoFeesIndicator = () => (
 );
 
 // Gateway processing fee, shown the same way on every Razorpay-routed method (cards and UPI).
-// GST is not named here: it is applied when the invoice is created.
 const ProcessingFee = () => (
   <>
     <p className="text-gray-500 text-[10px]">Processing Fee</p>

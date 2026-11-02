@@ -68,7 +68,6 @@ const FPCreateInvoice = ({ user }) => {
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     discountPercentage: 0,
-    taxPercentage: 0,
     notes: '',
     termsAndConditions: 'Payment is due within 15 days of invoice date.\nLate payments may incur additional charges.'
   });
@@ -216,12 +215,10 @@ const FPCreateInvoice = ({ user }) => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Calculate totals
+  // Calculate totals. An invoice carries no GST.
   const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
   const discountAmount = subtotal * (parseFloat(formData.discountPercentage) || 0) / 100;
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (parseFloat(formData.taxPercentage) || 0) / 100;
-  const totalAmount = taxableAmount + taxAmount;
+  const totalAmount = subtotal - discountAmount;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -261,7 +258,6 @@ const FPCreateInvoice = ({ user }) => {
         })),
         subtotal,
         discountPercentage: parseFloat(formData.discountPercentage) || 0,
-        taxPercentage: parseFloat(formData.taxPercentage) || 0,
         notes: formData.notes,
         termsAndConditions: formData.termsAndConditions
       };
@@ -814,23 +810,6 @@ const FPCreateInvoice = ({ user }) => {
                     />
                     <span className="text-gray-500">%</span>
                     <span className="font-medium text-red-600">-{formatCurrency(discountAmount)}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between text-sm items-center">
-                  <span className="text-gray-600">GST</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      name="taxPercentage"
-                      value={formData.taxPercentage}
-                      onChange={handleInputChange}
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-right text-sm"
-                    />
-                    <span className="text-gray-500">%</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(taxAmount)}</span>
                   </div>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">

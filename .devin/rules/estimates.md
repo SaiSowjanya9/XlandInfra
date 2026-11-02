@@ -143,17 +143,21 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
   prints `GST (0%) → ₹0`. **Nothing may fill a blank rate with 18.** Three places used to: the admin
   form's Price Summary *label* read `GST ({gstRate || '18'}%)` beside a ₹0 figure, the catalog quote
   endpoint defaulted `gst_percentage ?? 18`, and `invoices.tax_percentage` was `DEFAULT 18.00`.
-- **The invoice charges the rate its estimate carried.** `calculateInvoiceAmounts(subtotal,
-  discountPercentage, taxPercentage)` takes the rate as an argument defaulting to 0, and
-  `generateInvoiceFromEstimate` passes `estimate.gst_percent`. It previously applied a hardcoded
-  `GST_RATE = 18` whatever the estimate said, so an estimate quoted, sent and **approved at 0% was
-  billed at 18%** — the customer agreed to one figure and was charged another. `GST_RATE` is still
-  exported as the statutory rate a screen may offer as a choice; it is not a fallback, and the test
-  asserts as much. Regression test: `node --test backend/services/invoiceAmounts.test.js`.
-- GST is charged on the subtotal **after** the discount, in every surface that computes it.
+- **An invoice carries no GST at all, and the estimate's rate is never copied to it.** GST belongs
+  to the estimate; an invoice is raised from the estimate's **pre-GST** subtotal with
+  `tax_percentage = 0`, and no invoice screen, PDF, email or export shows a GST line.
+  `calculateInvoiceAmounts(subtotal, discountPercentage)` and `invoiceAmountsFromEstimate(estimate)`
+  take no rate, no route reads one from a request body, and nothing exports a statutory `GST_RATE`:
+  a hardcoded `GST_RATE = 18` is what once billed an estimate quoted, sent and **approved at 0% as
+  18%** — the customer agreed to one figure and was charged another. See AGENTS.md "An Invoice
+  Carries No GST". Regression tests:
+  `node --test backend/services/invoiceAmounts.test.js backend/services/invoiceGstDelink.test.js`.
+- On an estimate, GST is charged on the subtotal **after** the discount, in every surface that
+  computes it.
 - Existing invoices keep the `tax_percentage` they were raised with: it is what was charged and
   possibly already paid, so `schema_v39_invoice_tax_default_zero.sql` moves the column default only
-  and rewrites no rows.
+  and `schema_v61_invoice_gst_zero.sql` rewrites only the NULLs the removed "enter GST on the
+  draft" flow left behind.
 
 ## Terms & Conditions
 

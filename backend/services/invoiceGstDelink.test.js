@@ -5,9 +5,9 @@ const path = require('path');
 const Module = require('module');
 
 /**
- * An invoice's GST is not the estimate's. An invoice raised from an approved estimate starts with
- * its GST blank (tax_percentage NULL), an employee enters it on the draft in Generated Invoices,
- * the send route refuses the invoice until they have, and the rate is locked once it is sent.
+ * An invoice carries no GST. An invoice raised from an approved estimate is stored with
+ * `tax_percentage = 0` and `tax_amount = 0` whatever the estimate charged, no screen offers a
+ * GST field on an invoice, and no invoice document (screen, PDF or email) prints a GST line.
  */
 
 const inserts = [];
@@ -59,14 +59,14 @@ const columnValue = (insert, column) => {
   return insert.params[columns.indexOf(column)];
 };
 
-test('an invoice raised from an 18% estimate starts with its GST blank, not 18%', async () => {
+test('an invoice raised from an 18% estimate charges no GST', async () => {
   inserts.length = 0;
   state.estimate = { ...baseEstimate };
   state.invoice = null;
   await generateInvoiceFromEstimate(1, null, 'fp');
   assert.equal(inserts.length, 1);
   const insert = inserts[0];
-  assert.equal(columnValue(insert, 'tax_percentage'), null, 'GST is left for the employee to enter');
+  assert.equal(columnValue(insert, 'tax_percentage'), 0, "the estimate's rate is never copied");
   assert.equal(columnValue(insert, 'tax_amount'), 0);
   assert.equal(columnValue(insert, 'subtotal'), 10000, 'the pre-GST subtotal, never the GST-inclusive total');
   assert.equal(columnValue(insert, 'total_amount'), 10000);
@@ -75,45 +75,45 @@ test('an invoice raised from an 18% estimate starts with its GST blank, not 18%'
 
 test("the estimate's discount reaches the invoice, by amount or by percentage", () => {
   // A fixed-amount discount has no percentage; it must still come over
-  const byAmount = invoiceAmountsFromEstimate({ subtotal: '10000', discount_percent: '0', discount_amount: '1500' }, null);
+  const byAmount = invoiceAmountsFromEstimate({ subtotal: '10000', discount_percent: '0', discount_amount: '1500' });
   assert.equal(byAmount.discountAmount, 1500);
   assert.equal(byAmount.discountPercentage, 15);
   assert.equal(byAmount.totalAmount, 8500);
-  const byPercent = invoiceAmountsFromEstimate({ subtotal: '10000', discount_percent: '10' }, 18);
+  const byPercent = invoiceAmountsFromEstimate({ subtotal: '10000', discount_percent: '10', gst_percent: '18' });
   assert.equal(byPercent.discountAmount, 1000);
-  assert.equal(byPercent.taxAmount, 1620, "the invoice's own GST, on the discounted amount");
-  assert.equal(byPercent.totalAmount, 10620);
+  assert.equal(byPercent.taxAmount, 0, 'the discounted subtotal is the total; no GST rides along');
+  assert.equal(byPercent.totalAmount, 9000);
 });
 
-test('a discount added to the estimate after invoicing updates the unsent draft, keeping its GST', async () => {
+test('a discount added to the estimate after invoicing updates the unsent draft, GST still 0', async () => {
   updates.length = 0;
   state.estimate = { ...baseEstimate, discount_percent: '10.00', discount_amount: '1000.00' };
-  state.invoice = { id: 77, invoice_id: 'INV-00001', status: 'draft', tax_percentage: '5.00', amount_paid: '0.00' };
+  state.invoice = { id: 77, invoice_id: 'INV-00001', status: 'draft', amount_paid: '0.00' };
   const result = await refreshDraftInvoiceFromEstimate(1, 'fp');
   assert.equal(result.updated, true);
   const params = updates[0].params;
-  // line_items, subtotal, discount_percentage, discount_amount, tax_amount, total_amount, balance_amount, id
-  assert.deepEqual(params.slice(1), [10000, 10, 1000, 450, 9450, 9450, 77]);
+  // line_items, subtotal, discount_percentage, discount_amount, tax_percentage, tax_amount, total_amount, balance_amount, id
+  assert.deepEqual(params.slice(1), [10000, 10, 1000, 0, 0, 9000, 9000, 77]);
 });
 
 test('re-approving an edited estimate refreshes its existing draft instead of leaving it stale', async () => {
   updates.length = 0;
   inserts.length = 0;
   state.estimate = { ...baseEstimate, discount_amount: '2000.00' };
-  state.invoice = { id: 77, invoice_id: 'INV-00001', status: 'draft', tax_percentage: null, amount_paid: '0.00' };
+  state.invoice = { id: 77, invoice_id: 'INV-00001', status: 'draft', amount_paid: '0.00' };
   const result = await generateInvoiceFromEstimate(1, null, 'fp');
   assert.equal(result.alreadyExists, true);
   assert.equal(result.refreshed, true);
   assert.equal(inserts.length, 0, 'no second invoice');
-  assert.equal(updates[0].params[5], 8000);
+  assert.equal(updates[0].params[6], 8000, 'total_amount');
 });
 
 test('a sent invoice is never rewritten by an estimate edit', async () => {
   updates.length = 0;
   state.estimate = { ...baseEstimate, discount_amount: '2000.00' };
   for (const invoice of [
-    { id: 77, invoice_id: 'INV-00001', status: 'sent', tax_percentage: '18.00', amount_paid: '0.00' },
-    { id: 77, invoice_id: 'INV-00001', status: 'draft', tax_percentage: '18.00', amount_paid: '500.00' }
+    { id: 77, invoice_id: 'INV-00001', status: 'sent', amount_paid: '0.00' },
+    { id: 77, invoice_id: 'INV-00001', status: 'draft', amount_paid: '500.00' }
   ]) {
     state.invoice = invoice;
     const result = await refreshDraftInvoiceFromEstimate(1, 'fp');
@@ -137,23 +137,43 @@ const routeBody = (signature) => {
   return payments.slice(start, next < 0 ? undefined : next);
 };
 
-test('an invoice whose GST is blank cannot be sent', () => {
+test('nothing blocks or gates an invoice on its GST any more', () => {
   const send = routeBody("router.post('/invoices/:id/send'");
-  const guard = send.indexOf('tax_percentage === null');
-  assert.ok(guard > 0, 'the send route checks for a blank GST');
-  assert.ok(guard < send.indexOf('createPaymentLinkForInvoice'), 'before a payment link is minted');
-  assert.ok(guard < send.indexOf("status = CASE"), 'before the invoice is marked sent');
+  assert.doesNotMatch(send, /tax_percentage/, 'the send route no longer inspects GST');
+  assert.doesNotMatch(send, /GST_NOT_SET/);
+  assert.match(send, /createPaymentLinkForInvoice/, 'and still mints the payment link');
 });
 
-test('GST is editable on a draft and locked once sent', () => {
-  const update = routeBody("router.put('/invoices/:id'");
-  assert.match(update, /invoice\.status !== 'draft'/);
-  assert.match(update, /status\(409\)/);
-  assert.match(update, /requestedTax < 0 \|\| requestedTax > 100/);
+test('no invoice writer takes a GST rate from the request', () => {
+  for (const signature of [
+    "router.post('/invoices'",
+    "router.put('/invoices/:id'",
+    "router.post('/invoices/create-from-estimate'",
+    "router.post('/invoices/create-generic'"
+  ]) {
+    const body = routeBody(signature);
+    assert.match(body, /const taxPct = 0|taxPercentage: taxPct/, signature);
+    assert.doesNotMatch(body, /parseFloat\((gstPercent|taxPercentage)\)/, signature);
+  }
 });
 
-test('create-from-estimate taxes the pre-GST subtotal and only the GST the employee entered', () => {
-  const create = routeBody("router.post('/invoices/create-from-estimate'");
-  assert.doesNotMatch(create, /const subtotal = parseFloat\(estimate\.total\)/, 'the GST-inclusive total is never the base');
-  assert.match(create, /const taxPct = gstEntered \? parseFloat\(gstPercent\) : null/);
+test('no invoice document prints a GST line', () => {
+  // Only the invoice's own generators are checked: an estimate still states the GST it quoted,
+  // and those live in the same two files.
+  const between = (file, from, to) => {
+    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    const start = source.indexOf(from);
+    assert.ok(start >= 0, `${from} in ${file}`);
+    const end = to ? source.indexOf(to, start) : -1;
+    return source.slice(start, end < 0 ? undefined : end);
+  };
+  const invoiceDocuments = {
+    'the invoice PDF': between('services/pdfService.js', 'const generateInvoicePDF', 'const generateReceiptPDF'),
+    'the invoice email': between('services/emailService.js', 'const sendInvoiceEmail', 'const sendEmail = async'),
+    'the send-invoice email': fs.readFileSync(path.join(__dirname, '..', 'routes', 'payments.js'), 'utf8'),
+    'the auto-generated invoice email': fs.readFileSync(path.join(__dirname, 'invoiceService.js'), 'utf8')
+  };
+  for (const [what, source] of Object.entries(invoiceDocuments)) {
+    assert.doesNotMatch(source, /GST \(/, what);
+  }
 });

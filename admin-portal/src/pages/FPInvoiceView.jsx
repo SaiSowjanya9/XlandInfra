@@ -517,12 +517,6 @@ const FPInvoiceView = ({ user }) => {
                     <span className="font-medium text-red-600">-₹{formatCurrency(invoice.discountAmount)}</span>
                   </div>
                 )}
-                {invoice.taxAmount > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">GST ({invoice.taxPercentage}%):</span>
-                    <span className="font-medium text-gray-900">₹{formatCurrency(invoice.taxAmount)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between py-3 bg-gray-800 text-white px-4 -mx-4 rounded">
                   <span className="font-bold">Total Amount:</span>
                   <span className="font-bold text-lg">₹{formatCurrency(invoice.totalAmount)}</span>

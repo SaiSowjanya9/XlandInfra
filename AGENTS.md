@@ -673,28 +673,36 @@ shapes to avoid, both of which were on the customer portal:
 - A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
   kinds share one list, and the icon is what tells them apart.
 
-## Invoice GST Is Not the Estimate's GST
+## An Invoice Carries No GST
 
-- **The estimate's GST and the invoice's GST are unlinked, on the user's call.** When an estimate
-  is approved, `generateInvoiceFromEstimate` raises the draft invoice from the estimate's
-  **pre-GST** subtotal with `tax_percentage = NULL` (blank) and `tax_amount = 0`. The estimate's
-  `gst_percent` / `tax_percentage` is never copied, and when an estimate has no subtotal its GST is
-  taken back out of its total so it cannot ride in through the base amount.
-- An employee enters the GST % on the draft in **Generated Invoices** (detail modal → GST field →
-  Save → `PUT /api/payments/invoices/:id { taxPercentage }`). `POST /invoices/:id/send` refuses an
-  invoice whose `tax_percentage` is NULL (`code: 'GST_NOT_SET'`); `0` is a valid, entered rate.
-  The rate is locked once the invoice leaves `draft` (409).
-- `POST /invoices/create-from-estimate` follows the same rule: pre-GST subtotal, GST only from the
-  request's `gstPercent` (blank if absent). It used to tax the estimate's GST-inclusive total.
-- The manual **Create Invoice** forms (`billing/CreateInvoice.jsx`, `FPCreateInvoice.jsx`) default
-  GST to **0%**, not 18%; "Add from Estimate" does not copy the estimate's GST either.
+- **GST is 0 on every invoice and is never displayed, on the user's call.** There is no GST field
+  on any invoice screen, no GST row in the invoice price summary, PDF, email or Excel export, and
+  no "GST not set" badge. `tax_percentage` and `tax_amount` stay in the schema (both 0) so the
+  historic rows that did charge GST keep what was billed — `schema_v61_invoice_gst_zero.sql`
+  normalises only the NULLs the old "enter it on the draft" flow left behind.
+- **The estimate's GST and the invoice's GST are unlinked.** When an estimate is approved,
+  `generateInvoiceFromEstimate` raises the draft from the estimate's **pre-GST** subtotal with
+  `tax_percentage = 0`; the estimate's `gst_percent` is never copied, and when an estimate has no
+  subtotal its GST is taken back out of its total so it cannot ride in through the base amount.
+  An estimate still quotes and prints the GST it was created with — that is the estimate's alone.
+- `calculateInvoiceAmounts(subtotal, discountPercentage)` and `invoiceAmountsFromEstimate(estimate)`
+  take no rate at all: total = subtotal − discount. A third argument is ignored, not charged, and
+  nothing exports a statutory `GST_RATE` to fall back on — a hardcoded 18 is what once billed an
+  estimate approved at 0% as 18%.
+- Every invoice writer (`POST /invoices`, `PUT /invoices/:id`, `POST /invoices/create-from-estimate`,
+  `POST /invoices/create-generic`, the work-order generator) hardcodes `taxPct = 0` and ignores any
+  `taxPercentage` / `gstPercent` in the request body. `POST /invoices/:id/send` no longer inspects
+  GST: the `GST_NOT_SET` 400 and the draft-only 409 lock are gone, along with the detail modal's
+  GST input.
 - **The estimate's discount always reaches its invoice.** `invoiceAmountsFromEstimate` uses the
   estimate's stored `discount_amount` (a fixed-amount discount has no percentage), else its
   percentage. Editing an FP estimate (FP, Admin, Manager, Coordinator, Executive `PUT …/estimates/:id`)
   calls `refreshDraftInvoiceFromEstimate`, and re-approving one refreshes its existing invoice, so the
-  draft's line items, subtotal, discount and total follow the estimate while keeping the GST the
-  employee entered. A sent invoice, or one with money against it, is never rewritten.
-- Regression test: `node --test backend/services/invoiceGstDelink.test.js`.
+  draft's line items, subtotal, discount and total follow the estimate. A sent invoice, or one with
+  money against it, is never rewritten.
+- Regression tests: `node --test backend/services/invoiceGstDelink.test.js backend/services/invoiceAmounts.test.js`.
+  They fail if a route reads a rate from the request, if the send route gates on GST again, or if an
+  invoice document prints a `GST (` line.
 
 ## Billing > Payments and Payment History Are Two Screens
 

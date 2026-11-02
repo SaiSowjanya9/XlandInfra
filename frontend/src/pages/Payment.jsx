@@ -1262,10 +1262,6 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
                   <span className="text-green-600">-{formatCurrency(invoice.discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">GST ({parseFloat(invoice.taxPercentage) || 0}%)</span>
-                <span className="text-gray-900">{formatCurrency(invoice.taxAmount)}</span>
-              </div>
               <div className="border-t border-gold-600/20 pt-3">
                 <div className="flex justify-between">
                   <span className="text-gray-900 font-semibold">Total Amount</span>

@@ -10,11 +10,6 @@ const { generateInvoicePDF } = require('./pdfService');
 const { firstFreeNumber } = require('../utils/paymentIds');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
-// GST Rate (fixed at 18%)
-// Kept only as the statutory rate a screen may offer as a choice. It is NOT a fallback: a
-// document's GST is whatever was set on it, and nothing set means 0.
-const GST_RATE = 18;
-
 // Decode HTML entities (fix triple/double encoded ampersands etc.)
 const decodeHtmlEntities = (str) => {
   if (!str || typeof str !== 'string') return str;
@@ -89,24 +84,21 @@ const generateInvoiceId = async (fpId = null) => {
 /**
  * Calculate invoice amounts.
  *
- * **The GST rate is the document's own, and it defaults to nothing.** This used to apply `GST_RATE`
- * -- a hardcoded 18 -- whatever the estimate said, so an estimate quoted and approved at 0% GST was
- * invoiced at 18%: the customer agreed to one figure and was billed another. The caller passes the
- * rate the estimate carries, and a rate nobody set is 0, as it is on the estimate.
+ * **An invoice carries no GST.** The rate is 0 on every invoice, no screen sets one and no
+ * document prints a GST line, so the total is the subtotal less the discount. An estimate's own
+ * GST is the estimate's alone and is never carried over: billing a rate the customer never
+ * agreed to is exactly what this used to do with a hardcoded 18.
  */
-const calculateInvoiceAmounts = (subtotal, discountPercentage = 0, taxPercentage = 0) => {
-  const taxPercent = parseFloat(taxPercentage) || 0;
+const calculateInvoiceAmounts = (subtotal, discountPercentage = 0) => {
   const discountAmount = subtotal * (discountPercentage / 100);
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = taxableAmount * (taxPercent / 100);
-  const totalAmount = taxableAmount + taxAmount;
+  const totalAmount = subtotal - discountAmount;
 
   return {
     subtotal: parseFloat(subtotal.toFixed(2)),
     discountPercentage: parseFloat(discountPercentage.toFixed(2)),
     discountAmount: parseFloat(discountAmount.toFixed(2)),
-    taxPercentage: parseFloat(taxPercent.toFixed(2)),
-    taxAmount: parseFloat(taxAmount.toFixed(2)),
+    taxPercentage: 0,
+    taxAmount: 0,
     totalAmount: parseFloat(totalAmount.toFixed(2)),
     balanceAmount: parseFloat(totalAmount.toFixed(2))
   };
@@ -367,10 +359,10 @@ const round2 = (value) => parseFloat((Number(value) || 0).toFixed(2));
  *   taken back out of its total so the estimate's tax never rides in through the base amount.
  * - **Discount** comes over exactly as the estimate shows it: its stored discount amount when it
  *   has one (a fixed-amount discount has no percentage), otherwise its percentage of the subtotal.
- * - **GST is the invoice's own** (`taxPercentage`, not the estimate's). `null` means an employee
- *   has not entered it yet: it is stored as NULL and charges nothing until they do.
+ * - **GST is 0 and is not shown.** The estimate's rate is never copied and no screen sets one on
+ *   an invoice, so the total is the discounted subtotal.
  */
-const invoiceAmountsFromEstimate = (estimate, taxPercentage = null) => {
+const invoiceAmountsFromEstimate = (estimate) => {
   const estimateTotal = parseFloat(estimate.total) || parseFloat(estimate.total_amount) || 0;
   const estimateGst = parseFloat(estimate.gst_amount) || parseFloat(estimate.tax_amount) || 0;
   const subtotal = parseFloat(estimate.subtotal) || Math.max(0, estimateTotal - estimateGst);
@@ -378,16 +370,13 @@ const invoiceAmountsFromEstimate = (estimate, taxPercentage = null) => {
   const storedDiscount = parseFloat(estimate.discount_amount) || parseFloat(estimate.discount) || 0;
   const discountAmount = Math.min(subtotal, storedDiscount > 0 ? storedDiscount : subtotal * discountPercent / 100);
   const discountPercentage = discountPercent || (subtotal > 0 ? (discountAmount / subtotal) * 100 : 0);
-  const taxable = subtotal - discountAmount;
-  const rate = taxPercentage === null || taxPercentage === undefined || taxPercentage === '' ? null : parseFloat(taxPercentage);
-  const taxAmount = taxable * ((rate || 0) / 100);
-  const totalAmount = taxable + taxAmount;
+  const totalAmount = subtotal - discountAmount;
   return {
     subtotal: round2(subtotal),
     discountPercentage: round2(discountPercentage),
     discountAmount: round2(discountAmount),
-    taxPercentage: rate === null || !Number.isFinite(rate) ? null : round2(rate),
-    taxAmount: round2(taxAmount),
+    taxPercentage: 0,
+    taxAmount: 0,
     totalAmount: round2(totalAmount),
     balanceAmount: round2(totalAmount)
   };
@@ -396,12 +385,12 @@ const invoiceAmountsFromEstimate = (estimate, taxPercentage = null) => {
 /**
  * Bring an estimate's still-unsent invoice up to date with the estimate: a discount (or any
  * price change) made on the estimate after its invoice was raised is carried into the draft.
- * The invoice keeps the GST an employee entered on it. A sent invoice, or one with money
- * against it, is never rewritten -- the customer has already seen that figure.
+ * A sent invoice, or one with money against it, is never rewritten -- the customer has already
+ * seen that figure.
  */
 const applyEstimateToDraftInvoice = async (connection, estimate, estimateId, source) => {
   const [[invoice]] = await connection.execute(
-    'SELECT id, invoice_id, status, tax_percentage, amount_paid FROM invoices WHERE source_estimate_id = ? ORDER BY id DESC LIMIT 1',
+    'SELECT id, invoice_id, status, amount_paid FROM invoices WHERE source_estimate_id = ? ORDER BY id DESC LIMIT 1',
     [estimate.estimate_id]
   );
   if (!invoice) return { updated: false, reason: 'no_invoice' };
@@ -409,14 +398,14 @@ const applyEstimateToDraftInvoice = async (connection, estimate, estimateId, sou
     return { updated: false, reason: 'sent', invoiceId: invoice.invoice_id, id: invoice.id };
   }
   const lineItems = await buildEstimateLineItems(connection, estimate, estimateId, source);
-  const amounts = invoiceAmountsFromEstimate(estimate, invoice.tax_percentage);
+  const amounts = invoiceAmountsFromEstimate(estimate);
   await connection.execute(
     `UPDATE invoices SET
        line_items = ?, subtotal = ?, discount_percentage = ?, discount_amount = ?,
-       tax_amount = ?, total_amount = ?, balance_amount = ?, updated_at = NOW()
+       tax_percentage = ?, tax_amount = ?, total_amount = ?, balance_amount = ?, updated_at = NOW()
      WHERE id = ?`,
     [JSON.stringify(lineItems), amounts.subtotal, amounts.discountPercentage, amounts.discountAmount,
-      amounts.taxAmount, amounts.totalAmount, amounts.balanceAmount, invoice.id]
+      amounts.taxPercentage, amounts.taxAmount, amounts.totalAmount, amounts.balanceAmount, invoice.id]
   );
   console.log(`🔄 Draft invoice ${invoice.invoice_id} refreshed from estimate ${estimate.estimate_id}: Discount=${amounts.discountAmount}, Total=${amounts.totalAmount}`);
   return { updated: true, invoiceId: invoice.invoice_id, id: invoice.id, totalAmount: amounts.totalAmount };
@@ -476,8 +465,8 @@ const generateInvoiceFromEstimate = async (estimateId, approvedBy = null, source
     }
     
     const lineItems = await buildEstimateLineItems(connection, estimate, estimateId, source);
-    const amounts = invoiceAmountsFromEstimate(estimate, null);
-    console.log(`💰 Invoice amounts: Subtotal=${amounts.subtotal}, Discount=${amounts.discountAmount} (${amounts.discountPercentage}%), GST=not set (entered on the draft), Total=${amounts.totalAmount}`);
+    const amounts = invoiceAmountsFromEstimate(estimate);
+    console.log(`💰 Invoice amounts: Subtotal=${amounts.subtotal}, Discount=${amounts.discountAmount} (${amounts.discountPercentage}%), GST=0, Total=${amounts.totalAmount}`);
     
     // Generate invoice ID
     const fpId = estimate.franchise_partner_id || null;
@@ -669,8 +658,8 @@ const generateInvoiceFromWorkOrder = async (workOrderId, completedBy = null) => 
       };
     }
     
-    // A work order carries no GST rate of its own, so the invoice is raised without one
-    const amounts = calculateInvoiceAmounts(subtotal, 0, parseFloat(workOrder.gst_percent) || 0);
+    // An invoice carries no GST: the rate is 0 and no document shows a GST line
+    const amounts = calculateInvoiceAmounts(subtotal);
     
     // Prepare line items
     const lineItems = [{
@@ -1125,7 +1114,6 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     </tr>
                     ${summaryLine('Subtotal', formatCurrency(invoice.subtotal))}
                     ${parseFloat(invoice.discount_amount) > 0 ? summaryLine(`Discount (${invoice.discount_percentage || 0}%)`, `- ${formatCurrency(invoice.discount_amount)}`, '#047857') : ''}
-                    ${summaryLine(`GST (${parseFloat(invoice.tax_percentage) || 0}%)`, formatCurrency(invoice.tax_amount))}
                     ${amountPaid > 0 ? summaryLine('Amount Paid', `- ${formatCurrency(amountPaid)}`, '#047857') : ''}
                     ${amountPaid > 0 ? summaryLine('Balance Due', formatCurrency(balanceDue)) : ''}
                     <tr>
@@ -1199,8 +1187,6 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
         discountPercentage: invoice.discount_percentage,
-        taxAmount: invoice.tax_amount,
-        taxPercentage: parseFloat(invoice.tax_percentage) || 0,
         totalAmount: totalAmount,
         balanceAmount: invoice.balance_amount || totalAmount
       });
@@ -1249,6 +1235,5 @@ module.exports = {
   generateInvoiceFromWorkOrder,
   sendInvoiceEmailNotification,
   createPaymentLinkForInvoice,
-  GST_RATE,
   DUE_DATE_DAYS
 };

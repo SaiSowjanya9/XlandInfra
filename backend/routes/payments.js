@@ -1162,8 +1162,6 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       subtotal: invoice.subtotal,
       discountAmount: invoice.discount_amount,
       discountPercentage: invoice.discount_percentage,
-      taxAmount: invoice.tax_amount,
-      taxPercentage: invoice.tax_percentage,
       totalAmount: invoice.total_amount,
       balanceAmount: invoice.balance_amount,
       workOrderId: invoice.work_order_id || invoice.est_work_order_id,
@@ -1200,7 +1198,7 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
     const fpId = getFPScope(req);
     const {
       propertyId, estimateId, customerId, customerName, customerEmail, customerPhone,
-      invoiceDate, dueDate, lineItems, subtotal, discountPercentage, taxPercentage,
+      invoiceDate, dueDate, lineItems, subtotal, discountPercentage,
       notes, termsAndConditions, workOrderId
     } = req.body;
 
@@ -1213,14 +1211,13 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
       });
     }
 
-    // Calculate amounts
+    // Calculate amounts. An invoice carries no GST: the rate is 0, whatever the request sends.
     const sub = subtotalValidation.sanitizedAmount;
     const discPct = parseFloat(discountPercentage) || 0;
-    const taxPct = parseFloat(taxPercentage) || 0;
+    const taxPct = 0;
     const discountAmount = sub * (discPct / 100);
-    const taxableAmount = sub - discountAmount;
-    const taxAmount = taxableAmount * (taxPct / 100);
-    const totalAmount = taxableAmount + taxAmount;
+    const taxAmount = 0;
+    const totalAmount = sub - discountAmount;
 
     const invoiceId = await generateInvoiceId(fpId);
 
@@ -1257,7 +1254,7 @@ router.post('/invoices', authenticate, canEditPayments, paymentCreationLimiter, 
 router.post('/invoices/create-from-estimate', authenticate, canEditPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { estimateId, customerDetails, discountPercent, gstPercent, dueDate, notes } = req.body;
+    const { estimateId, customerDetails, discountPercent, dueDate, notes } = req.body;
 
     if (!estimateId) {
       return res.status(400).json({ success: false, message: 'Estimate ID is required' });
@@ -1312,22 +1309,15 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
       });
     }
 
-    // Calculate amounts from the estimate's pre-GST subtotal. Its total already contains the
-    // estimate's GST, and charging the invoice's GST on top of it taxed the tax. The invoice's GST
-    // is only what the employee entered; none entered leaves it blank for the draft. The
-    // estimate's own discount is carried over unless the employee entered one here.
-    const gstEntered = gstPercent !== undefined && gstPercent !== null && gstPercent !== '';
-    const taxPct = gstEntered ? parseFloat(gstPercent) : null;
-    if (gstEntered && (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 100)) {
-      return res.status(400).json({ success: false, message: 'GST % must be a number between 0 and 100.' });
-    }
+    // Calculate amounts from the estimate's pre-GST subtotal: its total already contains the
+    // estimate's GST, and billing on top of it taxed the tax. The invoice itself carries no GST.
+    // The estimate's own discount is carried over unless the employee entered one here.
     const { invoiceAmountsFromEstimate } = require('../services/invoiceService');
     const discountEntered = discountPercent !== undefined && discountPercent !== null && discountPercent !== '';
     const amounts = invoiceAmountsFromEstimate(
-      discountEntered ? { ...estimate, discount_amount: 0, discount: 0, discount_percent: parseFloat(discountPercent) || 0, discount_percentage: 0 } : estimate,
-      taxPct
+      discountEntered ? { ...estimate, discount_amount: 0, discount: 0, discount_percent: parseFloat(discountPercent) || 0, discount_percentage: 0 } : estimate
     );
-    const { subtotal, discountAmount, taxAmount, totalAmount } = amounts;
+    const { subtotal, discountAmount, taxPercentage: taxPct, taxAmount, totalAmount } = amounts;
     const discPct = amounts.discountPercentage;
 
     // Parse line items from estimate - capture full service details
@@ -1488,7 +1478,7 @@ router.post('/invoices/create-from-estimate', authenticate, canEditPayments, asy
 router.post('/invoices/create-generic', authenticate, canEditPayments, async (req, res) => {
   try {
     const fpId = getFPScope(req);
-    const { customerDetails, lineItems, discountPercent, gstPercent, invoiceDate, dueDate, notes, sendEmail, propertyId, propertyCode } = req.body;
+    const { customerDetails, lineItems, discountPercent, invoiceDate, dueDate, notes, sendEmail, propertyId, propertyCode } = req.body;
 
     // Validate required fields
     if (!customerDetails?.name || !customerDetails?.email) {
@@ -1505,14 +1495,13 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
       return res.status(400).json({ success: false, message: 'At least one valid line item is required' });
     }
 
-    // Calculate amounts
+    // Calculate amounts. An invoice carries no GST: the rate is 0 on every invoice.
     const subtotal = validItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0);
     const discPct = parseFloat(discountPercent) || 0;
-    const taxPct = parseFloat(gstPercent) || 0;
+    const taxPct = 0;
     const discountAmount = subtotal * (discPct / 100);
-    const taxableAmount = subtotal - discountAmount;
-    const taxAmount = taxableAmount * (taxPct / 100);
-    const totalAmount = taxableAmount + taxAmount;
+    const taxAmount = 0;
+    const totalAmount = subtotal - discountAmount;
 
     // Generate invoice ID
     const invoiceIdGen = await generateInvoiceId(fpId);
@@ -1694,10 +1683,6 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                         <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(discountAmount)}</td>
                       </tr>
                       ` : ''}
-                      <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${taxPct}%)</td>
-                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(taxAmount)}</td>
-                      </tr>
                       <tr style="border-top: 2px solid #10b981;">
                         <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">Grand Total</td>
                         <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(totalAmount)}</td>
@@ -1768,7 +1753,7 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
     const fpId = getFPScope(req);
     const {
       customerName, customerEmail, customerPhone,
-      invoiceDate, dueDate, lineItems, subtotal, discountPercentage, taxPercentage,
+      invoiceDate, dueDate, lineItems, subtotal, discountPercentage,
       notes, termsAndConditions, status
     } = req.body;
 
@@ -1787,28 +1772,13 @@ router.put('/invoices/:id', authenticate, canEditPayments, async (req, res) => {
 
     const invoice = existing[0];
 
-    // GST is entered by an employee on the draft and is locked once the invoice has been sent.
-    // A stored NULL means "not entered yet" and stays NULL until someone enters a rate.
-    const storedTax = invoice.tax_percentage === null || invoice.tax_percentage === undefined ? null : parseFloat(invoice.tax_percentage);
-    let taxPct = storedTax;
-    if (taxPercentage !== undefined && taxPercentage !== null && taxPercentage !== '') {
-      const requestedTax = parseFloat(taxPercentage);
-      if (!Number.isFinite(requestedTax) || requestedTax < 0 || requestedTax > 100) {
-        return res.status(400).json({ success: false, message: 'GST % must be a number between 0 and 100.' });
-      }
-      if (requestedTax !== storedTax && invoice.status && invoice.status !== 'draft') {
-        return res.status(409).json({ success: false, message: 'GST can only be changed before the invoice is sent.' });
-      }
-      taxPct = requestedTax;
-    }
-
-    // Calculate amounts
+    // Calculate amounts. An invoice carries no GST: there is nothing to enter and nothing to lock.
+    const taxPct = 0;
     const sub = parseFloat(subtotal) || parseFloat(invoice.subtotal);
     const discPct = discountPercentage !== undefined ? parseFloat(discountPercentage) : parseFloat(invoice.discount_percentage);
     const discountAmount = sub * (discPct / 100);
-    const taxableAmount = sub - discountAmount;
-    const taxAmount = taxableAmount * ((taxPct || 0) / 100);
-    const totalAmount = taxableAmount + taxAmount;
+    const taxAmount = 0;
+    const totalAmount = sub - discountAmount;
     const amountPaid = parseFloat(invoice.amount_paid) || 0;
     // Editing the total down past what was paid stored a negative balance — clamp like every
     // other settlement writer
@@ -2116,12 +2086,6 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       return res.status(400).json({ success: false, message: 'Customer email not found. Please update the invoice with customer email.' });
     }
 
-    // An invoice raised from an estimate starts with its GST blank: it is not the estimate's, an
-    // employee enters it on the draft. Nothing goes to the customer until they have.
-    if (invoice.tax_percentage === null || invoice.tax_percentage === undefined) {
-      return res.status(400).json({ success: false, code: 'GST_NOT_SET', message: 'Enter the GST % on this invoice before sending it.' });
-    }
-    
     // Create Razorpay payment link if needed (stored in DB for later use)
     if (!invoice.razorpay_short_url || invoice.payment_link_status === 'expired' || invoice.payment_link_status === 'cancelled') {
       try {
@@ -2169,8 +2133,6 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
         lineItems: invoice.line_items,
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
-        taxAmount: invoice.tax_amount,
-        taxPercentage: invoice.tax_percentage,
         totalAmount: invoice.total_amount,
         balanceAmount: invoice.balance_amount,
         workOrderId: invoice.work_order_id || invoice.est_work_order_id,
@@ -2297,10 +2259,6 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                     <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(invoice.discount_amount)}</td>
                   </tr>
                   ` : ''}
-                  <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">GST (${parseFloat(invoice.tax_percentage) || 0}%)</td>
-                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.tax_amount)}</td>
-                  </tr>
                   <tr style="border-top: 2px solid #C9A227;">
                     <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #C9A227;">Grand Total</td>
                     <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #C9A227;">${formatAmount(invoice.total_amount)}</td>

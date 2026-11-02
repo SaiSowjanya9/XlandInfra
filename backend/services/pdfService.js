@@ -938,7 +938,7 @@ const generateInvoicePDF = async (invoice) => {
         invoiceId, estimateId, invoiceType, customerName, customerEmail, customerPhone,
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
-        lineItems, subtotal, discountAmount, discountPercentage, taxAmount, taxPercentage,
+        lineItems, subtotal, discountAmount, discountPercentage,
         totalAmount, balanceAmount, amountPaid,
         workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
@@ -1053,7 +1053,7 @@ const generateInvoicePDF = async (invoice) => {
       if (figure(discountAmount) > 0) {
         summaryRows.push([`Discount (${money(figure(discountPercentage))}%)`, `- ${rupees(discountAmount)}`, '#047857']);
       }
-      summaryRows.push([`GST (${money(figure(taxPercentage))}%)`, rupees(taxAmount)]);
+      // No tax row: an invoice carries no GST, so a zero-rate line would say nothing
       if (paid > 0) {
         summaryRows.push(['Amount Paid', `- ${rupees(paid)}`, '#047857']);
         summaryRows.push(['Balance Due', rupees(balance)]);

@@ -2475,7 +2475,7 @@ const sendInvoiceEmail = async (invoice) => {
   const {
     invoiceId, customerName, customerEmail, customerPhone,
     propertyName, propertyCode, propertyType, zone, city, estimateId,
-    subtotal, discountAmount, taxAmount, taxPercentage, totalAmount, balanceAmount,
+    subtotal, discountAmount, totalAmount, balanceAmount,
     invoiceDate, dueDate, lineItems, paymentLink, billingDuration,
     invoiceType, workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
   } = invoice;
@@ -2607,8 +2607,6 @@ const sendInvoiceEmail = async (invoice) => {
       lineItems,
       subtotal,
       discountAmount,
-      taxAmount,
-      taxPercentage,
       totalAmount,
       balanceAmount,
       workOrderId,
@@ -2783,10 +2781,6 @@ const sendInvoiceEmail = async (invoice) => {
                   <td width="60%" style="padding: 8px 0; color: #059669; font-size: 14px;">Discount</td>
                   <td width="40%" style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">-${formatCurrency(discountAmount)}</td>
                 </tr>` : ''}
-                <tr>
-                  <td width="60%" style="padding: 8px 0; color: #6b7280; font-size: 14px;">GST (${parseFloat(taxPercentage) || 0}%)</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">${formatCurrency(taxAmount)}</td>
-                </tr>
                 <tr>
                   <td colspan="2" style="padding: 8px 0;"><hr style="border: none; border-top: 2px solid #c9a227; margin: 0;"></td>
                 </tr>

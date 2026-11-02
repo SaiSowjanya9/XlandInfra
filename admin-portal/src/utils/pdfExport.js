@@ -1782,24 +1782,19 @@ export const exportInvoiceToPDF = (invoice) => {
     // Price summary box
     doc.setDrawColor(...borderGray);
     doc.setLineWidth(0.3);
-    doc.roundedRect(summaryX, y, summaryWidth, 36, 3, 3, 'S');
+    doc.roundedRect(summaryX, y, summaryWidth, 29, 3, 3, 'S');
     
     let sy = y + 9;
     const labelX = summaryX + 6;
     const valueX = summaryX + summaryWidth - 6;
     
+    // No GST line: an invoice carries no GST
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryText);
     doc.text('Subtotal:', labelX, sy);
     doc.setTextColor(...primaryText);
     doc.text('Rs. ' + Math.round(invoice.subtotal || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
-    sy += 7;
-    
-    doc.setTextColor(...secondaryText);
-    doc.text('GST (' + (parseFloat(invoice.taxPercentage) || 0).toFixed(2) + '%):', labelX, sy);
-    doc.setTextColor(...primaryText);
-    doc.text('Rs. ' + Math.round(invoice.taxAmount || 0).toLocaleString('en-IN'), valueX, sy, { align: 'right' });
     sy += 8;
     
     doc.setDrawColor(...borderGray);
@@ -1812,7 +1807,7 @@ export const exportInvoiceToPDF = (invoice) => {
     doc.setTextColor(...gold);
     doc.text('Rs. ' + Math.round(invoice.totalAmount || 0).toLocaleString('en-IN'), valueX, sy + 2, { align: 'right' });
     
-    y += 42;
+    y += 35;
 
     // ===== FOOTER =====
     const footerY = Math.max(y, pageHeight - 15);

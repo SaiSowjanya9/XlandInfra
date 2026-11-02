@@ -567,8 +567,6 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       'Subtotal (₹)': parseFloat(inv.subtotal) || 0,
       'Discount (%)': parseFloat(inv.discountPercent) || 0,
       'Discount Amount (₹)': parseFloat(inv.discountAmount) || 0,
-      'Tax/GST (%)': parseFloat(inv.taxPercent) || 0,
-      'Tax Amount (₹)': parseFloat(inv.taxAmount) || 0,
       'Total Amount (₹)': parseFloat(inv.totalAmount) || 0,
       'Amount Paid (₹)': parseFloat(inv.amountPaid) || 0,
       'Balance Due (₹)': parseFloat(inv.balanceAmount) || 0,
@@ -581,8 +579,8 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     wsInvoices['!cols'] = [
       { wch: 6 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 20 },
       { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 12 },
-      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }
+      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }
     ];
     XLSX.utils.book_append_sheet(wb, wsInvoices, 'Invoices');
 
@@ -1888,10 +1886,6 @@ const InvoiceDetailPanel = ({
                       <span className="font-semibold text-emerald-700">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between px-3 py-1.5 text-xs">
-                    <span className="text-warm-muted">GST ({(parseFloat(invoice.taxPercentage) || 0).toFixed(2)}%)</span>
-                    <span className="font-semibold text-warm-text">Rs. {Math.round(invoice.taxAmount || 0).toLocaleString('en-IN')}</span>
-                  </div>
                 </div>
                 <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
                   <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
