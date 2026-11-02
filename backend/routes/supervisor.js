@@ -18,7 +18,7 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
-const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
+const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
 // Rate limiting for login endpoints
 const { loginRateLimiter, uploadRateLimiter } = require('../middleware/security');
 // Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
@@ -1818,6 +1818,13 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       clientType, companyName, propertyId, gstNumber
     } = req.body;
 
+    // One email, one customer account -- and a second entry is refused, never merged.
+    // Checked before the property and client rows are written, for both the property
+    // form and the simple create below. See utils/customerEmailGuard.js.
+    if (await customerEmailExists(pool, associationContacts?.[0]?.email || email)) {
+      return res.status(409).json(customerEmailExistsResponse());
+    }
+
     // Check if this is a property form submission
     if (zone && communityName) {
       const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
@@ -1902,7 +1909,6 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 
       let customerResult = null;
       let emailSent = false;
-      let accountLinked = false;
       let emailNote = '';
       if (contactEmail) {
         const tempPassword = generateTempPassword();
@@ -1910,74 +1916,34 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
-        const [existing] = await pool.query('SELECT id, is_activated FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
+        // The route's guard ran before the property row, so this email is new
+        [customerResult] = await pool.query(
+          `INSERT INTO customer_accounts (
+            customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
+            activation_token, activation_expires, is_activated, created_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
+            tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'supervisor']
+        );
 
-        if (existing.length === 0) {
-          [customerResult] = await pool.query(
-            `INSERT INTO customer_accounts (
-              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
-              activation_token, activation_expires, is_activated, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [clientId, contactName, '', contactEmail.toLowerCase(), `${contactCountryCode}${contactPhone}`,
-              tempPasswordHash, propertyResult.insertId, propertyIdGen, activationToken, activationExpires, 0, 'supervisor']
-          );
-
-          // Send activation email
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          const emailResult = await sendCustomerActivationEmail({
-            email: contactEmail.toLowerCase(),
-            firstName: contactName,
-            tempPassword,
-            activationLink,
-            propertyName: communityName,
-            propertyId: propertyIdGen
-          });
-          emailSent = emailResult.success;
-          emailNote = emailSent ? 'activation email sent' : 'activation email could not be sent';
-        } else {
-          // The account exists and still points at the property that created it —
-          // attach this one first, then decide what to send.
-          accountLinked = await linkCustomerToProperty(pool, existing[0].id, {
-            propertyId: propertyResult.insertId, propertyCode: propertyIdGen, propertyName: communityName
-          });
-          if (!existing[0].is_activated) {
-            // Resend activation email for inactive account
-            await pool.query(
-              `UPDATE customer_accounts
-               SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
-               WHERE id = ?`,
-              [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-            );
-
-            const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-            const emailResult = await sendCustomerActivationEmail({
-              email: contactEmail.toLowerCase(),
-              firstName: contactName,
-              tempPassword,
-              activationLink,
-              propertyName: communityName,
-              propertyId: propertyIdGen
-            });
-            emailSent = emailResult.success;
-            emailNote = emailSent ? 'activation email resent' : 'activation email could not be sent';
-          } else {
-            // Already activated: no credentials to re-issue — notify instead, but
-            // do not claim they were added if the link itself failed.
-            emailSent = accountLinked ? await notifyPropertyAdded({
-              email: contactEmail.toLowerCase(), firstName: contactName,
-              propertyName: communityName, propertyCode: propertyIdGen
-            }) : false;
-            emailNote = accountLinked
-              ? 'existing account linked' + (emailSent ? ' — notification email sent' : ' — notification email could not be sent')
-              : 'existing account could not be linked';
-          }
-        }
+        // Send activation email
+        const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+        const emailResult = await sendCustomerActivationEmail({
+          email: contactEmail.toLowerCase(),
+          firstName: contactName,
+          tempPassword,
+          activationLink,
+          propertyName: communityName,
+          propertyId: propertyIdGen
+        });
+        emailSent = emailResult.success;
+        emailNote = emailSent ? 'activation email sent' : 'activation email could not be sent';
       }
 
       res.status(201).json({
         success: true,
         message: 'Property and customer created successfully' + (emailNote ? ` — ${emailNote}` : ''),
-        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent, accountLinked, emailNote }
+        data: { propertyId: propertyIdGen, clientId, customerId: customerResult?.insertId || null, emailSent, emailNote }
       });
     } else {
       const clientId = `CLT-${Date.now()}`;
@@ -1999,44 +1965,22 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
         const activationToken = generateActivationToken();
         const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
 
-        const [existing] = await pool.query(
-          'SELECT id, is_activated FROM customer_accounts WHERE email = ?', [email.toLowerCase()]
+        // The route's guard ran before the client row, so this email is new
+        await pool.query(
+          `INSERT INTO customer_accounts (customer_id, first_name, last_name, email, phone, temp_password_hash,
+            activation_token, activation_expires, is_activated, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [clientId, name, '', email.toLowerCase(), phone || '', tempPasswordHash, activationToken, activationExpires, 0, 'supervisor']
         );
-        
-        if (existing.length === 0) {
-          await pool.query(
-            `INSERT INTO customer_accounts (customer_id, first_name, last_name, email, phone, temp_password_hash,
-              activation_token, activation_expires, is_activated, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [clientId, name, '', email.toLowerCase(), phone || '', tempPasswordHash, activationToken, activationExpires, 0, 'supervisor']
-          );
-          
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          console.log('📧 Sending activation email (supervisor simple create) to:', email.toLowerCase());
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
-            });
-            emailSent = emailResult.success;
-          } catch (emailError) {
-            console.error('📧 Email sending failed:', emailError);
-          }
-        } else if (!existing[0].is_activated) {
-          await pool.query(
-            `UPDATE customer_accounts SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW() WHERE id = ?`,
-            [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-          );
-          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-          try {
-            const emailResult = await sendCustomerActivationEmail({
-              email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
-            });
-            emailSent = emailResult.success;
-          } catch (emailError) {
-            console.error('📧 Email resend failed:', emailError);
-          }
-        } else {
-          // Already activated: no credentials to re-issue and no property to attach.
-          emailNote = 'contact already has a portal account';
+
+        const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+        console.log('📧 Sending activation email (supervisor simple create) to:', email.toLowerCase());
+        try {
+          const emailResult = await sendCustomerActivationEmail({
+            email: email.toLowerCase(), firstName: name, tempPassword, activationLink, propertyName: companyName || 'XLAND INFRA', propertyId: propertyId || clientId
+          });
+          emailSent = emailResult.success;
+        } catch (emailError) {
+          console.error('📧 Email sending failed:', emailError);
         }
       }
 

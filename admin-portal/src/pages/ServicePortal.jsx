@@ -590,7 +590,8 @@ const Onboarding = ({ admin }) => {
       }
     } catch (err) {
       console.error('Submit error:', err);
-      alert('An error occurred while saving. Please try again.');
+      // The server's own message, so a refused duplicate contact email reads as one
+      alert(err.message || 'An error occurred while saving. Please try again.');
     } finally {
       setSubmitting(false);
     }

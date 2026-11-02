@@ -15,7 +15,7 @@ const { pool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sendCustomerActivationEmail } = require('../services/emailService');
-const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
+const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
 // Rate limiting for login endpoints
 const { loginRateLimiter } = require('../middleware/security');
 // Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
@@ -1325,57 +1325,16 @@ async function createCustomerAccountAndSendEmail(customerData) {
     console.log('📧 [CreateCustomerAccount] Generated temp password and token');
     console.log('📧 [CreateCustomerAccount] Activation link:', activationLink);
 
-    // Check if customer account already exists
-    const [existing] = await pool.query(
-      'SELECT id, is_activated FROM customer_accounts WHERE email = ?',
-      [emailLower]
+    // The route's guard ran before the property and client rows, so this email is new
+    console.log('📧 [CreateCustomerAccount] Creating new customer account');
+    await pool.query(
+      `INSERT INTO customer_accounts (
+        customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
+        activation_token, activation_expires, is_activated, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [clientId, customerName || '', '', emailLower, customerPhone || '',
+        tempPasswordHash, propertyId, propertyCode, activationToken, activationExpires, 0, 'executive']
     );
-
-    if (existing.length > 0 && existing[0].is_activated) {
-      // Activated: there are no credentials to re-issue. Attach the property just
-      // created (when there is one) and notify -- the account's own password is what
-      // gets them in.
-      console.log('📧 [CreateCustomerAccount] Account already exists and is activated');
-      if (propertyId || propertyCode) {
-        const accountLinked = await linkCustomerToProperty(pool, existing[0].id, {
-          propertyId, propertyCode, propertyName
-        });
-        // Do not tell them they were added when the link itself failed.
-        const notified = accountLinked ? await notifyPropertyAdded({
-          email: emailLower, firstName: customerName || 'Customer',
-          propertyName: propertyName || 'XLAND INFRA', propertyCode
-        }) : false;
-        return { success: true, emailSent: notified, accountLinked };
-      }
-      return { success: true, emailSent: false, alreadyActivated: true };
-    }
-
-    if (existing.length > 0) {
-      // Update existing inactive account
-      console.log('📧 [CreateCustomerAccount] Updating existing inactive account');
-      await pool.query(
-        `UPDATE customer_accounts
-         SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
-         WHERE id = ?`,
-        [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-      );
-      // A still-unactivated account found under a new property should activate into
-      // that property, not the stale one it was first created for.
-      if (propertyId || propertyCode) {
-        await linkCustomerToProperty(pool, existing[0].id, { propertyId, propertyCode, propertyName });
-      }
-    } else {
-      // Create new customer account
-      console.log('📧 [CreateCustomerAccount] Creating new customer account');
-      await pool.query(
-        `INSERT INTO customer_accounts (
-          customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
-          activation_token, activation_expires, is_activated, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [clientId, customerName || '', '', emailLower, customerPhone || '',
-          tempPasswordHash, propertyId, propertyCode, activationToken, activationExpires, 0, 'executive']
-      );
-    }
 
     // Send activation email
     console.log('📧 [CreateCustomerAccount] Sending activation email to:', emailLower);
@@ -1416,6 +1375,13 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
       name, email, phone, alternatePhone, zipCode,
       clientType, companyName, propertyId, gstNumber
     } = req.body;
+
+    // One email, one customer account -- and a second entry is refused, never merged.
+    // Checked before the property and client rows are written, for both the property
+    // form and the simple create below. See utils/customerEmailGuard.js.
+    if (await customerEmailExists(pool, associationContacts?.[0]?.email || email)) {
+      return res.status(409).json(customerEmailExistsResponse());
+    }
 
     // Property form submission (with zone and communityName)
     if (zone && communityName) {
@@ -1515,17 +1481,13 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         propertyCode: propertyIdGen
       });
 
-      const emailNote = emailResult.alreadyActivated
-        ? 'contact already has a portal account'
-        : emailResult.accountLinked
-        ? 'existing account linked' + (emailResult.emailSent ? ' — notification email sent' : ' — notification email could not be sent')
-        : emailResult.emailSent ? 'activation email sent'
+      const emailNote = emailResult.emailSent ? 'activation email sent'
         : emailResult.reason === 'no_email' ? '' : 'activation email could not be sent';
 
       res.status(201).json({
         success: true,
         message: 'Property and customer created successfully' + (emailNote ? ` — ${emailNote}` : ''),
-        data: { propertyId: propertyIdGen, clientId, emailSent: emailResult.emailSent || false, accountLinked: !!emailResult.accountLinked, emailNote }
+        data: { propertyId: propertyIdGen, clientId, emailSent: emailResult.emailSent || false, emailNote }
       });
 
     } else {
@@ -1551,8 +1513,7 @@ router.post('/customers', requireExecutiveScope, async (req, res) => {
         propertyName: companyName || 'XLAND INFRA'
       });
 
-      const emailNote = emailResult.alreadyActivated ? 'contact already has a portal account'
-        : emailResult.emailSent ? 'activation email sent'
+      const emailNote = emailResult.emailSent ? 'activation email sent'
         : emailResult.reason === 'no_email' ? '' : 'activation email could not be sent';
 
       res.json({

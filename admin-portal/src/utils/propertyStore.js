@@ -135,7 +135,7 @@ const createCustomerAccounts = async (contacts, propertyData, createdBy) => {
   if (primaryEmail) {
     handled.add(primaryEmail);
     if (primaryEmail.includes('@')) {
-      const ok = Boolean(propertyData.emailSent || propertyData.accountLinked);
+      const ok = Boolean(propertyData.emailSent);
       results.push({
         email: contacts[0].email,
         success: ok,
@@ -252,9 +252,17 @@ export const saveProperty = async (formData, entryType, category, createdBy = 's
     });
     
     if (!res.ok) {
+      // The body carries the reason -- a 409 is the "this user already exists" refusal,
+      // and `Server error: 409` is what the screens used to show instead of it.
       const errorText = await res.text();
       console.error('saveProperty HTTP error:', res.status, errorText);
-      throw new Error(`Server error: ${res.status}`);
+      let message = '';
+      try {
+        message = JSON.parse(errorText)?.message || '';
+      } catch {
+        message = '';
+      }
+      throw new Error(message || `Server error: ${res.status}`);
     }
     
     const json = await res.json();

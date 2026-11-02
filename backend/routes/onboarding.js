@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { pool } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { sendCustomerActivationEmail } = require('../services/emailService');
-const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
+const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
 const { canonicalZoneName } = require('../utils/zoneDelete');
 
 // Constants for customer activation
@@ -135,6 +135,16 @@ router.post('/', authenticate, async (req, res) => {
     // Primary contact denormalized onto the property row (staff portals do the same)
     const primaryContact = associationContacts?.[0] || {};
 
+    // One email, one customer account -- and a second entry is refused, never merged.
+    // Checked before the property, contact and client rows are written: this route used
+    // to onboard the property and then re-point the existing login at it. Every contact
+    // is checked, not just the primary, because the admin portal creates an account for
+    // each one that has an email.
+    if (await customerEmailExists(conn, (associationContacts || []).map(c => c?.email))) {
+      await conn.rollback();
+      return res.status(409).json(customerEmailExistsResponse());
+    }
+
     const [result] = await conn.execute(
       `INSERT INTO onboarded_properties
         (property_id, entry_type, category, zone, area_name, division, property_type,
@@ -256,7 +266,6 @@ router.post('/', authenticate, async (req, res) => {
 
     // Create customer account and send activation email if contact email exists
     let emailSent = false;
-    let accountLinked = false;
     let emailNote = '';
     if (associationContacts && associationContacts.length > 0) {
       const primaryContact = associationContacts[0];
@@ -268,88 +277,41 @@ router.post('/', authenticate, async (req, res) => {
           const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
           const customerId = `CUST-${Date.now()}`;
 
-          // Check if customer already exists
-          const [existing] = await pool.execute(
-            'SELECT id, is_activated FROM customer_accounts WHERE email = ?',
-            [primaryContact.email.toLowerCase()]
+          // The guard above ran before the first INSERT, so this email is new
+          await pool.execute(
+            `INSERT INTO customer_accounts (
+              customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
+              activation_token, activation_expires, is_activated, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              customerId,
+              primaryContact.name || '',
+              '',
+              primaryContact.email.toLowerCase(),
+              primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
+              tempPasswordHash,
+              insertedId,
+              propertyId,
+              activationToken,
+              activationExpires,
+              0,
+              creatorName
+            ]
           );
 
-          if (existing.length === 0) {
-            // Create new customer account
-            await pool.execute(
-              `INSERT INTO customer_accounts (
-                customer_id, first_name, last_name, email, phone, temp_password_hash, property_id, property_code,
-                activation_token, activation_expires, is_activated, created_by
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                customerId,
-                primaryContact.name || '',
-                '',
-                primaryContact.email.toLowerCase(),
-                primaryContact.phone ? `${primaryContact.countryCode || '+91'}${primaryContact.phone}` : '',
-                tempPasswordHash,
-                insertedId,
-                propertyId,
-                activationToken,
-                activationExpires,
-                0,
-                creatorName
-              ]
-            );
-
-            // Send activation email
-            const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-            const emailResult = await sendCustomerActivationEmail({
-              email: primaryContact.email.toLowerCase(),
-              firstName: primaryContact.name || 'Customer',
-              tempPassword,
-              activationLink,
-              propertyName: communityName,
-              propertyId: propertyId
-            });
-            emailSent = emailResult.success;
-            emailNote = emailSent ? 'activation email sent' : 'activation email could not be sent';
-            console.log(`📧 Customer activation email sent to ${primaryContact.email}: ${emailSent}`);
-          } else {
-            // The account exists and still points at the property that created it —
-            // attach this one first, then decide what to send.
-            accountLinked = await linkCustomerToProperty(pool, existing[0].id, {
-              propertyId: insertedId, propertyCode: propertyId, propertyName: communityName
-            });
-            if (!existing[0].is_activated) {
-              // Resend activation email for inactive account
-              await pool.execute(
-                `UPDATE customer_accounts
-                 SET temp_password_hash = ?, activation_token = ?, activation_expires = ?, updated_at = NOW()
-                 WHERE id = ?`,
-                [tempPasswordHash, activationToken, activationExpires, existing[0].id]
-              );
-
-              const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-              const emailResult = await sendCustomerActivationEmail({
-                email: primaryContact.email.toLowerCase(),
-                firstName: primaryContact.name || 'Customer',
-                tempPassword,
-                activationLink,
-                propertyName: communityName,
-                propertyId: propertyId
-              });
-              emailSent = emailResult.success;
-              emailNote = emailSent ? 'activation email resent' : 'activation email could not be sent';
-            } else {
-              // Already activated: no credentials to re-issue — notify instead, but
-              // do not claim they were added if the link itself failed.
-              emailSent = accountLinked ? await notifyPropertyAdded({
-                email: primaryContact.email.toLowerCase(),
-                firstName: primaryContact.name || 'Customer',
-                propertyName: communityName,
-                propertyCode: propertyId
-              }) : false;
-              emailNote = accountLinked
-                ? 'existing account linked' + (emailSent ? ' — notification email sent' : ' — notification email could not be sent')
-                : 'existing account could not be linked';
-            }
-          }
+          // Send activation email
+          const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
+          const emailResult = await sendCustomerActivationEmail({
+            email: primaryContact.email.toLowerCase(),
+            firstName: primaryContact.name || 'Customer',
+            tempPassword,
+            activationLink,
+            propertyName: communityName,
+            propertyId: propertyId
+          });
+          emailSent = emailResult.success;
+          emailNote = emailSent ? 'activation email sent' : 'activation email could not be sent';
+          console.log(`📧 Customer activation email sent to ${primaryContact.email}: ${emailSent}`);
         } catch (emailError) {
           console.error('Error creating customer account or sending email:', emailError.message);
         }
@@ -368,7 +330,6 @@ router.post('/', authenticate, async (req, res) => {
         division,
         totalUnits,
         emailSent,
-        accountLinked,
         emailNote,
         createdAt: new Date().toISOString()
       }

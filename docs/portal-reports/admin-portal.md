@@ -268,7 +268,7 @@ check.
 The suites that should be run are:
 - `node --test backend/routes/paymentsVerify.test.js backend/routes/paymentReceiptRoutes.test.js`
 - `node --test backend/utils/workOrderId.test.js`
-- `node --test backend/utils/customerPropertyLink.test.js`
+- `node --test backend/utils/customerEmailGuard.test.js`
 - `cd admin-portal && npx vite build --outDir /tmp/build-admin`
 
 ---

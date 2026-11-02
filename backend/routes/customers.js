@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { sendCustomerActivationEmail, sendPasswordResetConfirmation, sendPasswordResetEmail, sendPasswordResetSuccess } = require('../services/emailService');
 const { issueActivation } = require('../utils/customerActivation');
-const { linkCustomerToProperty, notifyPropertyAdded } = require('../utils/customerPropertyLink');
+const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
 const { fetchPartnerName } = require('../utils/franchisePartnerName');
 // Rate limiting for login and password reset endpoints
 const { loginRateLimiter, passwordResetLimiter, sensitiveOperationLimiter, sanitizeString } = require('../middleware/security');
@@ -287,95 +287,13 @@ router.post('/create', authenticate, requireCustomerCreator, async (req, res) =>
       });
     }
 
-    // Check if customer already exists
-    const [existing] = await conn.execute(
-      'SELECT id, customer_id, is_activated FROM customer_accounts WHERE email = ?',
-      [email.toLowerCase()]
-    );
-
-    if (existing.length > 0) {
-      // Already activated: this used to be a 400, which left the just-saved property
-      // with no portal access and the contact never told. Link the account to the
-      // property and notify instead -- their own password gets them in.
-      if (existing[0].is_activated) {
-        if (!propertyId && !propertyCode) {
-          // Nothing to attach it to -- blanking property_id would unlink their
-          // current property, so keep the old refusal here.
-          await conn.rollback();
-          return res.status(400).json({
-            success: false,
-            message: 'A customer account with this email already exists and is active.'
-          });
-        }
-        const accountLinked = await linkCustomerToProperty(conn, existing[0].id, {
-          propertyId, propertyCode, propertyName
-        });
-        await conn.commit();
-
-        const emailSent = accountLinked ? await notifyPropertyAdded({
-          email: email.toLowerCase(), firstName,
-          propertyName, propertyCode
-        }) : false;
-
-        return res.json({
-          success: true,
-          message: 'Existing customer account linked to the property' + (emailSent ? ' — notification email sent' : ''),
-          data: {
-            customerId: existing[0].customer_id,
-            email: email.toLowerCase(),
-            emailSent,
-            accountLinked
-          }
-        });
-      }
-
-      // If exists but not activated, resend activation email
-      const tempPassword = generateTempPassword();
-      const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
-      const activationToken = generateActivationToken();
-      const activationExpires = new Date(Date.now() + ACTIVATION_EXPIRY_HOURS * 60 * 60 * 1000);
-
-      await conn.execute(
-        `UPDATE customer_accounts
-         SET temp_password_hash = ?,
-             activation_token = ?,
-             activation_expires = ?,
-             first_name = COALESCE(?, first_name),
-             last_name = COALESCE(?, last_name),
-             phone = COALESCE(?, phone),
-             updated_at = NOW()
-         WHERE id = ?`,
-        [tempPasswordHash, activationToken, activationExpires, firstName, lastName, phone, existing[0].id]
-      );
-
-      // A still-unactivated account found under a new property should activate into
-      // that property, not the stale one it was first created for.
-      if (propertyId || propertyCode) {
-        await linkCustomerToProperty(conn, existing[0].id, { propertyId, propertyCode, propertyName });
-      }
-
-      await conn.commit();
-
-      // Send activation email
-      const activationLink = `${FRONTEND_URL}/activate/${activationToken}`;
-      await sendCustomerActivationEmail({
-        email: email.toLowerCase(),
-        firstName,
-        tempPassword,
-        activationLink,
-        propertyName,
-        propertyId: propertyCode || propertyId
-      });
-
-      return res.json({
-        success: true,
-        message: 'Activation email resent successfully',
-        data: {
-          customerId: existing[0].customer_id,
-          email: email.toLowerCase(),
-          emailSent: true
-        }
-      });
+    // One email, one customer account -- and a second entry is refused, never merged.
+    // This route used to re-issue credentials for an unactivated row and re-point an
+    // activated one at the property just added, which moved the login off the property
+    // it already held. See utils/customerEmailGuard.js.
+    if (await customerEmailExists(conn, email)) {
+      await conn.rollback();
+      return res.status(409).json(customerEmailExistsResponse());
     }
 
     // Generate credentials

@@ -32,12 +32,12 @@ small, and I checked afterwards that every one was still in place.
   confirm this without the database.
 
 ### 2. Add Customer
-- **What it does:** Adds a property and its customer, and creates or links the customer's portal
-  login.
+- **What it does:** Adds a property and its customer, and creates the customer's portal login.
 - **Checked:** The requests match the server. This flow was reworked recently (the "one email,
-  one account" rules) and the code follows those rules.
-- **Status:** No new problems found. **Not testable locally:** activation and "you've been added"
-  emails, because email (SMTP) isn't set up here.
+  one account" rules) and the code follows those rules — an email that already has a login is
+  refused before anything is written.
+- **Status:** No new problems found. **Not testable locally:** the activation email, because
+  email (SMTP) isn't set up here.
 
 ### 3. Property Management
 - **What it does:** Lists properties, edits, archives, restores, permanently deletes, and assigns

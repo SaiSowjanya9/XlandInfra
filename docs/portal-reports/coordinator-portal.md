@@ -43,10 +43,9 @@ wrong. **Fixed.**
 ### 2. Add Customer
 **What it does:** adds a property, plus the customer's portal login.
 **What I checked:** the form's request, the server route, and the "one email = one customer
-account" rule (new / not yet activated / already activated).
-**Status:** looks correct. It follows the agreed rule for all three cases.
-**Not testable here:** the activation and "you've been added" emails (email is not set up on local
-machines).
+account" rule (new email, or one that already has a login).
+**Status:** looks correct. A known email is refused before anything is written.
+**Not testable here:** the activation email (email is not set up on local machines).
 
 ### 3. Property Management
 **What it does:** lists properties, lets you view and edit them, and shows their estimates and
@@ -168,7 +167,7 @@ their own automated tests. I found nothing coordinator-specific to fix.
 
 Start a local server on a spare port, sign in as a coordinator, and try each item above. Then run:
 
-- `node --test backend/routes/staffServiceCatalog.test.js backend/routes/marketing.test.js backend/utils/workOrderId.test.js backend/utils/customerPropertyLink.test.js`
+- `node --test backend/routes/staffServiceCatalog.test.js backend/routes/marketing.test.js backend/utils/workOrderId.test.js backend/utils/customerEmailGuard.test.js`
 - `cd admin-portal && npx vite build --outDir /tmp/build-coord` (checks the screens still compile)
 
 ---

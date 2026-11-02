@@ -261,40 +261,50 @@ Mistakes that fail silently and have each already broken live endpoints:
   `--apply`. Only `fp_estimates.work_order_id` and `invoices.source_work_order_id` refer to the code;
   every other reference uses `work_orders.id`.
 
-## One Email, One Customer Account, One Property
+## One Email, One Customer Account
 
 `customer_accounts.email` is `UNIQUE`, so a contact email owns exactly one portal login
 system-wide, and the account's `property_id`/`property_code`/`property_name` point at a
-single property. Every Add Customer / onboarding route resolves the same triage:
+single property. **A second entry under an email that already has a row is refused, and
+nothing is written:**
 
 - **No row** → create the account and send the activation email.
-- **Row, not activated** → re-issue the token/temp password and resend — and relink first,
-  so the link activates into the property it was just added to, not the stale one.
-- **Row, activated** → relink via `linkCustomerToProperty` and send the
-  "you've been added" notification (`notifyPropertyAdded`) — never an activation, which
-  would mint a temp password for an account that already has one.
-  Both live in `backend/utils/customerPropertyLink.js`; all seven call sites (onboarding,
-  FP/Manager/Coordinator/Supervisor/Executive property *and* simple create, and
-  `POST /api/customers/create`) go through it. Regression test:
-  `node --test backend/utils/customerPropertyLink.test.js`.
+- **Any existing row** → `409` / `CUSTOMER_EMAIL_EXISTS`, "This user already exists.
+  Please check with the admin to know more." No property, no client row, no account, no
+  email. `is_active` and `is_activated` are deliberately *not* part of the test: a
+  soft-deleted customer still owns its row, and reviving it by retyping the customer is
+  exactly the silent relink this guard replaced.
 
-The activated case used to fall through with no `else` — no email, no link, a silent
-success — so a property added for an email that had ever activated got no portal access
-at all while staff read "created successfully". The routes now return `accountLinked`
-and an honest `emailNote` in the message, and the five portal Add Customer pages show
-`result.message` instead of a hardcoded toast.
+The check is `backend/utils/customerEmailGuard.js` and must run **before the first
+INSERT** of the request — the portal routes write the property and client rows before
+they ever look at the email, so a check that drifts below them would leave a
+half-created customer behind the refusal. All seven call sites go through it (onboarding,
+the FP/Manager/Coordinator/Supervisor/Executive property *and* simple create, and
+`POST /api/customers/create`); onboarding checks **every** contact, not just the primary,
+because the admin portal creates an account per contact email. Inside a transaction, roll
+back before answering. Regression test: `node --test backend/utils/customerEmailGuard.test.js`,
+which fails if a route writes before it checks, or if anything relinks again.
+
+Until Nov 2026 an existing email was merged instead: an unactivated row had its token and
+temp password re-issued (killing the link already emailed), and an activated row was
+re-pointed at the property just added via `linkCustomerToProperty` (`is_active = 1`) with
+a "you've been added" notification. That silently moved the login off the property it
+already held — the earlier property's invoices, visits and staff-raised work orders
+dropped out of the customer's portal while their password kept working — and nothing
+recorded the move. The helper, its test and `sendPropertyAddedEmail` are gone; the five
+portal Add Customer pages render `result.message`, so the refusal shows as-is.
 
 Consequences that are easy to trip over:
 
-- **Re-adding an address moves the login's one property pointer.** A contact who holds
-  two properties sees only the most recently added one — there is no multi-property
-  account model, and widening it needs a join table, not a patch.
-- **Relinking sets `is_active = 1` deliberately.** Soft-deleting a property deactivates
-  the account by email, and the login query filters `is_active` before the password —
-  so a re-added customer would otherwise meet "Invalid email or password" forever.
-- **Soft delete deactivates by email, not by property.** Two properties sharing one
-  contact email means soft-deleting either locks the customer out of both until a
-  restore or a re-add.
+- **A contact who genuinely holds two properties cannot be entered twice.** There is no
+  multi-property account model, and widening it needs a join table, not a patch — so the
+  second property is added under a different contact email, or the admin resolves it.
+- **Soft delete deactivates by email, not by property** (`UPDATE customer_accounts SET
+  is_active = 0 WHERE email = ?`), and the login query filters `is_active` before the
+  password, so the customer meets "Invalid email or password". Two properties sharing one
+  contact email means soft-deleting either locks the customer out of both. Inactive
+  Customers → Restore flips `status` and `is_active` back and loses nothing; it is the
+  recovery path now that a re-add is refused.
 - **Permanent delete frees the email.** `…/properties/:id/permanent` deletes the
   `customer_accounts` row "so email can be reused". The onboarded-properties lookup that
   feeds it queried `poc_email`, a column that lives on `onboarded_vendors`, not

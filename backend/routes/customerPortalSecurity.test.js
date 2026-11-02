@@ -15,6 +15,9 @@ const accounts = {
     phone: '9000000000', property_id: 42, property_code: 'GC-042', property_name: 'Green Court', is_active: 1 }
 };
 
+// Emails that already own a portal login, for the duplicate guard below
+const takenEmails = new Set(['resident@example.test']);
+
 const writes = [];
 const mails = [];
 const renewalQueries = [];
@@ -23,7 +26,10 @@ const exec = async (sql, params = []) => {
     const row = accounts[Number(params[0])];
     return [row ? [row] : []];
   }
-  if (/FROM customer_accounts WHERE email = \?/.test(sql)) return [[]];
+  // utils/customerEmailGuard.js: one email, one customer account
+  if (/FROM customer_accounts\s+WHERE LOWER\(email\) IN/.test(sql)) {
+    return [params.filter(email => takenEmails.has(email)).map(email => ({ email }))];
+  }
   if (/FROM onboarded_properties WHERE id = \? OR property_id = \?/.test(sql)) {
     if (!params.some(p => String(p) === '42' || p === 'GC-042')) return [[]];
     return [[{ id: 42, franchise_partner_id: 5, name: 'Green Court', property_type: 'GC', property_id: 'GC-042',
@@ -136,6 +142,29 @@ test('only the seven staff portals can create a customer account', async (t) => 
 
   const insert = writes.filter(w => /INSERT INTO customer_accounts/.test(w.sql)).pop();
   assert.equal(insert.params.at(-1), 'fp_manager-user', 'created_by comes from the login, not the body');
+});
+
+test('an email that already has an account is refused, and nothing is written', async (t) => {
+  const base = await startApp(t);
+  const before = writes.length;
+  const mailsBefore = mails.length;
+
+  const response = await fetch(`${base}/api/customers/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken('admin')}` },
+    // The address already owns a login, and the property is a different one
+    body: JSON.stringify({ email: 'Resident@Example.test', firstName: 'Ravi', propertyId: 43, propertyCode: 'GC-043' })
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.success, false);
+  assert.equal(body.code, 'CUSTOMER_EMAIL_EXISTS');
+  assert.match(body.message, /already exists.*admin/i);
+  // No account created, no property re-pointed, no email sent -- the old behaviour
+  // relinked the account to the new property and mailed the customer about it
+  assert.equal(writes.length, before, 'the refusal must not write anything');
+  assert.equal(mails.length, mailsBefore, 'the refusal must not send anything');
 });
 
 test('a work order needs a customer login and takes the raiser from the account', async (t) => {
