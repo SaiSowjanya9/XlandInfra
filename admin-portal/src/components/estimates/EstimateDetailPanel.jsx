@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { formatCurrency, getAddonPrice, getEstimateAddons, getPropertyTypeLabel } from '../../utils/estimatePackageUtils';
-import EstimateServicesTable, { EstimateGrandTotal } from './EstimateServicesTable';
+import EstimateServicesTable from './EstimateServicesTable';
 import EstimateDocumentHeader from './EstimateDocumentHeader';
 import EstimatePriceSummary from './EstimatePriceSummary';
 import { EstimateTermsSection } from './EstimateTerms';
@@ -153,9 +153,10 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
       </Section>
 
       {/* The view lists the package's own services and the added services as two blocks -- the
-          AMC Package, at its price, then the Services, at theirs -- with Total Services Price (the
-          two together, which is the Price Summary's subtotal) under both. The customer's documents
-          list them as one table instead (the user's call). Package rows keep their _tag, which is
+          AMC Package, at its price, then the Services, at theirs. The two together are the Price
+          Summary's subtotal, which is the only place that figure is stated; a Total Services Price
+          row used to repeat it directly above the summary. The customer's documents list the
+          services as one table instead (the user's call). Package rows keep their _tag, which is
           how the cost columns know to read them against their share of the package price. */}
       {packageServices.length > 0 && (
         <Section title={packageName ? `AMC Package - ${decode(packageName)}` : 'AMC Package - Services Included'}>
@@ -177,15 +178,6 @@ export default function EstimateDetailPanel({ estimate, decode = value => value 
           />
         </Section>
       )}
-      {/* Total Services Price across both blocks, on their columns: under Vendor Cost, XLAND Cost
-          and Margin % it carries the whole estimate's figures -- what the separate INTERNAL panel
-          used to state -- and under Customer Price the subtotal */}
-      {(packageServices.length > 0 || services.length > 0 || packageName) && (
-        <EstimateGrandTotal internal={internal}
-          rows={[...packageServices.filter(row => row && typeof row === 'object').map(row => ({ ...row, _tag: 'Package' })), ...services]}
-          price={packagePrice + services.reduce((sum, row) => sum + getAddonPrice(row), 0)} />
-      )}
-
       {/* The card carries its own Price Summary caption, so the section is not headed again */}
       <div className="border-t border-gray-100 pt-4">
         <EstimatePriceSummary estimate={estimate} />

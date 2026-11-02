@@ -953,7 +953,6 @@ const ExecutiveEstimates = ({ user, defaultTab = 'list' }) => {
                     tag: 'Service',
                     onRemove: () => setSelectedAddons(selectedAddons.filter((_, i) => i !== idx)),
                   }))}
-                  total={selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0)}
                 />
             </div>
           )}

@@ -1151,10 +1151,8 @@ const Properties = () => {
                         <p className="text-xs text-gray-600 whitespace-pre-line">{getServiceDescription(addon)}</p>
                       </div>
                     ))}
-                    <div className="flex justify-between items-center p-3 bg-warm-accent-soft border border-warm-border rounded-lg">
-                      <p className="text-sm font-semibold text-warm-text">Total Services Price</p>
-                      <p className="font-bold text-warm-text">₹{(selectedEstimate.addonsTotal || selectedEstimate.addons.reduce((sum, a) => sum + getAddonPrice(a), 0)).toLocaleString()}</p>
-                    </div>
+                    {/* No total here: the Pricing Breakdown below already states the services'
+                        figure as Services Total, and the whole of it as Sub Total */}
                   </div>
                 </ViewSection>
               )}

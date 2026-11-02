@@ -1164,7 +1164,6 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
                       onRemove: () => setSelectedCatalogAddons(prev => prev.filter(item => item.addonId !== addon.addonId)),
                     })),
                   ]}
-                  total={selectedAddons.reduce((sum, id) => sum + getAddonPrice(addons.find(a => getAddonId(a) === id)), 0) + tableCatalogAddons.reduce((sum, addon) => sum + Number(addon.totalPrice), 0)}
                 />
             </div>
           )}

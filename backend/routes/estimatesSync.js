@@ -645,8 +645,7 @@ const sendAdminEstimateHandler = async (req, res) => {
       // Package info with description
       packageName: est.package_name,
       // Admin's estimates table keeps no package price column: the package is what the subtotal
-      // holds beyond the added services. Without it the email's Total Services Price left the
-      // package out.
+      // holds beyond the added services.
       packagePrice: est.package_name
         ? Math.max(0, (parseFloat(est.package_price ?? est.subtotal) || 0)
           - (est.package_price != null ? 0 : (Array.isArray(addons) ? addons : []).reduce((sum, addon) => sum + (parseFloat(addon.totalPrice ?? addon.price) || 0), 0)))

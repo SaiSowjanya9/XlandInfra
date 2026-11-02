@@ -48,9 +48,9 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
   assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
   assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
   // Every field of the service has its own column in the attachment. No Qty and no Price: the
-  // estimate is priced as a whole, in Total Services Price and the Price Summary, and the printed
-  // and downloaded estimate reads the same. Figures say "Rs." (PDFKit's built-in Helvetica has no
-  // rupee glyph, so a ₹ would print as a stray mark).
+  // estimate is priced as a whole, in the Price Summary, and the printed and downloaded estimate
+  // reads the same. Figures say "Rs." (PDFKit's built-in Helvetica has no rupee glyph, so a ₹
+  // would print as a stray mark).
   // Compared without case: a column heading is drawn in caps on the cream header bar
   const headings = texts.map(text => text.toUpperCase());
   for (const heading of ['Service', 'Description', 'Frequency', 'Visits']) {
@@ -146,7 +146,7 @@ const captureEstimate = async (t, estimate) => {
   return { html: mail.html, pdf: texts.join('\n') };
 };
 
-test('a property-based package estimate emails the same totals, package note, billing and terms as the portal', async t => {
+test('a property-based package estimate states its total once, in the summary, with the portal\'s billing and terms', async t => {
   const { html, pdf } = await captureEstimate(t, {
     estimateId: 'EST-PKG', estimateType: 'property_based', customerName: 'Charan', customerEmail: 'customer@example.test',
     propertyName: 'SS property', propertyType: 'GC', propertyCode: 'GC-1', packageName: 'GC Test', packagePrice: 45000,
@@ -157,11 +157,14 @@ test('a property-based package estimate emails the same totals, package note, bi
     subtotal: 387384, total: 387384, tax: 0, gstPercent: 0
   });
   for (const [where, text] of [['email', html], ['PDF', pdf]]) {
-    assert.match(text, /Total Services Price: Rs\. 3,87,384/, `${where}: the total includes the package price`);
-    assert.doesNotMatch(text, /Total Services Price: Rs\. 3,42,384/, `${where}: not the added services alone`);
-    assert.match(text, /Includes the AMC package (&ldquo;|")GC Test(&rdquo;|") at Rs\. 45,000/, `${where}: names the package beneath the total`);
+    // The services table foots to nothing: what they come to is the Price Summary's Subtotal, and
+    // the "Total Services Price" line that used to sit between the two only restated it, with the
+    // AMC package named again underneath
+    assert.doesNotMatch(text, /Total Services Price/, `${where}: no total above the summary`);
+    assert.doesNotMatch(text, /Includes the AMC package/, `${where}: no package note`);
+    assert.match(text, /3,87,384/, `${where}: the summary still states what the estimate comes to`);
     // No service states a price of its own: the added services' 3,36,000 and 6,384 are only in the total
-    assert.doesNotMatch(text, /3,36,000|6,384/, `${where}: no per-service price`);
+    assert.doesNotMatch(text, /3,36,000|6,384|45,000/, `${where}: no per-service or per-package price`);
     assert.match(text, /Clause one\.[\s\S]*Clause two\./, `${where}: carries the estimate's Terms & Conditions`);
   }
   assert.match(html, /Half yearly/, 'the estimate\'s own billing period, not a default Yearly');
@@ -172,7 +175,7 @@ test('a property-based package estimate emails the same totals, package note, bi
   assert.doesNotMatch(pdf, /^QTY$/m, 'the emailed PDF has no Qty column, like the printed one');
 });
 
-test('a direct custom estimate emails its total and terms, with no package note', async t => {
+test('a direct custom estimate emails its total and terms, and no total above the summary', async t => {
   const { html, pdf } = await captureEstimate(t, {
     estimateId: 'EST-DIRECT', estimateType: 'direct', customerName: 'Sai', customerEmail: 'customer@example.test', propertyType: 'VILLA',
     includeTerms: true, termsConditions: 'Direct clause.',
@@ -180,8 +183,8 @@ test('a direct custom estimate emails its total and terms, with no package note'
     subtotal: 3000, total: 3000, tax: 0, gstPercent: 0
   });
   for (const [where, text] of [['email', html], ['PDF', pdf]]) {
-    assert.match(text, /Total Services Price: Rs\. 3,000/, `${where}: total`);
-    assert.doesNotMatch(text, /Includes the AMC package/, `${where}: no package, no note`);
+    assert.doesNotMatch(text, /Total Services Price/, `${where}: no total above the summary`);
+    assert.match(text, /3,000/, `${where}: the summary states the total`);
     assert.match(text, /Direct clause\./, `${where}: terms`);
   }
 });

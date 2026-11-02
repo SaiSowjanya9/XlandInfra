@@ -6,6 +6,8 @@
 const { pool } = require('../config/database');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { billToParty } = require('../utils/estimateData');
+// An invoice bills its estimate's services: one resolution for the email body and the PDF
+const { loadInvoiceDocument, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
 const { generateInvoicePDF } = require('./pdfService');
 const { firstFreeNumber } = require('../utils/paymentIds');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
@@ -893,42 +895,11 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
       });
     };
     
-    // Parse line items
-    let lineItems = [];
-    try {
-      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
-      // Decode HTML entities in descriptions and use details as fallback
-      lineItems = lineItems.map(item => {
-        const name = decodeHtmlEntities(item.name || '');
-        const details = decodeHtmlEntities(item.details || '');
-        const desc = decodeHtmlEntities(item.description || '');
-        // Build full description: if details exist, use "name - details", otherwise use description
-        const fullDescription = details ? `${name} - ${details}` : (desc || name || 'Service');
-        return {
-          ...item,
-          description: fullDescription,
-          name: name
-        };
-      });
-    } catch (e) { lineItems = []; }
-    
-    // Generate line items HTML - Table format: # | Service | Description | Frequency | Visits (Gold Theme)
-    const lineItemsHtml = lineItems.map((item, idx) => {
-      const name = item.name || 'Service';
-      const details = item.details || '';
-      const freq = item.frequency || item.frequencyType || item.frequency_type || '-';
-      const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-      const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
-      return `
-      <tr>
-        <td style="padding: 7px 8px; border-bottom: 1px solid #EADFCF; font-size: 12px; color: #6B7280; vertical-align: top; width: 22px;">${idx + 1}</td>
-        <td style="padding: 7px 8px; border-bottom: 1px solid #EADFCF; font-size: 12px; color: #1F2937; vertical-align: top;"><strong style="color: #111827;">${name}</strong></td>
-        <td style="padding: 7px 8px; border-bottom: 1px solid #EADFCF; font-size: 11px; color: #6B7280; vertical-align: top; text-align: center;">${details || '-'}</td>
-        <td style="padding: 7px 8px; border-bottom: 1px solid #EADFCF; font-size: 12px; color: #1F2937; vertical-align: top; text-align: center;">${freqDisplay}</td>
-        <td style="padding: 7px 8px; border-bottom: 1px solid #EADFCF; font-size: 12px; color: #1F2937; vertical-align: top; text-align: right;">${visits}</td>
-      </tr>
-    `;
-    }).join('');
+    // The services the invoice bills, read from the estimate it was raised from -- the same
+    // document the portal's modal, the PDF below and every later email carry
+    const document = await loadInvoiceDocument(pool, invoice);
+    const lineItems = document.services;
+    const servicesTable = invoiceServicesEmailTable(document.services);
     
     // The same letterhead, ruled tables and summary card as the estimate email, drawn from the same
     // company record. What it replaced was a navy-and-gold layout of its own: a centred lockup in a
@@ -1093,16 +1064,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
               </tr>`).join('')}
             </table>` : ''}
 
-            ${lineItemsHtml ? `${heading('Services Billed')}
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                ${['#', 'Service', 'Description', 'Frequency', 'Visits'].map((label, index) => `
-                <th style="background: ${warm.section}; color: ${warm.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
-                  font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${warm.border};
-                  text-align: ${index === 4 ? 'right' : index >= 2 ? 'center' : 'left'};">${label}</th>`).join('')}
-              </tr>
-              ${lineItemsHtml}
-            </table>` : ''}
+            ${servicesTable ? `${heading('Services Billed')}${servicesTable}` : ''}
 
             <!-- Invoice Summary, against the right edge as it is on the PDF -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 18px;">
@@ -1183,7 +1145,10 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         invoiceDate: invoice.invoice_date,
         dueDate: dueDate,
         billingDuration: invoice.billing_duration,
-        lineItems: lineItems,
+        services: document.services,
+        packageName: document.packageName,
+        packagePrice: document.packagePrice,
+        servicesTotal: document.servicesTotal,
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
         discountPercentage: invoice.discount_percentage,

@@ -26,6 +26,8 @@ const { customerNotificationScope } = require('../utils/customerNotificationScop
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, authenticate, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+// The customer reads the same invoice document the staff portals do: its estimate's services
+const { loadInvoiceDocument, loadInvoiceDocuments } = require('../utils/invoiceDocument');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
 const { recordRazorpayPayment } = require('../services/razorpayPayment');
 const { generatePaymentId } = require('../utils/paymentIds');
@@ -1729,12 +1731,15 @@ router.get('/invoices', async (req, res) => {
       whereParams
     );
 
+    // The services each invoice bills, read from the estimate behind it -- the same document the
+    // staff portals' modal, the PDF and the email carry. The customer's own copy used to list the
+    // stored snapshot, so it alone showed the raw "Name - description" lines.
+    const documents = await loadInvoiceDocuments(pool, invoices);
+
     // Parse line items and calculate balance
-    const formattedInvoices = invoices.map(inv => {
-      let lineItems = [];
-      try {
-        lineItems = typeof inv.line_items === 'string' ? JSON.parse(inv.line_items) : (inv.line_items || []);
-      } catch (e) { lineItems = []; }
+    const formattedInvoices = invoices.map((inv, index) => {
+      const document = documents[index];
+      const lineItems = document.services;
 
       const amountPaid = parseFloat(inv.amount_paid) || 0;
       const totalAmount = parseFloat(inv.total_amount) || 0;
@@ -1754,7 +1759,11 @@ router.get('/invoices', async (req, res) => {
         invoiceDate: inv.invoice_date,
         dueDate: inv.due_date,
         billingDuration: inv.billing_duration,
+        services: document.services,
         lineItems: lineItems,
+        packageName: document.packageName,
+        packagePrice: document.packagePrice,
+        servicesTotal: document.servicesTotal,
         subtotal: parseFloat(inv.subtotal) || 0,
         discountAmount: parseFloat(inv.discount_amount) || 0,
         discountPercentage: parseFloat(inv.discount_percentage) || 0,
@@ -1891,11 +1900,9 @@ router.get('/invoices/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied to this invoice' });
     }
 
-    // Parse line items
-    let lineItems = [];
-    try {
-      lineItems = typeof inv.line_items === 'string' ? JSON.parse(inv.line_items) : (inv.line_items || []);
-    } catch (e) { lineItems = []; }
+    // The services this invoice bills, from the estimate behind it
+    const document = await loadInvoiceDocument(pool, inv);
+    const lineItems = document.services;
 
     const amountPaid = parseFloat(inv.amount_paid) || 0;
     const totalAmount = parseFloat(inv.total_amount) || 0;
@@ -1924,7 +1931,11 @@ router.get('/invoices/:id', async (req, res) => {
         invoiceDate: inv.invoice_date,
         dueDate: inv.due_date,
         billingDuration: inv.billing_duration,
+        services: document.services,
         lineItems: lineItems,
+        packageName: document.packageName,
+        packagePrice: document.packagePrice,
+        servicesTotal: document.servicesTotal,
         subtotal: parseFloat(inv.subtotal) || 0,
         discountAmount: parseFloat(inv.discount_amount) || 0,
         discountPercentage: parseFloat(inv.discount_percentage) || 0,

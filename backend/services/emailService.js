@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 const path = require('path');
 const { customerEstimateData, stripInternalServiceDetails, billToParty } = require('../utils/estimateData');
+// The invoice document's services and its one email table, shared with the PDF and the portals
+const { rowFromLineItem, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
@@ -930,8 +932,7 @@ const sendEstimateEmail = async (estimate, actionToken) => {
    * A service as the estimate states it: what it is, how it is priced and what was measured, what
    * it covers, how often and how many visits -- every column of the portal's view except its
    * internal Vendor Cost, XLAND Cost and Margin %. The same columns the PDF prints, so the email and its attachment agree. No service
-   * states a price of its own: the estimate is priced as a whole, in Total Services Price and the
-   * Price Summary.
+   * states a price of its own: the estimate is priced as a whole, in the Price Summary.
    */
   // A row is a service, or [service, tag] where the tag marks a package's own service
   const serviceRowsHtml = list => list.map((entry, index) => {
@@ -1286,15 +1287,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
             <!-- Work Order Details (only for work order estimates) -->
             ${workOrderHtml}
             ${servicesList.length || addonsList.length ? servicesTable(allServicesHtml, 'Services') : ''}
-            <!-- The whole of it: package price plus added services, so it matches the subtotal -->
-            ${(addonsList.length || Number(estimate.packagePrice) > 0) ? `
-            <p style="margin: 8px 0 0 0; text-align: right; font-size: 12px; font-weight: 700; color: ${WARM.text};">
-              Total Services Price: Rs. ${money((Number(estimate.packagePrice) || 0) + addonsList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0))}
-            </p>${packageName && Number(estimate.packagePrice) > 0 ? `
-            <p style="margin: 2px 0 0 0; text-align: right; font-size: 11px; color: ${WARM.muted};">
-              Includes the AMC package &ldquo;${emailText(packageName)}&rdquo; at Rs. ${money(Number(estimate.packagePrice))}.
-            </p>` : ''}` : ''}
 
+            <!-- The services table foots to nothing: what they come to is the Price Summary's
+                 Subtotal, which a total line here would only restate -->
             <!-- Price Summary, against the right edge as it is on the PDF -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 18px;">
               <tr>
@@ -2426,67 +2421,15 @@ const sendInvoiceEmail = async (invoice) => {
       .replace(/&#39;/g, "'");
   };
 
-  // Filter services (exclude addons)
-  const serviceItems = items.filter(item => {
-    const desc = String(item.description || item.name || '').toLowerCase();
-    const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
-    return !isAddon;
-  });
-
-  // Filter addons
-  const addonItems = items.filter(item => {
-    if (item.type === 'addon') return true;
-    const desc = String(item.description || item.name || '').toLowerCase();
-    return desc.includes('add-on') || desc.includes('addon');
-  });
-
-  // Generate services HTML
-  const servicesHtml = serviceItems.map((item, idx) => {
-    const details = stripInternalServiceDetails(decodeHtml(item.details || ''));
-    const fullDesc = stripInternalServiceDetails(decodeHtml(item.description || item.name || 'Service'));
-    const parts = fullDesc.split(' - ');
-    const serviceName = parts[0] || 'Service';
-    const serviceDesc = details || parts.slice(1).join(' - ') || '-';
-    const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
-    const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-    const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
-    return `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${idx + 1}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #1a365d; font-weight: 600;">${serviceName}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${serviceDesc}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
-    </tr>`;
-  }).join('');
-
-  // Generate addons HTML
-  const addonsHtml = addonItems.map((item, idx) => {
-    const fullDesc = stripInternalServiceDetails(decodeHtml(item.description || item.name || 'Service'));
-    let addonName = fullDesc;
-    let addonDesc = '-';
-    
-    if (fullDesc.includes(' - ')) {
-      const parts = fullDesc.split(' - ');
-      addonName = parts[0];
-      addonDesc = parts.slice(1).join(' - ') || '-';
-    }
-    
-    const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '-';
-    const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-    const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
-    const price = Math.round(parseFloat(item.totalPrice || item.total_price || item.unitPrice || item.unit_price || 0));
-    
-    return `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${idx + 1}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #92400e; font-weight: 600;">${addonName}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4a5568;">${addonDesc}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${freqDisplay}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4a5568;">${visits}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #1f2937; font-weight: 600;">Rs. ${price.toLocaleString('en-IN')}</td>
-    </tr>`;
-  }).join('');
+  // One table, in the document's own columns. The caller hands over the services `invoiceDocument`
+  // resolved from the estimate; a caller that still passes the stored snapshot has it normalised
+  // here. The two tables this replaced were split by sniffing the word "addon" out of a
+  // description, so a service went to the wrong table on a typo and an add-on's price was the one
+  // figure any invoice document stated per row.
+  const serviceRows = Array.isArray(invoice.services) && invoice.services.length
+    ? invoice.services
+    : items.map(rowFromLineItem);
+  const servicesTable = invoiceServicesEmailTable(serviceRows);
 
   // Payment link section (if provided) - Green themed (consistent across all invoices)
   const paymentSection = paymentLink ? `
@@ -2518,7 +2461,10 @@ const sendInvoiceEmail = async (invoice) => {
       invoiceDate,
       dueDate,
       billingDuration,
-      lineItems,
+      services: serviceRows,
+      packageName: invoice.packageName,
+      packagePrice: invoice.packagePrice,
+      servicesTotal: invoice.servicesTotal,
       subtotal,
       discountAmount,
       totalAmount,
@@ -2634,46 +2580,11 @@ const sendInvoiceEmail = async (invoice) => {
               </tr>
             </table>
             
-            <!-- Services Included -->
-            ${serviceItems.length > 0 ? `
+            <!-- Services Billed -->
+            ${servicesTable ? `
             <div style="margin-bottom: 20px;">
-              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Included</h3>
-              <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
-                <thead>
-                  <tr style="background: #c9a227;">
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${servicesHtml}
-                </tbody>
-              </table>
-            </div>
-            ` : ''}
-            
-            <!-- Services -->
-            ${addonItems.length > 0 ? `
-            <div style="margin-bottom: 20px;">
-              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services</h3>
-              <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
-                <thead>
-                  <tr style="background: #c9a227;">
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 30px;">#</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 120px;">Service</th>
-                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb;">Description</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Frequency</th>
-                    <th style="padding: 10px; text-align: center; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 50px;">Visits</th>
-                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #ffffff; font-weight: 600; border-bottom: 1px solid #e5e7eb; width: 80px;">Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${addonsHtml}
-                </tbody>
-              </table>
+              <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Services Billed</h3>
+              ${servicesTable}
             </div>
             ` : ''}
             

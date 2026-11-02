@@ -2661,7 +2661,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                           ...(addon.catalogServiceId ? { onEdit: () => setEditingCatalogAddon(addon) } : {}),
                           onRemove: () => handleRemoveAddon(addon.addonId),
                         }))}
-                        total={getAddonsTotal()}
                       />
                   </div>
                 )}
@@ -3441,7 +3440,6 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         ...(addon.catalogServiceId ? { onEdit: () => setEditingDirectCatalogAddon(addon) } : {}),
                         onRemove: () => handleDirectRemoveAddon(addon.addonId),
                       }))}
-                      total={getDirectAddonsTotal()}
                     />
                 </div>
               )}
@@ -4099,20 +4097,8 @@ const CreateEstimate = ({ admin, onSuccess, showToast, onSelectCustomEstimate })
                         ))
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50 border-t border-gray-200">
-                      <tr>
-                        <td colSpan={5} className="px-3 py-2 text-sm font-semibold text-gray-700">Total Services Price</td>
-                        {/* The whole of it, package price included, as the estimate view totals it */}
-                        <td className="px-3 py-2 text-sm font-bold text-gray-800 text-right">₹{((selectedPackage ? getNormalizedPackagePrice(selectedPackage) : 0) + getAddonsTotal()).toLocaleString()}</td>
-                      </tr>
-                      {selectedPackage && (
-                        <tr>
-                          <td colSpan={6} className="px-3 pb-2 pt-0 text-right text-[11px] text-gray-500">
-                            Includes the AMC package &ldquo;{decodeHtml(getPackageName(selectedPackage))}&rdquo; at ₹{getNormalizedPackagePrice(selectedPackage).toLocaleString()}.
-                          </td>
-                        </tr>
-                      )}
-                    </tfoot>
+                    {/* No footing total: the package price and the added services are the Pricing
+                        Summary's Subtotal below, which used to be restated here */}
                   </table>
                 </div>
               )}

@@ -1109,9 +1109,11 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
   const isPaid = invoice.status === 'paid' || invoice.balanceAmount <= 0;
   const isOverdue = invoice.status === 'overdue' || (invoice.dueDate && new Date(invoice.dueDate) < new Date() && !isPaid);
   
-  // Separate services and addons
-  const services = (invoice.lineItems || []).filter(item => item.type !== 'addon');
-  const addons = (invoice.lineItems || []).filter(item => item.type === 'addon');
+  // Every service the invoice bills, as the server resolved it from the estimate -- one list, in
+  // the order the document prints. It used to be split into `services` and `addons` on
+  // `type === 'addon'`, and the addons half was never rendered: an added service (the one line a
+  // customer is most likely to query) was missing from their own copy of the invoice.
+  const services = invoice.services || invoice.lineItems || [];
 
   return createPortal(
     <ViewModal
@@ -1213,33 +1215,36 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
             </div>
           )}
 
-          {/* Services Table */}
+          {/* Services Billed - the invoice document's own columns, the same seven the staff
+              portals' modal and the PDF print: what the service is, what it covers, what was
+              measured at the property, how it is priced, how often and how many visits */}
           {services.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gold-600 mb-3">Services Included</h3>
-              <div className="bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
+              <h3 className="text-sm font-semibold text-gold-600 mb-3">Services Billed</h3>
+              <div className="bg-gray-100 rounded-xl border border-gray-200 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-100 border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-gray-500 font-medium">#</th>
-                      <th className="px-4 py-3 text-left text-gray-500 font-medium">Service</th>
-                      <th className="px-4 py-3 text-center text-gray-500 font-medium">Frequency</th>
-                      <th className="px-4 py-3 text-right text-gray-500 font-medium">Visits</th>
+                      {['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'].map(label => (
+                        <th key={label} className={`px-3 py-3 font-medium text-gray-500 whitespace-nowrap ${label === '#' || label === 'Frequency' || label === 'Visits' ? 'text-center' : 'text-left'}`}>
+                          {label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {services.map((item, idx) => (
-                      <tr key={idx} className="border-b border-gray-200 last:border-0">
-                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-gray-900 font-medium">{item.name || item.description || 'Service'}</span>
+                      <tr key={idx} className="border-b border-gray-200 last:border-0 align-top">
+                        <td className="px-3 py-3 text-center text-gray-500">{idx + 1}</td>
+                        <td className="px-3 py-3">
+                          <p className="text-gray-900 font-medium">{item.name || 'Service'}</p>
+                          {item.category && <p className="text-xs text-gray-500">{item.category}</p>}
                         </td>
-                        <td className="px-4 py-3 text-center text-gray-500">
-                          {item.frequency || item.frequencyType || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-900">
-                          {item.visits || item.frequencyCount || item.quantity || 1}
-                        </td>
+                        <td className="px-3 py-3 text-gray-600 whitespace-pre-wrap">{item.description || '-'}</td>
+                        <td className="px-3 py-3 text-gray-600">{item.input || '-'}</td>
+                        <td className="px-3 py-3 text-gray-600">{item.method || '-'}</td>
+                        <td className="px-3 py-3 text-center text-gray-500">{item.frequency || item.frequencyType || '-'}</td>
+                        <td className="px-3 py-3 text-center text-gray-900">{item.visits || item.frequencyCount || 1}</td>
                       </tr>
                     ))}
                   </tbody>

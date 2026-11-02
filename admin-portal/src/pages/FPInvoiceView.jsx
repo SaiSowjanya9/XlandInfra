@@ -18,12 +18,13 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
-import { stripInternalServiceDetails } from '../utils/estimatePackageUtils';
 import { billToParty } from '../utils/estimateStore';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
+// One services table for every invoice surface: the estimate document's columns, as the PDF draws them
+import InvoiceServicesTable from '../components/billing/InvoiceServicesTable';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -43,20 +44,6 @@ const PAYMENT_LINK_STATUS = {
   paid: { label: 'Paid via Link', color: 'bg-green-100 text-green-700', icon: CheckCircle },
   expired: { label: 'Link Expired', color: 'bg-red-100 text-red-700', icon: Clock },
   cancelled: { label: 'Link Cancelled', color: 'bg-gray-100 text-gray-600', icon: XCircle },
-};
-
-// Helper to decode HTML entities (fix triple/double encoded ampersands etc.)
-const decodeHtmlEntities = (str) => {
-  if (!str) return str;
-  return String(str)
-    .replace(/&amp;amp;amp;/g, '&')
-    .replace(/&amp;amp;/g, '&')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
 };
 
 const FPInvoiceView = ({ user }) => {
@@ -461,46 +448,14 @@ const FPInvoiceView = ({ user }) => {
             </div>
           </div>
 
-          {/* Line Items Table */}
+          {/* Services Billed - the shared table every invoice surface draws, so this page, the
+              portal modals and the PDF list the same services in the same columns. The
+              `# / Description / Qty / Rate / Amount` table it replaced read `item.amount`, which
+              the stored line never carried: every rate and amount on this page printed ₹0.00. */}
           <div className="mb-8">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-800 text-white">
-                  <th className="py-3 px-4 text-left text-sm font-semibold">#</th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold">Description</th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold">Qty</th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold">Rate</th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(invoice.lineItems || []).map((item, index) => (
-                  <tr key={index} className="border-b border-gray-200">
-                    <td className="py-3 px-4 text-gray-600">{index + 1}</td>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{decodeHtmlEntities(stripInternalServiceDetails(item.description))}</p>
-                      {item.details && (
-                        <p className="text-sm text-gray-500">{decodeHtmlEntities(stripInternalServiceDetails(item.details))}</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center text-gray-600">{item.quantity || 1}</td>
-                    <td className="py-3 px-4 text-right text-gray-600">₹{formatCurrency(item.rate || item.amount)}</td>
-                    <td className="py-3 px-4 text-right font-medium text-gray-900">₹{formatCurrency(item.amount)}</td>
-                  </tr>
-                ))}
-                {(!invoice.lineItems || invoice.lineItems.length === 0) && (
-                  <tr className="border-b border-gray-200">
-                    <td className="py-3 px-4 text-gray-600">1</td>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">Services</p>
-                    </td>
-                    <td className="py-3 px-4 text-center text-gray-600">1</td>
-                    <td className="py-3 px-4 text-right text-gray-600">₹{formatCurrency(invoice.subtotal)}</td>
-                    <td className="py-3 px-4 text-right font-medium text-gray-900">₹{formatCurrency(invoice.subtotal)}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <InvoiceServicesTable
+              services={invoice.services || invoice.lineItems}
+            />
           </div>
 
           {/* Totals Section */}

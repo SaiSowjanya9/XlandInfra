@@ -39,6 +39,8 @@ import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import DismissPanel from '../../components/common/DismissPanel';
 import Modal from '../../components/common/Modal';
+// One services table for every invoice surface: the estimate document's columns, as the PDF draws them
+import InvoiceServicesTable from '../../components/billing/InvoiceServicesTable';
 import { COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -1666,209 +1668,13 @@ const InvoiceDetailPanel = ({
             );
           })()}
 
-          {/* ===== SERVICES INCLUDED - Image 3 style ===== */}
-          {lineItems.length > 0 && (() => {
-            // Decode HTML entities - multiple passes for nested encoding
-            const decodeHtml = (str) => {
-              if (!str) return str || '';
-              let decoded = String(str);
-              // Run multiple passes to handle nested encoding
-              for (let i = 0; i < 5; i++) {
-                const before = decoded;
-                decoded = decoded
-                  .replace(/&amp;/g, '&')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#39;/g, "'")
-                  .replace(/&#x27;/g, "'")
-                  .replace(/&nbsp;/g, ' ')
-                  .replace(/&#x2F;/g, '/');
-                if (decoded === before) break; // No more changes
-              }
-              return decoded;
-            };
+          {/* ===== SERVICES BILLED - the shared table the PDF mirrors column for column ===== */}
+          {invoice.invoiceType !== 'work_order' && (
+            <InvoiceServicesTable
+              services={invoice.services || lineItems}
+            />
+          )}
 
-            // Filter to only include services (exclude addons and AMC package entries)
-            const filteredItems = lineItems.filter(item => {
-              const desc = String(item.description || item.name || '').toLowerCase();
-              const isAddon = item.type === 'addon' || desc.includes('add-on') || desc.includes('addon');
-              return !isAddon && !desc.includes('amc package') && !desc.includes('amc services');
-            });
-
-            // Helper to extract frequency
-            const getFrequency = (item) => {
-              const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
-              if (!freq || freq === '-') return '-';
-              return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
-            };
-
-            // Map all items as services
-            const services = filteredItems.map(item => {
-              // Get service name from dedicated name field first
-              const serviceName = decodeHtml(
-                item.name || item.serviceName || item.service_name || 'Service'
-              );
-              
-              // Get description from all possible fields - prioritize dedicated description fields
-              let serviceDesc = decodeHtml(
-                item.details || 
-                item.service_description || 
-                item.serviceDescription || 
-                item.itemDescription ||
-                ''
-              );
-              
-              // If no dedicated description field, check the main description field
-              if (!serviceDesc && item.description) {
-                const fullDesc = decodeHtml(String(item.description));
-                // Only split if description starts with service name followed by " - "
-                if (fullDesc.toLowerCase().startsWith(serviceName.toLowerCase() + ' - ')) {
-                  serviceDesc = fullDesc.substring(serviceName.length + 3); // Remove "ServiceName - "
-                } else if (fullDesc.toLowerCase() !== serviceName.toLowerCase()) {
-                  // Use full description if it's different from the name
-                  serviceDesc = fullDesc;
-                }
-              }
-              
-              return {
-                name: serviceName,
-                description: serviceDesc || '-',
-                frequency: getFrequency(item),
-                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1
-              };
-            });
-
-            return services.length > 0 ? (
-              <div>
-                {/* Section Header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Services Included</span>
-                </div>
-                
-                {/* Services Table - Compact */}
-                <div className="bg-white rounded-lg border border-warm-border overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-warm-section">
-                        <th className="w-8 px-2 py-2 text-xs font-semibold text-warm-muted text-center">#</th>
-                        <th className="w-28 px-2 py-2 text-xs font-semibold text-warm-muted text-left">Service</th>
-                        <th className="px-2 py-2 text-xs font-semibold text-warm-muted text-left">Description</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Frequency</th>
-                        <th className="w-12 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Visits</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-warm-border/60">
-                      {services.map((item, idx) => (
-                        <tr key={idx} className="bg-white">
-                          <td className="px-2 py-2 text-xs text-gray-700 text-center">{idx + 1}</td>
-                          <td className="px-2 py-2 text-xs font-medium text-gray-800">{decodeHtml(item.name)}</td>
-                          <td className="px-2 py-2 text-xs text-gray-600">{decodeHtml(item.description) || '-'}</td>
-                          <td className="px-2 py-2 text-xs text-gray-600 text-center">{item.frequency}</td>
-                          <td className="px-2 py-2 text-xs font-medium text-gray-800 text-center">{item.visits}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null;
-          })()}
-
-          {/* ===== ADDONS SECTION - Below Services ===== */}
-          {lineItems.length > 0 && (() => {
-            // Decode HTML entities
-            const decodeHtml = (str) => {
-              if (!str) return str || '';
-              let decoded = String(str);
-              for (let i = 0; i < 5; i++) {
-                const before = decoded;
-                decoded = decoded
-                  .replace(/&amp;/g, '&')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#39;/g, "'")
-                  .replace(/&#x27;/g, "'")
-                  .replace(/&nbsp;/g, ' ')
-                  .replace(/&#x2F;/g, '/');
-                if (decoded === before) break;
-              }
-              return decoded;
-            };
-
-            // Filter addon items - check type field or description patterns
-            const addonItems = lineItems.filter(item => {
-              if (item.type === 'addon') return true;
-              const desc = String(item.description || item.name || '').toLowerCase();
-              return desc.includes('add-on') || desc.includes('addon');
-            });
-
-            const getFrequency = (item) => {
-              const freq = item.frequency || item.frequencyType || item.frequency_type || item.billingDuration || '';
-              if (!freq || freq === '-') return '-';
-              return String(freq).charAt(0).toUpperCase() + String(freq).slice(1).toLowerCase();
-            };
-
-            const addons = addonItems.map(item => {
-              // Parse addon name and description from description field
-              const fullDesc = decodeHtml(item.description || item.name || 'Service');
-              let addonName = fullDesc;
-              let addonDesc = '-';
-              
-              // Split by " - " to separate name and description
-              if (fullDesc.includes(' - ')) {
-                const parts = fullDesc.split(' - ');
-                addonName = parts[0];
-                addonDesc = parts.slice(1).join(' - ') || '-';
-              }
-              
-              return {
-                name: addonName,
-                description: addonDesc,
-                frequency: getFrequency(item),
-                visits: item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1,
-                price: parseFloat(item.total_price || item.totalPrice || item.unit_price || 0)
-              };
-            });
-
-            return addons.length > 0 ? (
-              <div className="mt-4">
-                {/* Section Header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-bold text-gray-900 uppercase whitespace-nowrap">Services</span>
-                </div>
-                
-                {/* Addons Table - Compact */}
-                <div className="bg-white rounded-lg border border-warm-border overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-warm-section">
-                        <th className="w-8 px-2 py-2 text-xs font-semibold text-warm-muted text-center">#</th>
-                        <th className="w-28 px-2 py-2 text-xs font-semibold text-warm-muted text-left">Service</th>
-                        <th className="px-2 py-2 text-xs font-semibold text-warm-muted text-left">Description</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Frequency</th>
-                        <th className="w-12 px-2 py-2 text-xs font-semibold text-warm-muted text-center">Visits</th>
-                        <th className="w-20 px-2 py-2 text-xs font-semibold text-warm-muted text-right">Price</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-warm-border/60">
-                      {addons.map((item, idx) => (
-                        <tr key={idx} className="bg-white">
-                          <td className="px-2 py-2 text-xs text-gray-700 text-center">{idx + 1}</td>
-                          <td className="px-2 py-2 text-xs font-medium text-gray-800">{decodeHtml(item.name)}</td>
-                          <td className="px-2 py-2 text-xs text-gray-600">{decodeHtml(item.description) || '-'}</td>
-                          <td className="px-2 py-2 text-xs text-gray-600 text-center">{item.frequency}</td>
-                          <td className="px-2 py-2 text-xs font-medium text-gray-800 text-center">{item.visits}</td>
-                          <td className="px-2 py-2 text-xs font-medium text-gray-800 text-right">₹{item.price.toLocaleString('en-IN')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null;
-          })()}
 
           {/* ===== PRICE SUMMARY - the card EstimatePriceSummary draws ===== */}
           <div className="flex justify-end">

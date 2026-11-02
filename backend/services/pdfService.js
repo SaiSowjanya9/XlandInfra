@@ -1,5 +1,8 @@
 const PDFDocument = require('pdfkit');
 const { customerEstimateData, stripInternalServiceDetails, billToParty } = require('../utils/estimateData');
+// An invoice's services are the estimate's: `rowFromLineItem` normalises a caller that still
+// hands over the stored snapshot instead of the resolved document rows
+const { rowFromLineItem } = require('../utils/invoiceDocument');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../utils/companyInfo');
 const path = require('path');
@@ -442,7 +445,7 @@ const drawDetailTable = (doc, y, fields, { margin = 50, wide = [] } = {}) => {
  * `columns` are `{ label, width, align }` and add up to the content width; `rows` are arrays of
  * cell values in the same order.
  */
-const drawItemsTable = (doc, y, { columns, rows, margin = 50 }) => {
+const drawItemsTable = (doc, y, { columns, rows, margin = 50, bottom = PAGE.bottom - 60 }) => {
   const pad = 8;
   const edges = columns.reduce((all, column) => [...all, all[all.length - 1] + column.width], [margin]);
   const cellWidth = index => columns[index].width - pad * 2;
@@ -460,7 +463,7 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50 }) => {
     doc.fontSize(8).font('Helvetica');
     const height = Math.max(24, ...cells.map((text, column) =>
       doc.heightOfString(String(text), { width: cellWidth(column) }) + pad * 2));
-    if (y + height > PAGE.bottom - 60) { doc.addPage(); y = margin; header(); }
+    if (y + height > bottom) { doc.addPage(); y = margin; header(); }
     doc.rect(margin, y, CONTENT, height).fillAndStroke('#ffffff', WARM.border);
     doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
     cells.forEach((text, column) => doc.text(String(text), edges[column] + pad, y + pad,
@@ -469,6 +472,51 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50 }) => {
   });
   return y + DOC_GAP.row;
 };
+
+/**
+ * An estimate's services, and the services its invoice bills -- one column set, one renderer.
+ *
+ * Every field of a service the customer is entitled to read has a column: what it is (its category
+ * under its name), what it covers, what was measured at the property, how it is priced, how often
+ * and how many visits -- every column of the portal's estimate view except its internal Vendor
+ * Cost, XLAND Cost and Margin %. No Price and no Qty column: no service states a price of its own,
+ * because the document is priced as a whole, in the summary.
+ *
+ * The invoice used to draw its own `# / Description / Frequency / Visits / Qty / Amount` table,
+ * where Amount was the AMC package price divided by the number of services it covered -- figures
+ * that summed to nothing the summary stated, and 0 against every added service.
+ */
+const SERVICE_COLUMNS = [
+  { label: '#', width: 22 },
+  { label: 'Service', width: 92 },
+  { label: 'Description', width: 125 },
+  { label: 'Input / Details', width: 84 },
+  { label: 'Method', width: 62 },
+  { label: 'Frequency', width: 66 },
+  // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
+  { label: 'Visits', width: 44, align: 'right' }
+];
+const serviceColumnWidth = label => (SERVICE_COLUMNS.find(column => column.label === label)?.width || 0) - 16;
+
+/** `tag` marks one of a package's own services, under its name and category. */
+const serviceTableRow = (item, tag = '') => ({
+  // The category says what kind of service this is, so it reads under the name rather than among
+  // the details in the Description column
+  name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
+    decodeHtml(item.category || ''), tag || item.tag || ''].filter(Boolean).join('\n'),
+  // Property Types, the capacity slab and the vendor rate are catalog configuration, not something
+  // a customer document states
+  details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
+  input: item.input || '-',
+  method: item.method || '-',
+  frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
+  visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1
+});
+
+const drawServicesTable = (doc, y, { rows, margin = 50, bottom }) => drawItemsTable(doc, y, {
+  margin, bottom, columns: SERVICE_COLUMNS,
+  rows: rows.map((row, index) => [String(index + 1), row.name, row.details, row.input, row.method, row.frequency, String(row.visits)])
+});
 
 /**
  * The money, in a card against the right edge: the figures line up on one edge, the labels on
@@ -538,7 +586,7 @@ const generateEstimatePDF = async (estimate) => {
         estimateId, estimateType, customerName, customerEmail, customerPhone,
         propertyName, propertyType, propertyCode, zone, division, city, address,
         numberOfBlocks, totalUnits, towerName, blockNumber, villaPlotNumber,
-        packageName, packagePrice, amcPackageDescription, services, addons,
+        packageName, amcPackageDescription, services, addons,
         subtotal, discount, discountAmount, tax, gstPercent, total, description, createdAt,
         billingDuration, billing_duration,
         // Terms & Conditions, printed only when the estimate was created with them
@@ -700,72 +748,9 @@ const generateEstimatePDF = async (estimate) => {
       if (!Array.isArray(svcList)) svcList = [];
 
       // ===== SERVICES TABLE =====
-      // Both service lists share one renderer: the columns add up to the content width, every cell
-      // carries the same padding, a row is as tall as its tallest cell actually measures rather
-      // than a guess from character count, and the header repeats when a table crosses a page.
-      // Every field of a service the customer is entitled to read has a column: what it is, what it
-      // covers, how it is priced and what was measured, how often and how many visits -- every column
-      // of the portal's estimate view except its internal Vendor Cost, XLAND Cost and Margin %. No
-      // Price and no Qty column: no service states a price
-      // of its own -- the estimate is priced as a whole, in Total Services Price and the Price
-      // Summary -- and the printed and downloaded estimate reads the same.
-      const TABLE_COLS = [
-        { label: '#', width: 22, align: 'left' },
-        // The view's order: name, description, what was measured, how it is priced, schedule
-        { label: 'Service', width: 92, align: 'left' },
-        { label: 'Description', width: 125, align: 'left' },
-        { label: 'Input / Details', width: 84, align: 'left' },
-        { label: 'Method', width: 62, align: 'left' },
-        { label: 'Frequency', width: 66, align: 'left' },
-        // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
-        { label: 'Visits', width: 44, align: 'right' }
-      ];
-      const CELL_PAD = 8;
-      const COL_EDGES = TABLE_COLS.reduce((edges, col) => [...edges, edges[edges.length - 1] + col.width], [MARGIN]);
-      const cellWidth = index => TABLE_COLS[index].width - CELL_PAD * 2;
-
-      // The cream skin the portal's services table is drawn in: a warm section bar with muted
-      // labels, warm rules between the rows, and figures in warm text
-      const drawTableHeader = () => {
-        doc.rect(MARGIN, y, CONTENT_WIDTH, 20).fillAndStroke(WARM.section, WARM.border);
-        doc.fontSize(7).font('Helvetica-Bold').fillColor(WARM.muted);
-        TABLE_COLS.forEach((col, index) => doc.text(col.label.toUpperCase(), COL_EDGES[index] + CELL_PAD, y + 7,
-          { width: cellWidth(index), align: col.align, lineBreak: false, ellipsis: false }));
-        y += 20;
-      };
-
-      const drawServicesTable = rows => {
-        drawTableHeader();
-        rows.forEach((row, index) => {
-          const cells = [String(index + 1), row.name, row.details, row.input, row.method, row.frequency, String(row.visits)];
-          doc.fontSize(8).font('Helvetica');
-          const height = Math.max(24, ...cells.map((text, column) =>
-            doc.heightOfString(String(text), { width: cellWidth(column) }) + CELL_PAD * 2));
-          if (y + height > pageHeight) { doc.addPage(); y = MARGIN; drawTableHeader(); }
-          // White, every row: the cream belongs to the column header alone, and the rule between
-          // rows is enough to tell them apart. Banding the body made the table shout.
-          doc.rect(MARGIN, y, CONTENT_WIDTH, height).fillAndStroke('#ffffff', WARM.border);
-          doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
-          cells.forEach((text, column) => doc.text(String(text), COL_EDGES[column] + CELL_PAD, y + CELL_PAD,
-            { width: cellWidth(column), align: TABLE_COLS[column].align }));
-          y += height;
-        });
-        y += GAP.row;
-      };
-
-      // `tag` marks a package's own service in the combined table, under its name and category
-      const tableRow = (item, tag = '') => ({
-        // The category says what kind of service this is, so it reads under the name rather than
-        // among the details in the Description column
-        name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
-          decodeHtml(item.category || ''), tag].filter(Boolean).join('\n'),
-        // Property Types is catalog configuration, not something a customer document states
-        details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
-        frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
-        visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1,
-        method: item.method || '-',
-        input: item.input || '-'
-      });
+      // Drawn by the shared `drawServicesTable` / `serviceTableRow` above, which the invoice raised
+      // from this estimate uses too: the same seven columns in the same order, so a customer who
+      // approves an estimate and then receives its invoice reads one table twice, not two tables.
 
       // Only show Services Table for NON-work order estimates
       const hasWorkOrderId = workOrderId && String(workOrderId).length > 0;
@@ -788,33 +773,19 @@ const generateEstimatePDF = async (estimate) => {
       // Skip for Work Order Estimates
       // The package's own services and the services added to it are one table, numbered straight
       // through -- the package's marked "Package" under their name -- as the printed copy has them
-      const tableRows = [...svcList.map(item => tableRow(item, packageName ? 'Package' : '')), ...addonList.map(item => tableRow(item))];
+      const tableRows = [...svcList.map(item => serviceTableRow(item, packageName ? 'Package' : '')), ...addonList.map(item => serviceTableRow(item))];
       if (!isWOEstimate && tableRows.length > 0) {
         // The heading and its first row stay together rather than splitting across a page
         doc.fontSize(8).font('Helvetica');
-        const firstRow = tableRows[0];
-        const firstHeight = Math.max(24, doc.heightOfString(firstRow.details, { width: cellWidth(2) }) + CELL_PAD * 2);
+        const firstHeight = Math.max(24, doc.heightOfString(tableRows[0].details, { width: serviceColumnWidth('Description') }) + 16);
         if (y + GAP.heading + 20 + firstHeight > pageHeight) { doc.addPage(); y = MARGIN; }
 
         sectionHeading('Services');
-        drawServicesTable(tableRows);
+        y = drawServicesTable(doc, y, { rows: tableRows, margin: MARGIN, bottom: pageHeight });
       }
-      // Total Services Price is the whole of it -- the package price plus the added services -- so
-      // it agrees with the Price Summary's subtotal; it used to leave the package out. A small line
-      // under it names the package, as the portal's estimate view and printed copy do.
-      const pkgPrice = Number(packagePrice) || 0;
-      if (!isWOEstimate && (addonList.length > 0 || pkgPrice > 0)) {
-        if (y + 30 > pageHeight) { doc.addPage(); y = MARGIN; }
-        const addonsTotal = addonList.reduce((sum, addon) => sum + Number(addon.totalPrice ?? addon.price ?? 0), 0);
-        doc.fontSize(9).font('Helvetica-Bold').fillColor(navy)
-           .text(`Total Services Price: Rs. ${money(pkgPrice + addonsTotal)}`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
-        if (packageName && pkgPrice > 0) {
-          y += 13;
-          doc.fontSize(7).font('Helvetica').fillColor('#6B7280')
-             .text(`Includes the AMC package "${decodeHtml(String(packageName))}" at Rs. ${money(pkgPrice)}.`, MARGIN, y, { width: CONTENT_WIDTH, align: 'right', lineBreak: false });
-        }
-        y += GAP.section;
-      }
+      // What the services come to is the Price Summary's Subtotal and nothing else: the table used
+      // to foot to a "Total Services Price" line, with the AMC package named under it, directly
+      // above a Subtotal stating the same figure.
 
       // Check if Price Summary needs new page
       if (y + 60 > pageHeight) {
@@ -938,7 +909,8 @@ const generateInvoicePDF = async (invoice) => {
         invoiceId, estimateId, invoiceType, customerName, customerEmail, customerPhone,
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
-        lineItems, subtotal, discountAmount, discountPercentage,
+        lineItems, services,
+        subtotal, discountAmount, discountPercentage,
         totalAmount, balanceAmount, amountPaid,
         workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
@@ -948,9 +920,15 @@ const generateInvoicePDF = async (invoice) => {
       const rupees = value => `Rs. ${money(figure(value))}`;
       const isWorkOrder = invoiceType === 'work_order' || !!(workOrderId && String(workOrderId).length);
 
-      let items = [];
-      try { items = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []); } catch (error) { items = []; }
-      if (!Array.isArray(items)) items = [];
+      // The services the invoice bills, as `invoiceDocument` resolved them from the estimate. A
+      // caller that still hands over the stored snapshot alone has it normalised here, so the
+      // document never prints a name twice or a frequency the estimate never set.
+      let items = Array.isArray(services) ? services : [];
+      if (!items.length) {
+        let stored = [];
+        try { stored = typeof lineItems === 'string' ? JSON.parse(lineItems) : (lineItems || []); } catch (error) { stored = []; }
+        items = (Array.isArray(stored) ? stored : []).map(rowFromLineItem);
+      }
 
       const paid = figure(amountPaid);
       const balance = balanceAmount === undefined || balanceAmount === null ? figure(totalAmount) : figure(balanceAmount);
@@ -1013,37 +991,18 @@ const generateInvoicePDF = async (invoice) => {
         y += DOC_GAP.section;
       }
 
-      // ===== ITEMS =====
+      // ===== SERVICES =====
       // One table, whatever the line is: an invoice bills for services and they are all billed the
       // same way. The old layout split them into "Services Included" and "Add-ons" by sniffing the
       // word "addon" out of a description, which put a service in the wrong table on a typo.
+      //
+      // The estimate's own seven columns, drawn by the same renderer -- the invoice's `Qty` and
+      // `Amount` are gone: `Amount` stated the AMC package price divided by the number of services
+      // it covered, which agreed with nothing in the summary, and read 0 against every added
+      // service. What is billed is stated once, in the Invoice Summary below.
       if (items.length) {
         y = drawSectionHeading(doc, y, isWorkOrder ? 'Work Billed' : 'Services Billed', MARGIN);
-        y = drawItemsTable(doc, y, {
-          margin: MARGIN,
-          columns: [
-            { label: '#', width: 26 },
-            { label: 'Description', width: 199 },
-            { label: 'Frequency', width: 78 },
-            { label: 'Visits', width: 44, align: 'right' },
-            { label: 'Qty', width: 34, align: 'right' },
-            { label: 'Amount', width: 114, align: 'right' }
-          ],
-          rows: items.map((item, index) => {
-            const name = stripInternalServiceDetails(decodeHtml(String(item.description || item.name || item.serviceName || item.service_name || 'Service')));
-            const detail = stripInternalServiceDetails(decodeHtml(String(item.details || item.serviceDescription || '')));
-            const quantity = item.quantity ?? item.qty;
-            const amount = item.amount ?? item.totalPrice ?? item.total_price ?? item.unitPrice ?? item.unit_price ?? 0;
-            return [
-              String(index + 1),
-              [name, detail].filter(Boolean).join('\n'),
-              String(item.frequency || item.frequencyType || item.frequency_type || '-').replace(/^\d+x\s*/i, ''),
-              String(item.visits ?? item.frequencyCount ?? item.frequency_count ?? 1),
-              quantity === undefined || quantity === null || quantity === '' ? '-' : String(quantity),
-              money(figure(amount))
-            ];
-          })
-        });
+        y = drawServicesTable(doc, y, { margin: MARGIN, rows: items.map(item => serviceTableRow(item, item.tag)) });
       }
 
       // ===== SUMMARY =====

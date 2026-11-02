@@ -714,6 +714,45 @@ shapes to avoid, both of which were on the customer portal:
   They fail if a route reads a rate from the request, if the send route gates on GST again, or if an
   invoice document prints a `GST (` line.
 
+## The Invoice Document — One Document, Every Surface
+
+- **An invoice bills its estimate's services, so every surface resolves them from the estimate**
+  through `backend/utils/invoiceDocument.js` (`loadInvoiceDocument`, `loadInvoiceDocuments` for a
+  list, `invoiceDocument` for the pure mapping). It reads the estimate back through the estimate's
+  own customer projection — `customerEstimateData` — so the rows are the ones the estimate's view,
+  PDF and email already print, with the same customer-safe description, Method and Input / Details.
+  The invoice's stored `line_items` are a snapshot taken when the draft was raised; they are a
+  **fallback only** (a generic or manual invoice, or an estimate that no longer resolves).
+- **Never rebuild an invoice's services at a call site.** `GET /invoices/:id` and
+  `GET /invoices/:id/pdf` each carried their own ~150-line "enrichment" block, and they disagreed:
+  the modal matched a stored line by name and kept its price and frequency, the PDF matched by
+  position and kept neither, so one invoice read "Quarterly / Rs. 3,360" on screen and "Other / 0"
+  on paper. Both also wrote the description twice (`description` as `"Name - detail"` *and*
+  `details` as the same detail), which the PDF printed on two lines.
+- **The services table carries the estimate document's columns, in this order**: `#`, Service (its
+  category, and `Package` for one of the AMC package's own services, under the name), Description,
+  Input / Details, Method, Frequency, Visits. One table, package services first — never a
+  "Services Included" / "Services" pair split by sniffing the word "addon" out of a description.
+  Drawn by `SERVICE_COLUMNS` / `drawServicesTable` / `serviceTableRow` in `services/pdfService.js`
+  (shared with the estimate PDF), `invoiceServicesEmailTable` in `utils/invoiceDocument.js` (shared
+  by all three invoice emails) and `components/billing/InvoiceServicesTable.jsx` in the portals.
+- **No money in that table**: no per-service price, and no total under it. The invoice is priced in
+  the Invoice Summary / Price Summary alone. The `Amount` column the PDF used to print was the AMC
+  package price divided by the number of services it covered — ₹497 against each of four services
+  on a ₹7,530 invoice, and ₹0 against every added service.
+- **There is one invoice PDF and it is the server's**: `GET /api/payments/invoices/:id/pdf`.
+  Generated Invoices, Invoices (download and preview) and the FP invoice page all fetch it. The
+  client-side `exportInvoiceToPDF` in `admin-portal/src/utils/pdfExport.js` is gone; do not add a
+  second layout. `FPInvoiceView`'s own html2canvas capture is of the shared table, so it matches.
+- **The customer's copy is the same document.** `routes/customers.js` (invoice list and detail)
+  resolves it through the same loader; `frontend/src/pages/Payment.jsx` lists every row. It used to
+  split the stored snapshot on `type === 'addon'` and render the services half only — an added
+  service was missing from the customer's own invoice entirely.
+- Regression tests: `node --test backend/utils/invoiceDocument.test.js` and
+  `node --test admin-portal/src/utils/invoiceDocumentView.test.js`. The second compares the column
+  set across the component, the PDF and the email, and fails if a screen rebuilds its own table,
+  splits add-ons out again, or foots the table to a total the PDF does not print.
+
 ## Billing > Payments and Payment History Are Two Screens
 
 - **`Payments` is the list of payments; `PaymentHistory` is the `payment_history` audit trail.** Every

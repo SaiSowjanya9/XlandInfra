@@ -32,6 +32,8 @@ const {
   hashIP
 } = require('../utils/paymentSecurity');
 const { generateInvoicePDF } = require('../services/pdfService');
+// An invoice bills its estimate's services: one resolution for the modal, the PDF and the email
+const { loadInvoiceDocument, invoiceDocument, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
 const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 // Shared with the Razorpay writer so online and manual payments draw the same sequence
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
@@ -746,183 +748,12 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
     );
 
     const i = invoices[0];
-    
-    // Parse existing line items
-    let lineItems = i.line_items ? (typeof i.line_items === 'string' ? JSON.parse(i.line_items) : i.line_items) : [];
-    
-    // If we have a source estimate, try to enrich line items with full descriptions
-    if (i.source_estimate_id) {
-      try {
-        // Fetch estimate with AMC package services AND the original AMC package for full descriptions
-        const [estimates] = await pool.execute(
-          `SELECT fe.package_services, fe.addons_data, fe.package_id, fe.package_name,
-                  fpamc_id.services as amcPackageServices,
-                  fpamc_name.services as amcPackageServicesByName
-           FROM fp_estimates fe
-           LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
-           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
-           WHERE fe.estimate_id = ?`,
-          [i.source_estimate_id]
-        );
-        
-        if (estimates.length > 0) {
-          const estimate = estimates[0];
-          
-          console.log('[Invoice Enrichment] Found estimate:', estimate.package_id, estimate.package_name);
-          console.log('[Invoice Enrichment] AMC services from ID:', estimate.amcPackageServices ? 'YES (length: ' + (estimate.amcPackageServices?.length || 'N/A') + ')' : 'NO');
-          console.log('[Invoice Enrichment] AMC services from Name:', estimate.amcPackageServicesByName ? 'YES (length: ' + (estimate.amcPackageServicesByName?.length || 'N/A') + ')' : 'NO');
-          
-          // Parse the AMC package services (these have the full descriptions)
-          let amcServices = [];
-          const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
-          console.log('[Invoice Enrichment] Raw AMC services type:', typeof amcServicesRaw);
-          if (amcServicesRaw) {
-            try {
-              const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
-              console.log('[Invoice Enrichment] Parsed AMC services structure:', JSON.stringify(Object.keys(parsed || {})));
-              console.log('[Invoice Enrichment] Has serviceRows:', !!parsed?.serviceRows, 'Has services:', !!parsed?.services, 'IsArray:', Array.isArray(parsed));
-              amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
-              console.log('[Invoice Enrichment] Extracted services count:', amcServices.length);
-              if (amcServices.length > 0) {
-                console.log('[Invoice Enrichment] First service FULL structure:', JSON.stringify(amcServices[0]));
-                console.log('[Invoice Enrichment] First service description:', amcServices[0]?.description || '(empty)');
-              }
-            } catch (e) { console.log('Error parsing AMC services:', e); }
-          } else {
-            console.log('[Invoice Enrichment] No AMC services raw data found!');
-          }
-          
-          // Parse estimate's package_services
-          let estimateServices = [];
-          console.log('[Invoice Enrichment] Estimate package_services:', estimate.package_services ? 'EXISTS' : 'MISSING');
-          if (estimate.package_services) {
-            try {
-              const rawEstServices = typeof estimate.package_services === 'string' 
-                ? JSON.parse(estimate.package_services) 
-                : estimate.package_services;
-              // Handle both array format and object with serviceRows
-              if (Array.isArray(rawEstServices)) {
-                estimateServices = rawEstServices;
-              } else if (rawEstServices?.serviceRows) {
-                estimateServices = rawEstServices.serviceRows;
-              } else if (rawEstServices?.services) {
-                estimateServices = rawEstServices.services;
-              }
-              console.log('[Invoice Enrichment] Estimate services count:', estimateServices.length);
-              if (estimateServices.length > 0) {
-                console.log('[Invoice Enrichment] First estimate service:', JSON.stringify(estimateServices[0]));
-              }
-            } catch (e) { 
-              console.log('[Invoice Enrichment] Error parsing estimate services:', e.message);
-              estimateServices = []; 
-            }
-          }
-          
-          // Build enriched line items - ALWAYS use AMC package descriptions as primary source
-          // The AMC package has full descriptions; estimate/invoice may have truncated versions
-          const originalLineItems = [...lineItems]; // Keep original for matching
-          
-          // Determine the primary source of services (AMC package or estimate)
-          const primaryServices = amcServices.length > 0 ? amcServices : estimateServices;
-          const sourceType = amcServices.length > 0 ? 'AMC' : 'estimate';
-          
-          console.log(`[Invoice Enrichment] Using ${sourceType} services as primary source, count: ${primaryServices.length}`);
-          console.log('[Invoice Enrichment] Original line items count:', originalLineItems.length);
-          
-          if (primaryServices.length > 0) {
-            // Build a name lookup map for matching existing items
-            const existingByName = {};
-            originalLineItems.forEach((item, idx) => {
-              const name = (item.name || item.description?.split(' - ')[0] || '').toLowerCase().trim();
-              if (name) existingByName[name] = { item, idx };
-            });
-            
-            // Use ALL services from the primary source (AMC/estimate), not just matching existing ones
-            lineItems = primaryServices.map((service, idx) => {
-              const serviceName = service.service || service.name || service.serviceName || 'Service';
-              const fullDescription = service.description || service.service_description || service.details || '';
-              
-              // Try to find matching existing line item for price info
-              const existingName = serviceName.toLowerCase().trim();
-              const existing = existingByName[existingName]?.item || originalLineItems[idx] || {};
-              
-              console.log(`[Invoice Enrichment] Service ${idx + 1}: "${serviceName}" - Desc: "${fullDescription?.substring(0, 80)}..."`);
-              
-              return {
-                ...existing,
-                name: serviceName,
-                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
-                details: fullDescription,
-                service_description: fullDescription,
-                frequency: service.frequency_type || service.frequencyType || service.frequency || existing.frequency || 'Other',
-                visits: service.frequency_count || service.frequencyCount || service.visits || existing.visits || 1,
-                totalPrice: parseFloat(existing.totalPrice || existing.total_price || service.totalPrice || service.price || 0),
-                type: existing.type || 'service'
-              };
-            });
-            
-            console.log(`[Invoice Enrichment] Final line items count: ${lineItems.length}`);
-          } else {
-            console.log('[Invoice Enrichment] No AMC services or estimate services found - keeping original line items');
-          }
-          
-          // Also enrich addons if present - fetch full descriptions from fp_addons table
-          if (estimate.addons_data) {
-            const addons = typeof estimate.addons_data === 'string' 
-              ? JSON.parse(estimate.addons_data) 
-              : estimate.addons_data;
-            
-            if (Array.isArray(addons)) {
-              // Fetch all FP addons for full descriptions
-              let fpAddons = [];
-              try {
-                const [addonsResult] = await pool.execute(
-                  `SELECT id, service_name, description FROM fp_addons WHERE franchise_partner_id = ?`,
-                  [i.franchise_partner_id]
-                );
-                fpAddons = addonsResult || [];
-              } catch (e) { console.log('Error fetching fp_addons:', e); }
-              
-              addons.forEach(addon => {
-                const addonName = addon.name || addon.serviceName || addon.service_name || 'Add-on';
-                let addonDesc = addon.description || addon.service_description || '';
-                
-                // Try to find full description from fp_addons table
-                if (fpAddons.length > 0) {
-                  const matchingAddon = fpAddons.find(fa => 
-                    (fa.service_name || '').toLowerCase() === addonName.toLowerCase()
-                  );
-                  if (matchingAddon && matchingAddon.description) {
-                    addonDesc = matchingAddon.description;
-                  }
-                }
-                
-                // Check if addon already exists in lineItems
-                const exists = lineItems.some(item => 
-                  item.name?.toLowerCase() === addonName.toLowerCase() || 
-                  item.description?.toLowerCase().includes(addonName.toLowerCase())
-                );
-                
-                if (!exists) {
-                  lineItems.push({
-                    name: addonName,
-                    description: addonDesc ? `${addonName} - ${addonDesc}` : addonName,
-                    details: addonDesc,
-                    frequency: addon.frequency || addon.frequencyType || 'Other',
-                    visits: addon.visits || addon.frequencyCount || 1,
-                    totalPrice: parseFloat(addon.totalPrice || addon.price || 0),
-                    type: 'addon'
-                  });
-                }
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error enriching line items from estimate:', e);
-      }
-    }
-    
+
+    // The services this invoice bills, read from the estimate it was raised from. One resolution
+    // for the modal, the PDF and the email -- the three used to rebuild them separately and
+    // disagree about an add-on's price and frequency.
+    const document = await loadInvoiceDocument(pool, i);
+
     const settledPaid = parseFloat(i.settled_paid) || 0;
     const detailTotal = parseFloat(i.total_amount) || 0;
     const detailBalance = Math.max(0, detailTotal - settledPaid);
@@ -958,7 +789,13 @@ router.get('/invoices/:id', authenticate, canViewPayments, async (req, res) => {
         customerPhone: i.customer_phone,
         invoiceDate: i.invoice_date,
         dueDate: i.due_date,
-        lineItems: lineItems,
+        // The document's rows, and the same array under the old name so nothing reading
+        // `lineItems` is left with the raw snapshot
+        services: document.services,
+        lineItems: document.services,
+        packageName: document.packageName,
+        packagePrice: document.packagePrice,
+        servicesTotal: document.servicesTotal,
         subtotal: parseFloat(i.subtotal),
         discountPercentage: parseFloat(i.discount_percentage),
         discountAmount: parseFloat(i.discount_amount),
@@ -1039,111 +876,12 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
     }
 
     const invoice = invoices[0];
-    
-    // Parse existing line items
-    let lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
-    
-    // Enrich line items from estimate if available (same logic as single invoice endpoint)
-    if (invoice.source_estimate_id) {
-      try {
-        const [estimates] = await pool.execute(
-          `SELECT fe.package_services, fe.addons_data, fe.package_id, fe.package_name,
-                  fpamc_id.services as amcPackageServices,
-                  fpamc_name.services as amcPackageServicesByName
-           FROM fp_estimates fe
-           LEFT JOIN fp_amc_packages fpamc_id ON fe.package_id = fpamc_id.id
-           LEFT JOIN fp_amc_packages fpamc_name ON fe.package_name = fpamc_name.name AND fe.franchise_partner_id = fpamc_name.franchise_partner_id
-           WHERE fe.estimate_id = ?`,
-          [invoice.source_estimate_id]
-        );
-        
-        if (estimates.length > 0) {
-          const estimate = estimates[0];
-          
-          // Parse AMC services
-          let amcServices = [];
-          const amcServicesRaw = estimate.amcPackageServices || estimate.amcPackageServicesByName;
-          if (amcServicesRaw) {
-            try {
-              const parsed = typeof amcServicesRaw === 'string' ? JSON.parse(amcServicesRaw) : amcServicesRaw;
-              amcServices = parsed?.serviceRows || parsed?.services || (Array.isArray(parsed) ? parsed : []);
-            } catch (e) { }
-          }
-          
-          // Parse estimate services
-          let estimateServices = [];
-          if (estimate.package_services) {
-            try {
-              const rawEstServices = typeof estimate.package_services === 'string' 
-                ? JSON.parse(estimate.package_services) 
-                : estimate.package_services;
-              if (Array.isArray(rawEstServices)) {
-                estimateServices = rawEstServices;
-              } else if (rawEstServices?.serviceRows) {
-                estimateServices = rawEstServices.serviceRows;
-              } else if (rawEstServices?.services) {
-                estimateServices = rawEstServices.services;
-              }
-            } catch (e) { }
-          }
-          
-          // Use ALL services from primary source
-          const primaryServices = amcServices.length > 0 ? amcServices : estimateServices;
-          const originalLineItems = [...lineItems];
-          
-          if (primaryServices.length > 0) {
-            console.log(`[PDF Enrichment] Using ${primaryServices.length} services from estimate/AMC (original: ${originalLineItems.length})`);
-            
-            lineItems = primaryServices.map((service, idx) => {
-              const serviceName = service.service || service.name || service.serviceName || 'Service';
-              const fullDescription = service.description || service.service_description || service.details || '';
-              const existing = originalLineItems[idx] || {};
-              
-              return {
-                ...existing,
-                name: serviceName,
-                description: fullDescription ? `${serviceName} - ${fullDescription}` : serviceName,
-                details: fullDescription,
-                service_description: fullDescription,
-                frequency: service.frequency_type || service.frequencyType || service.frequency || existing.frequency || 'Other',
-                visits: service.frequency_count || service.frequencyCount || service.visits || existing.visits || 1,
-                totalPrice: parseFloat(existing.totalPrice || existing.total_price || service.totalPrice || service.price || 0),
-                type: existing.type || 'service'
-              };
-            });
-          }
-          
-          // Add addons
-          if (estimate.addons_data) {
-            const addons = typeof estimate.addons_data === 'string' ? JSON.parse(estimate.addons_data) : estimate.addons_data;
-            if (Array.isArray(addons)) {
-              addons.forEach(addon => {
-                const addonName = addon.name || addon.serviceName || 'Add-on';
-                const addonDesc = addon.description || addon.service_description || '';
-                const exists = lineItems.some(item => item.name?.toLowerCase() === addonName.toLowerCase());
-                if (!exists) {
-                  lineItems.push({
-                    name: addonName,
-                    description: addonDesc ? `${addonName} - ${addonDesc}` : addonName,
-                    details: addonDesc,
-                    frequency: addon.frequency || 'Other',
-                    visits: addon.visits || 1,
-                    type: 'addon'
-                  });
-                }
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('[PDF] Error enriching line items:', e);
-      }
-    }
-    
-    console.log(`[PDF] Final line items count: ${lineItems.length}`);
-    
-    // Generate PDF using pdfService
-    const pdfData = {
+
+    // The same document the view modal reads, so the PDF cannot state a different service,
+    // frequency or figure from the screen it was downloaded from
+    const document = await loadInvoiceDocument(pool, invoice);
+
+    const pdfBuffer = await generateInvoicePDF({
       invoiceId: invoice.invoice_id,
       estimateId: invoice.source_estimate_id,
       invoiceType: invoice.invoice_type,
@@ -1158,7 +896,10 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
       billingDuration: invoice.billing_duration,
-      lineItems: JSON.stringify(lineItems), // Use enriched line items
+      services: document.services,
+      packageName: document.packageName,
+      packagePrice: document.packagePrice,
+      servicesTotal: document.servicesTotal,
       subtotal: invoice.subtotal,
       discountAmount: invoice.discount_amount,
       discountPercentage: invoice.discount_percentage,
@@ -1168,20 +909,7 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       workOrderCategory: invoice.work_order_category,
       workOrderSubcategory: invoice.work_order_subcategory,
       workOrderDescription: invoice.work_order_description
-    };
-    
-    console.log('[PDF] Invoice Data:', { 
-      invoiceId: pdfData.invoiceId,
-      lineItemsCount: lineItems.length,
-      lineItems: lineItems.map((item, idx) => ({
-        index: idx + 1,
-        name: item.name || item.serviceName,
-        hasDescription: !!(item.description || item.details || item.service_description)
-      })),
-      workOrderId: pdfData.workOrderId
     });
-    
-    const pdfBuffer = await generateInvoicePDF(pdfData);
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Invoice_${invoice.invoice_id}.pdf`);
@@ -1594,25 +1322,9 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-        // Generate line items HTML - Table: # | Service | Description | Frequency | Visits (Gold Theme)
-        const lineItemsHtml = formattedLineItems.map((item, idx) => {
-          const name = item.name || item.description || 'Service';
-          const details = item.details || '';
-          const freq = item.frequency || item.frequencyType || '-';
-          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-          const visits = item.visits || item.quantity || 1;
-          return `
-          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
-              <span style="display: inline-block; width: 22px; height: 22px; background: #d97706; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
-            </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #78350f;">${name}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #d97706; font-weight: 500;">${freqDisplay}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #78350f;">${visits}</td>
-          </tr>
-        `;
-        }).join('');
+        // A sales invoice has no estimate behind it, so its own lines are the document's rows --
+        // in the same columns the invoice's PDF, view modal and every later email carry
+        const servicesTable = invoiceServicesEmailTable(invoiceDocument({ subtotal, line_items: formattedLineItems }, null).services);
 
         await sendEmailService({
           to: customerDetails.email,
@@ -1657,20 +1369,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                       </tr>
                     </table>
 
-                    <table style="width: 100%; border-collapse: collapse;">
-                      <thead>
-                        <tr style="background: #fef3c7;">
-                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
-                          <th style="padding: 10px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
-                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
-                          <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
-                          <th style="padding: 10px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${lineItemsHtml}
-                      </tbody>
-                    </table>
+                    ${servicesTable}
 
                     <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
                       <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -2111,6 +1810,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       WHERE id = ?
     `, [req.user.id, id]);
 
+    // The services the invoice bills, resolved from its estimate once for the PDF and the email
+    // body below -- the two used to be built from different places and could disagree
+    const document = await loadInvoiceDocument(pool, invoice);
+
     // Generate PDF attachment
     const { generateInvoicePDF } = require('../services/pdfService');
     let pdfBuffer = null;
@@ -2130,7 +1833,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
         invoiceDate: invoice.invoice_date,
         dueDate: invoice.due_date,
         billingDuration: invoice.billing_duration,
-        lineItems: invoice.line_items,
+        services: document.services,
+        packageName: document.packageName,
+        packagePrice: document.packagePrice,
+        servicesTotal: document.servicesTotal,
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
         totalAmount: invoice.total_amount,
@@ -2145,35 +1851,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
       console.error('Failed to generate invoice PDF:', pdfError.message);
     }
 
-    // Parse line items for email - Table: # | Service | Description | Frequency | Visits (no Amount)
-    let lineItemsHtml = '';
-    let lineItems = [];
-    try {
-      lineItems = invoice.line_items ? (typeof invoice.line_items === 'string' ? JSON.parse(invoice.line_items) : invoice.line_items) : [];
-      if (lineItems.length > 0) {
-        lineItemsHtml = lineItems.map((item, idx) => {
-          // Generic invoices store their line as `description` only
-          const name = item.name || item.serviceName || item.description || 'Service';
-          const details = item.details || (item.name ? item.description : '') || '';
-          const freq = item.frequency || item.frequencyType || item.frequency_type || '-';
-          const freqDisplay = freq && freq !== '-' ? freq.charAt(0).toUpperCase() + freq.slice(1).toLowerCase() : '-';
-          const visits = item.visits || item.frequencyCount || item.frequency_count || item.quantity || 1;
-          return `
-          <tr style="background: ${idx % 2 === 0 ? '#ffffff' : '#fffbeb'};">
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; vertical-align: middle;">
-              <span style="display: inline-block; width: 22px; height: 22px; background: #d97706; color: #ffffff; border-radius: 50%; font-size: 11px; font-weight: 600; line-height: 22px; text-align: center;">${idx + 1}</span>
-            </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #78350f;">${name}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563; font-size: 12px;">${details || '-'}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #d97706; font-weight: 500;">${freqDisplay}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #78350f;">${visits}</td>
-          </tr>
-        `;
-        }).join('');
-      }
-    } catch (e) {
-      console.log('Error parsing line items:', e);
-    }
+    // The email lists the services in the document's own columns, so the message, its attachment
+    // and the portal's modal read as one document
+    const lineItems = document.services;
+    const servicesTable = invoiceServicesEmailTable(document.services);
 
     // Format amounts
     const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -2231,22 +1912,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                   </tr>
                 </table>
 
-                ${lineItems.length > 0 ? `
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                  <thead>
-                    <tr style="background: #fef3c7;">
-                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 40px;">#</th>
-                      <th style="padding: 10px; text-align: left; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 100px;">Service</th>
-                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase;">Description</th>
-                      <th style="padding: 10px; text-align: center; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 80px;">Frequency</th>
-                      <th style="padding: 10px; text-align: right; color: #92400e; font-size: 11px; font-weight: 600; text-transform: uppercase; width: 50px;">Visits</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${lineItemsHtml}
-                  </tbody>
-                </table>
-                ` : ''}
+                ${servicesTable ? `<div style="margin-top: 15px;">${servicesTable}</div>` : ''}
 
                 <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
                   <tr style="border-bottom: 1px solid #e5e7eb;">

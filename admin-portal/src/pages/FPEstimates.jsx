@@ -805,7 +805,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
   // In custom mode every service is listed in the Custom Services table above, so the package-side
   // tables must not repeat the catalog rows underneath it.
   const tableCatalogAddons = estimateStructure === 'custom' ? [] : catalogAddons;
-  const tableCatalogAddonsTotal = tableCatalogAddons.reduce((sum, addon) => sum + (parseFloat(addon.totalPrice) || 0), 0);
 
   // Helper to match property type for filtering
   const matchPropertyType = (value, filterId) => {
@@ -1477,7 +1476,6 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
                       onEdit: () => setEditingCatalogAddon(addon), onRemove: () => removeCatalogAddon(addon.addonId),
                     })),
                   ]}
-                  total={estimateForm.selectedAddons.reduce((sum, id) => sum + (parseFloat(addons.find(a => a.id == id)?.price) || 0), 0) + tableCatalogAddonsTotal}
                 />
             </div>
           )}
