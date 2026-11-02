@@ -42,9 +42,14 @@ const BottomNav = ({ user, onLogout }) => {
   const moreActive = showMore || pathname.startsWith('/dashboard/contact');
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
 
-  const tabClass = (active) => `flex flex-col items-center justify-center gap-1 py-2 mx-1 my-1.5 rounded-xl transition-colors ${
+  // The pill, and the focus ring a keyboard needs to see where it is. The tabs are grid items with
+  // no height of their own: they stretch to the row, so the 48px target comes from
+  // `--portal-nav-h` less these margins, and there is no second height to keep in step.
+  const tabClass = (active) => `flex flex-col items-center justify-center gap-1 mx-1 my-1.5 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold-500 ${
     active ? 'bg-gold-600/10 text-gold-600' : 'text-gray-500 hover:text-gold-600'
   }`;
+
+  const labelClass = (active) => `text-[10px] leading-none whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`;
 
   return (
     <>
@@ -53,7 +58,11 @@ const BottomNav = ({ user, onLogout }) => {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Primary"
       >
-        <div className="grid grid-cols-5">
+        {/* The bar spans the screen; the tabs inside it do not. Five items sharing a tablet's full
+            width are 150px each with a 20px icon adrift in the middle, so the row is capped and
+            centred -- below `max-w-xl` the cap does nothing and a phone's tabs still divide the
+            whole width. */}
+        <div className="grid grid-cols-5 h-[var(--portal-nav-h)] w-full max-w-xl mx-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = isActive(tab, pathname);
@@ -64,14 +73,20 @@ const BottomNav = ({ user, onLogout }) => {
                 className={tabClass(active)}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium leading-none whitespace-nowrap">{tab.label}</span>
+                <Icon className="w-5 h-5" aria-hidden="true" />
+                <span className={labelClass(active)}>{tab.label}</span>
               </Link>
             );
           })}
-          <button type="button" onClick={() => setShowMore(true)} className={tabClass(moreActive)}>
-            <MoreHorizontal className="w-5 h-5" />
-            <span className="text-[10px] font-medium leading-none">More</span>
+          <button
+            type="button"
+            onClick={() => setShowMore(true)}
+            className={tabClass(moreActive)}
+            aria-haspopup="dialog"
+            aria-expanded={showMore}
+          >
+            <MoreHorizontal className="w-5 h-5" aria-hidden="true" />
+            <span className={labelClass(moreActive)}>More</span>
           </button>
         </div>
       </nav>
@@ -80,10 +95,14 @@ const BottomNav = ({ user, onLogout }) => {
         <Modal
           onClose={() => setShowMore(false)}
           align="bottom"
-          padding="p-3"
+          // The sheet rests on top of the bar, not over it: `p-3` alone put its bottom edge 12px
+          // from the viewport, which is across the bar that opened it and under an iPhone's home
+          // indicator. The bottom padding is the bar plus that inset plus the same 12px, so the
+          // More tab stays visible and lit while its sheet is open.
+          padding="px-3 pt-3"
           // `lg:hidden` belongs to the overlay, not the card: hiding only the card at a width the
           // bar itself is hidden at would leave a transparent `fixed inset-0` swallowing clicks.
-          overlayClassName="lg:hidden"
+          overlayClassName="lg:hidden pb-[calc(var(--portal-nav-space)_+_0.75rem)]"
           className="max-w-md overflow-hidden"
           ariaLabelledBy="more-sheet-name"
         >

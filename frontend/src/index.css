@@ -65,6 +65,42 @@
   margin: 0;
 }
 
+/* The customer portal's fixed bottom bar is one number, stated once.
+ *
+ * `--portal-nav-h` is the bar's own height and `--portal-nav-space` is that plus the phone's home
+ * indicator, which is the room the page has to leave under its last card. The bar
+ * (components/BottomNav.jsx) and the page's bottom padding (components/Layout.jsx) both read them,
+ * because written out twice they drift: the padding was a flat `pb-24` against a bar whose height
+ * nothing declared, so the gap under the last card was 58px on Android and 24px on an iPhone --
+ * the same spacing shrinking by the size of an inset the padding knew nothing about.
+ *
+ * 3.75rem leaves each tab 48px once the 1.5 of vertical margin on the pills is taken off, which is
+ * the touch target to aim for. Change the height here and the bar, the tabs and the page's
+ * clearance all follow. */
+:root {
+  --portal-nav-h: 3.75rem;
+  --portal-nav-space: calc(var(--portal-nav-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* The portal's full-height shell. `100vh` on a mobile browser is the viewport with the address bar
+ * *hidden*, so while the bar is showing the shell is taller than the screen and a short page
+ * scrolls into ~100px of empty space below its own content, the fixed bottom bar hanging over the
+ * gap. `100dvh` is the viewport as it actually is and resizes with the address bar.
+ *
+ * The fallback is a separate `@supports` block and not a second declaration in this one, because
+ * the build's CSS minifier drops a declaration another declaration in the same block overrides --
+ * `min-height: 100vh; min-height: 100dvh;` shipped as `min-height:100dvh` alone, leaving Safari
+ * before 15.4 with no min-height at all. */
+.portal-shell {
+  min-height: 100vh;
+}
+
+@supports (min-height: 100dvh) {
+  .portal-shell {
+    min-height: 100dvh;
+  }
+}
+
 html {
   scroll-behavior: smooth;
   /* Prevent unwanted zoom on mobile */
@@ -1177,11 +1213,24 @@ section {
   scroll-margin-top: 80px;
 }
 
-/* GPU acceleration for smoother scrolling */
-body {
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
+/* No transform on `body`, however harmless the value looks.
+ *
+ * This was `transform: translateZ(0)`, added for "GPU acceleration for smoother scrolling". A
+ * transform of any value other than `none` makes the element a containing block for every
+ * `position: fixed` descendant -- so `fixed` across this whole app resolved against the body box,
+ * which is as tall as the document, not against the viewport.
+ *
+ * The customer portal's bottom bar is `fixed bottom-0`, so its `bottom: 0` was the bottom of the
+ * *document*: it scrolled away with the page and only looked pinned once you reached the end,
+ * which is where a screenshot of it tends to be taken. Measured in Chrome, the bar was under the
+ * viewport's bottom edge at the foot of the page and nowhere near it at the top; with this rule
+ * gone it is there at every scroll position. Every `fixed inset-0` modal overlay was mispositioned
+ * the same way, which is what the `space-y-` margin reset above and the portalled dialogs in
+ * Dashboard.jsx and Schedule.jsx were working around.
+ *
+ * Compositing is decided by the browser now; this hint bought nothing and cost the layout. Do not
+ * put it back. Note that `contain: layout` on `section` (further up) and the `translateZ(0)` on
+ * `button, a, [class*="hover:"]` do the same thing to anything fixed *inside* them. */
 
 @media (prefers-reduced-motion: reduce) {
   html {

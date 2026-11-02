@@ -87,13 +87,18 @@ const Layout = ({ children, user, onLogout }) => {
 
   return (
   <PortalRefreshProvider>
-    <div className="min-h-screen bg-warm-page flex flex-col">
+    {/* `portal-shell` is a full-height shell on a viewport unit that tracks the address bar —
+        see index.css. The page itself scrolls; nothing here is a nested scroll container, so the
+        fixed bar stays put and the body keeps scrolling behind it. */}
+    <div className="portal-shell bg-warm-page flex flex-col">
       <PortalHeader user={user} onLogout={onLogout} />
 
-      {/* The bottom bar is fixed, so the page keeps its own height clear of it: `pb-24` lifts at
-          `lg` with the bar itself, since padding that stopped at `md` would leave a tablet's last
-          card sitting under it. */}
-      <main className="flex-1 pb-24 lg:pb-6">
+      {/* The bottom bar is fixed, so the page keeps its own height clear of it -- the bar's height
+          plus the home indicator, read from the same variable the bar is drawn from, so the gap
+          under the last card cannot drift from the thing it is clearing. Each page adds its own
+          `py-6` on top, which is the visible gap. It lifts at `lg` with the bar itself, since
+          padding that stopped at `md` would leave a tablet's last card sitting under it. */}
+      <main className="flex-1 pb-[var(--portal-nav-space)] lg:pb-6">
         {children}
       </main>
 
