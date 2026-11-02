@@ -279,9 +279,14 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
   const canSeeEstimateMargins = ['admin', 'operations_manager', 'franchise_partner']
     .includes(user?.role);
   
-  // FP Context
-  const { fpList, selectedFp, selectFp, loading: fpLoading } = useFP();
+  // FP Context. The partner picker belongs to the head-office portal alone -- an FP, Manager or
+  // Supervisor is already scoped to one partner by its own token, and FPContext deliberately
+  // leaves selectedFp null for those roles, so an ungated picker sat on their dashboards reading
+  // as the admin's all-partners view over an empty list. Every other billing screen gates it the
+  // same way; utils/fpPickerScope.test.js keeps them in step.
+  const { fpList, selectedFp, selectFp } = useFP();
   const [fpDropdownOpen, setFpDropdownOpen] = useState(false);
+  const isAdminPortal = portalType === 'admin' || portalType === 'employee';
 
   const token = getAuthToken();
 
@@ -311,8 +316,9 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     setLoading(true);
     try {
       // Build query params with optional FP filter
+      // Only an admin narrows by partner; an FP's own token already scopes the route.
       const params = new URLSearchParams();
-      if (selectedFp && selectedFp.id !== 'all') {
+      if (isAdminPortal && selectedFp && selectedFp.id !== 'all') {
         params.append('fpId', selectedFp.id);
       }
       const queryString = params.toString();
@@ -582,7 +588,7 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, selectedFp, canSeeEstimateMargins]);
+  }, [token, isAdminPortal, selectedFp, canSeeEstimateMargins]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -622,21 +628,24 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
       {/* The shared section header, as on Work Orders and Estimates */}
       <div className="px-4 sm:px-6 pt-6">
         <PageHeader icon={IndianRupee} title="Payments Dashboard"
-          subtitle={selectedFp ? `Viewing payments for ${selectedFp.name}` : 'Overview of all payments and collections'}>
+          subtitle={isAdminPortal && selectedFp && selectedFp.id !== 'all'
+            ? `Viewing payments for ${selectedFp.companyName || selectedFp.company_name || selectedFp.name || selectedFp.fpId}`
+            : 'Overview of all payments and collections'}>
           <>
-            {/* FP Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span className="text-sm font-medium text-gray-700">
-                  {selectedFp ? (selectedFp.id === 'all' ? 'Admin (All FPs)' : selectedFp.fpId || selectedFp.fp_code || selectedFp.name) : 'Admin (All FPs)'}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
+            {/* FP Selector - Only for Admin Portal */}
+            {isAdminPortal && (
+              <div className="relative">
+                <button
+                  onClick={() => setFpDropdownOpen(!fpDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectedFp && selectedFp.id !== 'all' ? (selectedFp.fpId || selectedFp.fp_code || selectedFp.name) : 'Admin (All FPs)'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${fpDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <DismissPanel open={fpDropdownOpen} onDismiss={() => setFpDropdownOpen(false)} className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-auto">
                   {/* Admin (All FPs) Option */}
                   <button
                     onClick={() => { selectFp({ id: 'all', name: 'All Franchise Partners' }); setFpDropdownOpen(false); }}
@@ -669,7 +678,8 @@ const PaymentsDashboard = ({ user, portalType = 'admin' }) => {
                     ))}
                   </div>
                 </DismissPanel>
-            </div>
+              </div>
+            )}
             <DateRangeFilter
               startDate={dateRange.start}
               endDate={dateRange.end}
