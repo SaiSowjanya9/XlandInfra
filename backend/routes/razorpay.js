@@ -30,6 +30,29 @@ const { ensureRefundTable, recordRefund, findRefund } = require('../utils/refund
 const { resyncInvoiceSettlement } = require('../utils/invoiceSettlement');
 const { generatePaymentId } = require('../utils/paymentIds');
 
+/**
+ * The property an invoice is for, by name.
+ *
+ * **`invoices` has no `property_name` column** — no migration has ever created one — so the two
+ * public payment-page queries that selected `i.property_name` failed outright with
+ * `ER_BAD_FIELD_ERROR: Unknown column 'i.property_name' in 'field list'`, and the page the Pay Now
+ * button in every invoice email leads to answered "Failed to load invoice details". It is not
+ * drift: a database built from this repo has never had the column either.
+ *
+ * The name belongs to the property, so it is joined. The **code** is matched first because a bare
+ * row number is not unique across the two property tables — `properties.id` 37 and
+ * `onboarded_properties.id` 37 are different communities — so the number is only a fallback for an
+ * invoice that carries no code, and a wrong match would print another household's name on a
+ * payment page. `properties` is the FP portal's table and `onboarded_properties` every other
+ * portal's; both are consulted because an invoice may belong to either.
+ */
+const PROPERTY_NAME_SELECT =
+  'COALESCE(prop_by_code.community_name, fp_prop_by_code.name, prop_by_id.community_name) AS property_name';
+const PROPERTY_NAME_JOINS = `
+      LEFT JOIN onboarded_properties prop_by_code ON prop_by_code.property_id = i.property_code
+      LEFT JOIN properties fp_prop_by_code ON fp_prop_by_code.property_id = i.property_code
+      LEFT JOIN onboarded_properties prop_by_id ON prop_by_id.id = i.property_id`;
+
 // Environment variables for Razorpay
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
@@ -1235,7 +1258,7 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
         i.invoice_id,
         i.property_id,
         i.property_code,
-        i.property_name,
+        ${PROPERTY_NAME_SELECT},
         i.customer_name,
         i.customer_email,
         i.customer_phone,
@@ -1252,6 +1275,7 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
         i.razorpay_short_url,
         i.payment_link_status
       FROM invoices i
+      ${PROPERTY_NAME_JOINS}
       WHERE i.invoice_id = ?
     `;
     const params = [invoiceId];
@@ -1447,7 +1471,7 @@ router.get('/public/pay', ipBlacklistMiddleware, qrAccessLimiter, async (req, re
         i.invoice_id,
         i.property_id,
         i.property_code,
-        i.property_name,
+        ${PROPERTY_NAME_SELECT},
         i.customer_name,
         i.customer_email,
         i.customer_phone,
@@ -1462,6 +1486,7 @@ router.get('/public/pay', ipBlacklistMiddleware, qrAccessLimiter, async (req, re
         i.payment_link,
         i.payment_link_status
       FROM invoices i
+      ${PROPERTY_NAME_JOINS}
       WHERE i.invoice_id = ? AND i.payment_token_hash = ?
     `, [invoiceId, tokenHash]);
 
