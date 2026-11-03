@@ -25,7 +25,7 @@ const { buildCustomerActivity, buildUpcomingVisits } = require('../utils/custome
 const { customerNotificationScope } = require('../utils/customerNotificationScope');
 // A work order's property number is shared between `properties` and `onboarded_properties`,
 // so a numeric match has to agree on the code the way an invoice match always has
-const { propertyCodeAgreement } = require('../utils/workOrderPropertyCode');
+const { propertyCodeAgreement, workOrderPropertyCodeAvailable } = require('../utils/workOrderPropertyCode');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, authenticate, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
@@ -156,8 +156,12 @@ const authenticateCustomer = async (req, res, next) => {
     }
 
     // Get customer details
+    // `created_at` bounds what an identity (email, resident_id) may claim -- see
+    // customerWorkOrderScope. Without it the activity feed would fall back to property grounds
+    // only, so it is selected here rather than looked up again per route.
     const [customer] = await pool.execute(
-      `SELECT id, customer_id, email, first_name, last_name, property_id, property_code, property_name, is_active
+      `SELECT id, customer_id, email, first_name, last_name, property_id, property_code, property_name,
+              is_active, created_at
        FROM customer_accounts WHERE id = ? AND is_active = 1`,
       [customerId]
     );
@@ -175,7 +179,8 @@ const authenticateCustomer = async (req, res, next) => {
       lastName: customer[0].last_name,
       propertyId: customer[0].property_id,
       propertyCode: customer[0].property_code,
-      propertyName: customer[0].property_name
+      propertyName: customer[0].property_name,
+      createdAt: customer[0].created_at
     };
 
     next();
@@ -1371,10 +1376,38 @@ const resolveCustomerProperty = async (storedPropertyId, storedPropertyCode, sto
  *
  * Property name is deliberately NOT one of them: names are not unique (several communities are
  * called "OHSS"), and matching on one leaked another household's requests.
+ *
+ * Two kinds of ground, and they are not interchangeable:
+ *
+ *   The property (`property_id`, `property_code`) is about a place, and a place keeps its history.
+ *   A request raised against the property before this account existed is still about the
+ *   customer's building, so these carry no date limit.
+ *
+ *   An identity (`resident_id`, `customer_email`) is about a person, and both can be *reused*.
+ *   `customer_email` is a snapshot of who to call written onto the row, not a link to an account,
+ *   and the address is freed for a new customer once the old one is permanently deleted; the
+ *   legacy `residents` table numbers its rows in the same space `customer_accounts` does. So an
+ *   identity match is confined to the account's own lifetime (`wo.created_at >= created_at`),
+ *   which is the one thing a reused identifier cannot forge.
+ *
+ * That last rule is why account #52 (KKR Buildings `GC-1793673531543`, created 3 Nov 2026) is no
+ * longer shown WO-1783455968280 and WO-1783045326823 — two customer-raised work orders from July
+ * and October, against "PP" and "sdfsdfs", which reached it on `customer_email` alone because a
+ * previous holder of customer@example.com had raised them. Email is additionally narrowed to
+ * rows that carry no property at all, which is the gap it was added to cover: a work order whose
+ * property reference is missing, and which nothing else can find.
  */
-const customerWorkOrderScope = async ({ numericPropertyId, propertyCode, customerId, email }) => {
+const customerWorkOrderScope = async ({
+  numericPropertyId, propertyCode, customerId, email, accountCreatedAt
+}) => {
   const conditions = [];
   const params = [];
+  const hasPropertyCode = await workOrderPropertyCodeAvailable();
+  // An identity may only claim a row raised while this account has existed. Without the account's
+  // creation time there is no such bound, so identity grounds are dropped rather than trusted.
+  const lifetime = accountCreatedAt
+    ? { sql: ' AND wo.created_at >= ?', params: [accountCreatedAt] }
+    : null;
 
   if (numericPropertyId) {
     // The number alone is not unique across onboarded_properties and properties, so a work
@@ -1388,16 +1421,29 @@ const customerWorkOrderScope = async ({ numericPropertyId, propertyCode, custome
     params.push(numericPropertyId, ...agreement.params);
   }
   if (propertyCode && propertyCode !== numericPropertyId) {
+    // Some writers put the code straight into property_id
     conditions.push('wo.property_id = ?');
     params.push(propertyCode);
   }
-  if (customerId) {
-    conditions.push('wo.resident_id = ?');
-    params.push(customerId);
+  if (propertyCode && hasPropertyCode) {
+    // The unambiguous one: a row stamped with this code is about this property, whatever its
+    // number says. See utils/workOrderPropertyCode.js.
+    conditions.push('wo.property_code = ?');
+    params.push(propertyCode);
   }
-  if (email) {
-    conditions.push('LOWER(wo.customer_email) = LOWER(?)');
-    params.push(email);
+  if (customerId && lifetime) {
+    // `work_orders.resident_id` holds a customer_accounts.id today, but it began as a foreign key
+    // to the legacy `residents` table, whose ids run in the same range -- so a new account can
+    // collide with an old resident's work orders.
+    conditions.push(`(wo.resident_id = ?${lifetime.sql})`);
+    params.push(customerId, ...lifetime.params);
+  }
+  if (email && lifetime) {
+    const unclaimed = hasPropertyCode
+      ? "AND (wo.property_id IS NULL OR wo.property_id = '') AND (wo.property_code IS NULL OR wo.property_code = '')"
+      : "AND (wo.property_id IS NULL OR wo.property_id = '')";
+    conditions.push(`(LOWER(wo.customer_email) = LOWER(?) ${unclaimed}${lifetime.sql})`);
+    params.push(email, ...lifetime.params);
   }
 
   // No identifier at all must return nothing, never everything
@@ -1489,7 +1535,10 @@ router.get('/dashboard', async (req, res) => {
       numericPropertyId, propertyCode, propertyName, custEmail, customerId
     });
 
-    const scope = await customerWorkOrderScope({ numericPropertyId, propertyCode, customerId, email: custEmail });
+    const scope = await customerWorkOrderScope({
+      numericPropertyId, propertyCode, customerId, email: custEmail,
+      accountCreatedAt: customerData.created_at
+    });
     const whereClause = `WHERE ${scope.sql}`;
     const whereParams = scope.params;
 
@@ -1633,7 +1682,9 @@ router.get('/work-orders', async (req, res) => {
     const property = await resolveCustomerProperty(
       customerData.property_id, customerData.property_code, customerData.property_name
     );
-    const scope = await customerWorkOrderScope({ ...property, customerId, email: custEmail });
+    const scope = await customerWorkOrderScope({
+      ...property, customerId, email: custEmail, accountCreatedAt: customerData.created_at
+    });
     const whereClause = `WHERE ${scope.sql}`;
     const whereParams = scope.params;
 
@@ -3195,7 +3246,9 @@ router.get('/activity', authenticateCustomer, async (req, res) => {
     const customer = req.customer;
 
     const property = await resolveCustomerProperty(customer.propertyId, customer.propertyCode, customer.propertyName);
-    const workOrderScope = await customerWorkOrderScope({ ...property, customerId: customer.id, email: customer.email });
+    const workOrderScope = await customerWorkOrderScope({
+      ...property, customerId: customer.id, email: customer.email, accountCreatedAt: customer.createdAt
+    });
     const invoiceScope = customerInvoiceScope({ ...property, email: customer.email });
 
     // Each stream is dated by its own best column, which is not always the one it can be ordered by
@@ -3401,3 +3454,8 @@ router.get('/complaints', authenticateCustomer, async (req, res) => {
 });
 
 module.exports = router;
+// Exported for the regression tests: the ownership rules are the whole of the customer portal's
+// isolation, and they are worth asserting directly rather than through a route.
+module.exports.customerWorkOrderScope = customerWorkOrderScope;
+module.exports.customerInvoiceScope = customerInvoiceScope;
+module.exports.resolveCustomerProperty = resolveCustomerProperty;

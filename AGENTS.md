@@ -367,6 +367,44 @@ Consequences that are easy to trip over:
   `onboarded_properties` (`contact_email`) — the query threw into an empty catch and the
   cleanup silently depended on the `property_id` fallback matching. Fixed in
   `routes/franchisePartner.js` and `routes/admin.js`.
+- **A freed email does not free the rows that carry it**, and that is how a reused address
+  handed a new customer the old one's history. `work_orders.customer_email` is a snapshot of
+  who to call written onto the row, not a link to an account, so
+  `LOWER(wo.customer_email) = LOWER(?)` in `customerWorkOrderScope` claimed everything the
+  previous holder had ever raised. Account #52 (KKR Buildings `GC-1793673531543`, created
+  3 Nov 2026) was shown WO-1783455968280 and WO-1783045326823 — customer-raised requests from
+  July and October against the properties "PP" and "sdfsdfs", with their descriptions and entry
+  notes. See the identity rule below.
+
+## A Property Ground Is Not an Identity Ground
+
+`customerWorkOrderScope` (routes/customers.js) claims a work order on four grounds, OR'd. They
+split in two, and the halves have different rules:
+
+- **A property** (`property_id`, `property_code`) is a *place*, and a place keeps its history. A
+  request raised against the property before this account existed is still about the customer's
+  building, so these carry **no date limit**.
+- **An identity** (`customer_email`, `resident_id`) is a *person*, and both identifiers get
+  **reused**. An email is freed by permanently deleting its customer; `work_orders.resident_id`
+  holds a `customer_accounts.id` today but began as a foreign key to the legacy `residents` table,
+  whose ids run in the same range. So an identity ground is confined to the account's own lifetime
+  — `AND wo.created_at >= <account.created_at>` — which is the one thing a reused identifier
+  cannot forge. Email is narrowed further to rows carrying no property at all, which is the only
+  gap it was ever needed for: a work order whose property reference is missing, that nothing else
+  can find.
+
+`accountCreatedAt` must be passed at all three call sites (`/dashboard`, `/work-orders`,
+`/activity`); `authenticateCustomer` selects `created_at` and exposes it as `req.customer.createdAt`
+for the third. **Without it the identity grounds are dropped, not trusted** — losing an orphaned
+work order is a smaller harm than showing another household's.
+
+Diagnosing a "why does this customer see this?" report: `node scripts/diagnose-customer-work-orders.js
+<property code | email | account id>` is read-only and prints, per row, which of the four grounds
+claimed it and whether the row's own `property_code` says it belongs to someone else.
+
+Regression test: `node --test backend/routes/customerWorkOrderScope.test.js`, which fails if an
+identity ground loses its lifetime bound, if a property ground gains one, if the placeholders and
+parameters stop lining up, or if the scope names `property_code` on a deployment that lacks it.
 - **Still open:** `GET /api/fp/customers` unions a third list
   (`customer_accounts` ⋈ `onboarded_properties` with `ca.franchise_partner_id IS NULL`)
   that ignores which FP owns the property, so admin-created customers appear in every
