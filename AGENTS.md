@@ -2072,9 +2072,22 @@ The project uses **Razorpay Payment Links** (hosted checkout) for online payment
   Please contact support.". A link raised by the invoice email is stored as `payment_link_status =
   'sent'` and one raised by that route as `'created'`: both are live, and the reuse check matches
   both, or a fresh Razorpay link was minted on every single click of an emailed Pay Now.
+- **A customer's phone number must never cost the invoice its payment link.** Razorpay validates
+  `customer.contact` and refuses the *whole* request over it — the live log carried
+  "Error creating payment link: Recurring digits in customer contact are disallowed", its anti-spam
+  check firing on a stored `9000000042`. Its documented rules reject more (8+ digits including the
+  country code; digits and a leading `+` only), so a stored `+91 98765-43210` and the empty string
+  `routes/customers.js` sent for a customer with no phone fail too. With no link created, the
+  invoice email went out with no Pay Now target and card and UPI were unavailable on an otherwise
+  payable invoice. All three creators build the block with `razorpayCustomer()` and create the
+  link through `createPaymentLink(razorpay, options)` (`utils/razorpayPaymentLink.js`), which drops
+  whichever customer field Razorpay names and retries — a contact is a convenience, since the
+  hosted page asks for one itself. **Never call `razorpay.paymentLink.create` directly.**
+  Regression test: `node --test backend/utils/razorpayPaymentLink.test.js`.
 - Regression test: `node --test backend/services/paymentLinkNotifications.test.js`. It reads the
-  options handed to each `paymentLink.create` and fails if a notification or a reminder is turned
-  back on, or if a **new** link creator appears that has not made the same decision.
+  options handed to each creator and fails if a notification or a reminder is turned back on, if a
+  creator calls Razorpay itself instead of the shared creator, or if a **new** link creator appears
+  that has not made the same decisions.
 
 ### Environment Variables (Backend)
 ```

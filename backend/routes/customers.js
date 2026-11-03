@@ -29,6 +29,8 @@ const { propertyCodeAgreement, workOrderPropertyCodeAvailable } = require('../ut
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, authenticate, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+// A customer's phone must never be the reason an invoice has no payment link
+const { razorpayCustomer, createPaymentLink } = require('../utils/razorpayPaymentLink');
 // The customer reads the same invoice document the staff portals do: its estimate's services
 const { loadInvoiceDocument, loadInvoiceDocuments } = require('../utils/invoiceDocument');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
@@ -2287,11 +2289,11 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
       currency: 'INR',
       accept_partial: false,
       description: `Payment for Invoice ${inv.invoice_id}`,
-      customer: {
+      customer: razorpayCustomer({
         name: inv.customer_name || customerData.first_name + ' ' + customerData.last_name,
         email: inv.customer_email || customerEmail,
-        contact: inv.customer_phone || customerData.phone || ''
-      },
+        contact: inv.customer_phone || customerData.phone
+      }),
       // Razorpay does not write to the customer; XLAND does -- see routes/razorpay.js for why.
       // This link is minted while the customer is on the Pay screen and redirected to it, so a
       // mail or an SMS announcing it tells them what they are already looking at.
@@ -2309,7 +2311,7 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
       callback_method: 'get'
     };
 
-    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+    const paymentLink = await createPaymentLink(razorpay, paymentLinkOptions);
 
     // Update invoice with payment link details. This wrote payment_link_id / payment_link_url,
     // which no schema file creates, so it raised "Unknown column 'payment_link_id' in 'field

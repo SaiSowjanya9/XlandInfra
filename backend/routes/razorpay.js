@@ -27,6 +27,8 @@ const { recordRazorpayPayment, findRecordedPayment } = require('../services/razo
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
 // The customer's payment page and the token that authorises the public endpoints below
 const { invoicePaymentToken, authorizeInvoiceToken, paymentPageUrl } = require('../utils/invoicePaymentToken');
+// A customer's phone must never be the reason an invoice has no payment link
+const { razorpayCustomer, createPaymentLink } = require('../utils/razorpayPaymentLink');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
 const { ensureRefundTable, recordRefund, findRefund } = require('../utils/refundLedger');
 const { resyncInvoiceSettlement } = require('../utils/invoiceSettlement');
@@ -206,11 +208,11 @@ const createInvoicePaymentLink = async ({ invoice, portion, customAmount, perfor
     accept_partial: !plan,
     first_min_partial_amount: 100, // Minimum ₹1 partial payment
     description: `Payment for Invoice: ${invoice.invoice_id}${plan ? ' (part payment)' : ''}`,
-    customer: {
-      name: invoice.customer_name || 'Customer',
-      email: invoice.customer_email || undefined,
-      contact: invoice.customer_phone || undefined
-    },
+    customer: razorpayCustomer({
+      name: invoice.customer_name,
+      email: invoice.customer_email,
+      contact: invoice.customer_phone
+    }),
     // Razorpay does not write to the customer; XLAND does. Its own link mail is
     // Razorpay-branded, carries a "created in Test Mode" banner on test keys and states the
     // link id rather than the invoice, so a customer received that beside our invoice email and
@@ -232,7 +234,7 @@ const createInvoicePaymentLink = async ({ invoice, portion, customAmount, perfor
     expire_by: expiresAt
   };
 
-  const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+  const paymentLink = await createPaymentLink(razorpay, paymentLinkOptions);
 
   // Update invoice with payment link details. An instalment link is deliberately not stored:
   // these columns are the invoice's own link, the one already sent to the customer for the whole

@@ -14,6 +14,8 @@ const { generateInvoicePDF } = require('./pdfService');
 const { firstFreeNumber } = require('../utils/paymentIds');
 // Pay Now goes to the customer's payment page, token and all -- never a hand-built /pay/ URL
 const { paymentPageUrl } = require('../utils/invoicePaymentToken');
+// A customer's phone must never be the reason an invoice has no payment link
+const { razorpayCustomer, createPaymentLink } = require('../utils/razorpayPaymentLink');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
 // Decode HTML entities (fix triple/double encoded ampersands etc.)
@@ -799,11 +801,11 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
       accept_partial: true,
       first_min_partial_amount: 100,
       description: `Payment for Invoice: ${invoice.invoice_id}`,
-      customer: {
-        name: invoice.customer_name || 'Customer',
-        email: invoice.customer_email || undefined,
-        contact: invoice.customer_phone || undefined
-      },
+      customer: razorpayCustomer({
+        name: invoice.customer_name,
+        email: invoice.customer_email,
+        contact: invoice.customer_phone
+      }),
       // Razorpay does not write to the customer; XLAND does -- see routes/razorpay.js for why.
       // Reminders go off with the notification: they are the same Razorpay-branded mail sent
       // again days later, and are not covered by `notify.email: false`.
@@ -820,7 +822,7 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
       expire_by: expiresAt
     };
     
-    const paymentLink = await razorpay.paymentLink.create(paymentLinkOptions);
+    const paymentLink = await createPaymentLink(razorpay, paymentLinkOptions);
     
     // Update invoice with payment link details
     // NOTE: Status stays as 'draft' - invoice remains in "Generated Invoices" until payment is received

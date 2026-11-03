@@ -29,11 +29,17 @@ const CREATORS = [
   ['routes/customers.js', "the customer portal's own link"]
 ];
 
-// The options object handed to `paymentLink.create`, so the assertions read that call and not
-// some unrelated `email: true` elsewhere in a 3,000-line route file
+// Every creator hands its options to the shared `createPaymentLink`, which drops a customer
+// field Razorpay refuses and retries rather than letting a phone number cost the whole link
+const CREATOR_CALL = 'createPaymentLink(razorpay';
+const RAW_CALL = 'paymentLink.create(';
+const LINK_UTIL = 'utils/razorpayPaymentLink.js';
+
+// The options object handed to the creator, so the assertions read that call and not some
+// unrelated `email: true` elsewhere in a 3,000-line route file
 const linkOptions = source => {
-  const at = source.indexOf('paymentLink.create(');
-  assert.ok(at > 0, 'no paymentLink.create in this file');
+  const at = source.indexOf(CREATOR_CALL);
+  assert.ok(at > 0, 'no payment link is created in this file');
   return source.slice(Math.max(0, at - 2500), at);
 };
 
@@ -47,16 +53,27 @@ test('no payment link asks Razorpay to notify the customer', () => {
   }
 });
 
+test('no creator calls Razorpay directly, so a refused contact cannot cost the link', () => {
+  for (const [file, what] of CREATORS) {
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.ok(source.includes(CREATOR_CALL), `${what} does not go through createPaymentLink`);
+    assert.ok(!source.includes(RAW_CALL),
+      `${what} calls razorpay.paymentLink.create itself, so Razorpay refusing customer.contact `
+      + '("Recurring digits in customer contact are disallowed") leaves the invoice with no link at all');
+  }
+});
+
 test('every payment link the backend creates is one of those three', () => {
   const found = [];
   const walk = dir => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
+      const rel = path.relative(root, full).replace(/\\/g, '/');
       if (entry.isDirectory()) {
         if (!['node_modules', '.git', 'uploads'].includes(entry.name)) walk(full);
-      } else if (entry.name.endsWith('.js') && !entry.name.endsWith('.test.js')
-        && fs.readFileSync(full, 'utf8').includes('paymentLink.create(')) {
-        found.push(path.relative(root, full).replace(/\\/g, '/'));
+      } else if (entry.name.endsWith('.js') && !entry.name.endsWith('.test.js') && rel !== LINK_UTIL) {
+        const source = fs.readFileSync(full, 'utf8');
+        if (source.includes(CREATOR_CALL) || source.includes(RAW_CALL)) found.push(rel);
       }
     }
   };
