@@ -261,6 +261,50 @@ Mistakes that fail silently and have each already broken live endpoints:
   `--apply`. Only `fp_estimates.work_order_id` and `invoices.source_work_order_id` refer to the code;
   every other reference uses `work_orders.id`.
 
+## A Property Row Number Does Not Name a Property
+
+**There are two live property tables and their row numbers collide.** The FP portal's Add Customer
+writes `properties`; Manager/Coordinator/Supervisor/Executive Add Customer and the admin portal's
+onboarding write `onboarded_properties`. schema_v28 copied `properties.id` into
+`onboarded_properties.id` deliberately, so the id spaces overlap and have been diverging ever
+since — **`properties.id` 37 and `onboarded_properties.id` 37 are two different communities.** Only
+the code (`GC-…`, `APT-…`, `V-…`, `PL-…`, `FL-…`) is unique across both.
+
+Anything that identifies a property by a bare number is therefore ambiguous, and the ambiguity is
+silent — no error, just another household's rows:
+
+- **`work_orders.property_id` is that bare number**, and `customerWorkOrderScope` matched on it, so
+  a newly added FP customer was shown every work order filed against the onboarded property that
+  happened to share its row number: their descriptions, their entry notes, and wrong
+  Total/Pending/Completed counts. `invoices` never had this because it carries `property_code`
+  beside `property_id` and `customerInvoiceScope` refuses a numeric match naming a different code
+  ("The number alone is not unique…", repeated at five call sites). schema_v62 gives `work_orders`
+  the same second identifier and the scope the same guard.
+- **Every work order writer records the code** through `utils/workOrderPropertyCode.js`
+  `stampWorkOrderPropertyCode(insertId, { propertyCode, propertyId })`, called right after its
+  INSERT — eleven sites across `routes/workOrders.js` (×2), the five staff portals, `admin.js` and
+  the three scheduling services. **A number that exists in both tables under different codes
+  resolves to `null`, never to a guess**: a wrong code would hand the work order to the wrong
+  household permanently, whereas no code just leaves it matching on the number as it did before.
+- **Only `ensureWorkOrderPropertyCode` alters the table, and only at boot** (`config/database.js`).
+  DDL commits implicitly, so a request path — several of these writers are inside a transaction —
+  uses `workOrderPropertyCodeAvailable`, which only reads `information_schema`. The reader's
+  `propertyCodeAgreement` returns empty SQL where the column is absent, because naming a missing
+  column fails the statement and would empty the dashboard outright.
+- **A row with no code still matches on the number.** That keeps history whole between the
+  migration and the backfill; it also means the leak persists for un-backfilled rows, so
+  `node backend/scripts/backfill-work-order-property-codes.js` (dry run) then `--apply` is part of
+  the deployment, not optional. It reports rows whose number is ambiguous rather than guessing
+  them — those are exactly the rows a customer can currently see by mistake.
+- `resolveCustomerProperty` has the matching rule on the read side: look the **code** up first and
+  the number second, because the FP portal stores a `properties` id with its code and resolving
+  that id against `onboarded_properties` first landed the customer on another household's property.
+
+Regression test: `node --test backend/utils/workOrderPropertyCode.test.js`, which fails if a writer
+stops stamping, if a new `INSERT INTO work_orders` appears without one, if the scope drops the
+agreement or a caller forgets to `await` it, or if the migration reaches for MariaDB's
+`ADD COLUMN IF NOT EXISTS`.
+
 ## One Email, One Customer Account
 
 `customer_accounts.email` is `UNIQUE`, so a contact email owns exactly one portal login
@@ -813,14 +857,17 @@ shapes to avoid, both of which were on the customer portal:
   Drawn by `SERVICE_COLUMNS` / `drawServicesTable` / `serviceTableRow` in `services/pdfService.js`
   (shared with the estimate PDF), `invoiceServicesEmailTable` in `utils/invoiceDocument.js` (shared
   by all three invoice emails) and `components/billing/InvoiceServicesTable.jsx` in the portals.
-- **`Method` is a screen column only.** How XLAND prices a service (Capacity Slab, Area Based) is
-  how the figure was arrived at, not something the customer is billed for, so the user asked for
-  that column to come off **every document**: the portal's own export (`pdfExport.js`), the emailed
+- **No invoice surface carries `Method`.** How XLAND prices a service (Capacity Slab, Area Based)
+  is how the figure was arrived at, not something the customer is billed for, so the user asked
+  for that column off every document — the portal's own export (`pdfExport.js`), the emailed
   estimate and invoice PDFs (`SERVICE_COLUMNS`) and both email bodies (`emailService.js`'s
-  `SERVICE_HEAD`, `INVOICE_SERVICE_COLUMNS`). It stays in `EstimateServicesTable`,
-  `InvoiceServicesTable`, the create tables and the customer's own invoice view, and `method` is
-  still projected on the row for them — only the documents stop printing it. Its width went to
-  Description, which carries the wrapping.
+  `SERVICE_HEAD`, `INVOICE_SERVICE_COLUMNS`) — and then off the invoice **screens** too:
+  `InvoiceServicesTable` (the Generated Invoices and Invoices modals and the FP invoice page) and
+  the customer's own invoice view in `frontend/src/pages/Payment.jsx`. `utils/invoiceDocument.js`
+  no longer projects `method` on the row at all, and `FPInvoiceView`'s html2canvas capture no
+  longer strips a `data-column="Method"` cell out of its clone, because there is none. The
+  column's width went to Description, which carries the wrapping. Estimates are a different
+  document: `EstimateServicesTable` and the create tables still show Method on screen.
 - **A service's name is set larger and bolder than the lines under it.** The category and the
   `Package` mark qualify the name; at the name's own size and weight they read as three services
   stacked in one cell (which is what the screenshot that prompted this showed — the PDFs drew all

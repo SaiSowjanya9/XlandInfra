@@ -1,5 +1,8 @@
 const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
+// Which property this work order is about, said unambiguously: a bare row number is shared
+// between `properties` and `onboarded_properties`
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
@@ -326,6 +329,13 @@ router.post('/', requireCustomer, uploadRateLimiter, (req, res, next) => {
       );
 
       const workOrderId = result.insertId;
+
+      // The property's unique code. `property_id` above is whichever table's row number the
+      // lookup matched, and the two tables share numbers -- without this the customer portal
+      // shows this request to the other table's property of the same number.
+      await stampWorkOrderPropertyCode(workOrderId, {
+        propertyCode: actualPropertyId, propertyId: propDetails.id || propId
+      });
 
       // Save attachments
       for (const att of attachments) {
@@ -869,6 +879,9 @@ router.post('/admin/create', authenticate, managerOrAdmin, uploadRateLimiter, up
       );
 
       const workOrderId = result.insertId;
+
+      // See the customer route above: the row number alone cannot name the property
+      await stampWorkOrderPropertyCode(workOrderId, { propertyCode: actualPropertyId, propertyId: propId });
 
       for (const att of attachments) {
         await pool.query(

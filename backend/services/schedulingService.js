@@ -6,6 +6,8 @@
 const { pool } = require('../config/database');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { ensurePendingScheduleSchema } = require('../utils/pendingScheduleColumns');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 const { assignVendorFilter } = require('../utils/estimateScheduling');
 
 // Generate unique IDs
@@ -736,6 +738,14 @@ Schedule Reference: ${visit.schedule_id || 'N/A'}
           visit.total_visits,
           visit.schedule_id || `PSS-${visit.service_schedule_id}`
         ]
+      );
+
+      // The property's unique code: `property_id` is a bare row number shared between
+      // `properties` and `onboarded_properties`, so it cannot name the community on its own
+      await stampWorkOrderPropertyCode(
+        result.insertId,
+        { propertyCode: visit.property_code, propertyId: visit.property_id },
+        connection
       );
 
       // Update scheduled visit with work order reference and status

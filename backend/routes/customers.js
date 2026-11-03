@@ -23,6 +23,9 @@ const { buildCustomerActivity, buildUpcomingVisits } = require('../utils/custome
 // Which notifications are this customer's own -- one rule for the list, its count and both
 // mark-read routes, because they have to agree
 const { customerNotificationScope } = require('../utils/customerNotificationScope');
+// A work order's property number is shared between `properties` and `onboarded_properties`,
+// so a numeric match has to agree on the code the way an invoice match always has
+const { propertyCodeAgreement } = require('../utils/workOrderPropertyCode');
 // SECURITY: Use verifyToken instead of direct JWT_SECRET access
 const { verifyToken, authenticate, generateToken: authGenerateToken } = require('../middleware/auth');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
@@ -1369,13 +1372,20 @@ const resolveCustomerProperty = async (storedPropertyId, storedPropertyCode, sto
  * Property name is deliberately NOT one of them: names are not unique (several communities are
  * called "OHSS"), and matching on one leaked another household's requests.
  */
-const customerWorkOrderScope = ({ numericPropertyId, propertyCode, customerId, email }) => {
+const customerWorkOrderScope = async ({ numericPropertyId, propertyCode, customerId, email }) => {
   const conditions = [];
   const params = [];
 
   if (numericPropertyId) {
-    conditions.push('wo.property_id = ?');
-    params.push(numericPropertyId);
+    // The number alone is not unique across onboarded_properties and properties, so a work
+    // order matched by it must not name another property's code -- the guard
+    // customerInvoiceScope below has always had, and that work orders lacked: a newly added
+    // FP customer was shown every request filed against the onboarded property that happened
+    // to share its row number. A row that carries no code yet still matches on the number, so
+    // no history disappears before scripts/backfill-work-order-property-codes.js has run.
+    const agreement = await propertyCodeAgreement('wo', propertyCode);
+    conditions.push(`(wo.property_id = ?${agreement.sql})`);
+    params.push(numericPropertyId, ...agreement.params);
   }
   if (propertyCode && propertyCode !== numericPropertyId) {
     conditions.push('wo.property_id = ?');
@@ -1479,7 +1489,7 @@ router.get('/dashboard', async (req, res) => {
       numericPropertyId, propertyCode, propertyName, custEmail, customerId
     });
 
-    const scope = customerWorkOrderScope({ numericPropertyId, propertyCode, customerId, email: custEmail });
+    const scope = await customerWorkOrderScope({ numericPropertyId, propertyCode, customerId, email: custEmail });
     const whereClause = `WHERE ${scope.sql}`;
     const whereParams = scope.params;
 
@@ -1623,7 +1633,7 @@ router.get('/work-orders', async (req, res) => {
     const property = await resolveCustomerProperty(
       customerData.property_id, customerData.property_code, customerData.property_name
     );
-    const scope = customerWorkOrderScope({ ...property, customerId, email: custEmail });
+    const scope = await customerWorkOrderScope({ ...property, customerId, email: custEmail });
     const whereClause = `WHERE ${scope.sql}`;
     const whereParams = scope.params;
 
@@ -3185,7 +3195,7 @@ router.get('/activity', authenticateCustomer, async (req, res) => {
     const customer = req.customer;
 
     const property = await resolveCustomerProperty(customer.propertyId, customer.propertyCode, customer.propertyName);
-    const workOrderScope = customerWorkOrderScope({ ...property, customerId: customer.id, email: customer.email });
+    const workOrderScope = await customerWorkOrderScope({ ...property, customerId: customer.id, email: customer.email });
     const invoiceScope = customerInvoiceScope({ ...property, email: customer.email });
 
     // Each stream is dated by its own best column, which is not always the one it can be ordered by

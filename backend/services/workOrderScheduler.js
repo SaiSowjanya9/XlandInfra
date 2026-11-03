@@ -13,6 +13,8 @@
 
 const cron = require('node-cron');
 const { generateWorkOrderId } = require('../utils/workOrderId');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 const { pool } = require('../config/database');
 const { initSchedulingSchema } = require('../config/schedulingSchema');
 const { sendEmail, getWorkOrderNotificationRecipients } = require('./emailService');
@@ -178,6 +180,14 @@ Schedule Reference: ${visit.occurrence_code || 'N/A'}
         ]);
 
         const insertedWorkOrderId = woResult.insertId;
+
+        // The property's unique code: `property_id` is a bare row number shared between
+        // `properties` and `onboarded_properties`, so it cannot name the community on its own
+        await stampWorkOrderPropertyCode(
+          insertedWorkOrderId,
+          { propertyCode: visit.property_code, propertyId: visit.property_id },
+          connection
+        );
 
         // Update schedule occurrence with work order reference
         await connection.execute(`

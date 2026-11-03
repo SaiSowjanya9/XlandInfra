@@ -19,6 +19,8 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints
 const { loginRateLimiter, uploadRateLimiter } = require('../middleware/security');
 // Use shared generateToken from auth middleware (secure - doesn't expose JWT_SECRET)
@@ -1431,6 +1433,11 @@ router.post('/work-orders', requireSupervisorScope, uploadRateLimiter, (req, res
     );
 
     const workOrderDbId = result.insertId;
+
+    // The property's unique code. `property_id` holds a bare row number, and `properties.id`
+    // 37 and `onboarded_properties.id` 37 are two different communities -- without this the
+    // customer portal shows the request to whichever of them it is not about.
+    await stampWorkOrderPropertyCode(workOrderDbId, { propertyCode: actualPropertyId, propertyId });
 
     // Save attachments if any
     if (req.files && req.files.length > 0) {

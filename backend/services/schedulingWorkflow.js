@@ -26,6 +26,8 @@
 const { pool } = require('../config/database');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 const { ensurePendingScheduleSchema } = require('../utils/pendingScheduleColumns');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 
 // ID Generators
 const generateId = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -435,6 +437,9 @@ async function generateWorkOrdersForUpcomingVisits() {
         so.*,
         ss.service_name, ss.service_category, ss.property_id,
         ss.franchise_partner_id,
+        -- The onboarded property's unique code, so the work order below can name the
+        -- community rather than a row number the other property table also uses
+        op.property_id AS property_code,
         op.property_name, op.property_address, op.customer_name, op.customer_phone,
         ov.owner_name as vendor_contact, ov.owner_mobile as vendor_phone
       FROM schedule_occurrences so
@@ -454,7 +459,7 @@ async function generateWorkOrdersForUpcomingVisits() {
         const workOrderId = generateWorkOrderId();
 
         // Create work order
-        await connection.execute(`
+        const [woResult] = await connection.execute(`
           INSERT INTO work_orders (
             work_order_id, property_id, schedule_occurrence_id, vendor_id,
             service_type, title, description, status, priority,
@@ -469,6 +474,14 @@ async function generateWorkOrdersForUpcomingVisits() {
           occurrence.franchise_partner_id,
           occurrence.visit_number, occurrence.total_visits || 1
         ]);
+
+        // The property's unique code: `property_id` is a bare row number shared between
+        // `properties` and `onboarded_properties`, so it cannot name the community on its own
+        await stampWorkOrderPropertyCode(
+          woResult.insertId,
+          { propertyCode: occurrence.property_code, propertyId: occurrence.property_id },
+          connection
+        );
 
         // Update occurrence with work order reference
         await connection.execute(`

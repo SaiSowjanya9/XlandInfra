@@ -466,6 +466,11 @@ const initOnboardingTables = async () => {
         work_order_id VARCHAR(50) UNIQUE NOT NULL,
         resident_id INT DEFAULT NULL,
         property_id VARCHAR(50) DEFAULT NULL,
+        -- The property's unique code (GC-/APT-/V-/PL-/FL-). property_id above is a bare row
+        -- number, and properties.id 37 and onboarded_properties.id 37 are two different
+        -- communities, so the number alone cannot say which -- see schema_v62 and
+        -- utils/workOrderPropertyCode.js.
+        property_code VARCHAR(50) DEFAULT NULL,
         unit_id INT DEFAULT NULL,
         category_id INT DEFAULT NULL,
         subcategory_id INT DEFAULT NULL,
@@ -499,10 +504,32 @@ const initOnboardingTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_status (status),
         INDEX idx_property (property_id),
+        INDEX idx_property_code (property_code),
         INDEX idx_created (created_at),
         INDEX idx_franchise_partner (franchise_partner_id)
       )
     `);
+
+    // work_orders.property_code drift (schema_v62): the CREATE TABLE above adds nothing to a
+    // table that already exists, and every deployment predates the column. Without it the
+    // customer portal matches a work order by its property's row number alone, which is
+    // shared between properties and onboarded_properties -- see utils/workOrderPropertyCode.js.
+    try {
+      const [woCols] = await conn.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'work_orders' AND COLUMN_NAME = 'property_code'`,
+        [dbConfig.database]
+      );
+      if (woCols.length === 0) {
+        await conn.execute('ALTER TABLE work_orders ADD COLUMN property_code VARCHAR(50) DEFAULT NULL');
+        await conn.execute('CREATE INDEX idx_work_orders_property_code ON work_orders (property_code)')
+          .catch(() => {});
+        console.log('  ✅ work_orders.property_code added (schema_v62 had not been applied)');
+      }
+    } catch (e) {
+      console.log('  - work_orders.property_code check failed:', e.message);
+    }
+
     console.log('  ✅ Work orders table initialized');
 
     // Create work_order_attachments table

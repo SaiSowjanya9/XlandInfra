@@ -35,6 +35,8 @@ const {
 } = require('../middleware/fpScope');
 const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints (5 attempts per 15 minutes)
 const { loginRateLimiter, uploadRateLimiter } = require('../middleware/security');
 
@@ -1526,6 +1528,13 @@ router.post('/work-orders', requireFPScope, uploadRateLimiter, upload.array('att
         req.fpId, req.user?.id || null
       ]
     );
+
+    // The property's unique code. `validatedPropertyId` above is a bare row number, and
+    // `properties.id` 37 and `onboarded_properties.id` 37 are two different communities --
+    // without this the customer portal shows the request to whichever it is not about.
+    await stampWorkOrderPropertyCode(result.insertId, {
+      propertyCode: property[0].property_id, propertyId: validatedPropertyId
+    });
 
     // Save attachments if any and build array for email
     const savedAttachments = [];

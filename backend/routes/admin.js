@@ -1,5 +1,7 @@
 const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
@@ -1243,6 +1245,11 @@ router.post('/work-orders', authenticate, managerOrAdmin, async (req, res) => {
         req.user?.email || 'admin'
       ]
     );
+
+    // The property's unique code. `propertyId` here may be a number or a code; a number is
+    // shared between `properties` and `onboarded_properties`, so the helper resolves it and
+    // records nothing when it is genuinely ambiguous rather than guessing a community.
+    await stampWorkOrderPropertyCode(result.insertId, { propertyId });
 
     res.json({
       success: true,

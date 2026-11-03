@@ -16,6 +16,8 @@ const {
   pool } = require('../config/database');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+// A work order's property, said unambiguously: a bare row number is shared between tables
+const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints
 const { loginRateLimiter } = require('../middleware/security');
 
@@ -1378,6 +1380,11 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
        finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
        customerName || null, customerEmail || null, customerPhone || null, propertyZone]
     );
+
+    // The property's unique code. `property_id` holds a bare row number, and `properties.id`
+    // 37 and `onboarded_properties.id` 37 are two different communities -- without this the
+    // customer portal shows the request to whichever of them it is not about.
+    await stampWorkOrderPropertyCode(result.insertId, { propertyCode: actualPropertyId, propertyId });
 
     // Send email notification for new work order
     // Sends to: FP email + zone-centric employees + customer
