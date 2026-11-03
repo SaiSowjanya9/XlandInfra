@@ -47,7 +47,9 @@ Every create-estimate form opens with the shared `components/estimates/EstimateS
 
 ## Add-on Pricing Display
 
-- **Customer documents carry every column of the estimate view except the internal costs.** The downloaded/printed PDF, the emailed PDF and the email body list each service as #, Service (category under it), Description, **Input / Details**, **Method**, Frequency, Visits -- the **one order** for every list of an estimate's or package's services (view modal, create tables, package view, PDFs, email), with Vendor Cost, XLAND Cost and Margin % after Visits where they are shown -- never Vendor Cost, XLAND Cost or Margin % (the user's call). `customerEstimateData` projects `method` and `input` (a package capacity-slab service states its slab, "0 - 3 KL"); the description drops the segment that restates the amount. Primary Input and Property Types stay out.
+- **Customer documents carry every column of the estimate view except the internal costs and Method.** The downloaded/printed PDF, the emailed PDF and the email body list each service as #, Service (category under it), Description, **Input / Details**, Frequency, Visits -- the **one order** for every list of an estimate's or package's services (view modal, create tables, package view, PDFs, email), with Method after Input / Details and Vendor Cost, XLAND Cost and Margin % after Visits **on the screens that show them** -- never Vendor Cost, XLAND Cost or Margin % on a document (the user's call). `customerEstimateData` projects `method` and `input` (a package capacity-slab service states its slab, "0 - 3 KL"); the description drops the segment that restates the amount. Primary Input and Property Types stay out.
+- **No document prints Method.** How XLAND prices a service is how the figure was arrived at, not something the customer is billed for, so the user asked for the column to come off the portal's export (`pdfExport.js`, where the print-only `forPrint` variant that already dropped it is gone -- the printed and downloaded copies are now the same document), the emailed estimate and invoice PDFs (`SERVICE_COLUMNS`) and both email bodies. It stays on every screen, and `method` is still resolved on the row for them. Its width went to Description.
+- **A service's name reads larger and bolder than the lines under it** -- its category and the `Package` mark, which qualify the name rather than standing beside it. The name is the cell's heading (bold, at the table's size) and the lines under it are smaller and muted, the mark also italic: the PDFs used to draw all three in plain Helvetica at one size, which read as three services stacked in a cell. `text-xs` over `text-[10px]` on screen, 12px over 11px/10.5px in the emails; the emailed PDF stacks the Service cell's lines itself (a `drawItemsTable` cell may be a string or an array of `{ text, size, font, color }`, because pdfkit sets one size per call) and the portal's export leaves the name to autoTable and draws the smaller lines in `didDrawCell` (`serviceNameCell` / `serviceNameHooks`). Regression tests: `node --test admin-portal/src/utils/serviceNameCellPdf.test.js` and the drawn-size assertion in `backend/services/estimateDelivery.test.js`.
 - **There is no "Total Services Price" block anywhere — it only restated the Subtotal below it.** The user asked for the two-line block (the bold total plus its "Includes the AMC package … at Rs. …" note) to go from every surface it rendered on: the estimate email body, the emailed/backend PDF (estimate and invoice — `drawServicesTotal` is gone), the portal's download/print PDF (`pdfExport.js`), the estimate detail view (`EstimateGrandTotal` is gone, and with it the whole-estimate cost totals it carried), every create screen's draft table (`EstimateDraftServicesTable` no longer takes `total`/`totalLabel` and foots to nothing), the CreateEstimate preview table and the Properties estimate drawer. Never reintroduce it: what the services come to is the Price Summary's Subtotal, stated once. Regression test: `node --test backend/services/estimateDelivery.test.js`, which asserts neither phrase reaches the email or its PDF — mind that an HTML comment carrying the words ships inside the message and trips it.
 - **The estimate view has no separate INTERNAL panel; its block footers carry those figures.** Each block's footer (AMC Package Price, Services Total — `TotalsCells`/`TotalsCard`, laid on the table's own columns) states Vendor Cost, XLAND Cost, Customer Price and Margin % under their columns, summed from the row cells (`serviceTotals`). There is no row totalling the two blocks together. A row with no vendor cost on record leaves the cost totals as a dash, titled with the name (accurate figures only). Internal views only; screen only.
 - **No service states a price of its own outside the estimate view** -- create screens (property-based and direct), the downloaded/printed PDF, the emailed PDF and the email body. The user's call: the estimate is priced as a whole, in the Price Summary. A hand-entered service's price is still entered, in its dialog; it is simply not listed per row. The **estimate view** (`EstimateServicesTable`) is the exception: it shows a Customer Price column (after XLAND Cost, before Margin %) -- a package service shows its `packageShare` (₹0 where the package price does not cover it), never "Included"; a dash only where no figure is on record.
@@ -144,15 +146,20 @@ All headers are center-aligned except **Service**, which is left-aligned. Freque
   prints `GST (0%) → ₹0`. **Nothing may fill a blank rate with 18.** Three places used to: the admin
   form's Price Summary *label* read `GST ({gstRate || '18'}%)` beside a ₹0 figure, the catalog quote
   endpoint defaulted `gst_percentage ?? 18`, and `invoices.tax_percentage` was `DEFAULT 18.00`.
-- **An invoice carries no GST at all, and the estimate's rate is never copied to it.** GST belongs
+- **An invoice is charged no GST, and the estimate's rate is never copied to it.** GST belongs
   to the estimate; an invoice is raised from the estimate's **pre-GST** subtotal with
-  `tax_percentage = 0`, and no invoice screen, PDF, email or export shows a GST line.
+  `tax_percentage = 0`, and no invoice screen offers a GST field.
   `calculateInvoiceAmounts(subtotal, discountPercentage)` and `invoiceAmountsFromEstimate(estimate)`
   take no rate, no route reads one from a request body, and nothing exports a statutory `GST_RATE`:
   a hardcoded `GST_RATE = 18` is what once billed an estimate quoted, sent and **approved at 0% as
-  18%** — the customer agreed to one figure and was charged another. See AGENTS.md "An Invoice
-  Carries No GST". Regression tests:
+  18%** — the customer agreed to one figure and was charged another. Regression tests:
   `node --test backend/services/invoiceAmounts.test.js backend/services/invoiceGstDelink.test.js`.
+- **An invoice does, however, *print* its GST row at that 0% rate**, between Sub Total and
+  Discount: an invoice's summary is `Sub Total`, `GST (n%)`, `Discount (n%)`, `Total`,
+  `Balance Due`, in that order on every screen, PDF, email and export, fixed in
+  `backend/utils/invoiceSummary.js` and its client twins. This is the opposite order from an
+  estimate's (where GST follows the discount, because that is how it is charged) and it carries no
+  Amount Paid line. See AGENTS.md "The Invoice Summary — One Order, Every Surface".
 - On an estimate, GST is charged on the subtotal **after** the discount, in every surface that
   computes it.
 - Existing invoices keep the `tax_percentage` they were raised with: it is what was charged and
@@ -197,8 +204,9 @@ are the same document. A change to one belongs in all of them; a section added t
 bug, because a colleague reading the estimate on screen is reading what the customer receives.
 
 **The invoice raised from an estimate lists the same services, in the same columns** — `#`, Service
-(category, and `Package` for one of the AMC package's own services, under the name), Description,
-Input / Details, Method, Frequency, Visits, and no money in the table at all. It resolves them from
+(category, and `Package` for one of the AMC package's own services, under the name, both smaller
+than the name), Description, Input / Details, Frequency, Visits, and no money in the table at all —
+and no Method, which no document prints. It resolves them from
 the estimate through `backend/utils/invoiceDocument.js` (`customerEstimateData` under it), and the
 columns are drawn by the renderer the estimate PDF shares (`SERVICE_COLUMNS` / `drawServicesTable`
 in `services/pdfService.js`), `invoiceServicesEmailTable` for the three invoice emails and

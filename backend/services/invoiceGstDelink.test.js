@@ -139,8 +139,13 @@ const routeBody = (signature) => {
 
 test('nothing blocks or gates an invoice on its GST any more', () => {
   const send = routeBody("router.post('/invoices/:id/send'");
-  assert.doesNotMatch(send, /tax_percentage/, 'the send route no longer inspects GST');
   assert.doesNotMatch(send, /GST_NOT_SET/);
+  // The route reads the stored rate only to hand it to the document, so the GST line states what
+  // the invoice was billed. It must never test it: the `GST_NOT_SET` 400 and the draft-only 409
+  // that used to live here refused to send an invoice over a rate nobody sets any more.
+  assert.doesNotMatch(send, /if \([^)]*tax_percentage/, 'the send route gates on GST again');
+  assert.doesNotMatch(send, /parseFloat\((invoice\.)?tax_percentage\)/, 'the send route re-reads a GST rate');
+  assert.match(send, /taxPercentage: invoice\.tax_percentage/, "the PDF is not told the invoice's own rate");
   assert.match(send, /createPaymentLinkForInvoice/, 'and still mints the payment link');
 });
 
@@ -157,9 +162,12 @@ test('no invoice writer takes a GST rate from the request', () => {
   }
 });
 
-test('no invoice document prints a GST line', () => {
-  // Only the invoice's own generators are checked: an estimate still states the GST it quoted,
-  // and those live in the same two files.
+test('every invoice document states its GST line, at the invoice\'s own rate', () => {
+  // The rate is 0 and the estimate's is still never copied -- what changed is that the line is
+  // *printed* at that rate rather than left out (the user's call): a summary that jumps from Sub
+  // Total to Total reads as though a tax line had gone missing. The label is built in
+  // `utils/invoiceSummary.js` from the invoice's own `tax_percentage`, so a historic row that was
+  // billed 18% still says 18%, and no document hard-codes a rate of its own.
   const between = (file, from, to) => {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
     const start = source.indexOf(from);
@@ -170,10 +178,31 @@ test('no invoice document prints a GST line', () => {
   const invoiceDocuments = {
     'the invoice PDF': between('services/pdfService.js', 'const generateInvoicePDF', 'const generateReceiptPDF'),
     'the invoice email': between('services/emailService.js', 'const sendInvoiceEmail', 'const sendEmail = async'),
-    'the send-invoice email': fs.readFileSync(path.join(__dirname, '..', 'routes', 'payments.js'), 'utf8'),
+    'the send-invoice email': between('routes/payments.js', "router.post('/invoices/:id/send'", '\nrouter.'),
     'the auto-generated invoice email': fs.readFileSync(path.join(__dirname, 'invoiceService.js'), 'utf8')
   };
   for (const [what, source] of Object.entries(invoiceDocuments)) {
-    assert.doesNotMatch(source, /GST \(/, what);
+    assert.match(source, /summary\.lines/, `${what} does not draw the shared summary lines`);
+    // A rate written into the document is what once billed a 0% estimate at 18%
+    assert.doesNotMatch(source, /GST \(\$\{[^}]*\|\|\s*18/, `${what} falls back to an 18% label`);
+    assert.doesNotMatch(source, /GST \(18/, `${what} hard-codes an 18% GST line`);
   }
+  // The label itself is written once, in the shared helper
+  const helper = fs.readFileSync(path.join(__dirname, '..', 'utils', 'invoiceSummary.js'), 'utf8');
+  assert.match(helper, /GST \(\$\{ratePercent\(taxPercentage\)\}%\)/, 'the GST label no longer reads the invoice\'s own rate');
+});
+
+test('the summary states Sub Total, GST, Discount, Total, Balance Due, in that order', () => {
+  const helper = fs.readFileSync(path.join(__dirname, '..', 'utils', 'invoiceSummary.js'), 'utf8');
+  const order = ["key: 'subtotal'", "key: 'gst'", "key: 'discount'"];
+  const at = order.map(token => helper.indexOf(token));
+  for (const [index, position] of at.entries()) {
+    assert.ok(position > 0, `${order[index]} is not a summary line`);
+    if (index) assert.ok(position > at[index - 1], `${order[index]} is out of order`);
+  }
+  // The discount is the one conditional line: it is entered on the estimate and comes over with it
+  const discountGate = helper.slice(helper.indexOf('if (discountAmount > 0)'), helper.indexOf("key: 'discount'"));
+  assert.ok(discountGate.length > 0 && discountGate.length < 200, 'the discount line is no longer gated on an amount');
+  // GST and Balance Due are not gated on anything
+  assert.doesNotMatch(helper, /if \(tax(Amount|Percentage)[^)]*\)\s*\{?\s*lines\.push/, 'the GST line is conditional again');
 });

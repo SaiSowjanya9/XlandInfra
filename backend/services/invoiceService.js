@@ -8,6 +8,8 @@ const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { billToParty } = require('../utils/estimateData');
 // An invoice bills its estimate's services: one resolution for the email body and the PDF
 const { loadInvoiceDocument, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+const { invoiceSummary } = require('../utils/invoiceSummary');
 const { generateInvoicePDF } = require('./pdfService');
 const { firstFreeNumber } = require('../utils/paymentIds');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
@@ -944,9 +946,11 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     const propertyLines = [];
     for (let index = 0; index < propertyPairs.length; index += 2) propertyLines.push(propertyPairs.slice(index, index + 2));
 
-    const amountPaid = parseFloat(invoice.amount_paid) || 0;
-    const balanceDue = invoice.balance_amount === undefined || invoice.balance_amount === null
-      ? totalAmount : parseFloat(invoice.balance_amount) || 0;
+    // Sub Total, GST, Discount, Total, Balance Due -- the one order every invoice surface prints,
+    // fixed in `utils/invoiceSummary.js`, so this message, its PDF and the portals' modals state
+    // the same block
+    const summary = invoiceSummary({ ...invoice, total_amount: totalAmount });
+    const balanceDue = summary.balanceDue;
 
     const subject = `Invoice ${invoiceId} from ${COMPANY.legalName} - Payment Due`;
     const html = `
@@ -1074,13 +1078,19 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
                     <tr>
                       <td colspan="2" style="background: ${warm.section}; border-bottom: 1px solid ${warm.border}; padding: 6px 12px; font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: ${warm.muted}; border-radius: 8px 8px 0 0;">Invoice Summary</td>
                     </tr>
-                    ${summaryLine('Subtotal', formatCurrency(invoice.subtotal))}
-                    ${parseFloat(invoice.discount_amount) > 0 ? summaryLine(`Discount (${invoice.discount_percentage || 0}%)`, `- ${formatCurrency(invoice.discount_amount)}`, '#047857') : ''}
-                    ${amountPaid > 0 ? summaryLine('Amount Paid', `- ${formatCurrency(amountPaid)}`, '#047857') : ''}
-                    ${amountPaid > 0 ? summaryLine('Balance Due', formatCurrency(balanceDue)) : ''}
+                    ${summary.lines.map(line => summaryLine(line.label,
+                      line.negative ? `- ${formatCurrency(line.amount)}` : formatCurrency(line.amount),
+                      line.negative ? '#047857' : warm.text)).join('')}
                     <tr>
-                      <td style="background: ${warm.accent}; padding: 10px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: ${warm.text}; border-radius: 0 0 0 8px;">Total</td>
-                      <td style="background: ${warm.accent}; padding: 10px 12px; font-size: 16px; font-weight: 700; color: ${warm.text}; text-align: right; white-space: nowrap; border-radius: 0 0 8px 0;">${formatCurrency(totalAmount)}</td>
+                      <td style="background: ${warm.accent}; padding: 10px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: ${warm.text};">${summary.totalLabel}</td>
+                      <td style="background: ${warm.accent}; padding: 10px 12px; font-size: 16px; font-weight: 700; color: ${warm.text}; text-align: right; white-space: nowrap;">${formatCurrency(summary.totalAmount)}</td>
+                    </tr>
+                    <!-- Balance Due is read from the Total above it, so it sits below the rule
+                         rather than among the lines that sum into it. Always stated: the total
+                         until something is paid, 0 once the invoice is settled in full. -->
+                    <tr>
+                      <td style="padding: 9px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: ${warm.muted}; border-top: 1px solid ${warm.border}; border-radius: 0 0 0 8px;">${summary.balanceLabel}</td>
+                      <td style="padding: 9px 12px; font-size: 13px; font-weight: 700; color: ${summary.balanceDue > 0 ? '#b91c1c' : '#047857'}; text-align: right; white-space: nowrap; border-top: 1px solid ${warm.border}; border-radius: 0 0 8px 0;">${formatCurrency(summary.balanceDue)}</td>
                     </tr>
                   </table>
                 </td>
@@ -1152,8 +1162,11 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
         discountPercentage: invoice.discount_percentage,
+        taxPercentage: invoice.tax_percentage,
+        taxAmount: invoice.tax_amount,
         totalAmount: totalAmount,
-        balanceAmount: invoice.balance_amount || totalAmount
+        amountPaid: invoice.amount_paid,
+        balanceAmount: summary.balanceDue
       });
       console.log(`📄 Invoice PDF generated for ${invoiceId}`);
     } catch (pdfError) {

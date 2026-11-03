@@ -3,6 +3,8 @@ const { customerEstimateData, stripInternalServiceDetails, billToParty } = requi
 // An invoice's services are the estimate's: `rowFromLineItem` normalises a caller that still
 // hands over the stored snapshot instead of the resolved document rows
 const { rowFromLineItem } = require('../utils/invoiceDocument');
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+const { invoiceSummary } = require('../utils/invoiceSummary');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES, COMPANY_FOOTER_LINE } = require('../utils/companyInfo');
 const path = require('path');
@@ -449,6 +451,15 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50, bottom = PAGE.bott
   const pad = 8;
   const edges = columns.reduce((all, column) => [...all, all[all.length - 1] + column.width], [margin]);
   const cellWidth = index => columns[index].width - pad * 2;
+  // A cell is a string, or a stack of lines each carrying its own size, face and colour: a
+  // service's category and the mark that it comes with the package read under its name in a
+  // smaller face, so the name is still what the eye lands on first. pdfkit sets one size per
+  // call, so each line is measured and drawn on its own rather than joined with a newline.
+  const laidOut = (value, column) => (Array.isArray(value) ? value : [{ text: value }])
+    .map(line => ({ size: 8, font: 'Helvetica', color: WARM.text, ...line, text: String(line.text ?? '') }))
+    .filter(line => line.text.length > 0)
+    .map(line => ({ ...line,
+      height: doc.fontSize(line.size).font(line.font).heightOfString(line.text, { width: cellWidth(column) }) }));
 
   const header = () => {
     doc.rect(margin, y, CONTENT, 20).fillAndStroke(WARM.section, WARM.border);
@@ -460,16 +471,23 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50, bottom = PAGE.bott
 
   header();
   rows.forEach(cells => {
-    doc.fontSize(8).font('Helvetica');
-    const height = Math.max(24, ...cells.map((text, column) =>
-      doc.heightOfString(String(text), { width: cellWidth(column) }) + pad * 2));
+    const stacks = cells.map(laidOut);
+    const height = Math.max(24, ...stacks.map(stack => stack.reduce((sum, line) => sum + line.height, 0) + pad * 2));
     if (y + height > bottom) { doc.addPage(); y = margin; header(); }
     doc.rect(margin, y, CONTENT, height).fillAndStroke('#ffffff', WARM.border);
-    doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
-    cells.forEach((text, column) => doc.text(String(text), edges[column] + pad, y + pad,
-      { width: cellWidth(column), align: columns[column].align || 'left' }));
+    stacks.forEach((stack, column) => {
+      let lineY = y + pad;
+      stack.forEach(line => {
+        doc.fontSize(line.size).font(line.font).fillColor(line.color)
+          .text(line.text, edges[column] + pad, lineY, { width: cellWidth(column), align: columns[column].align || 'left' });
+        lineY += line.height;
+      });
+    });
     y += height;
   });
+  // The last line drawn may have been a smaller, muted, oblique one; leave the document on the
+  // table's own face so a caller that sets only a size is not drawn in it
+  doc.fontSize(8).font('Helvetica').fillColor(WARM.text);
   return y + DOC_GAP.row;
 };
 
@@ -477,10 +495,15 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50, bottom = PAGE.bott
  * An estimate's services, and the services its invoice bills -- one column set, one renderer.
  *
  * Every field of a service the customer is entitled to read has a column: what it is (its category
- * under its name), what it covers, what was measured at the property, how it is priced, how often
- * and how many visits -- every column of the portal's estimate view except its internal Vendor
- * Cost, XLAND Cost and Margin %. No Price and no Qty column: no service states a price of its own,
- * because the document is priced as a whole, in the summary.
+ * under its name), what it covers, what was measured at the property, how often and how many
+ * visits -- every column of the portal's estimate view except its internal Vendor Cost, XLAND Cost
+ * and Margin %. No Price and no Qty column: no service states a price of its own, because the
+ * document is priced as a whole, in the summary.
+ *
+ * **No Method column either**: how XLAND prices a service (Capacity Slab, Area Based) is how the
+ * figure was arrived at, not something the customer is being billed for, so the user asked for it
+ * to come off every document -- this PDF, the portal's own export and both email bodies. It stays
+ * on the screens, where staff read it. Its width went to Description, which carries the wrapping.
  *
  * The invoice used to draw its own `# / Description / Frequency / Visits / Qty / Amount` table,
  * where Amount was the AMC package price divided by the number of services it covered -- figures
@@ -488,11 +511,10 @@ const drawItemsTable = (doc, y, { columns, rows, margin = 50, bottom = PAGE.bott
  */
 const SERVICE_COLUMNS = [
   { label: '#', width: 22 },
-  { label: 'Service', width: 92 },
-  { label: 'Description', width: 125 },
-  { label: 'Input / Details', width: 84 },
-  { label: 'Method', width: 62 },
-  { label: 'Frequency', width: 66 },
+  { label: 'Service', width: 98 },
+  { label: 'Description', width: 171 },
+  { label: 'Input / Details', width: 90 },
+  { label: 'Frequency', width: 70 },
   // Wide enough for the word VISITS set in caps: at 40pt it broke after VISIT
   { label: 'Visits', width: 44, align: 'right' }
 ];
@@ -501,35 +523,45 @@ const serviceColumnWidth = label => (SERVICE_COLUMNS.find(column => column.label
 /** `tag` marks one of a package's own services, under its name and category. */
 const serviceTableRow = (item, tag = '') => ({
   // The category says what kind of service this is, so it reads under the name rather than among
-  // the details in the Description column
-  name: [decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'),
-    decodeHtml(item.category || ''), tag || item.tag || ''].filter(Boolean).join('\n'),
+  // the details in the Description column. The name is the heading of the cell -- bold, at the
+  // table's size -- and the lines under it are smaller and muted, exactly as the portal's table
+  // and the email body set them. Drawn at one size and weight, the three read as three services
+  // stacked in a cell rather than as one service and what qualifies it.
+  name: [
+    { text: decodeHtml(item.name || item.service_name || item.serviceName || item.service || 'Service'), font: 'Helvetica-Bold' },
+    { text: decodeHtml(item.category || ''), size: 6.5, color: WARM.muted },
+    { text: tag || item.tag || '', size: 6.5, font: 'Helvetica-Oblique', color: WARM.muted }
+  ],
   // Property Types, the capacity slab and the vendor rate are catalog configuration, not something
   // a customer document states
   details: stripInternalServiceDetails(decodeHtml(item.details || item.description || item.service_description || '-')) || '-',
   input: item.input || '-',
-  method: item.method || '-',
   frequency: String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, ''),
   visits: item.frequency_count ?? item.frequencyCount ?? item.visits ?? 1
 });
 
 const drawServicesTable = (doc, y, { rows, margin = 50, bottom }) => drawItemsTable(doc, y, {
   margin, bottom, columns: SERVICE_COLUMNS,
-  rows: rows.map((row, index) => [String(index + 1), row.name, row.details, row.input, row.method, row.frequency, String(row.visits)])
+  rows: rows.map((row, index) => [String(index + 1), row.name, row.details, row.input, row.frequency, String(row.visits)])
 });
 
 /**
  * The money, in a card against the right edge: the figures line up on one edge, the labels on
  * another, and the total is ruled off on the tan accent so it is the last thing the eye lands on.
  * Dark text on the tan -- white on it does not meet contrast.
+ *
+ * `after` is drawn in a strip below the total block, for a figure that is read *from* the total
+ * rather than summed into it -- the invoice's Balance Due. Printing it among `rows` would put it
+ * above the Total it is derived from.
  */
-const drawSummaryCard = (doc, y, { rows = [], total, caption = 'Price Summary', margin = 50 }) => {
+const drawSummaryCard = (doc, y, { rows = [], total, after = [], caption = 'Price Summary', margin = 50 }) => {
   const width = 205;
   const x = margin + CONTENT - width;
   const capHeight = 16;
   const rowHeight = 15;
   const totalHeight = 24;
-  if (y + capHeight + rows.length * rowHeight + 6 + totalHeight > PAGE.bottom - 16) { doc.addPage(); y = margin; }
+  const afterHeight = after.length ? after.length * rowHeight + 10 : 0;
+  if (y + capHeight + rows.length * rowHeight + 6 + totalHeight + afterHeight > PAGE.bottom - 16) { doc.addPage(); y = margin; }
 
   doc.rect(x, y, width, capHeight + rows.length * rowHeight + 6).fillAndStroke('#ffffff', WARM.border);
   doc.rect(x, y, width, capHeight).fill(WARM.section);
@@ -552,8 +584,21 @@ const drawSummaryCard = (doc, y, { rows = [], total, caption = 'Price Summary', 
      .text(String(total[0]).toUpperCase(), x + 10, totalY + 8.5, { characterSpacing: 1.4, lineBreak: false });
   doc.fontSize(10.5).font('Helvetica-Bold').fillColor(WARM.text)
      .text(total[1], x + 60, totalY + 7, { width: width - 70, align: 'right', lineBreak: false });
+
+  const afterY = totalY + totalHeight;
+  if (after.length) {
+    doc.rect(x, afterY, width, afterHeight).fillAndStroke('#ffffff', WARM.border);
+    let strip = afterY + 7;
+    after.forEach(([label, value, colour]) => {
+      doc.fontSize(8).font('Helvetica-Bold').fillColor(colour || WARM.text)
+         .text(label, x + 10, strip, { width: 110, lineBreak: false });
+      doc.fontSize(9).font('Helvetica-Bold').fillColor(colour || WARM.text)
+         .text(value, x + 120, strip - 0.5, { width: width - 130, align: 'right', lineBreak: false });
+      strip += rowHeight;
+    });
+  }
   doc.font('Helvetica');
-  return totalY + totalHeight + DOC_GAP.section;
+  return afterY + afterHeight + DOC_GAP.section;
 };
 
 /**
@@ -910,7 +955,7 @@ const generateInvoicePDF = async (invoice) => {
         propertyName, propertyCode, propertyType, zone, city,
         invoiceDate, dueDate, billingDuration,
         lineItems, services,
-        subtotal, discountAmount, discountPercentage,
+        subtotal, discountAmount, discountPercentage, taxPercentage, taxAmount,
         totalAmount, balanceAmount, amountPaid,
         workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
       } = invoice;
@@ -1006,22 +1051,22 @@ const generateInvoicePDF = async (invoice) => {
       }
 
       // ===== SUMMARY =====
-      // Amount Paid and Balance Due appear only once something has been paid: on a fresh invoice
-      // the balance is the total, and saying so twice adds nothing.
-      const summaryRows = [['Subtotal', rupees(subtotal)]];
-      if (figure(discountAmount) > 0) {
-        summaryRows.push([`Discount (${money(figure(discountPercentage))}%)`, `- ${rupees(discountAmount)}`, '#047857']);
-      }
-      // No tax row: an invoice carries no GST, so a zero-rate line would say nothing
-      if (paid > 0) {
-        summaryRows.push(['Amount Paid', `- ${rupees(paid)}`, '#047857']);
-        summaryRows.push(['Balance Due', rupees(balance)]);
-      }
+      // Sub Total, GST, Discount, Total, Balance Due -- the one order every invoice surface
+      // prints, fixed in `utils/invoiceSummary.js` so the PDF cannot drift from the screen or the
+      // email. GST is stated at the invoice's own rate (0 on every invoice raised since it was
+      // unlinked from the estimate) rather than omitted, and Balance Due always renders: it is
+      // the total until something is paid and 0 once the invoice is settled in full.
+      const summary = invoiceSummary({ subtotal, taxPercentage, taxAmount, discountPercentage,
+        discountAmount, totalAmount, amountPaid: paid, balanceAmount: balance });
       y = drawSummaryCard(doc, y, {
         margin: MARGIN,
         caption: 'Invoice Summary',
-        rows: summaryRows,
-        total: ['Total', rupees(totalAmount)]
+        rows: summary.lines.map(line => (line.negative
+          ? [line.label, `- ${rupees(line.amount)}`, '#047857']
+          : [line.label, rupees(line.amount)])),
+        total: [summary.totalLabel, rupees(summary.totalAmount)],
+        after: [[summary.balanceLabel, rupees(summary.balanceDue),
+          summary.balanceDue > 0 ? '#b91c1c' : '#047857']]
       });
 
       drawDocumentFooter(doc, y, MARGIN);

@@ -34,6 +34,8 @@ import {
 import StatCards from '../components/common/StatCards';
 import ViewModal from '../components/common/ViewModal';
 import { istDay, istToday } from '../utils/ist';
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+import { invoiceSummary } from '../utils/invoiceSummary';
 import { useRegisterRefresh } from '../hooks/usePortalRefresh';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -1253,40 +1255,41 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
             </div>
           )}
 
-          {/* Price Summary */}
-          <div className="bg-gradient-to-br from-gold-600/10 to-gold-500/5 rounded-xl p-5 border border-gold-600/20">
-            <h3 className="text-sm font-semibold text-gold-600 mb-4">Price Summary</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Subtotal</span>
-                <span className="text-gray-900">{formatCurrency(invoice.subtotal)}</span>
-              </div>
-              {invoice.discountAmount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-600">Discount ({invoice.discountPercentage || 0}%)</span>
-                  <span className="text-green-600">-{formatCurrency(invoice.discountAmount)}</span>
-                </div>
-              )}
-              <div className="border-t border-gold-600/20 pt-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-900 font-semibold">Total Amount</span>
-                  <span className="text-gold-600 text-lg font-bold">{formatCurrency(invoice.totalAmount)}</span>
-                </div>
-              </div>
-              {invoice.amountPaid > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600">Amount Paid</span>
-                    <span className="text-green-600">{formatCurrency(invoice.amountPaid)}</span>
+          {/* Price Summary — Sub Total, GST, Discount, Total, Balance Due, in the one order
+              `utils/invoiceSummary.js` fixes for the staff portals, the PDF and the invoice
+              emails, so the customer's copy states the same block as the document they were sent.
+              Balance Due always renders and follows the payments against the invoice: it is the
+              total until something is paid and 0 once it is settled in full. */}
+          {(() => {
+            const summary = invoiceSummary(invoice);
+            return (
+              <div className="bg-gradient-to-br from-gold-600/10 to-gold-500/5 rounded-xl p-5 border border-gold-600/20">
+                <h3 className="text-sm font-semibold text-gold-600 mb-4">Price Summary</h3>
+                <div className="space-y-3">
+                  {summary.lines.map(line => (
+                    <div key={line.key} className="flex justify-between text-sm">
+                      <span className={line.negative ? 'text-green-600' : 'text-gray-500'}>{line.label}</span>
+                      <span className={line.negative ? 'text-green-600' : 'text-gray-900'}>
+                        {line.negative ? '-' : ''}{formatCurrency(line.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t border-gold-600/20 pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-900 font-semibold">{summary.totalLabel}</span>
+                      <span className="text-gold-600 text-lg font-bold">{formatCurrency(summary.totalAmount)}</span>
+                    </div>
                   </div>
                   <div className="flex justify-between border-t border-gold-600/20 pt-3">
-                    <span className="text-gray-900 font-semibold">Balance Due</span>
-                    <span className="text-red-600 text-lg font-bold">{formatCurrency(invoice.balanceAmount)}</span>
+                    <span className="text-gray-900 font-semibold">{summary.balanceLabel}</span>
+                    <span className={`text-lg font-bold ${summary.balanceDue > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatCurrency(summary.balanceDue)}
+                    </span>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Payment History — every recorded payment on this invoice, with its receipt */}
           {(invoice.payments || []).length > 0 && (

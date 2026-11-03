@@ -41,6 +41,8 @@ import DismissPanel from '../../components/common/DismissPanel';
 import Modal from '../../components/common/Modal';
 // One services table for every invoice surface: the estimate document's columns, as the PDF draws them
 import InvoiceServicesTable from '../../components/billing/InvoiceServicesTable';
+// One price summary too: Sub Total, GST, Discount, Total, Balance Due, in the PDF's own order
+import InvoiceSummaryCard from '../../components/billing/InvoiceSummaryCard';
 import { COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -566,10 +568,13 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
       'Invoice Type': INVOICE_TYPE_CONFIG[inv.invoiceType]?.label || 'Manual',
       'Invoice Date': formatDate(inv.invoiceDate),
       'Due Date': formatDate(inv.dueDate),
-      'Subtotal (₹)': parseFloat(inv.subtotal) || 0,
-      'Discount (%)': parseFloat(inv.discountPercent) || 0,
+      // The invoice summary's own order: Sub Total, GST, Discount, Total, Balance Due
+      'Sub Total (₹)': parseFloat(inv.subtotal) || 0,
+      'GST (%)': parseFloat(inv.taxPercentage) || 0,
+      'GST Amount (₹)': parseFloat(inv.taxAmount) || 0,
+      'Discount (%)': parseFloat(inv.discountPercentage ?? inv.discountPercent) || 0,
       'Discount Amount (₹)': parseFloat(inv.discountAmount) || 0,
-      'Total Amount (₹)': parseFloat(inv.totalAmount) || 0,
+      'Total (₹)': parseFloat(inv.totalAmount) || 0,
       'Amount Paid (₹)': parseFloat(inv.amountPaid) || 0,
       'Balance Due (₹)': parseFloat(inv.balanceAmount) || 0,
       'Status': STATUS_CONFIG[inv.status]?.label || inv.status,
@@ -578,12 +583,10 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
     }));
 
     const wsInvoices = XLSX.utils.json_to_sheet(invoicesData);
-    wsInvoices['!cols'] = [
-      { wch: 6 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 20 },
-      { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-      { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }
-    ];
+    // One width per column: a list shorter than the row leaves the trailing columns unsized
+    wsInvoices['!cols'] = Object.keys(invoicesData[0] || {}).map((label, index) => (
+      index === 0 ? { wch: 6 } : { wch: Math.max(12, Math.min(26, label.length + 4)) }
+    ));
     XLSX.utils.book_append_sheet(wb, wsInvoices, 'Invoices');
 
     // Sheet 3: Status Breakdown
@@ -1676,30 +1679,9 @@ const InvoiceDetailPanel = ({
           )}
 
 
-          {/* ===== PRICE SUMMARY - the card EstimatePriceSummary draws ===== */}
-          <div className="flex justify-end">
-            <div className="w-64">
-              <div className="overflow-hidden rounded-lg border border-warm-border">
-                <p className="border-b border-warm-border bg-warm-section px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-warm-muted">Price Summary</p>
-                <div className="divide-y divide-warm-border/60">
-                  <div className="flex justify-between px-3 py-1.5 text-xs">
-                    <span className="text-warm-muted">Subtotal</span>
-                    <span className="font-semibold text-warm-text">Rs. {Math.round(invoice.subtotal || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  {invoice.discountAmount > 0 && (
-                    <div className="flex justify-between px-3 py-1.5 text-xs">
-                      <span className="text-warm-muted">Discount ({invoice.discountPercentage || 0}%)</span>
-                      <span className="font-semibold text-emerald-700">-Rs. {Math.round(invoice.discountAmount).toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
-                  <span className="text-base font-bold text-warm-text">Rs. {Math.round(invoice.totalAmount || 0).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* ===== PRICE SUMMARY - Sub Total, GST, Discount, Total, Balance Due, in the one
+               order the PDF and the invoice emails print ===== */}
+          <InvoiceSummaryCard invoice={invoice} />
 
           {/* Payment History */}
           {invoice.payments && invoice.payments.length > 0 && (

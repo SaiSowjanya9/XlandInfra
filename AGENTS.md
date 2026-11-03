@@ -294,6 +294,18 @@ dropped out of the customer's portal while their password kept working — and n
 recorded the move. The helper, its test and `sendPropertyAddedEmail` are gone; the five
 portal Add Customer pages render `result.message`, so the refusal shows as-is.
 
+**The refusal has to be rendered where the submit happened.** The five pages
+(`FP`/`Manager`/`Coordinator`/`Supervisor`/`ExecutiveCustomers.jsx`) are clones with three
+early returns — list, category selection, property form — and the banner markup lived only
+in the category-selection branch. A success resets the form and navigates back to that
+branch, so it showed; an error keeps the user on the property form, which rendered nothing
+at all, so the 409 was visible only as a red line in devtools and the submit button looked
+dead. All five now render `components/common/FormMessage` both there and directly above
+the Submit button, because the form is several screens long and a banner at the top of the
+page is off-screen at the moment it appears. `FormMessage`'s dismiss control is
+`type="button"`: a bare `<button>` inside a `<form>` submits it, which would re-fire the
+very request the banner is reporting on.
+
 Consequences that are easy to trip over:
 
 - **A contact who genuinely holds two properties cannot be entered twice.** There is no
@@ -683,13 +695,56 @@ shapes to avoid, both of which were on the customer portal:
 - A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
   kinds share one list, and the icon is what tells them apart.
 
+## The Invoice Summary — One Order, Every Surface
+
+- **An invoice states its money as `Sub Total`, `GST (n%)`, `Discount (n%)`, `Total`,
+  `Balance Due`, in that order and no other** (the user's call). The order is fixed in
+  `backend/utils/invoiceSummary.js` and its client twin `invoiceSummary.js`, which lives in
+  **both** `admin-portal/src/utils/` and `frontend/src/utils/` and is kept byte-identical — there
+  is no shared package, so the duplication is deliberate and checked. Every surface maps
+  `summary.lines` and never writes the rows itself: the PDF (`services/pdfService.js`), all four
+  invoice emails (`services/invoiceService.js`, `services/emailService.js`'s `sendInvoiceEmail`,
+  and the two in `routes/payments.js`), the shared staff card
+  `components/billing/InvoiceSummaryCard.jsx` (mounted by the `Invoices` and `GeneratedInvoices`
+  modals in all six portals), `FPInvoiceView`, both invoice drafts (`CreateInvoice`,
+  `GeneratedInvoices`) and the customer portal's `frontend/src/pages/Payment.jsx`.
+- **GST is printed at the invoice's own rate rather than omitted.** This reverses the earlier
+  "never displayed" call: a summary that jumps from Sub Total to Total reads as though a tax line
+  had gone missing, so the row is stated — `GST (0%) → Rs. 0` on every invoice raised since GST
+  was unlinked from the estimate. The label is built from the row's own `tax_percentage`, so a
+  historic invoice that really was billed 18% still says 18%. **Nothing hard-codes a rate**: a
+  literal 18 is what once billed an estimate approved at 0% as 18%, and the de-link below still
+  holds — no screen offers a GST field on an invoice and no writer reads a rate from a request.
+- **Balance Due always renders, and is never a sum of the lines above it** — it is read *from* the
+  Total, so it sits below the total rule (`drawSummaryCard`'s `after` strip on the PDF, a
+  bordered row under the accent bar on screen). It is the total until something is paid and **0
+  once the invoice is settled in full**, in the staff portals and the customer portal alike,
+  because it comes from the same recomputed `balance_amount` the payments ledger drives
+  (see "An invoice's settlement fields are recomputed, never incremented").
+- **`Amount Paid` is not a summary line.** It used to render beside Balance Due and only once
+  something had been paid, so an unpaid invoice never said what was owed and a settled one did not
+  say it was settled. What came in is the Payment History panel's job.
+- The discount row is the one conditional line: it appears where the estimate behind the invoice
+  carried a discount (`discountAmount > 0` — a fixed-amount discount with no percentage has its
+  rate derived from the subtotal). Discount is entered on the estimate and only displayed here.
+- The total is labelled **`Total`**, never "Grand Total" or "Total Amount", and the first line is
+  **`Sub Total`**. The Invoices Excel export lists the same figures in the same order.
+- The **estimate's** own Price Summary is unchanged (`Subtotal`, `Discount`, `GST`, `Total`): GST
+  on an estimate is charged on the subtotal *after* the discount, which is why it reads last
+  there. Only the invoice uses this order.
+- Regression tests: `node --test backend/utils/invoiceSummary.test.js` and
+  `node --test admin-portal/src/utils/invoiceSummaryView.test.js`. They fail if a surface
+  rebuilds its own rows, drops the GST or Balance Due line, reinstates Amount Paid, reorders the
+  lines, lets the two client copies drift, or hard-codes a rate.
+
 ## An Invoice Carries No GST
 
-- **GST is 0 on every invoice and is never displayed, on the user's call.** There is no GST field
-  on any invoice screen, no GST row in the invoice price summary, PDF, email or Excel export, and
-  no "GST not set" badge. `tax_percentage` and `tax_amount` stay in the schema (both 0) so the
-  historic rows that did charge GST keep what was billed — `schema_v61_invoice_gst_zero.sql`
-  normalises only the NULLs the old "enter it on the draft" flow left behind.
+- **GST is 0 on every invoice**, and the rate is never taken from a request or from the estimate.
+  There is no GST field on any invoice screen and no "GST not set" badge; the summary's GST row
+  (above) is a *display* of the stored rate, not an input. `tax_percentage` and `tax_amount` stay
+  in the schema (both 0) so the historic rows that did charge GST keep what was billed —
+  `schema_v61_invoice_gst_zero.sql` normalises only the NULLs the old "enter it on the draft" flow
+  left behind.
 - **The estimate's GST and the invoice's GST are unlinked.** When an estimate is approved,
   `generateInvoiceFromEstimate` raises the draft from the estimate's **pre-GST** subtotal with
   `tax_percentage = 0`; the estimate's `gst_percent` is never copied, and when an estimate has no
@@ -712,7 +767,7 @@ shapes to avoid, both of which were on the customer portal:
   money against it, is never rewritten.
 - Regression tests: `node --test backend/services/invoiceGstDelink.test.js backend/services/invoiceAmounts.test.js`.
   They fail if a route reads a rate from the request, if the send route gates on GST again, or if an
-  invoice document prints a `GST (` line.
+  invoice document hard-codes a GST rate instead of stating the one the invoice carries.
 
 ## The Invoice Document — One Document, Every Surface
 
@@ -720,7 +775,7 @@ shapes to avoid, both of which were on the customer portal:
   through `backend/utils/invoiceDocument.js` (`loadInvoiceDocument`, `loadInvoiceDocuments` for a
   list, `invoiceDocument` for the pure mapping). It reads the estimate back through the estimate's
   own customer projection — `customerEstimateData` — so the rows are the ones the estimate's view,
-  PDF and email already print, with the same customer-safe description, Method and Input / Details.
+  PDF and email already print, with the same customer-safe description and Input / Details.
   The invoice's stored `line_items` are a snapshot taken when the draft was raised; they are a
   **fallback only** (a generic or manual invoice, or an estimate that no longer resolves).
 - **Never rebuild an invoice's services at a call site.** `GET /invoices/:id` and
@@ -731,11 +786,33 @@ shapes to avoid, both of which were on the customer portal:
   `details` as the same detail), which the PDF printed on two lines.
 - **The services table carries the estimate document's columns, in this order**: `#`, Service (its
   category, and `Package` for one of the AMC package's own services, under the name), Description,
-  Input / Details, Method, Frequency, Visits. One table, package services first — never a
+  Input / Details, Frequency, Visits. One table, package services first — never a
   "Services Included" / "Services" pair split by sniffing the word "addon" out of a description.
   Drawn by `SERVICE_COLUMNS` / `drawServicesTable` / `serviceTableRow` in `services/pdfService.js`
   (shared with the estimate PDF), `invoiceServicesEmailTable` in `utils/invoiceDocument.js` (shared
   by all three invoice emails) and `components/billing/InvoiceServicesTable.jsx` in the portals.
+- **`Method` is a screen column only.** How XLAND prices a service (Capacity Slab, Area Based) is
+  how the figure was arrived at, not something the customer is billed for, so the user asked for
+  that column to come off **every document**: the portal's own export (`pdfExport.js`), the emailed
+  estimate and invoice PDFs (`SERVICE_COLUMNS`) and both email bodies (`emailService.js`'s
+  `SERVICE_HEAD`, `INVOICE_SERVICE_COLUMNS`). It stays in `EstimateServicesTable`,
+  `InvoiceServicesTable`, the create tables and the customer's own invoice view, and `method` is
+  still projected on the row for them — only the documents stop printing it. Its width went to
+  Description, which carries the wrapping.
+- **A service's name is set larger and bolder than the lines under it.** The category and the
+  `Package` mark qualify the name; at the name's own size and weight they read as three services
+  stacked in one cell (which is what the screenshot that prompted this showed — the PDFs drew all
+  three in plain Helvetica at the table's size, while the screens and the emails had already set
+  the name in `font-medium` / `<strong>`). The name is the heading of the cell: bold, at the
+  table's size, with the lines beneath it smaller and muted (the mark also italic). The HTML
+  surfaces use `text-xs` over `text-[10px]` / 12px over 11px; the emailed PDF stacks the cell's
+  lines itself — a
+  `drawItemsTable` cell may be a string *or* an array of `{ text, size, font, color }` lines,
+  because pdfkit sets one size per call — and the portal's export leaves the name to autoTable and
+  draws the smaller lines in `didDrawCell` (`serviceNameCell` / `serviceNameHooks`,
+  `SERVICE_SUB_SIZE`), since autoTable sets one font size per cell. Regression tests:
+  `node --test admin-portal/src/utils/serviceNameCellPdf.test.js` (renders the table and compares
+  the drawn sizes) and the drawn-size assertion in `backend/services/estimateDelivery.test.js`.
 - **No money in that table**: no per-service price, and no total under it. The invoice is priced in
   the Invoice Summary / Price Summary alone. The `Amount` column the PDF used to print was the AMC
   package price divided by the number of services it covered — ₹497 against each of four services

@@ -3,6 +3,8 @@ const path = require('path');
 const { customerEstimateData, stripInternalServiceDetails, billToParty } = require('../utils/estimateData');
 // The invoice document's services and its one email table, shared with the PDF and the portals
 const { rowFromLineItem, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+const { invoiceSummary } = require('../utils/invoiceSummary');
 const { estimateTermsLines } = require('../utils/estimateTerms');
 const { COMPANY, COMPANY_CONTACT_LINES } = require('../utils/companyInfo');
 const { generateEstimatePDF, generateInvoicePDF } = require('./pdfService');
@@ -929,10 +931,13 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   if (!Array.isArray(servicesList)) servicesList = [];
 
   /**
-   * A service as the estimate states it: what it is, how it is priced and what was measured, what
-   * it covers, how often and how many visits -- every column of the portal's view except its
-   * internal Vendor Cost, XLAND Cost and Margin %. The same columns the PDF prints, so the email and its attachment agree. No service
-   * states a price of its own: the estimate is priced as a whole, in the Price Summary.
+   * A service as the estimate states it: what it is, what was measured, what it covers, how often
+   * and how many visits -- every column of the portal's view except its internal Vendor Cost,
+   * XLAND Cost and Margin %, and except Method: how XLAND prices the service is how the figure
+   * was arrived at, not something the customer is billed for, so the user asked for that column to
+   * come off every document. The same columns the PDF prints, so the email and its attachment
+   * agree. No service states a price of its own: the estimate is priced as a whole, in the Price
+   * Summary.
    */
   // A row is a service, or [service, tag] where the tag marks a package's own service
   const serviceRowsHtml = list => list.map((entry, index) => {
@@ -953,10 +958,9 @@ const sendEstimateEmail = async (estimate, actionToken) => {
         ${category ? `<br><span style="font-size: 11px; color: #6b7280;">${category}</span>` : ''}
         ${tag ? `<br><span style="font-size: 10px; font-style: italic; color: #6b7280;">${tag}</span>` : ''}
       </td>
-      <!-- The view's order: name, description, what was measured, how it is priced, schedule -->
+      <!-- The view's order: name, description, what was measured, schedule -->
       <td style="${cell} font-size: 11px; color: #4b5563;">${details || '-'}</td>
       <td style="${cell} width: 76px;">${item.input ? emailText(item.input) : '-'}</td>
-      <td style="${cell} width: 70px;">${item.method ? emailText(item.method) : '-'}</td>
       <td style="${cell} width: 70px;">${frequency}</td>
       <td style="${cell} width: 46px; text-align: center;">${visits}</td>
     </tr>`;
@@ -965,10 +969,10 @@ const sendEstimateEmail = async (estimate, actionToken) => {
   // The cream skin the portal's services table is drawn in: a warm section bar with muted labels
   const SERVICE_HEAD = `
     <tr>
-      ${['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'].map((label, index) => `
+      ${['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'].map((label, index, labels) => `
         <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
           font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border};
-          text-align: ${index === 6 ? 'center' : 'left'};">${label}</th>`).join('')}
+          text-align: ${index === labels.length - 1 ? 'center' : 'left'};">${label}</th>`).join('')}
     </tr>`;
 
 
@@ -2384,7 +2388,8 @@ const sendInvoiceEmail = async (invoice) => {
   const {
     invoiceId, customerName, customerEmail, customerPhone,
     propertyName, propertyCode, propertyType, zone, city, estimateId,
-    subtotal, discountAmount, totalAmount, balanceAmount,
+    subtotal, discountAmount, discountPercentage, taxPercentage, taxAmount,
+    totalAmount, amountPaid, balanceAmount,
     invoiceDate, dueDate, lineItems, paymentLink, billingDuration,
     invoiceType, workOrderId, workOrderCategory, workOrderSubcategory, workOrderDescription
   } = invoice;
@@ -2431,6 +2436,13 @@ const sendInvoiceEmail = async (invoice) => {
     : items.map(rowFromLineItem);
   const servicesTable = invoiceServicesEmailTable(serviceRows);
 
+  // Sub Total, GST, Discount, Total, Balance Due -- the one order every invoice surface prints,
+  // fixed in `utils/invoiceSummary.js`. The Grand Total this replaced stated `balanceAmount ||
+  // totalAmount`, so a part-paid invoice headlined what was still owed as though it were the
+  // invoice's total; the two are separate lines now.
+  const summary = invoiceSummary({ subtotal, discountAmount, discountPercentage, taxPercentage,
+    taxAmount, totalAmount, amountPaid, balanceAmount });
+
   // Payment link section (if provided) - Green themed (consistent across all invoices)
   const paymentSection = paymentLink ? `
     <div style="text-align: center; margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 1px solid #86efac;">
@@ -2467,8 +2479,12 @@ const sendInvoiceEmail = async (invoice) => {
       servicesTotal: invoice.servicesTotal,
       subtotal,
       discountAmount,
+      discountPercentage,
+      taxPercentage,
+      taxAmount,
       totalAmount,
-      balanceAmount,
+      amountPaid,
+      balanceAmount: summary.balanceDue,
       workOrderId,
       workOrderCategory,
       workOrderSubcategory,
@@ -2598,20 +2614,20 @@ const sendInvoiceEmail = async (invoice) => {
                 </tr>
               </table>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td width="60%" style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #1f2937; font-weight: 500;">${formatCurrency(subtotal)}</td>
-                </tr>
-                ${discountAmount > 0 ? `<tr>
-                  <td width="60%" style="padding: 8px 0; color: #059669; font-size: 14px;">Discount</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #059669; font-weight: 500;">-${formatCurrency(discountAmount)}</td>
-                </tr>` : ''}
+                ${summary.lines.map(line => `<tr>
+                  <td width="60%" style="padding: 8px 0; color: ${line.negative ? '#059669' : '#6b7280'}; font-size: 14px;">${line.label}</td>
+                  <td width="40%" style="padding: 8px 0; text-align: right; color: ${line.negative ? '#059669' : '#1f2937'}; font-weight: 500;">${line.negative ? '-' : ''}${formatCurrency(line.amount)}</td>
+                </tr>`).join('')}
                 <tr>
                   <td colspan="2" style="padding: 8px 0;"><hr style="border: none; border-top: 2px solid #c9a227; margin: 0;"></td>
                 </tr>
                 <tr>
-                  <td width="60%" style="padding: 8px 0; color: #c9a227; font-size: 16px; font-weight: 700;">Grand Total</td>
-                  <td width="40%" style="padding: 8px 0; text-align: right; color: #c9a227; font-size: 18px; font-weight: 700;">${formatCurrency(balanceAmount || totalAmount)}</td>
+                  <td width="60%" style="padding: 8px 0; color: #c9a227; font-size: 16px; font-weight: 700;">${summary.totalLabel}</td>
+                  <td width="40%" style="padding: 8px 0; text-align: right; color: #c9a227; font-size: 18px; font-weight: 700;">${formatCurrency(summary.totalAmount)}</td>
+                </tr>
+                <tr>
+                  <td width="60%" style="padding: 8px 0; color: ${summary.balanceDue > 0 ? '#b91c1c' : '#047857'}; font-size: 14px; font-weight: 700;">${summary.balanceLabel}</td>
+                  <td width="40%" style="padding: 8px 0; text-align: right; color: ${summary.balanceDue > 0 ? '#b91c1c' : '#047857'}; font-size: 15px; font-weight: 700;">${formatCurrency(summary.balanceDue)}</td>
                 </tr>
               </table>
             </div>

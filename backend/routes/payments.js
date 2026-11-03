@@ -34,6 +34,8 @@ const {
 const { generateInvoicePDF } = require('../services/pdfService');
 // An invoice bills its estimate's services: one resolution for the modal, the PDF and the email
 const { loadInvoiceDocument, invoiceDocument, invoiceServicesEmailTable } = require('../utils/invoiceDocument');
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+const { invoiceSummary } = require('../utils/invoiceSummary');
 const { markPaymentCompleted } = require('../services/schedulingWorkflow');
 // Shared with the Razorpay writer so online and manual payments draw the same sequence
 const { generatePaymentId, generateReceiptId } = require('../utils/paymentIds');
@@ -903,7 +905,10 @@ router.get('/invoices/:id/pdf', authenticate, canViewPayments, async (req, res) 
       subtotal: invoice.subtotal,
       discountAmount: invoice.discount_amount,
       discountPercentage: invoice.discount_percentage,
+      taxPercentage: invoice.tax_percentage,
+      taxAmount: invoice.tax_amount,
       totalAmount: invoice.total_amount,
+      amountPaid: invoice.amount_paid,
       balanceAmount: invoice.balance_amount,
       workOrderId: invoice.work_order_id || invoice.est_work_order_id,
       workOrderCategory: invoice.work_order_category,
@@ -1326,6 +1331,13 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         // in the same columns the invoice's PDF, view modal and every later email carry
         const servicesTable = invoiceServicesEmailTable(invoiceDocument({ subtotal, line_items: formattedLineItems }, null).services);
 
+        // Sub Total, GST, Discount, Total, Balance Due -- the one order, from the shared helper.
+        // Nothing has been paid against an invoice being raised, so the balance is its total.
+        const summary = invoiceSummary({
+          subtotal, taxPercentage: taxPct, taxAmount, discountPercentage: discPct,
+          discountAmount, totalAmount, amountPaid: 0, balanceAmount: totalAmount
+        });
+
         await sendEmailService({
           to: customerDetails.email,
           subject: `Invoice ${invoiceIdGen} from XLand Infra`,
@@ -1372,19 +1384,18 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
                     ${servicesTable}
 
                     <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                      ${summary.lines.map(line => `
                       <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
-                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(subtotal)}</td>
-                      </tr>
-                      ${discountAmount > 0 ? `
-                      <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Discount</td>
-                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(discountAmount)}</td>
-                      </tr>
-                      ` : ''}
+                        <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">${line.label}</td>
+                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: ${line.negative ? '#dc2626' : '#374151'};">${line.negative ? '-' : ''}${formatAmount(line.amount)}</td>
+                      </tr>`).join('')}
                       <tr style="border-top: 2px solid #10b981;">
-                        <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">Grand Total</td>
-                        <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(totalAmount)}</td>
+                        <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #10b981;">${summary.totalLabel}</td>
+                        <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #10b981;">${formatAmount(summary.totalAmount)}</td>
+                      </tr>
+                      <tr>
+                        <td width="60%" style="padding: 10px 0; text-align: left; font-weight: bold; color: ${summary.balanceDue > 0 ? '#dc2626' : '#047857'};">${summary.balanceLabel}</td>
+                        <td width="40%" style="padding: 10px 0; text-align: right; font-weight: bold; color: ${summary.balanceDue > 0 ? '#dc2626' : '#047857'};">${formatAmount(summary.balanceDue)}</td>
                       </tr>
                     </table>
                   </div>
@@ -1839,7 +1850,11 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
         servicesTotal: document.servicesTotal,
         subtotal: invoice.subtotal,
         discountAmount: invoice.discount_amount,
+        discountPercentage: invoice.discount_percentage,
+        taxPercentage: invoice.tax_percentage,
+        taxAmount: invoice.tax_amount,
         totalAmount: invoice.total_amount,
+        amountPaid: invoice.amount_paid,
         balanceAmount: invoice.balance_amount,
         workOrderId: invoice.work_order_id || invoice.est_work_order_id,
         workOrderCategory: invoice.work_order_category,
@@ -1859,6 +1874,10 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     // Format amounts
     const formatAmount = (amt) => `₹${(parseFloat(amt) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+    // Sub Total, GST, Discount, Total, Balance Due -- the one order, from the shared helper, so a
+    // resend states the same block the PDF attached to it and the portal's modal do
+    const summary = invoiceSummary(invoice);
 
     // Send email to customer with PDF attachment
     const { sendEmail } = require('../services/emailService');
@@ -1915,30 +1934,19 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
                 ${servicesTable ? `<div style="margin-top: 15px;">${servicesTable}</div>` : ''}
 
                 <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+                  ${summary.lines.map(line => `
                   <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Subtotal</td>
-                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #374151;">${formatAmount(invoice.subtotal)}</td>
-                  </tr>
-                  ${invoice.discount_amount > 0 ? `
-                  <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">Discount</td>
-                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${formatAmount(invoice.discount_amount)}</td>
-                  </tr>
-                  ` : ''}
+                    <td width="60%" style="padding: 10px 0; text-align: left; color: #374151;">${line.label}</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: ${line.negative ? '#dc2626' : '#374151'};">${line.negative ? '-' : ''}${formatAmount(line.amount)}</td>
+                  </tr>`).join('')}
                   <tr style="border-top: 2px solid #C9A227;">
-                    <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #C9A227;">Grand Total</td>
-                    <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #C9A227;">${formatAmount(invoice.total_amount)}</td>
-                  </tr>
-                  ${invoice.amount_paid > 0 ? `
-                  <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td width="60%" style="padding: 10px 0; text-align: left; color: #16a34a;">Amount Paid</td>
-                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: 600; color: #16a34a;">${formatAmount(invoice.amount_paid)}</td>
+                    <td width="60%" style="padding: 14px 0; text-align: left; font-size: 18px; font-weight: bold; color: #C9A227;">${summary.totalLabel}</td>
+                    <td width="40%" style="padding: 14px 0; text-align: right; font-size: 18px; font-weight: bold; color: #C9A227;">${formatAmount(summary.totalAmount)}</td>
                   </tr>
                   <tr>
-                    <td width="60%" style="padding: 10px 0; text-align: left; font-weight: bold; color: #dc2626;">Balance Due</td>
-                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: bold; color: #dc2626;">${formatAmount(invoice.balance_amount)}</td>
+                    <td width="60%" style="padding: 10px 0; text-align: left; font-weight: bold; color: ${summary.balanceDue > 0 ? '#dc2626' : '#047857'};">${summary.balanceLabel}</td>
+                    <td width="40%" style="padding: 10px 0; text-align: right; font-weight: bold; color: ${summary.balanceDue > 0 ? '#dc2626' : '#047857'};">${formatAmount(summary.balanceDue)}</td>
                   </tr>
-                  ` : ''}
                 </table>
               </div>
 

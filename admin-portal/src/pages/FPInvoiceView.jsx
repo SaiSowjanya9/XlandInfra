@@ -25,6 +25,8 @@ import { formatDate, formatDateTime } from '../utils/dateFormat';
 import Modal from '../components/common/Modal';
 // One services table for every invoice surface: the estimate document's columns, as the PDF draws them
 import InvoiceServicesTable from '../components/billing/InvoiceServicesTable';
+// Sub Total / GST / Discount / Total / Balance Due, in the PDF's own order
+import { invoiceSummary } from '../utils/invoiceSummary';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -142,7 +144,11 @@ const FPInvoiceView = ({ user }) => {
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 1280
+        windowWidth: 1280,
+        // What is captured is a document, and no document carries the Method column -- how XLAND
+        // prices a service is how the figure was arrived at, not something the customer is billed
+        // for. Dropped from the clone html2canvas renders, so the page itself keeps it on screen.
+        onclone: (clone) => clone.querySelectorAll('[data-column="Method"]').forEach(cell => cell.remove())
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -458,39 +464,38 @@ const FPInvoiceView = ({ user }) => {
             />
           </div>
 
-          {/* Totals Section */}
-          <div className="flex justify-end mb-8">
-            <div className="w-72">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium text-gray-900">₹{formatCurrency(invoice.subtotal)}</span>
-                </div>
-                {invoice.discountAmount > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Discount ({invoice.discountPercentage}%):</span>
-                    <span className="font-medium text-red-600">-₹{formatCurrency(invoice.discountAmount)}</span>
+          {/* Totals Section - Sub Total, GST, Discount, Total, Balance Due, in the one order
+              `utils/invoiceSummary.js` fixes for the PDF, the emails and every portal's modal.
+              Balance Due always renders (it was shown only once something had been paid, so an
+              unpaid invoice never said what was owed) and Amount Paid has come off: the payment
+              history below the totals is the record of what came in. */}
+          {(() => {
+            const summary = invoiceSummary(invoice);
+            return (
+              <div className="flex justify-end mb-8">
+                <div className="w-72">
+                  <div className="space-y-2 text-sm">
+                    {summary.lines.map(line => (
+                      <div key={line.key} className="flex justify-between py-2 border-b border-gray-200">
+                        <span className="text-gray-600">{line.label}:</span>
+                        <span className={`font-medium ${line.negative ? 'text-red-600' : 'text-gray-900'}`}>
+                          {line.negative ? '-' : ''}₹{formatCurrency(line.amount)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between py-3 bg-gray-800 text-white px-4 -mx-4 rounded">
+                      <span className="font-bold">{summary.totalLabel}:</span>
+                      <span className="font-bold text-lg">₹{formatCurrency(summary.totalAmount)}</span>
+                    </div>
+                    <div className={`flex justify-between py-2 px-4 -mx-4 rounded ${summary.balanceDue > 0 ? 'bg-amber-100' : 'bg-emerald-50'}`}>
+                      <span className={`font-bold ${summary.balanceDue > 0 ? 'text-amber-800' : 'text-emerald-800'}`}>{summary.balanceLabel}:</span>
+                      <span className={`font-bold ${summary.balanceDue > 0 ? 'text-amber-800' : 'text-emerald-800'}`}>₹{formatCurrency(summary.balanceDue)}</span>
+                    </div>
                   </div>
-                )}
-                <div className="flex justify-between py-3 bg-gray-800 text-white px-4 -mx-4 rounded">
-                  <span className="font-bold">Total Amount:</span>
-                  <span className="font-bold text-lg">₹{formatCurrency(invoice.totalAmount)}</span>
                 </div>
-                {invoice.amountPaid > 0 && (
-                  <>
-                    <div className="flex justify-between py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Amount Paid:</span>
-                      <span className="font-medium text-green-600">₹{formatCurrency(invoice.amountPaid)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 bg-amber-100 px-4 -mx-4 rounded">
-                      <span className="font-bold text-amber-800">Balance Due:</span>
-                      <span className="font-bold text-amber-800">₹{formatCurrency(invoice.balanceAmount)}</span>
-                    </div>
-                  </>
-                )}
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Payment Instructions */}
           {invoice.balanceAmount > 0 && (

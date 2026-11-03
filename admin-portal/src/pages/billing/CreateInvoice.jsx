@@ -22,6 +22,8 @@ import PageHeader, { HEADER_ACTION_CLASS } from '../../components/common/PageHea
 import DateField from '../../components/common/DateField';
 import { formatDate } from '../../utils/dateFormat';
 import Modal from '../../components/common/Modal';
+// Sub Total / GST / Discount / Total / Balance Due, in the one order every invoice surface prints
+import { invoiceSummary } from '../../utils/invoiceSummary';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -370,6 +372,14 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
   };
 
   const totals = calculateTotals();
+  // The draft's own summary, through the shared helper, so the preview states the same block in
+  // the same order as the invoice it raises. An invoice carries no GST, hence the 0 rate; nothing
+  // has been paid against one being raised, so the balance is its total.
+  const draftSummary = invoiceSummary({
+    subtotal: totals.subtotal, taxPercentage: 0, taxAmount: 0,
+    discountAmount: totals.totalDiscount, totalAmount: totals.grandTotal,
+    amountPaid: 0, balanceAmount: totals.grandTotal
+  });
 
   // Create invoice
   const handleCreateInvoice = async (e) => {
@@ -1001,21 +1011,25 @@ const CreateInvoice = ({ user, portalType = 'admin' }) => {
 
             {/* Summary */}
             <div className="mt-6 pt-6 border-t border-gray-200">
+              {/* Sub Total, GST, Discount, Total, Balance Due -- the order every invoice surface
+                  prints, from the shared helper */}
               <div className="flex justify-end">
                 <div className="w-80 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="text-gray-900">₹{formatCurrency(totals.subtotal)}</span>
-                  </div>
-                  {totals.totalDiscount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-600">Discount</span>
-                      <span className="text-green-600">-₹{formatCurrency(totals.totalDiscount)}</span>
+                  {draftSummary.lines.map(line => (
+                    <div key={line.key} className="flex justify-between text-sm">
+                      <span className={line.negative ? 'text-green-600' : 'text-gray-600'}>{line.label}</span>
+                      <span className={line.negative ? 'text-green-600' : 'text-gray-900'}>
+                        {line.negative ? '-' : ''}₹{formatCurrency(line.amount)}
+                      </span>
                     </div>
-                  )}
+                  ))}
                   <div className="flex justify-between text-lg font-semibold pt-2 border-t border-gray-200">
-                    <span className="text-gray-900">Grand Total</span>
-                    <span className="text-blue-600">₹{formatCurrency(totals.grandTotal)}</span>
+                    <span className="text-gray-900">{draftSummary.totalLabel}</span>
+                    <span className="text-blue-600">₹{formatCurrency(draftSummary.totalAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-200">
+                    <span className="text-gray-600">{draftSummary.balanceLabel}</span>
+                    <span className={draftSummary.balanceDue > 0 ? 'text-red-600' : 'text-green-600'}>₹{formatCurrency(draftSummary.balanceDue)}</span>
                   </div>
                 </div>
               </div>

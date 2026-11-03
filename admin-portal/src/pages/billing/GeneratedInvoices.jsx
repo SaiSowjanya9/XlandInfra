@@ -42,6 +42,9 @@ import DismissPanel from '../../components/common/DismissPanel';
 import Modal from '../../components/common/Modal';
 // One services table for every invoice surface: the estimate document's columns, as the PDF draws them
 import InvoiceServicesTable from '../../components/billing/InvoiceServicesTable';
+// One price summary too: Sub Total, GST, Discount, Total, Balance Due, in the PDF's own order
+import InvoiceSummaryCard from '../../components/billing/InvoiceSummaryCard';
+import { invoiceSummary } from '../../utils/invoiceSummary';
 import { COMPANY_LOGO_ICON } from '../../utils/companyInfo';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -276,6 +279,13 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
   };
 
   const totals = calculateTotals();
+  // The draft's own summary, through the shared helper, so the preview cannot state the figures in
+  // a different order from the invoice it raises. An invoice carries no GST, hence the 0 rate.
+  const draftSummary = invoiceSummary({
+    subtotal: totals.subtotal, taxPercentage: 0, taxAmount: 0,
+    discountPercentage: discountPercent, discountAmount: totals.discountAmount,
+    totalAmount: totals.total, amountPaid: 0, balanceAmount: totals.total
+  });
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -509,21 +519,27 @@ const CreateInvoiceForm = ({ onSuccess, onCancel, token }) => {
             />
           </div>
 
-          {/* Totals - Gold Theme */}
+          {/* Totals - Gold Theme. The draft states the same block in the same order the invoice
+              it raises will carry: Sub Total, GST, Discount, Total, Balance Due. Nothing has been
+              paid against an invoice being raised, so the balance is its total. */}
           <div className="bg-[#fffbeb] border border-[#fde68a] rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal (from Estimate)</span>
-              <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
-            </div>
-            {discountPercent > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-green-600">Discount ({discountPercent}%)</span>
-                <span className="font-medium text-green-600">-{formatCurrency(totals.discountAmount)}</span>
+            {draftSummary.lines.map(line => (
+              <div key={line.key} className="flex justify-between text-sm">
+                <span className={line.negative ? 'text-green-600' : 'text-gray-600'}>
+                  {line.key === 'subtotal' ? `${line.label} (from Estimate)` : line.label}
+                </span>
+                <span className={`font-medium ${line.negative ? 'text-green-600' : ''}`}>
+                  {line.negative ? '-' : ''}{formatCurrency(line.amount)}
+                </span>
               </div>
-            )}
+            ))}
             <div className="flex justify-between text-lg font-semibold border-t border-warm-border pt-2">
-              <span className="text-[#8A6D12]">Grand Total</span>
-              <span className="text-[#8A6D12]">{formatCurrency(totals.total)}</span>
+              <span className="text-[#8A6D12]">{draftSummary.totalLabel}</span>
+              <span className="text-[#8A6D12]">{formatCurrency(draftSummary.totalAmount)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-semibold border-t border-warm-border pt-2">
+              <span className="text-gray-600">{draftSummary.balanceLabel}</span>
+              <span className={draftSummary.balanceDue > 0 ? 'text-red-600' : 'text-green-600'}>{formatCurrency(draftSummary.balanceDue)}</span>
             </div>
           </div>
 
@@ -1377,32 +1393,9 @@ const GeneratedInvoices = ({ user, portalType = 'admin' }) => {
                 );
               })()}
 
-              {/* ===== PRICE SUMMARY - Compact, right aligned ===== */}
-              <div className="flex justify-end">
-                <div className="w-64">
-                  {/* Price Summary - the same card EstimatePriceSummary draws: a warm caption bar,
-                      warm rules between the lines, the Total on the tan accent in dark text */}
-                  <div className="overflow-hidden rounded-lg border border-warm-border">
-                    <p className="border-b border-warm-border bg-warm-section px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-warm-muted">Price Summary</p>
-                    <div className="divide-y divide-warm-border/60">
-                      <div className="flex justify-between px-3 py-1.5 text-xs">
-                        <span className="text-warm-muted">Subtotal</span>
-                        <span className="font-semibold text-warm-text">Rs. {Math.round(selectedInvoice.subtotal || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                      {selectedInvoice.discountAmount > 0 && (
-                        <div className="flex justify-between px-3 py-1.5 text-xs">
-                          <span className="text-warm-muted">Discount ({selectedInvoice.discountPercentage || 0}%)</span>
-                          <span className="font-semibold text-emerald-700">-Rs. {Math.round(selectedInvoice.discountAmount).toLocaleString('en-IN')}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between bg-warm-accent-soft border-t border-warm-border px-3 py-2.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-warm-text">Total</span>
-                      <span className="text-base font-bold text-warm-text">Rs. {Math.round(selectedInvoice.totalAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* ===== PRICE SUMMARY - Sub Total, GST, Discount, Total, Balance Due, in the one
+                   order the PDF and the invoice emails print ===== */}
+              <InvoiceSummaryCard invoice={selectedInvoice} />
 
               {/* Footer separator and message - compact */}
               <div className="border-t border-warm-border pt-3 mt-4">
