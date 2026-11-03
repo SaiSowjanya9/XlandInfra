@@ -2,16 +2,17 @@
  * The services an invoice bills -- one table, one column set, every screen.
  *
  * `#`, Service (its category, and `Package` for one of the AMC package's own services, under the
- * name and smaller than it), Description, Input / Details, Method, Frequency, Visits: the estimate
+ * name and smaller than it), Description, Input / Details, Frequency, Visits: the estimate
  * document's columns, because an invoice bills the estimate's services and the two are read as one
  * document. The server resolves the rows (`backend/utils/invoiceDocument.js`) and the PDF draws
  * the same columns (`SERVICE_COLUMNS` in `backend/services/pdfService.js`), so the screen and the
  * download cannot disagree.
  *
- * **Method is the one column the documents do not carry**: how XLAND prices a service is how the
- * figure was arrived at, not something the customer is billed for, so the PDFs and the emails
- * leave it out while the screens keep it. Every cell of it is marked `data-column="Method"`, so a
- * screen capture taken as a document (`FPInvoiceView`'s download) can drop it from the clone.
+ * **No Method column on any invoice surface**: how XLAND prices a service (Capacity Slab, Area
+ * Based) is how the figure was arrived at, not something the customer is billed for. The PDFs and
+ * the emails never printed it and the user asked for it off the screens too, so the column is
+ * gone here and from the customer's own copy, and with it the per-cell marker a screen capture
+ * taken as a document (`FPInvoiceView`'s download) used to strip out of the clone.
  *
  * No money in it at all: no per-service price, and no total under the table either -- the invoice
  * is priced in the Price Summary beside it, and a services total directly above a Subtotal stating
@@ -24,7 +25,7 @@
  */
 
 // Each column's share of the table width; adds up to 100
-const COLUMN_SHARE = { '#': 4, 'Service': 17, 'Description': 25, 'Input / Details': 14, 'Method': 13, 'Frequency': 15, 'Visits': 12 };
+const COLUMN_SHARE = { '#': 4, 'Service': 20, 'Description': 30, 'Input / Details': 17, 'Frequency': 16, 'Visits': 13 };
 const COLUMNS = Object.keys(COLUMN_SHARE);
 const ALIGN = { '#': 'text-center', 'Frequency': 'text-center', 'Visits': 'text-center' };
 
@@ -51,7 +52,6 @@ const normalize = (item, index) => ({
   tag: item.tag || '',
   description: decode(item.description || item.details || ''),
   input: decode(item.input || ''),
-  method: decode(item.method || ''),
   frequency: decode(item.frequency || item.frequencyType || item.frequency_type || ''),
   visits: item.visits ?? item.frequencyCount ?? item.frequency_count ?? 1
 });
@@ -92,7 +92,6 @@ export default function InvoiceServicesTable({ services, title = 'Services Bille
                 </td>
                 <td className="px-2 py-2 text-xs text-gray-600 whitespace-pre-wrap break-words">{row.description || '-'}</td>
                 <td className="px-2 py-2 text-xs text-gray-700 break-words">{row.input || '-'}</td>
-                <td data-column="Method" className="px-2 py-2 text-xs text-gray-700 break-words">{row.method || '-'}</td>
                 <td className="px-2 py-2 text-center text-xs text-warm-text">{row.frequency || '-'}</td>
                 <td className="px-2 py-2 text-center text-xs font-semibold text-warm-text">{row.visits}</td>
               </tr>

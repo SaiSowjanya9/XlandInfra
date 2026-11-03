@@ -25,12 +25,11 @@ const read = (...parts) => fs.readFileSync(path.join(repo, ...parts), 'utf8');
 
 // The document's columns, in the order every surface prints them.
 //
-// Method is a screen column only: how XLAND prices a service (Capacity Slab, Area Based) is how
-// the figure was arrived at, not something the customer is billed for, so the user asked for it to
-// come off the documents -- the PDFs and the email bodies -- while the staff screens and the
-// customer's own invoice view keep it.
+// Method is on none of them: how XLAND prices a service (Capacity Slab, Area Based) is how the
+// figure was arrived at, not something the customer is billed for, so the user asked for it off
+// every invoice surface -- the PDFs and the email bodies, which never carried it, and the staff
+// screens and the customer's own invoice view, which did.
 const COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'];
-const SCREEN_COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'];
 
 const SCREENS = [
   ['admin-portal/src/pages/billing/GeneratedInvoices.jsx', 'the generated-invoice modal'],
@@ -40,10 +39,10 @@ const SCREENS = [
 
 test('the shared table carries the document columns, in order', () => {
   const body = read('admin-portal/src/components/billing/InvoiceServicesTable.jsx');
-  const order = SCREEN_COLUMNS.map(label => body.indexOf(`'${label}'`));
+  const order = COLUMNS.map(label => body.indexOf(`'${label}'`));
   for (const [index, at] of order.entries()) {
-    assert.ok(at > 0, `${SCREEN_COLUMNS[index]} is not a column of InvoiceServicesTable`);
-    if (index) assert.ok(at > order[index - 1], `${SCREEN_COLUMNS[index]} is out of order`);
+    assert.ok(at > 0, `${COLUMNS[index]} is not a column of InvoiceServicesTable`);
+    if (index) assert.ok(at > order[index - 1], `${COLUMNS[index]} is out of order`);
   }
   // No money in the table at all: the invoice is priced in the Price Summary beside it, and the
   // PDFs state no services total either -- one directly above a Subtotal said the same figure twice
@@ -118,9 +117,26 @@ for (const [file, what] of SCREENS) {
   });
 }
 
+test('no invoice surface states how a service is priced', () => {
+  // Method came off the screens too, so neither the shared table nor the customer's copy heads a
+  // column with it, no row renders a `method`, and the FP page's screen capture no longer has to
+  // strip the column out of the clone it renders
+  for (const file of ['admin-portal/src/components/billing/InvoiceServicesTable.jsx',
+    'frontend/src/pages/Payment.jsx', 'backend/utils/invoiceDocument.js']) {
+    const body = read(...file.split('/'));
+    assert.doesNotMatch(body, /'Method'|"Method"|>Method</, `${file}: the Method column is back`);
+  }
+  assert.doesNotMatch(read('admin-portal', 'src', 'components', 'billing', 'InvoiceServicesTable.jsx'),
+    /row\.method/, 'the shared table renders a method again');
+  assert.doesNotMatch(read('frontend', 'src', 'pages', 'Payment.jsx'),
+    /item\.method/, "the customer's invoice view renders a method again");
+  assert.doesNotMatch(read('admin-portal', 'src', 'pages', 'FPInvoiceView.jsx'),
+    /data-column="Method"/, 'the FP download still strips a Method column');
+});
+
 test("the customer's copy lists every service, in the same columns", () => {
   const body = read('frontend/src/pages/Payment.jsx');
-  for (const label of SCREEN_COLUMNS) assert.ok(body.includes(`'${label}'`), `the customer's invoice view has no ${label} column`);
+  for (const label of COLUMNS) assert.ok(body.includes(`'${label}'`), `the customer's invoice view has no ${label} column`);
   assert.doesNotMatch(body, /filter\(item => item\.type === 'addon'\)/, "the customer's view splits the rows again");
   assert.match(body, /invoice\.services/, "the customer's view does not read the resolved document");
 });

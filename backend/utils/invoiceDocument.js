@@ -22,9 +22,10 @@ const { customerEstimateData, stripInternalServiceDetails } = require('./estimat
  * No per-service price: the invoice is priced as a whole, in its summary, exactly as the
  * estimate is.
  *
- * `method` is still resolved on the row -- the screens read it -- but **no document prints it**:
- * how XLAND prices a service is how the figure was arrived at, not something the customer is
- * billed for, so the user asked for that column to come off the PDFs and the emails.
+ * **No `method` on the row**: how XLAND prices a service (Capacity Slab, Area Based) is how the
+ * figure was arrived at, not something the customer is billed for, so the user asked for that
+ * column off every invoice surface. The PDFs and the emails never printed it; it was resolved
+ * here only for the screens, and they no longer show it either.
  */
 
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
@@ -64,7 +65,7 @@ const frequencyLabel = value => {
  * One row shape, carried by every surface. The snake/camel aliases are deliberate: a screen or
  * export written against the old stored line item (`frequency_type`, `total_price`) keeps reading.
  */
-const documentRow = ({ name, category, description, input, method, frequency, visits, price, tag, type }) => {
+const documentRow = ({ name, category, description, input, frequency, visits, price, tag, type }) => {
   const frequencyType = frequencyLabel(frequency);
   const frequencyCount = Number.isFinite(Number(visits)) && Number(visits) > 0 ? Number(visits) : 1;
   const amountValue = amount(price);
@@ -75,7 +76,6 @@ const documentRow = ({ name, category, description, input, method, frequency, vi
     // out here, so no caller has to remember to strip them
     description: stripInternalServiceDetails(decodeHtml(description)).trim(),
     input: decodeHtml(input),
-    method: decodeHtml(method),
     frequency: frequencyType,
     frequencyType,
     frequency_type: frequencyType,
@@ -110,7 +110,6 @@ const rowFromLineItem = item => {
     category: first(source.category, source.serviceCategory, source.subcategory, ''),
     description: describeLineItem(source, name),
     input: first(source.input, source.inputText, ''),
-    method: first(source.method, source.methodLabel, ''),
     frequency: first(source.frequency, source.frequencyType, source.frequency_type, source.billingDuration, ''),
     visits: first(source.visits, source.frequencyCount, source.frequency_count, source.quantity, 1),
     price: first(source.totalPrice, source.total_price, source.amount, source.unitPrice, source.unit_price, 0),
@@ -123,7 +122,6 @@ const rowFromEstimateService = (service, tag) => documentRow({
   category: service.category,
   description: service.description,
   input: service.input,
-  method: service.method,
   frequency: service.frequencyType || service.frequency_type,
   visits: service.frequencyCount ?? service.frequency_count,
   price: service.totalPrice ?? service.price,
@@ -194,7 +192,8 @@ const invoiceDocument = (invoice = {}, estimate = null) => {
  * labels, warm rules, figures in warm text.
  */
 const WARM = { section: '#FFF9EE', border: '#EADFCF', muted: '#8A7A66', text: '#1F2937' };
-// No Method column: it is read on the screens, not on the document the customer receives
+// No Method column: how a service is priced is not something the customer is billed for, and no
+// invoice surface -- email, PDF or screen -- states it
 const INVOICE_SERVICE_COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'];
 const escapeHtml = value => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

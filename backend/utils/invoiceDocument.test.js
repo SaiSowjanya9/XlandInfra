@@ -87,10 +87,12 @@ test('a description is stated once, and carries no internal segment', () => {
   assert.equal(services[0].description, 'This is a test message');
 });
 
-test('Method and Input / Details are projected for a configured service', () => {
+test('Input / Details is projected for a configured service, and the pricing method is not', () => {
   const [, , cctv] = invoiceDocument(invoice, estimate).services;
-  assert.equal(cctv.method, 'Quantity Based');
   assert.equal(cctv.input, '8 Camera');
+  // How the figure was arrived at is not something the customer is billed for: no invoice
+  // surface states it, so the row does not carry it
+  assert.equal(cctv.method, undefined);
 });
 
 test('the services total is the invoice subtotal, never a per-row fiction', () => {

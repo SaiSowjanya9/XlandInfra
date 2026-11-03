@@ -144,11 +144,7 @@ const FPInvoiceView = ({ user }) => {
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 1280,
-        // What is captured is a document, and no document carries the Method column -- how XLAND
-        // prices a service is how the figure was arrived at, not something the customer is billed
-        // for. Dropped from the clone html2canvas renders, so the page itself keeps it on screen.
-        onclone: (clone) => clone.querySelectorAll('[data-column="Method"]').forEach(cell => cell.remove())
+        windowWidth: 1280
       });
       
       const imgData = canvas.toDataURL('image/png');

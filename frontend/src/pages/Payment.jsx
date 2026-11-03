@@ -1217,9 +1217,10 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
             </div>
           )}
 
-          {/* Services Billed - the invoice document's own columns, the same seven the staff
+          {/* Services Billed - the invoice document's own columns, the same six the staff
               portals' modal and the PDF print: what the service is, what it covers, what was
-              measured at the property, how it is priced, how often and how many visits */}
+              measured at the property, how often and how many visits. No Method column: how
+              XLAND prices a service is how the figure was arrived at, not something billed. */}
           {services.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gold-600 mb-3">Services Billed</h3>
@@ -1227,7 +1228,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-100 border-b border-gray-200">
-                      {['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'].map(label => (
+                      {['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'].map(label => (
                         <th key={label} className={`px-3 py-3 font-medium text-gray-500 whitespace-nowrap ${label === '#' || label === 'Frequency' || label === 'Visits' ? 'text-center' : 'text-left'}`}>
                           {label}
                         </th>
@@ -1244,7 +1245,6 @@ const InvoiceDetailModal = ({ invoice, onClose, onPay, onViewReceipt }) => {
                         </td>
                         <td className="px-3 py-3 text-gray-600 whitespace-pre-wrap">{item.description || '-'}</td>
                         <td className="px-3 py-3 text-gray-600">{item.input || '-'}</td>
-                        <td className="px-3 py-3 text-gray-600">{item.method || '-'}</td>
                         <td className="px-3 py-3 text-center text-gray-500">{item.frequency || item.frequencyType || '-'}</td>
                         <td className="px-3 py-3 text-center text-gray-900">{item.visits || item.frequencyCount || 1}</td>
                       </tr>
