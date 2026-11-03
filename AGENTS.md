@@ -1981,6 +1981,27 @@ being carried out, so they must not precede the agreement.
 
 The project uses **Razorpay Payment Links** (hosted checkout) for online payments. UPI, cards, net banking, and wallets are all handled by Razorpay's hosted page.
 
+### Razorpay Never Writes to the Customer
+
+- **Every Payment Link is created with `notify: { sms: false, email: false }` and
+  `reminder_enable: false`** — `services/invoiceService.js` (invoice send and auto-generated),
+  `routes/razorpay.js` (staff links and instalments) and `routes/customers.js` (the customer
+  portal's own link). With `notify.email` on, Razorpay sends its own mail: Razorpay-branded,
+  headed "Payment requested by XLAND INFRA PRIVATE LIMITED", stamped **"This Payment Link is
+  created in Test Mode"** whenever the keys are test keys, and naming the link id (`plink_…`)
+  instead of the invoice. The customer got that beside our invoice email and read the two as
+  separate requests for the same money.
+- **`reminder_enable` must go off with it.** Reminders are the same Razorpay mail sent again days
+  later and are a separate setting (Razorpay's docs: pass `reminder_enable: false` to disable them
+  for a link), so `notify.email: false` alone only delays the problem. There is also an
+  account-level reminder toggle in the Razorpay Dashboard.
+- What the customer gets instead is **our own invoice email**, whose Pay Now button goes to
+  `/pay/<invoice_id>` — our payment page, which offers the methods and then the Razorpay link.
+  Nothing they need went with the notification.
+- Regression test: `node --test backend/services/paymentLinkNotifications.test.js`. It reads the
+  options handed to each `paymentLink.create` and fails if a notification or a reminder is turned
+  back on, or if a **new** link creator appears that has not made the same decision.
+
 ### Environment Variables (Backend)
 ```
 RAZORPAY_KEY_ID=rzp_test_xxx (test) or rzp_live_xxx (live)

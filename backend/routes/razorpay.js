@@ -183,12 +183,13 @@ const createInvoicePaymentLink = async ({ invoice, portion, customAmount, perfor
       email: invoice.customer_email || undefined,
       contact: invoice.customer_phone || undefined
     },
-    notify: {
-      sms: false,
-      // Razorpay's own link and payment-confirmation emails, alongside ours
-      email: true
-    },
-    reminder_enable: true,
+    // Razorpay does not write to the customer; XLAND does. Its own link mail is
+    // Razorpay-branded, carries a "created in Test Mode" banner on test keys and states the
+    // link id rather than the invoice, so a customer received that beside our invoice email and
+    // read the two as different requests. `reminder_enable` has to go off with it: reminders are
+    // the same mail sent again days later, and `notify.email: false` alone does not stop them.
+    notify: { sms: false, email: false },
+    reminder_enable: false,
     notes: {
       invoice_id: invoice.invoice_id,
       internal_invoice_id: invoice.id.toString(),

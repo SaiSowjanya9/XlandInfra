@@ -2241,11 +2241,11 @@ router.post('/invoices/:id/initiate-payment', async (req, res) => {
         email: inv.customer_email || customerEmail,
         contact: inv.customer_phone || customerData.phone || ''
       },
-      notify: {
-        sms: true,
-        email: true
-      },
-      reminder_enable: true,
+      // Razorpay does not write to the customer; XLAND does -- see routes/razorpay.js for why.
+      // This link is minted while the customer is on the Pay screen and redirected to it, so a
+      // mail or an SMS announcing it tells them what they are already looking at.
+      notify: { sms: false, email: false },
+      reminder_enable: false,
       // internal_invoice_id is what the payment_link.paid and payment.captured webhooks
       // resolve the invoice from; the key this used to carry was read by nothing
       notes: {

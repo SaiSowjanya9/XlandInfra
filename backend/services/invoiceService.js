@@ -802,12 +802,11 @@ const createPaymentLinkForInvoice = async (invoiceDbId, invoice) => {
         email: invoice.customer_email || undefined,
         contact: invoice.customer_phone || undefined
       },
-      notify: {
-        sms: false,
-        // Razorpay's own link and payment-confirmation emails, alongside ours
-        email: true
-      },
-      reminder_enable: true,
+      // Razorpay does not write to the customer; XLAND does -- see routes/razorpay.js for why.
+      // Reminders go off with the notification: they are the same Razorpay-branded mail sent
+      // again days later, and are not covered by `notify.email: false`.
+      notify: { sms: false, email: false },
+      reminder_enable: false,
       notes: {
         invoice_id: invoice.invoice_id,
         internal_invoice_id: invoiceDbId.toString(),
