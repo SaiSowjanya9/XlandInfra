@@ -17,6 +17,8 @@ const { COMPANY } = require('../utils/companyInfo');
 const { ROLES } = require('../config/roles');
 const { decodeEntities } = require('../utils/htmlEntities');
 const { notifyCustomerPaymentVerified } = require('../services/paymentNotifications');
+// Pay Now goes to the customer's payment page, token and all -- never a hand-built /pay/ URL
+const { paymentPageUrl } = require('../utils/invoicePaymentToken');
 
 // Payment Security Middleware
 const {
@@ -1312,8 +1314,7 @@ router.post('/invoices/create-generic', authenticate, canEditPayments, async (re
         balance_amount: totalAmount
       });
       // Use custom payment page URL instead of direct Razorpay link
-      const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
-      paymentLinkUrl = `${frontendUrl}/pay/${invoiceIdGen}`;
+      paymentLinkUrl = paymentPageUrl({ id: insertedId, invoice_id: invoiceIdGen });
     } catch (plErr) {
       console.error('Failed to create payment link:', plErr.message);
     }
@@ -1807,7 +1808,7 @@ router.post('/invoices/:id/send', authenticate, canEditPayments, async (req, res
     }
     
     // Always use custom payment page URL (shows payment method selection)
-    const paymentLink = `${process.env.FRONTEND_URL || 'https://xlandinfra.com'}/pay/${invoice.invoice_id}`;
+    const paymentLink = paymentPageUrl(invoice);
 
     // Update invoice status to 'sent' and track email sending. A resend of a paid or
     // partially-paid invoice must not downgrade its status back to 'sent' — the row would

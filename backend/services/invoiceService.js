@@ -12,6 +12,8 @@ const { loadInvoiceDocument, invoiceServicesEmailTable } = require('../utils/inv
 const { invoiceSummary } = require('../utils/invoiceSummary');
 const { generateInvoicePDF } = require('./pdfService');
 const { firstFreeNumber } = require('../utils/paymentIds');
+// Pay Now goes to the customer's payment page, token and all -- never a hand-built /pay/ URL
+const { paymentPageUrl } = require('../utils/invoicePaymentToken');
 // Email sending is handled via sendEmail function imported dynamically to avoid circular dependencies
 
 // Decode HTML entities (fix triple/double encoded ampersands etc.)
@@ -879,8 +881,7 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
     await createPaymentLinkForInvoice(invoiceDbId, invoice);
     
     // Link to our custom payment page (shows payment method selection)
-    const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
-    const paymentPageUrl = `${frontendUrl}/pay/${invoiceId}`;
+    const payNowUrl = paymentPageUrl({ id: invoiceDbId, invoice_id: invoiceId });
     
     const formatCurrency = (amount) => {
       const num = parseFloat(amount) || 0;
@@ -1096,12 +1097,12 @@ const sendInvoiceEmailNotification = async (invoiceDbId, customerEmail, customer
               </tr>
             </table>
 
-            ${paymentPageUrl ? `<div style="margin: 28px 0 0;">
+            ${payNowUrl ? `<div style="margin: 28px 0 0;">
               <p style="color: #374151; font-weight: 600; margin: 0 0 16px 0; font-size: 15px; text-align: center;">Ready to pay?</p>
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
                 <tr>
                   <td>
-                    <a href="${paymentPageUrl}" style="display: block; width: 240px; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 0; border-radius: 8px; font-size: 16px; font-weight: 600; text-align: center; white-space: nowrap;">Pay ${formatCurrency(balanceDue)}</a>
+                    <a href="${payNowUrl}" style="display: block; width: 240px; background: #059669; color: #ffffff; text-decoration: none; padding: 14px 0; border-radius: 8px; font-size: 16px; font-weight: 600; text-align: center; white-space: nowrap;">Pay ${formatCurrency(balanceDue)}</a>
                   </td>
                 </tr>
               </table>

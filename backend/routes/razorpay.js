@@ -25,6 +25,8 @@ const {
 } = require('../utils/paymentSecurity');
 const { recordRazorpayPayment, findRecordedPayment } = require('../services/razorpayPayment');
 const { resolvePaymentPortion, halfPaymentNote } = require('../utils/halfPayment');
+// The customer's payment page and the token that authorises the public endpoints below
+const { invoicePaymentToken, authorizeInvoiceToken, paymentPageUrl } = require('../utils/invoicePaymentToken');
 const { ensurePaymentColumns } = require('../utils/paymentColumns');
 const { ensureRefundTable, recordRefund, findRefund } = require('../utils/refundLedger');
 const { resyncInvoiceSettlement } = require('../utils/invoiceSettlement');
@@ -173,8 +175,11 @@ const createInvoicePaymentLink = async ({ invoice, portion, customAmount, perfor
   if (portionError) return { status: 400, error: portionError };
 
   // The invoice's stored link is for the whole balance, so it is reused for a full payment and
-  // never handed back to a request asking to pay half of it.
-  if (!plan && invoice.razorpay_payment_link_id && invoice.payment_link_status === 'created'
+  // never handed back to a request asking to pay half of it. A link raised by the invoice email
+  // is stored as 'sent' and one raised here as 'created' -- both are the same live link, and
+  // matching only 'created' minted a fresh Razorpay link on every click of an emailed Pay Now.
+  if (!plan && invoice.razorpay_payment_link_id
+    && ['created', 'sent'].includes(invoice.payment_link_status)
     && new Date(invoice.payment_link_expires_at) > new Date()) {
     return {
       message: 'Payment link already exists',
@@ -332,9 +337,10 @@ router.post('/send-payment-link', authenticate, canManagePayments, paymentLinkLi
       WHERE id = ?
     `, [tokenHash, invoiceId]);
 
-    // Build custom payment page URL with invoice ID
-    const frontendUrl = process.env.FRONTEND_URL || 'https://xlandinfra.com';
-    const customPaymentUrl = `${frontendUrl}/pay/${invoice.invoice_id}`;
+    // Build custom payment page URL with invoice ID. The token above is stored for /public/pay;
+    // the link itself carries the invoice's durable token, which is what the page's own calls
+    // are authorised by -- a URL without one leaves the customer unable to do anything there.
+    const customPaymentUrl = paymentPageUrl(invoice);
 
     // Get email template
     const [templates] = await pool.execute(`
@@ -1251,7 +1257,12 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
       });
     }
 
-    // Build query - if token provided, verify it matches razorpay_payment_link_id
+    // The invoice is read by its own id. The token used to be compared with
+    // `razorpay_payment_link_id` here, which no link in any email has ever carried — and since
+    // the same route answered happily with no token at all, the check only ever rejected the
+    // callers that tried. Authorisation that matters is on the two write routes below; what this
+    // one does with the token is hand back the invoice's own, so a page opened from an older
+    // tokenless email can still start a payment.
     let query = `
       SELECT 
         i.id,
@@ -1273,18 +1284,13 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
         i.payment_status,
         i.payment_link,
         i.razorpay_short_url,
-        i.payment_link_status
+        i.payment_link_status,
+        i.payment_token_hash
       FROM invoices i
       ${PROPERTY_NAME_JOINS}
       WHERE i.invoice_id = ?
     `;
     const params = [invoiceId];
-
-    // If token provided, add verification (optional extra security)
-    if (token) {
-      query += ` AND i.razorpay_payment_link_id = ?`;
-      params.push(token);
-    }
 
     const [invoices] = await pool.execute(query, params);
 
@@ -1333,7 +1339,10 @@ router.get('/public/invoice/:invoiceId', async (req, res) => {
         balanceAmount: parseFloat(invoice.balance_amount) || parseFloat(invoice.total_amount) || 0,
         status: invoice.payment_status || invoice.status,
         paymentLink: invoice.razorpay_short_url || invoice.payment_link,
-        paymentLinkStatus: invoice.payment_link_status
+        paymentLinkStatus: invoice.payment_link_status,
+        // What the page sends back to /public/payment-link and /public/record-payment-intent.
+        // A token already in the URL is echoed so an older link keeps the one it arrived with.
+        paymentToken: (token && authorizeInvoiceToken(invoice, token)) ? token : invoicePaymentToken(invoice)
       }
     });
 
@@ -1566,15 +1575,17 @@ router.post('/public/payment-link', ipBlacklistMiddleware, paymentLinkLimiter, a
       });
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const [invoices] = await pool.execute(`
       SELECT i.*, p.community_name as property_name
       FROM invoices i
       LEFT JOIN onboarded_properties p ON i.property_id = p.id
-      WHERE i.invoice_id = ? AND i.payment_token_hash = ?
-    `, [invoiceId, tokenHash]);
+      WHERE i.invoice_id = ?
+    `, [invoiceId]);
 
-    if (invoices.length === 0) {
+    // The row is found by its id and then authorised, rather than matched on the stored hash
+    // alone: an emailed link's token is derived from the invoice and never stored, so a query
+    // keyed on `payment_token_hash` answered "not found" for every customer who came from one.
+    if (invoices.length === 0 || !authorizeInvoiceToken(invoices[0], token)) {
       req.ipBlacklist.recordFailed();
       return res.status(404).json({
         success: false,
@@ -1619,16 +1630,16 @@ router.post('/public/record-payment-intent', ipBlacklistMiddleware, async (req, 
       });
     }
 
-    // Verify token
-    const crypto = require('crypto');
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-
+    // Verify the link's token against the invoice it names. Looking the row up *by* the stored
+    // hash is what lost every offline payment started from an invoice email: that token is
+    // derived from the invoice and never stored, so the query matched nothing and the customer's
+    // cash, cheque or transfer reached the team as no pending payment at all.
     const [invoices] = await pool.execute(
-      'SELECT id, invoice_id FROM invoices WHERE invoice_id = ? AND payment_token_hash = ?',
-      [invoiceId, tokenHash]
+      'SELECT id, invoice_id, payment_token_hash FROM invoices WHERE invoice_id = ?',
+      [invoiceId]
     );
 
-    if (invoices.length === 0) {
+    if (invoices.length === 0 || !authorizeInvoiceToken(invoices[0], token)) {
       req.ipBlacklist.recordFailed();
       return res.status(404).json({
         success: false,

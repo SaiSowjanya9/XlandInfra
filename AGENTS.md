@@ -2036,6 +2036,42 @@ The project uses **Razorpay Payment Links** (hosted checkout) for online payment
 - What the customer gets instead is **our own invoice email**, whose Pay Now button goes to
   `/pay/<invoice_id>` — our payment page, which offers the methods and then the Razorpay link.
   Nothing they need went with the notification.
+- **That page is `frontend/src/pages/PublicPayment.jsx`, not the admin portal's copy.** The link is
+  `${FRONTEND_URL}/pay/<invoice_id>` and `xlandinfra.com` serves `frontend/dist`, so the route that
+  answers a customer is the frontend app's `/pay/:invoiceId`.
+  `admin-portal/src/pages/PublicPayment.jsx` is a second, richer copy mounted at `/pay` on
+  `admin.xlandinfra.com`, which no customer ever reaches — a change made only there is invisible
+  from the email. Its Choose Payment Method block is a verbatim port of
+  `admin-portal/src/pages/billing/MakePayments.jsx` (same rows, line-art icons, card and UPI
+  logos, `FeeIndicator` / `NoFeesIndicator`), so the customer meets the interface the portals show;
+  edit the two together.
+- **The emailed link carries a token, and `utils/invoicePaymentToken.js` is the only place it or
+  the URL is built.** The public endpoints behind the page have no login: the link's own token is
+  the authorisation. It used to carry none, so `POST /public/record-payment-intent` answered 400
+  and the page swallowed it — a customer who chose Bank Transfer, Cash or Cheque from an invoice
+  email read the instructions while staff were shown no `verification_pending` payment at all, and
+  the money arrived unannounced. The two other tokens could not fix it either: `generatePaymentToken`
+  expires in 30 minutes, and its hash lands in the one `invoices.payment_token_hash` column that
+  `/generate-qr-token` also overwrites, so whichever ran last killed the other's link.
+  The link token is therefore **derived, not stored**: `HMAC(PAYMENT_TOKEN_SECRET,
+  'invoice-pay:v1:<id>:<code>')`. It is stable (a re-send mails the same working link and the
+  first email stays alive), unexpiring, and nothing can overwrite it. Build every Pay Now URL with
+  `paymentPageUrl(invoice)` — `routes/payments.js` (send + sales invoice), `services/invoiceService.js`
+  and `routes/razorpay.js` all do — and authorise every public write with
+  `authorizeInvoiceToken(invoice, token)`, which also accepts the stored-hash tokens so the QR and
+  send-payment-link flows keep working. **Never look an invoice up *by* `payment_token_hash`**: that
+  is what made every emailed token a 404. `GET /public/invoice/:invoiceId` stays open (tightening it
+  would kill the tokenless links already in customers' inboxes) and returns the invoice's
+  `paymentToken`, so a page opened from an older email can still start a payment. Regression test:
+  `node --test backend/utils/invoicePaymentToken.test.js`, which fails if a writer hand-builds a
+  `/pay/` URL or a write route goes back to the hash lookup.
+- **The page asks the server for the Razorpay link; it never redirects to the stored one.**
+  `POST /public/payment-link` reuses the invoice's live link and mints a replacement when it is
+  missing, expired or cancelled, so Cards and UPI work even on an invoice whose link failed to
+  mint — the page used to send the customer to a dead page, or to "Payment link not available.
+  Please contact support.". A link raised by the invoice email is stored as `payment_link_status =
+  'sent'` and one raised by that route as `'created'`: both are live, and the reuse check matches
+  both, or a fresh Razorpay link was minted on every single click of an emailed Pay Now.
 - Regression test: `node --test backend/services/paymentLinkNotifications.test.js`. It reads the
   options handed to each `paymentLink.create` and fails if a notification or a reminder is turned
   back on, or if a **new** link creator appears that has not made the same decision.
