@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import CategorySelection from '../components/common/CategorySelection';
+// The submit banner, shared so the property form and the views around it report alike
+import FormMessage from '../components/common/FormMessage';
 import {
   Users,
   UserPlus,
@@ -11,7 +13,6 @@ import {
   X,
   Save,
   AlertCircle,
-  CheckCircle,
   Phone,
   Mail,
   MapPin,
@@ -693,17 +694,7 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
         </PageHeader>
 
         {/* Message */}
-        {message.text && (
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${
-            message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span>{message.text}</span>
-            <button onClick={() => setMessage({ type: '', text: '' })} className="ml-auto">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        <FormMessage message={message} onDismiss={() => setMessage({ type: '', text: '' })} />
 
         {/* Category Selection Card */}
         <CategorySelection categories={CATEGORIES} onSelect={setSelectedCategory} />
@@ -1524,22 +1515,26 @@ const FPCustomers = ({ user, defaultTab = 'list' }) => {
               </div>
             </div>
 
-            {/* Submit Button */}
-            <div className="p-8 pt-0 flex justify-end">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Property Entry'
-                )}
-              </button>
+            {/* Submit Button, with the submit result right above it -- the form is long
+                enough that a banner at the top of the page is off-screen when it appears */}
+            <div className="p-8 pt-0 space-y-4">
+              <FormMessage message={message} onDismiss={() => setMessage({ type: '', text: '' })} />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Property Entry'
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>
