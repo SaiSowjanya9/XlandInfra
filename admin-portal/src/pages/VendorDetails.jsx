@@ -421,7 +421,7 @@ const VendorDetails = () => {
     const zone = v.zone || v.zone_name;
     if (zoneFilter && zone !== zoneFilter) return false;
     if (searchTerm) {
-      const q = searchTerm.toLowerCase();
+      const q = searchTerm.trim().toLowerCase();
       const ownerName = v.ownerName || v.owner_name || v.company_name || '';
       const vendorId = v.vendorId || v.vendor_id || '';
       const areaName = v.areaName || v.area_name || v.area || '';
@@ -615,7 +615,7 @@ const VendorDetails = () => {
               type="text"
               placeholder="Search by name, ID, service, or zone..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value.trim())}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
             />
           </div>

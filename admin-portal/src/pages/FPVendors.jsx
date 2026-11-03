@@ -179,7 +179,7 @@ const FPVendors = ({ user }) => {
     
     // Search filter
     if (searchTerm) {
-      const q = searchTerm.toLowerCase();
+      const q = searchTerm.trim().toLowerCase();
       return (
         (v.vendorId || v.vendor_id || '').toLowerCase().includes(q) ||
         (v.ownerName || v.owner_name || '').toLowerCase().includes(q) ||
@@ -342,7 +342,7 @@ const FPVendors = ({ user }) => {
                   type="text"
                   placeholder="Search by name, ID, service, or zone..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value.trim())}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-amber-200 focus:border-amber-400 outline-none"
                 />
               </div>

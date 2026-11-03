@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { EstimateThemeProvider } from '../utils/estimateTheme';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
@@ -62,43 +62,24 @@ const FPProperties = ({ user }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const autoOpenProcessed = useRef(false);
   
-  // URL-synced state for filters and navigation
-  const searchTerm = searchParams.get('search') || '';
-  const activeTab = searchParams.get('type') || 'all';
-  const selectedZone = searchParams.get('zone') || '';
-  const statusFilter = searchParams.get('status') || 'active';
-  const selectedCategory = searchParams.get('category') || null;
+  // Filters are component state, not query parameters.
+  //
+  // They used to be read back out of the URL, which made the address bar the only copy of
+  // them: every keystroke in the search box was a router navigation that rewrote the URL
+  // (`?search=ghh` after three letters), and the page re-rendered through react-router to
+  // show one more character. Nothing links here with a filter on it, so the query string
+  // was carrying state for its own sake.
+  //
+  // `view` and `edit` stay in the URL. They are not filters -- they name the property whose
+  // modal is open, so a link to one is worth sending to someone, and the handlers below
+  // still write them.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedZone, setSelectedZone] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const viewPropertyId = searchParams.get('view');
   const editPropertyId = searchParams.get('edit');
-  
-  // Helper to update URL params
-  const updateUrlParam = useCallback((key, value) => {
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      if (value === '' || value === null || value === undefined || value === 'all' || value === 'active') {
-        // Don't store default values in URL
-        if (key === 'status' && value === 'active') {
-          newParams.delete(key);
-        } else if (key === 'type' && value === 'all') {
-          newParams.delete(key);
-        } else if (!value) {
-          newParams.delete(key);
-        } else {
-          newParams.set(key, value);
-        }
-      } else {
-        newParams.set(key, value);
-      }
-      return newParams;
-    }, { replace: true });
-  }, [setSearchParams]);
-  
-  // Setters that update URL
-  const setSearchTerm = (value) => updateUrlParam('search', value);
-  const setActiveTab = (value) => updateUrlParam('type', value);
-  const setSelectedZone = (value) => updateUrlParam('zone', value);
-  const setStatusFilter = (value) => updateUrlParam('status', value);
-  const setSelectedCategory = (value) => updateUrlParam('category', value);
   
   const [properties, setProperties] = useState([]);
   const [zones, setZones] = useState([]);
@@ -1050,7 +1031,7 @@ const FPProperties = ({ user }) => {
     
     // Search filter
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
       if (!(
         p.name?.toLowerCase().includes(search) ||
         p.property_id?.toLowerCase().includes(search) ||
@@ -1213,7 +1194,7 @@ const FPProperties = ({ user }) => {
             type="text"
             placeholder="Search by name, ID, zone, or address..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.trim())}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>

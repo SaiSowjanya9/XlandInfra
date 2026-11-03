@@ -108,10 +108,10 @@ const SupervisorVendors = ({ user }) => {
 
   const filteredVendors = allVendors.filter(v => {
     const matchSearch = !searchTerm || 
-      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.zone?.toLowerCase().includes(searchTerm.toLowerCase());
+      v.company_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.owner_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.zone?.toLowerCase().includes(searchTerm.trim().toLowerCase());
     const matchService = serviceFilter === 'all' || v.service_type?.toLowerCase() === serviceFilter.toLowerCase();
     const matchZone = zoneFilter === 'all' || v.zone === zoneFilter || v.zone_name === zoneFilter;
     const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? (v.status === 'active' || v.is_active) : v.status !== 'active');
@@ -155,7 +155,7 @@ const SupervisorVendors = ({ user }) => {
             type="text"
             placeholder="Search by name, ID, service, or zone..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.trim())}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
           />
         </div>

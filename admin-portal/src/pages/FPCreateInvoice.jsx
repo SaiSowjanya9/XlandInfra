@@ -300,7 +300,7 @@ const FPCreateInvoice = ({ user }) => {
 
 
   const filteredProperties = properties.filter(prop => {
-    const q = searchTerm.toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return (
       prop.name?.toLowerCase().includes(q) ||
       prop.property_id?.toLowerCase().includes(q) ||
@@ -310,7 +310,7 @@ const FPCreateInvoice = ({ user }) => {
   });
 
   const filteredWorkOrders = workOrders.filter(wo => {
-    const q = searchTerm.toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return (
       wo.wo_id?.toLowerCase().includes(q) ||
       wo.property_name?.toLowerCase().includes(q) ||

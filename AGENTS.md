@@ -695,6 +695,28 @@ shapes to avoid, both of which were on the customer portal:
 - A row's icon and tint come from `invoice.invoiceType`, never from the filter: on All the two
   kinds share one list, and the icon is what tells them apart.
 
+## Search Boxes and Filter State
+
+- **Never trim a search box's value in its `onChange`.** Every one of the portal's ~40 search
+  inputs was `setSearchTerm(e.target.value.trim())`, which trims on *each keystroke*: press space
+  after "Urban" and the value is set back to "Urban", so the space never reaches the field and the
+  next letter gives "UrbanH". No multi-word term — "Urban Heights", "Ravi Kumar", a street in an
+  address — could be searched for anywhere in the portal. Trim where the term is **used**:
+  `searchTerm.trim().toLowerCase()` in a client filter, `.trim()` on the value handed to a server
+  search (`params.append('search', searchTerm.trim())`).
+- **Filters are component state; the URL names a *thing*, not a view.** `FPProperties` read
+  `search`, `type`, `zone`, `status` and `category` back out of the query string, so every
+  keystroke was a router navigation that rewrote the address bar (`?search=ghh` after three
+  letters) and re-rendered the page through react-router to show one more character. Nothing
+  links in with a filter on it. What stays in the URL is `view`/`edit`, which name the property
+  whose modal is open — a link worth sending to someone.
+- `admin-portal/src/hooks/useUrlState.js` has **no importers**; do not wire it up without
+  deciding the above again.
+- Regression test: `node --test admin-portal/src/utils/searchInput.test.js`. It walks every source
+  under `admin-portal/src` and fails if any search/filter/query setter trims on keystroke, if a
+  client filter matches against an untrimmed term, if a server search is sent one, or if
+  `FPProperties` puts a filter back in the URL.
+
 ## The Invoice Summary — One Order, Every Surface
 
 - **An invoice states its money as `Sub Total`, `GST (n%)`, `Discount (n%)`, `Total`,

@@ -245,11 +245,11 @@ const ManagerVendors = ({ user }) => {
     if (statusFilter === 'inactive' && !isInactive) return false;
     
     const matchesSearch = !searchTerm ||
-      v.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.vendor_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.zone_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      v.company_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.contact_person?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.email?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.vendor_id?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      v.zone_name?.toLowerCase().includes(searchTerm.trim().toLowerCase());
     
     const matchesTab = activeTab === 'all' || v.service_type?.toLowerCase() === activeTab;
     const matchesZone = zoneFilter === 'all' || matchesFilter(v, 'zone', zoneFilter);
@@ -349,7 +349,7 @@ const ManagerVendors = ({ user }) => {
             type="text"
             placeholder="Search by name, ID, service, or zone..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.trim())}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
           />
         </div>

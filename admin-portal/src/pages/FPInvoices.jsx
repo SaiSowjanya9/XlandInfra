@@ -60,7 +60,7 @@ const FPInvoices = ({ user }) => {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (paymentStatusFilter !== 'all') params.append('paymentStatus', paymentStatusFilter);
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm) params.append('search', searchTerm.trim());
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url, {

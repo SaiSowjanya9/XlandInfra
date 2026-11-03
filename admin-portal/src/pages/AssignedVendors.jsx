@@ -304,7 +304,7 @@ const AssignedVendors = ({ user }) => {
   // Filter property assignments
   const filteredAssignments = assignments.filter(a => {
     if (searchTerm) {
-      const q = searchTerm.toLowerCase();
+      const q = searchTerm.trim().toLowerCase();
       const matchesSearch =
         a.vendorName?.toLowerCase().includes(q) ||
         a.vendorId?.toLowerCase().includes(q) ||

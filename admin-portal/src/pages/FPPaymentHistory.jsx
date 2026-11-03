@@ -84,7 +84,7 @@ const FPPaymentHistory = ({ user }) => {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm) params.append('search', searchTerm.trim());
       if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url, {

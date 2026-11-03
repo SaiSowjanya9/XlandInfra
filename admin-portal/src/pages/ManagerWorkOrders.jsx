@@ -196,7 +196,7 @@ const ManagerWorkOrders = ({ user }) => {
 
     // Search filter
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
       return (
         wo.title?.toLowerCase().includes(search) ||
         wo.work_order_id?.toLowerCase().includes(search) ||

@@ -382,7 +382,7 @@ const EmployeeWorkOrders = ({ admin }) => {
   const formatDate = (dateString) => formatDateTime(dateString, '-');
 
   const filtered = workOrders.filter(wo => {
-    const search = searchTerm.toLowerCase();
+    const search = searchTerm.trim().toLowerCase();
     const matchesSearch = !searchTerm || (
       wo.work_order_id?.toLowerCase().includes(search) ||
       wo.first_name?.toLowerCase().includes(search) ||
@@ -939,7 +939,7 @@ const EmployeeWorkOrders = ({ admin }) => {
                   type="text"
                   placeholder="Search by Property ID..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value.trim())}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={handleSearchKeyPress}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />

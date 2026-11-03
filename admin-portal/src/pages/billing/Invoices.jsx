@@ -231,7 +231,7 @@ const Invoices = ({ user, portalType = 'admin', defaultTab = 'generated' }) => {
         params.append('fpId', selectedFp.id);
       }
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm) params.append('search', searchTerm.trim());
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
       params.append('archived', 'false');

@@ -66,7 +66,7 @@ const StateSelect = ({
   }, []);
 
   const filteredStates = INDIAN_STATES.filter(state =>
-    state.toLowerCase().startsWith(searchTerm.toLowerCase())
+    state.toLowerCase().startsWith(searchTerm.trim().toLowerCase())
   );
 
   const handleInputChange = (e) => {

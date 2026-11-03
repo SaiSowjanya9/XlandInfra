@@ -139,7 +139,7 @@ const VendorAssignmentModal = ({
     if (!searchTerm) {
       setFilteredVendors(vendors);
     } else {
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
       setFilteredVendors(vendors.filter(v =>
         v.vendorName?.toLowerCase().includes(search) ||
         v.ownerName?.toLowerCase().includes(search) ||

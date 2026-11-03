@@ -123,9 +123,9 @@ const SupervisorEmployees = ({ user }) => {
   };
 
   const filteredEmployees = employees.filter(e =>
-    e.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
+    e.first_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    e.email?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    e.employee_code?.toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
   // Pagination calculations
@@ -159,7 +159,7 @@ const SupervisorEmployees = ({ user }) => {
       )}
 
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search employees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
+        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search employees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500" /></div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">

@@ -2575,7 +2575,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
 
   // ALL ESTIMATES
   const filteredEstimates = estimates.filter(e => {
-    const search = searchTerm.toLowerCase();
+    const search = searchTerm.trim().toLowerCase();
     const matchSearch = !searchTerm || (
       (e.title || '').toLowerCase().includes(search) || 
       (e.estimate_id || '').toLowerCase().includes(search) || 
@@ -2625,7 +2625,7 @@ const FPEstimates = ({ user, defaultTab = 'list' }) => {
         {/* One row of equal-height controls: the search field takes the slack, every button keeps
             its own width, and they wrap as a group rather than shrinking out of alignment */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[16rem] flex-1 max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-accent" /><input type="text" placeholder="Search by Property ID, Customer, or Estimate #..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value.trim())} className={`${CONTROL_H} w-full pl-10 pr-4 border border-warm-border rounded-[10px] text-sm text-warm-text placeholder:text-warm-muted focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`} /></div>
+          <div className="relative min-w-[16rem] flex-1 max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-accent" /><input type="text" placeholder="Search by Property ID, Customer, or Estimate #..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${CONTROL_H} w-full pl-10 pr-4 border border-warm-border rounded-[10px] text-sm text-warm-text placeholder:text-warm-muted focus:outline-none focus:border-warm-accent focus:ring-2 focus:ring-warm-accent/20`} /></div>
           <button onClick={() => setShowFilters(!showFilters)} className={`${CONTROL_H} px-4 border border-warm-border text-warm-text bg-white rounded-[10px] inline-flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium`}><Filter className="w-4 h-4 text-warm-accent" />Filters<ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} /></button>
           <button onClick={exportAllEstimates} className={`${CONTROL_H} px-4 bg-emerald-700 text-white rounded-[10px] inline-flex items-center gap-2 hover:bg-emerald-800 transition-colors text-sm font-medium`}><Download className="w-4 h-4" />Export All</button>
           <button onClick={() => { setFilterStatus('all'); setFilterType('all'); setFilterCategory('all'); setFilterFromDate(''); setFilterToDate(''); setFilterFromDateDisplay(''); setFilterToDateDisplay(''); }} className={`${CONTROL_H} px-4 border border-warm-border text-warm-muted bg-white rounded-[10px] inline-flex items-center gap-2 hover:bg-warm-section transition-colors text-sm font-medium whitespace-nowrap`}><X className="w-4 h-4" />Clear all filters</button>

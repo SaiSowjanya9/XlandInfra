@@ -493,7 +493,7 @@ const WorkOrders = ({ admin }) => {
     
     // Search filter
     if (!searchTerm) return true;
-    const q = searchTerm.toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return (
       wo.work_order_id?.toLowerCase().includes(q) ||
       wo.title?.toLowerCase().includes(q) ||

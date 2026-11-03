@@ -301,7 +301,7 @@ const EstimatesList = ({
 
   // Filter estimates based on search and filters
   const filteredEstimates = estimates.filter(est => {
-    const search = searchTerm.toLowerCase();
+    const search = searchTerm.trim().toLowerCase();
     const matchSearch = !search || 
       est.estimateId?.toLowerCase().includes(search) ||
       est.customerName?.toLowerCase().includes(search) ||

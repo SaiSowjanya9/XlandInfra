@@ -179,7 +179,7 @@ const SchedulingCalendar = ({ user, portalType = 'admin' }) => {
     let filtered = schedules;
     
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
       filtered = filtered.filter(s =>
         s.title?.toLowerCase().includes(search) ||
         s.propertyName?.toLowerCase().includes(search) ||

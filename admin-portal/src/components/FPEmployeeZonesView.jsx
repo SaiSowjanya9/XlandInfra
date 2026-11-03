@@ -42,10 +42,10 @@ const FPEmployeeZonesView = ({ apiEndpoint, title = "Team Zone Assignments" }) =
   }, []);
 
   const filteredEmployees = employees.filter(emp =>
-    emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.zone_names?.toLowerCase().includes(searchTerm.toLowerCase())
+    emp.name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    emp.email?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    emp.role?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    emp.zone_names?.toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
   const getRoleBadgeColor = (role) => {

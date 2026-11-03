@@ -574,7 +574,7 @@ const InvoiceList = ({ invoices, loading, type, onRefresh, onView, onDownload, o
   const itemsPerPage = 10;
 
   const filteredInvoices = invoices.filter(inv => {
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = searchTerm.trim().toLowerCase();
     const matchesSearch = !searchTerm || 
       inv.invoiceId?.toLowerCase().includes(searchLower) ||
       inv.customerName?.toLowerCase().includes(searchLower) ||

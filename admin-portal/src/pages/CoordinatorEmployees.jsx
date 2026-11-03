@@ -281,10 +281,10 @@ const CoordinatorEmployees = ({ user }) => {
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = !searchTerm ||
-      emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.employee_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      emp.first_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      emp.name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      emp.employee_code?.toLowerCase().includes(searchTerm.trim().toLowerCase());
 
     const hasZones = (emp.assigned_zones && emp.assigned_zones.length > 0) || 
                      (emp.zone_names && emp.zone_names !== 'No zones assigned');
@@ -372,7 +372,7 @@ const CoordinatorEmployees = ({ user }) => {
               type="text"
               placeholder="Search employees by name, ID, or email..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value.trim())}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500"
             />
           </div>

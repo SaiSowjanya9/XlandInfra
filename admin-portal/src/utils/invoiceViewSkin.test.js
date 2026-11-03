@@ -46,15 +46,17 @@ for (const file of FILES) {
   });
 
   test(`${file} draws the modal in the estimate's warm palette`, () => {
+    // The modal's price summary is now the shared `InvoiceSummaryCard` (one order of figures for
+    // every portal), so the skin is spread across the page and the card it mounts. Both are read.
     const body = read(...file.split('/'));
+    assert.match(body, /<InvoiceSummaryCard/, `${file}: the shared summary card is not mounted`);
+    const skin = body + read('components', 'billing', 'InvoiceSummaryCard.jsx');
     for (const token of ['bg-warm-section', 'border-warm-border', 'bg-warm-accent-soft', 'text-warm-text', 'text-warm-muted']) {
-      assert.match(body, new RegExp(token), `${file}: missing ${token}`);
+      assert.match(skin, new RegExp(token), `${file}: missing ${token}`);
     }
     // The bands sit in light cream, dark text — the solid warm-accent (tan) fill was swapped
     // for accent-soft at the user's request; assert no solid accent fill remains
-    assert.doesNotMatch(body, /bg-warm-accent(?![-\w/])/, `${file}: a solid warm-accent fill is back`);
-    // The Total sits on the cream band in dark text, bordered like the card it ends
-    assert.match(body, /bg-warm-accent-soft[^>]*>[\s\S]{0,200}text-warm-text[^>]*>Total/, `${file}: the Total band is not the cream band`);
+    assert.doesNotMatch(skin, /bg-warm-accent(?![-\w/])/, `${file}: a solid warm-accent fill is back`);
   });
 
   test(`${file} letterhead uses the estimate's logo icon`, () => {
@@ -65,6 +67,16 @@ for (const file of FILES) {
     assert.doesNotMatch(body, /src="\/logo\.(png|webp)"/, `${file}: a hard-coded logo path is back`);
   });
 }
+
+test('the shared summary card ends on the cream band, in dark text', () => {
+  // The Total is the last thing the eye lands on, so it sits on the light accent in dark text --
+  // white on the tan does not meet contrast. Balance Due follows it, below the band.
+  const body = read('components', 'billing', 'InvoiceSummaryCard.jsx');
+  assert.match(body, /bg-warm-accent-soft[\s\S]{0,300}text-warm-text[^>]*>\{summary\.totalLabel\}/,
+    'the Total band is not the cream band');
+  assert.match(body, /summary\.balanceLabel[\s\S]{0,300}summary\.balanceDue/,
+    'Balance Due does not follow the Total');
+});
 
 // The row-status pill in pages/billing/Invoices.jsx (mounted by every portal) is a label, not
 // a control: 'sent' comes from the send action, 'overdue' from the due date, 'paid'/

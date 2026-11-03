@@ -2420,7 +2420,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
       }
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (methodFilter !== 'all') params.append('paymentMethod', methodFilter);
-      const search = headerSearchTerm || searchTerm;
+      const search = (headerSearchTerm || searchTerm).trim();
       if (search) params.append('search', search);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
@@ -2526,7 +2526,7 @@ const Payments = ({ user, portalType = 'admin' }) => {
 
   // Filtering
   const filteredPayments = payments.filter(payment => {
-    const search = headerSearchTerm || searchTerm;
+    const search = (headerSearchTerm || searchTerm).trim();
     const matchesSearch = !search ||
       payment.paymentId?.toLowerCase().includes(search.toLowerCase()) ||
       payment.invoiceId?.toLowerCase().includes(search.toLowerCase()) ||

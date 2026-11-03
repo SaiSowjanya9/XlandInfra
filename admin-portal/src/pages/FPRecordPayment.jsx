@@ -246,7 +246,7 @@ const FPRecordPayment = ({ user }) => {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const q = searchTerm.toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return (
       inv.invoiceId?.toLowerCase().includes(q) ||
       inv.customerName?.toLowerCase().includes(q) ||

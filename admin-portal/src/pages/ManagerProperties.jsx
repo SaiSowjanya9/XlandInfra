@@ -552,11 +552,11 @@ const ManagerProperties = ({ user }) => {
   const filteredProperties = properties.filter(p => {
     // Search filter
     const matchesSearch = !searchTerm || 
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.property_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.zone_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.address?.toLowerCase().includes(searchTerm.toLowerCase());
+      p.name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      p.city?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      p.property_id?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      p.zone_name?.toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+      p.address?.toLowerCase().includes(searchTerm.trim().toLowerCase());
     
     // Tab filter (property type) - normalize for consistent matching
     const matchesTab = activeTab === 'all' || normalizePropertyType(p.property_type) === activeTab;
@@ -702,7 +702,7 @@ const ManagerProperties = ({ user }) => {
             type="text"
             placeholder="Search by name, ID, zone, or address..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.trim())}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
           />
         </div>

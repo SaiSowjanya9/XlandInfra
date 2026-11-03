@@ -276,7 +276,7 @@ const PendingPropertySchedules = ({ user, portalType = 'admin' }) => {
     
     // Search filter
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+      const search = searchTerm.trim().toLowerCase();
       filtered = filtered.filter(p => 
         p.propertyId?.toLowerCase().includes(search) ||
         p.propertyName?.toLowerCase().includes(search) ||
