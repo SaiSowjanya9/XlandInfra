@@ -2,11 +2,16 @@
  * The services an invoice bills -- one table, one column set, every screen.
  *
  * `#`, Service (its category, and `Package` for one of the AMC package's own services, under the
- * name), Description, Input / Details, Method, Frequency, Visits: the estimate document's columns,
- * because an invoice bills the estimate's services and the two are read as one document. The
- * server resolves the rows (`backend/utils/invoiceDocument.js`) and the PDF draws the same seven
- * (`SERVICE_COLUMNS` in `backend/services/pdfService.js`), so the screen and the download cannot
- * disagree.
+ * name and smaller than it), Description, Input / Details, Method, Frequency, Visits: the estimate
+ * document's columns, because an invoice bills the estimate's services and the two are read as one
+ * document. The server resolves the rows (`backend/utils/invoiceDocument.js`) and the PDF draws
+ * the same columns (`SERVICE_COLUMNS` in `backend/services/pdfService.js`), so the screen and the
+ * download cannot disagree.
+ *
+ * **Method is the one column the documents do not carry**: how XLAND prices a service is how the
+ * figure was arrived at, not something the customer is billed for, so the PDFs and the emails
+ * leave it out while the screens keep it. Every cell of it is marked `data-column="Method"`, so a
+ * screen capture taken as a document (`FPInvoiceView`'s download) can drop it from the clone.
  *
  * No money in it at all: no per-service price, and no total under the table either -- the invoice
  * is priced in the Price Summary beside it, and a services total directly above a Subtotal stating
@@ -65,12 +70,12 @@ export default function InvoiceServicesTable({ services, title = 'Services Bille
       <div className="overflow-hidden rounded-lg border border-warm-border bg-white">
         <table className="w-full table-fixed border-collapse">
           <colgroup>
-            {COLUMNS.map(label => <col key={label} style={{ width: `${COLUMN_SHARE[label]}%` }} />)}
+            {COLUMNS.map(label => <col key={label} data-column={label} style={{ width: `${COLUMN_SHARE[label]}%` }} />)}
           </colgroup>
           <thead>
             <tr className="bg-warm-section">
               {COLUMNS.map(label => (
-                <th key={label} className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-warm-muted ${ALIGN[label] || 'text-left'}`}>
+                <th key={label} data-column={label} className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-warm-muted ${ALIGN[label] || 'text-left'}`}>
                   {label}
                 </th>
               ))}
@@ -87,7 +92,7 @@ export default function InvoiceServicesTable({ services, title = 'Services Bille
                 </td>
                 <td className="px-2 py-2 text-xs text-gray-600 whitespace-pre-wrap break-words">{row.description || '-'}</td>
                 <td className="px-2 py-2 text-xs text-gray-700 break-words">{row.input || '-'}</td>
-                <td className="px-2 py-2 text-xs text-gray-700 break-words">{row.method || '-'}</td>
+                <td data-column="Method" className="px-2 py-2 text-xs text-gray-700 break-words">{row.method || '-'}</td>
                 <td className="px-2 py-2 text-center text-xs text-warm-text">{row.frequency || '-'}</td>
                 <td className="px-2 py-2 text-center text-xs font-semibold text-warm-text">{row.visits}</td>
               </tr>

@@ -5,8 +5,8 @@ const { customerEstimateData, stripInternalServiceDetails } = require('./estimat
  *
  * An invoice raised from an estimate bills the estimate's services, so it reads them back through
  * the estimate's own customer projection (`customerEstimateData`): the same rows, in the same
- * order, with the same customer-safe description, Method and Input / Details the estimate's view,
- * PDF and email already print. The invoice's stored `line_items` are a snapshot taken when the
+ * order, with the same customer-safe description and Input / Details the estimate's view, PDF and
+ * email already print. The invoice's stored `line_items` are a snapshot taken when the
  * draft was raised and are used only where there is no estimate behind the row (a generic or
  * manual invoice), or where the estimate no longer resolves.
  *
@@ -18,9 +18,13 @@ const { customerEstimateData, stripInternalServiceDetails } = require('./estimat
  * and `details` as the same detail), which the PDF then printed on two lines.
  *
  * Every surface renders these rows with the estimate document's columns:
- * `#`, Service (category under it), Description, Input / Details, Method, Frequency, Visits.
+ * `#`, Service (category under it), Description, Input / Details, Frequency, Visits.
  * No per-service price: the invoice is priced as a whole, in its summary, exactly as the
  * estimate is.
+ *
+ * `method` is still resolved on the row -- the screens read it -- but **no document prints it**:
+ * how XLAND prices a service is how the figure was arrived at, not something the customer is
+ * billed for, so the user asked for that column to come off the PDFs and the emails.
  */
 
 const first = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
@@ -190,7 +194,8 @@ const invoiceDocument = (invoice = {}, estimate = null) => {
  * labels, warm rules, figures in warm text.
  */
 const WARM = { section: '#FFF9EE', border: '#EADFCF', muted: '#8A7A66', text: '#1F2937' };
-const INVOICE_SERVICE_COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'];
+// No Method column: it is read on the screens, not on the document the customer receives
+const INVOICE_SERVICE_COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'];
 const escapeHtml = value => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const cellText = value => escapeHtml(value || '-').replace(/\n/g, '<br>');
@@ -198,12 +203,13 @@ const cellText = value => escapeHtml(value || '-').replace(/\n/g, '<br>');
 const invoiceServicesEmailTable = services => {
   const rows = Array.isArray(services) ? services : [];
   if (!rows.length) return '';
-  const align = index => (index === 0 ? 'center' : index >= 5 ? 'center' : 'left');
+  const align = index => (index === 0 || index >= INVOICE_SERVICE_COLUMNS.length - 2 ? 'center' : 'left');
   const header = INVOICE_SERVICE_COLUMNS.map((label, index) => `
     <th style="background: ${WARM.section}; color: ${WARM.muted}; font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
       font-weight: 700; padding: 7px 8px; border-bottom: 1px solid ${WARM.border}; text-align: ${align(index)};">${label}</th>`).join('');
   const body = rows.map((service, index) => {
-    // The category reads under the service name, as it does in the table and the PDF
+    // The category reads under the service name, as it does in the table and the PDF, in a
+    // smaller face than the name
     const name = [escapeHtml(service.name), service.category ? `<br><span style="color: ${WARM.muted}; font-size: 10.5px;">${escapeHtml(service.category)}</span>` : '',
       service.tag ? `<br><span style="color: ${WARM.muted}; font-size: 10px; font-style: italic;">${escapeHtml(service.tag)}</span>` : ''].join('');
     const cell = (content, index_) => `<td style="padding: 8px; border-bottom: 1px solid ${WARM.border}; font-size: 12px; color: ${WARM.text};
@@ -213,9 +219,8 @@ const invoiceServicesEmailTable = services => {
       ${cell(`<strong>${name}</strong>`, 1)}
       ${cell(cellText(service.description), 2)}
       ${cell(cellText(service.input), 3)}
-      ${cell(cellText(service.method), 4)}
-      ${cell(cellText(service.frequency), 5)}
-      ${cell(escapeHtml(service.visits ?? 1), 6)}
+      ${cell(cellText(service.frequency), 4)}
+      ${cell(escapeHtml(service.visits ?? 1), 5)}
     </tr>`;
   }).join('');
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">

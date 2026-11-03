@@ -7,9 +7,11 @@ const PDFDocument = require('pdfkit');
 const { sendEstimateEmail } = require('./emailService');
 
 test('customer email and PDF retain catalog details, zero GST and decimals without internal prices', async t => {
-  const texts = [];
+  // Each draw is kept with the size and face it was set in: a service's category and the mark that
+  // it comes with the package must read smaller and lighter than the name above them
+  const drawn = [];
   const originalText = PDFDocument.prototype.text;
-  PDFDocument.prototype.text = function (text, ...args) { texts.push(String(text)); return originalText.call(this, text, ...args); };
+  PDFDocument.prototype.text = function (text, ...args) { drawn.push({ text: String(text), size: this._fontSize, font: this._font?.name }); return originalText.call(this, text, ...args); };
   t.after(() => { PDFDocument.prototype.text = originalText; });
   const result = await sendEstimateEmail({ estimateId: 'EST-DELIVERY', estimateType: 'custom', customerName: 'Customer', customerEmail: 'customer@example.test',
     propertyCode: 'PROP-TEST', propertyType: 'APT', address: 'Saved address', createdAt: '2026-09-16', subtotal: 11700.25, total: 11700.25, tax: 0, gstPercent: 0,
@@ -31,22 +33,37 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
     ['xland-logo', 'xland-icon-phone', 'xland-icon-email', 'xland-icon-website']);
   const attachedPdf = mail.attachments.find(item => String(item.filename).endsWith('.pdf'));
   assert.equal(attachedPdf.content.subarray(0, 4).toString(), '%PDF');
+  const texts = drawn.map(item => item.text);
   const pdfText = texts.join('\n');
   assert.match(pdfText, /10 KL/);
   assert.match(pdfText, /11,700.25/);
   assert.match(pdfText, /PROP-TEST/);
   assert.match(pdfText, /Saved address/);
   assert.doesNotMatch(pdfText, /9123.45|876.54|vendorCost|pricingSnapshot|operating_cost/);
-  // What the customer reads of a service: its category, how it is priced and what was measured at
-  // their property -- every column of the portal's view but the internal costs
-  for (const text of ['Water Management', 'Capacity Based', '10 KL']) {
+  // What the customer reads of a service: its category and what was measured at their property --
+  // every column of the portal's view but the internal costs and Method
+  for (const text of ['Water Management', '10 KL']) {
     assert.ok(mail.html.includes(text), `email: ${text}`);
     assert.ok(pdfText.includes(text), `pdf: ${text}`);
   }
-  // The category belongs with the service name, not in the Description column. In the email it
-  // follows the name immediately; in the PDF the Service cell is drawn with both.
-  assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*>Water Management<\/span>/);
-  assert.ok(texts.some(text => /^Tank <Cleaning>\nWater Management$/.test(text)), 'pdf service cell carries the category');
+  // How XLAND prices a service is how the figure was arrived at, not something the customer is
+  // billed for, so the user asked for the Method column to come off every document: this PDF, the
+  // portal's own export and both email bodies. It stays on the screens, where staff read it.
+  assert.ok(!mail.html.includes('Capacity Based'), 'email: the pricing method is back on a customer document');
+  assert.ok(!pdfText.includes('Capacity Based'), 'pdf: the pricing method is back on a customer document');
+  assert.doesNotMatch(mail.html, />\s*Method\s*</i, 'email: the Method column is back');
+  // The category belongs with the service name, not in the Description column, and reads smaller
+  // than the name. In the email it follows the name immediately; in the PDF the cell's lines are
+  // drawn one at a time, because pdfkit sets one size per call.
+  assert.match(mail.html, /<strong[^>]*>Tank &lt;Cleaning&gt;<\/strong>\s*<br><span[^>]*font-size: 11px[^>]*>Water Management<\/span>/);
+  const nameLine = drawn.find(item => item.text === 'Tank <Cleaning>');
+  const categoryLine = drawn.find(item => item.text === 'Water Management');
+  assert.ok(nameLine && categoryLine, 'pdf service cell carries the name and its category');
+  assert.ok(categoryLine.size < nameLine.size,
+    `pdf: the category (${categoryLine?.size}pt) must read smaller than the name (${nameLine?.size}pt)`);
+  // And lighter: at one weight as well as one size, the two lines read as two services
+  assert.match(nameLine.font, /Bold/, `pdf: the service name is set in ${nameLine.font}, not a bold face`);
+  assert.doesNotMatch(categoryLine.font, /Bold/, 'pdf: the category is as bold as the name above it');
   // Every field of the service has its own column in the attachment. No Qty and no Price: the
   // estimate is priced as a whole, in the Price Summary, and the printed and downloaded estimate
   // reads the same. Figures say "Rs." (PDFKit's built-in Helvetica has no rupee glyph, so a ₹
@@ -57,6 +74,7 @@ test('customer email and PDF retain catalog details, zero GST and decimals witho
     assert.ok(headings.includes(heading.toUpperCase()), `pdf column: ${heading}`);
   }
   assert.ok(!headings.includes('QTY'), 'no Qty column');
+  assert.ok(!headings.includes('METHOD'), 'no Method column');
   assert.ok(!headings.includes('PRICE'), 'no per-service Price column');
   assert.ok(texts.includes('Rs. 11,700.25'), 'the estimate is still priced, in its summary');
   // The derived input label and the types the service is configured for are ours. The measured
@@ -84,7 +102,9 @@ test('manpower email and PDF show the selected range, personnel and overtime wit
   }, 'test-token');
   assert.equal(result.success, true);
   const pdfText = texts.join('\n');
-  for (const text of ['Housekeeping Staff', 'Manpower', '2 Persons', '1500 Sq Ft', '1001–2000 Sq Ft', 'Overtime Hours: 1']) {
+  // No 'Manpower' among them: that is the pricing method, and the Method column is off every
+  // customer document -- the role, the headcount and the range are what the customer reads
+  for (const text of ['Housekeeping Staff', '2 Persons', '1500 Sq Ft', '1001–2000 Sq Ft', 'Overtime Hours: 1']) {
     assert.ok(mail.html.includes(text), text);
     assert.ok(pdfText.includes(text), text);
   }
@@ -173,6 +193,7 @@ test('a property-based package estimate states its total once, in the summary, w
   assert.doesNotMatch(pdf, /AMC Package - Services Included/, 'pdf: one services table');
   assert.match(html, /Deep Cleaning<\/strong>[\s\S]{0,300}Package/, 'email: a package service is marked Package');
   assert.doesNotMatch(pdf, /^QTY$/m, 'the emailed PDF has no Qty column, like the printed one');
+  assert.doesNotMatch(pdf, /^METHOD$/m, 'the emailed PDF has no Method column either');
 });
 
 test('a direct custom estimate emails its total and terms, and no total above the summary', async t => {

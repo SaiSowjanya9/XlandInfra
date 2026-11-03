@@ -23,8 +23,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.join(here, '..', '..', '..');
 const read = (...parts) => fs.readFileSync(path.join(repo, ...parts), 'utf8');
 
-// The document's columns, in the order every surface prints them
-const COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'];
+// The document's columns, in the order every surface prints them.
+//
+// Method is a screen column only: how XLAND prices a service (Capacity Slab, Area Based) is how
+// the figure was arrived at, not something the customer is billed for, so the user asked for it to
+// come off the documents -- the PDFs and the email bodies -- while the staff screens and the
+// customer's own invoice view keep it.
+const COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Frequency', 'Visits'];
+const SCREEN_COLUMNS = ['#', 'Service', 'Description', 'Input / Details', 'Method', 'Frequency', 'Visits'];
 
 const SCREENS = [
   ['admin-portal/src/pages/billing/GeneratedInvoices.jsx', 'the generated-invoice modal'],
@@ -34,10 +40,10 @@ const SCREENS = [
 
 test('the shared table carries the document columns, in order', () => {
   const body = read('admin-portal/src/components/billing/InvoiceServicesTable.jsx');
-  const order = COLUMNS.map(label => body.indexOf(`'${label}'`));
+  const order = SCREEN_COLUMNS.map(label => body.indexOf(`'${label}'`));
   for (const [index, at] of order.entries()) {
-    assert.ok(at > 0, `${COLUMNS[index]} is not a column of InvoiceServicesTable`);
-    if (index) assert.ok(at > order[index - 1], `${COLUMNS[index]} is out of order`);
+    assert.ok(at > 0, `${SCREEN_COLUMNS[index]} is not a column of InvoiceServicesTable`);
+    if (index) assert.ok(at > order[index - 1], `${SCREEN_COLUMNS[index]} is out of order`);
   }
   // No money in the table at all: the invoice is priced in the Price Summary beside it, and the
   // PDFs state no services total either -- one directly above a Subtotal said the same figure twice
@@ -54,10 +60,11 @@ test('no surface foots the services table to a total', () => {
   }
 });
 
-test('the PDF draws the same columns as the screen', () => {
+test('the PDF draws the same columns as the screen, less the Method it never prints', () => {
   const pdf = read('backend/services/pdfService.js');
   const section = pdf.slice(pdf.indexOf('const SERVICE_COLUMNS'), pdf.indexOf('const serviceColumnWidth'));
   for (const label of COLUMNS) assert.match(section, new RegExp(`label: '${label.replace(/\//g, '\\/')}'`), `the PDF has no ${label} column`);
+  assert.doesNotMatch(section, /label: 'Method'/, "the PDF's Method column is back");
   // The invoice draws with the shared renderer rather than a table of its own
   const invoice = pdf.slice(pdf.indexOf('const generateInvoicePDF'), pdf.indexOf('const generateReceiptPDF'));
   assert.match(invoice, /drawServicesTable\(/, 'the invoice PDF does not use the shared services table');
@@ -66,8 +73,39 @@ test('the PDF draws the same columns as the screen', () => {
 
 test('the email prints the same columns too', () => {
   const body = read('backend/utils/invoiceDocument.js');
-  const listed = body.slice(body.indexOf('const INVOICE_SERVICE_COLUMNS'));
-  for (const label of COLUMNS) assert.ok(listed.includes(`'${label}'`), `the invoice email has no ${label} column`);
+  const declaration = body.slice(body.indexOf('const INVOICE_SERVICE_COLUMNS'), body.indexOf('const escapeHtml'));
+  for (const label of COLUMNS) assert.ok(declaration.includes(`'${label}'`), `the invoice email has no ${label} column`);
+  assert.doesNotMatch(declaration, /'Method'/, "the invoice email's Method column is back");
+});
+
+test('the portal\'s own estimate export drops Method as well', () => {
+  // The downloaded and printed PDF is the same document as the emailed one, so it lists the same
+  // columns: one of them carrying Method would read as a different estimate on paper.
+  const exporter = read('admin-portal/src/utils/pdfExport.js');
+  const head = exporter.slice(exporter.indexOf('const serviceHead'), exporter.indexOf('const serviceTableStyles'));
+  assert.match(head, /'INPUT \/ DETAILS', 'FREQUENCY'/, 'the export no longer heads its services with the document columns');
+  assert.doesNotMatch(head, /METHOD/, "the export's Method column is back");
+});
+
+test('a service name reads larger than the lines under it, on every surface', () => {
+  // The category and the "Package" mark qualify the name; set at the name's own size they read as
+  // three services stacked in one cell. The PDFs are checked where they are generated
+  // (backend/services/estimateDelivery.test.js asserts the drawn sizes).
+  for (const [file, name, sub] of [
+    ['admin-portal/src/components/billing/InvoiceServicesTable.jsx', /text-xs font-medium text-gray-800/, /text-\[10px\]/],
+    ['admin-portal/src/components/estimates/EstimateServicesTable.jsx', /font-medium text-gray-800 text-xs/, /text-\[10px\]/],
+    ['backend/utils/invoiceDocument.js', /font-size: 12px/, /font-size: 10\.5px/],
+    ['backend/services/emailService.js', /font-size: 12px/, /font-size: 11px/]
+  ]) {
+    const body = read(...file.split('/'));
+    assert.match(body, name, `${file}: the service name's own size`);
+    assert.match(body, sub, `${file}: the lines under the name are no longer set smaller`);
+  }
+  // The exporter hands autoTable the parts and draws the sub-lines itself, since autoTable sets
+  // one font size per cell
+  const exporter = read('admin-portal/src/utils/pdfExport.js');
+  assert.match(exporter, /SERVICE_SUB_SIZE/, 'the export sets no smaller size for the lines under a name');
+  assert.match(exporter, /serviceNameHooks\(doc, warmMuted\)/, 'the services table does not draw the sub-lines');
 });
 
 for (const [file, what] of SCREENS) {
@@ -82,7 +120,7 @@ for (const [file, what] of SCREENS) {
 
 test("the customer's copy lists every service, in the same columns", () => {
   const body = read('frontend/src/pages/Payment.jsx');
-  for (const label of COLUMNS) assert.ok(body.includes(`'${label}'`), `the customer's invoice view has no ${label} column`);
+  for (const label of SCREEN_COLUMNS) assert.ok(body.includes(`'${label}'`), `the customer's invoice view has no ${label} column`);
   assert.doesNotMatch(body, /filter\(item => item\.type === 'addon'\)/, "the customer's view splits the rows again");
   assert.match(body, /invoice\.services/, "the customer's view does not read the resolved document");
 });

@@ -463,10 +463,59 @@ const drawEstimateLetterhead = (doc, margin, data, { kind = 'estimate' } = {}) =
   return y + stripHeight + 7;
 };
 
+// A service's name cell on the services table: the name, and under it the lines that qualify it --
+// its category, and the mark that it comes with the AMC package. The name is the heading of the
+// cell (bold, at the table's size) and the lines under it are smaller and muted, as the portal's
+// table and the emails set them; at one size and weight the three read as three services stacked
+// in a cell rather than as one service and what qualifies it.
+//
+// autoTable draws one font size per cell, so the cell carries its parts and the table's draw hooks
+// (`serviceNameHooks`) place them; its `content` is still every line, so the row is measured tall
+// enough for the whole stack.
+const SERVICE_SUB_SIZE = 5.5;
+const serviceNameCell = (name, lines) => {
+  const parts = lines.filter(line => line.text);
+  return { content: [name, ...parts.map(line => line.text)].join('\n'), styles: { fontStyle: 'bold' },
+    serviceName: name, serviceLines: parts };
+};
+
+const serviceNameHooks = (doc, colour) => {
+  const scale = doc.internal.scaleFactor;
+  const lineHeight = size => (size * doc.getLineHeightFactor()) / scale;
+  // autoTable offsets a cell's first baseline from the top of its text block by 0.85 of the font
+  // size (`autoTableText`); the hand-drawn lines take the same offset, so they sit on the rhythm
+  // of the name above them and of the columns beside them
+  const baseline = (top, size) => top + (size * 0.85) / scale;
+  const sublines = data => (data.section === 'body' ? data.cell.raw?.serviceLines : null);
+  return {
+    // The name alone is left to autoTable; the lines under it are drawn below at their own size
+    willDrawCell: (data) => {
+      if (!sublines(data)?.length) return;
+      const { cell } = data;
+      doc.setFontSize(cell.styles.fontSize);
+      cell.text = doc.splitTextToSize(cell.raw.serviceName, cell.width - cell.padding('horizontal'));
+    },
+    didDrawCell: (data) => {
+      const lines = sublines(data);
+      if (!lines?.length) return;
+      const { cell } = data;
+      const width = cell.width - cell.padding('horizontal');
+      let top = cell.y + cell.padding('top') + cell.text.length * lineHeight(cell.styles.fontSize);
+      doc.setFontSize(SERVICE_SUB_SIZE);
+      doc.setTextColor(...colour);
+      lines.forEach(line => {
+        doc.setFont('helvetica', line.italic ? 'italic' : 'normal');
+        const wrapped = doc.splitTextToSize(line.text, width);
+        doc.text(wrapped, cell.x + cell.padding('left'), baseline(top, SERVICE_SUB_SIZE));
+        top += wrapped.length * lineHeight(SERVICE_SUB_SIZE);
+      });
+      doc.setFont('helvetica', 'normal');
+    }
+  };
+};
+
 // Generate Premium PDF with professional design
-// `forPrint` -- the Print button and Ctrl+P -- leaves out the Method column (the user's call); the
-// downloaded copy and the emailed one keep it
-const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false } = {}) => {
+const generatePDF = (data, type, filename, { returnDoc = false } = {}) => {
   try {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -669,26 +718,19 @@ const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false
     const priced = type === 'estimate';
     // Uppercase and aligned per column, as the backend's PDF sets them
     // Every column of the estimate view except its internal Vendor Cost, XLAND Cost and Margin %
-    // in the view's order: name, description, what was measured, how it is priced, schedule
-    const serviceHead = [forPrint
-      ? ['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'FREQUENCY', 'VISITS']
-      : ['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'METHOD', 'FREQUENCY', 'VISITS']];
-    // Printed, Description takes the Method column's width
-    const serviceColumnStyles = forPrint ? {
+    // in the view's order: name, description, what was measured, schedule
+    // No Method column: how XLAND prices a service is how the figure was arrived at, not something
+    // the customer is billed for, so the user asked for it to come off every document -- this
+    // export, the emailed PDF and both email bodies. It stays on the screens, where staff read it,
+    // and its width goes to Description, which carries the wrapping.
+    const serviceHead = [['#', 'SERVICE', 'DESCRIPTION', 'INPUT / DETAILS', 'FREQUENCY', 'VISITS']];
+    const serviceColumnStyles = {
       0: { cellWidth: 8, halign: 'center' },
       1: { cellWidth: 35, halign: 'left' },
       2: { cellWidth: 73, halign: 'left' },
       3: { cellWidth: 28, halign: 'left' },
       4: { cellWidth: 22, halign: 'center' },
       5: { cellWidth: 14, halign: 'center' }
-    } : {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 33, halign: 'left' },
-      2: { cellWidth: 55, halign: 'left' },
-      3: { cellWidth: 26, halign: 'left' },
-      4: { cellWidth: 22, halign: 'left' },
-      5: { cellWidth: 22, halign: 'center' },
-      6: { cellWidth: 14, halign: 'center' }
     };
     // Drawn in the cream skin the portal uses -- warm section header, warm rules, figures in warm
     // text -- for an estimate and a package alike
@@ -732,16 +774,14 @@ const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false
     // `tag` marks a package's own service in the combined table, under its name and category
     const serviceRow = (item, index, tag = '') => {
       const category = decodeHtml(String(item.category || ''));
-      const name = [decodeHtml(String(item.name || item.service || item.serviceName || item.service_name || 'Service')),
-        category, tag].filter(Boolean).join('\n');
+      const name = decodeHtml(String(item.name || item.service || item.serviceName || item.service_name || 'Service'));
       const freqType = String(item.frequencyType || item.frequency_type || item.frequency || 'Monthly').replace(/^\d+x\s*/i, '');
       const visits = item.frequencyCount ?? item.frequency_count ?? item.visits ?? 1;
       // The customer's description: no method, Primary Input or property types (they are ours, or
       // have their own columns), and no restated amount -- as the emailed PDF prints it
       const details = withoutInputSegment(customerServiceDetails(withoutCategory(stripInternalServiceDetails(decodeHtml(String(item.description || ''))), category), category), item.input);
-      return forPrint
-        ? [String(index + 1), name, details || '-', item.input || '-', freqType, String(visits)]
-        : [String(index + 1), name, details || '-', item.input || '-', item.method || '-', freqType, String(visits)];
+      return [String(index + 1), serviceNameCell(name, [{ text: category }, { text: tag, italic: true }]),
+        details || '-', item.input || '-', freqType, String(visits)];
     };
 
     // ===== SERVICES (Skip for Work Order Estimates) =====
@@ -763,7 +803,9 @@ const generatePDF = (data, type, filename, { returnDoc = false, forPrint = false
         startY: y,
         head: serviceHead,
         body: tableRows.map(([item, tag], index) => serviceRow(item, index, tag)),
-        ...serviceTableStyles
+        ...serviceTableStyles,
+        // Spread last: the category and the Package mark are drawn under the name, smaller
+        ...serviceNameHooks(doc, warmMuted)
       });
 
       y = doc.lastAutoTable.finalY + 6;
@@ -1238,7 +1280,7 @@ export const printEstimatePDF = (estimate) => {
   try {
     const exportData = estimateExportData(estimate);
     if (!exportData) return false;
-    const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true, forPrint: true });
+    const doc = generatePDF(exportData, 'estimate', `Estimate-${exportData.estimateId}.pdf`, { returnDoc: true });
     if (!doc) return false;
     const url = URL.createObjectURL(doc.output('blob'));
     // iOS cannot print a PDF in a hidden frame: contentWindow.print() on it silently does
