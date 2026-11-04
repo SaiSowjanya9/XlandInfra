@@ -4,6 +4,9 @@ const { generateWorkOrderId } = require('../utils/workOrderId');
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 const { propertyAccountScope } = require('../utils/propertyAccountScope');
 const { ensureClientColumns } = require('../utils/clientPropertyLink');
+const {
+  fetchPropertyRows, getDeleteImpact, hasLiveRecords, purgePropertyRecords, notifyPermanentDelete
+} = require('../utils/propertyPurge');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
@@ -813,54 +816,62 @@ router.put('/properties/:id/restore', authenticate, adminOnly, adminWriteRoles, 
   }
 });
 
-// Permanently delete property (Admin only) - hard delete from database
+// Live records a permanent delete would still find -- unpaid invoices, upcoming
+// visits, payments awaiting verification, open work orders. The confirm modal
+// shows this before the delete is committed.
+router.get('/properties/:id/delete-impact', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tables = propertySourceTables(req);
+    const rows = await fetchPropertyRows(tables, id);
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    const impact = await getDeleteImpact(id, rows[0].code, { onboarded: rows.some(r => r.table === 'onboarded_properties') });
+    res.json({
+      success: true,
+      data: {
+        propertyName: rows[0].name,
+        propertyCode: rows[0].code,
+        ...impact,
+        hasLiveRecords: hasLiveRecords(impact)
+      }
+    });
+  } catch (error) {
+    console.error('Error computing delete impact:', error);
+    res.status(500).json({ success: false, message: 'Error checking customer records', error: error.message });
+  }
+});
+
+// Permanently delete property (Admin only) - hard delete from database.
+// Estimates and invoices move to archive, payment history is preserved, and
+// every other record of the customer is deleted so nothing shows in any portal.
 router.delete('/properties/:id/permanent', authenticate, adminOnly, adminWriteRoles, async (req, res) => {
   try {
     const { id } = req.params;
     const tables = propertySourceTables(req);
+    const rows = await fetchPropertyRows(tables, id);
+    const code = rows.find(r => r.code)?.code || null;
+
+    // What the customer still has open -- computed before the purge removes it
+    const impact = await getDeleteImpact(id, code, { onboarded: rows.some(r => r.table === 'onboarded_properties') });
+
+    // Children first: the schedule stack only cascades off onboarded_properties
+    // and work_orders RESTRICTs properties(id), so deleting the row first could
+    // leave it alive behind a swallowed FK error.
+    const scopedRows = rows.map(r => ({ code: r.code, email: r.email }));
+    const summary = await purgePropertyRecords({ tables, id, code, scopedRows });
+
     let deleted = false;
-    let contactEmail = null;
-    const scopedRows = [];
-
-    // Get each row's code and email before deleting -- the code scopes the account
-    // cleanup to this property (see utils/propertyAccountScope.js).
     if (tables.includes('properties')) {
       try {
-        const [prop] = await pool.query('SELECT contact_email, property_id FROM properties WHERE id = ?', [id]);
-        if (prop.length > 0) {
-          contactEmail = prop[0].contact_email;
-          scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
-        }
-      } catch (e) {}
-    }
-    if (tables.includes('onboarded_properties')) {
-      try {
-        const [prop] = await pool.query('SELECT contact_email, property_id FROM onboarded_properties WHERE id = ?', [id]);
-        if (prop.length > 0) {
-          if (!contactEmail) contactEmail = prop[0].contact_email;
-          scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
-        }
-      } catch (e) {}
-    }
-
-    // Try to delete from properties table first
-    if (tables.includes('properties')) {
-      try {
-        const [result1] = await pool.execute(
-          `DELETE FROM properties WHERE id = ?`,
-          [id]
-        );
+        const [result1] = await pool.execute(`DELETE FROM properties WHERE id = ?`, [id]);
         if (result1.affectedRows > 0) deleted = true;
       } catch (e) { console.log('Properties table delete skipped:', e.message); }
     }
-
-    // Also try to delete from onboarded_properties table
     if (tables.includes('onboarded_properties')) {
       try {
-        const [result2] = await pool.execute(
-          `DELETE FROM onboarded_properties WHERE id = ?`,
-          [id]
-        );
+        const [result2] = await pool.execute(`DELETE FROM onboarded_properties WHERE id = ?`, [id]);
         if (result2.affectedRows > 0) deleted = true;
       } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
     }
@@ -872,81 +883,22 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, adminWriteRo
       });
     }
 
-    // Delete only the accounts/clients that lived on this property -- keyed on its
-    // unique code, or (pre-property_code rows) the row number tied to this
-    // property's contact email. A bare `WHERE email = ?` used to wipe the login of
-    // a different, surviving property that shared the contact, and a bare
-    // `property_id = <id>` collides across the two tables' independent sequences.
-    try {
-      const scope = propertyAccountScope(scopedRows, id);
-      if (scope.params.length) {
-        await pool.execute(`DELETE FROM customer_accounts WHERE ${scope.sql}`, scope.params);
-        console.log('📋 [Admin] Deleted customer_account for property:', id);
-      }
-    } catch (e) {}
-    try {
-      // clients.property_code only exists once schema_v63 has applied -- scope on it
-      // only where it does, else the DELETE fails on the missing column
-      const hasCode = (await ensureClientColumns()).has('property_code');
-      const scope = propertyAccountScope(scopedRows, id, { codeColumn: hasCode });
-      if (scope.params.length) {
-        await pool.execute(`DELETE FROM clients WHERE ${scope.sql}`, scope.params);
-        console.log('📋 [Admin] Deleted clients for property:', id);
-      }
-    } catch (e) {}
-
-    // Archive related estimates in fp_estimates (not delete - move to archived)
-    try {
-      const [estResult] = await pool.execute(
-        'UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE property_id = ?',
-        [id]
-      );
-      if (estResult.affectedRows > 0) {
-        console.log('📋 [Admin] Archived', estResult.affectedRows, 'estimates for property_id:', id);
-      }
-    } catch (e) { console.log('fp_estimates archive skipped:', e.message); }
-
-    // Unlink invoices from property (preserve payment history)
-    try {
-      const [invResult] = await pool.execute(
-        'UPDATE invoices SET property_id = NULL WHERE property_id = ?',
-        [id]
-      );
-      if (invResult.affectedRows > 0) {
-        console.log('📋 [Admin] Unlinked', invResult.affectedRows, 'invoices from property_id:', id);
-      }
-    } catch (e) { console.log('invoices unlink skipped:', e.message); }
-
-    // Unlink payments from property (preserve payment history)
-    try {
-      const [payResult] = await pool.execute(
-        'UPDATE payments SET property_id = NULL WHERE property_id = ?',
-        [id]
-      );
-      if (payResult.affectedRows > 0) {
-        console.log('📋 [Admin] Unlinked', payResult.affectedRows, 'payments from property_id:', id);
-      }
-    } catch (e) { console.log('payments unlink skipped:', e.message); }
-
-    // Unlink work orders from property (preserve work order history)
-    try {
-      const [woResult] = await pool.execute(
-        'UPDATE work_orders SET property_id = NULL WHERE property_id = ?',
-        [id]
-      );
-      if (woResult.affectedRows > 0) {
-        console.log('📋 [Admin] Unlinked', woResult.affectedRows, 'work_orders from property_id:', id);
-      }
-    } catch (e) { console.log('work_orders unlink skipped:', e.message); }
-
-    // Note: schedule_series, schedule_occurrences, property_service_schedules, 
-    // and scheduled_visits are automatically deleted via ON DELETE CASCADE
+    // Live records survive the delete only as notification text -- the bell
+    // tells admin (and the owning FP) what was still open when it went.
+    await notifyPermanentDelete({
+      propertyCode: code,
+      propertyName: rows[0]?.name,
+      impact,
+      actorName: [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ') || req.user?.username || 'an admin',
+      fpId: rows[0]?.fpId
+    });
 
     console.log('📋 [Admin] Permanently deleted property:', id);
 
     res.json({
       success: true,
-      message: 'Customer permanently deleted. This action cannot be undone.'
+      message: 'Customer permanently deleted. This action cannot be undone.',
+      data: { impact, summary }
     });
   } catch (error) {
     console.error('Error permanently deleting property:', error);

@@ -37,6 +37,9 @@ const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActiv
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
 const { propertyAccountScope } = require('../utils/propertyAccountScope');
 const { ensureClientColumns } = require('../utils/clientPropertyLink');
+const {
+  resolveSourceTables, fetchPropertyRows, getDeleteImpact, hasLiveRecords, purgePropertyRecords, notifyPermanentDelete
+} = require('../utils/propertyPurge');
 // A work order's property, said unambiguously: a bare row number is shared between tables
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints (5 attempts per 15 minutes)
@@ -882,6 +885,9 @@ router.put('/properties/:id', requireFPScope, async (req, res) => {
 router.delete('/properties/:id', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
+    // The two property tables share ids; ?sourceTable= names the row's own table
+    // so only it is touched. Absent or unrecognised, both are tried, as before.
+    const tables = resolveSourceTables(req.query?.sourceTable || req.body?.sourceTable);
     let updated = false;
     let contactEmail = null;
     const scopedRows = [];
@@ -889,45 +895,53 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
     // Get each row's code and email before soft-deleting -- the code is what scopes
     // the account change to this property; the bare id and email both overreach
     // (see utils/propertyAccountScope.js).
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (props.length > 0) {
-        contactEmail = props[0].contact_email;
-        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
-      }
-    } catch (e) {}
+    if (tables.includes('properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) {
+          contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
+      } catch (e) {}
+    }
 
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (props.length > 0) {
-        if (!contactEmail) contactEmail = props[0].contact_email;
-        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
-      }
-    } catch (e) {}
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) {
+          if (!contactEmail) contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
+      } catch (e) {}
+    }
 
     // Try to soft-delete from properties table first
-    try {
-      const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result1.affectedRows > 0) updated = true;
-    } catch (e) { console.log('Properties table update skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `UPDATE properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result1.affectedRows > 0) updated = true;
+      } catch (e) { console.log('Properties table update skipped:', e.message); }
+    }
 
     // Also try to soft-delete from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result2.affectedRows > 0) updated = true;
-    } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `UPDATE onboarded_properties SET status = 'inactive' WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result2.affectedRows > 0) updated = true;
+      } catch (e) { console.log('Onboarded_properties table update skipped:', e.message); }
+    }
 
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Property not found' });
@@ -958,51 +972,60 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
 router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
+    const tables = resolveSourceTables(req.query?.sourceTable || req.body?.sourceTable);
     let restored = false;
     let contactEmail = null;
     const scopedRows = [];
 
     // Same scoping as the delete: the row's code identifies its account, not the
     // shared contact email.
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (props.length > 0) {
-        contactEmail = props[0].contact_email;
-        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
-      }
-    } catch (e) {}
+    if (tables.includes('properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) {
+          contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
+      } catch (e) {}
+    }
 
-    try {
-      const [props] = await pool.execute(
-        `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (props.length > 0) {
-        if (!contactEmail) contactEmail = props[0].contact_email;
-        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
-      }
-    } catch (e) {}
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [props] = await pool.execute(
+          `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (props.length > 0) {
+          if (!contactEmail) contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
+      } catch (e) {}
+    }
 
     // Try to restore from properties table first
-    try {
-      const [result1] = await pool.execute(
-        `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result1.affectedRows > 0) restored = true;
-    } catch (e) { console.log('Properties table restore skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `UPDATE properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result1.affectedRows > 0) restored = true;
+      } catch (e) { console.log('Properties table restore skipped:', e.message); }
+    }
 
     // Also try to restore from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result2.affectedRows > 0) restored = true;
-    } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `UPDATE onboarded_properties SET status = 'active' WHERE id = ? AND status = 'inactive' AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result2.affectedRows > 0) restored = true;
+      } catch (e) { console.log('Onboarded_properties table restore skipped:', e.message); }
+    }
 
     if (!restored) {
       return res.status(404).json({ success: false, message: 'Property not found or already active' });
@@ -1028,125 +1051,92 @@ router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
   }
 });
 
-// Permanently delete property - Hard delete from database
+// Live records a permanent delete would still find -- unpaid invoices, upcoming
+// visits, payments awaiting verification, open work orders. The confirm modal
+// shows this before the delete is committed.
+router.get('/properties/:id/delete-impact', requireFPScope, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tables = resolveSourceTables(req.query?.sourceTable || req.body?.sourceTable);
+    const rows = await fetchPropertyRows(tables, id, req.fpId);
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    const impact = await getDeleteImpact(id, rows[0].code, { onboarded: rows.some(r => r.table === 'onboarded_properties') });
+    res.json({
+      success: true,
+      data: {
+        propertyName: rows[0].name,
+        propertyCode: rows[0].code,
+        ...impact,
+        hasLiveRecords: hasLiveRecords(impact)
+      }
+    });
+  } catch (error) {
+    console.error('Delete impact error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Permanently delete property - Hard delete from database.
+// Estimates and invoices move to archive, payment history is preserved, and
+// every other record of the customer is deleted so nothing shows in any portal.
 router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
   try {
     const { id } = req.params;
+    const tables = resolveSourceTables(req.query?.sourceTable || req.body?.sourceTable);
+    const rows = await fetchPropertyRows(tables, id, req.fpId);
+    const code = rows.find(r => r.code)?.code || null;
+
+    // What the customer still has open -- computed before the purge removes it
+    const impact = await getDeleteImpact(id, code, { onboarded: rows.some(r => r.table === 'onboarded_properties') });
+
+    // Children first: the schedule stack only cascades off onboarded_properties
+    // and work_orders RESTRICTs properties(id), so deleting the row first could
+    // leave it alive behind a swallowed FK error.
+    const scopedRows = rows.map(r => ({ code: r.code, email: r.email }));
+    const summary = await purgePropertyRecords({ tables, id, code, scopedRows, fpId: req.fpId });
+
     let deleted = false;
-    let contactEmail = null;
-    const scopedRows = [];
-
-    // Get each row's code and email before deleting -- the code is what scopes the
-    // account cleanup to this property (see utils/propertyAccountScope.js).
-    try {
-      const [prop] = await pool.query('SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
-      if (prop.length > 0) {
-        contactEmail = prop[0].contact_email;
-        scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
-      }
-    } catch (e) {}
-    try {
-      const [prop] = await pool.query('SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
-      if (prop.length > 0) {
-        if (!contactEmail) contactEmail = prop[0].contact_email;
-        scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
-      }
-    } catch (e) {}
-
-    // Try to delete from properties table first
-    try {
-      const [result1] = await pool.execute(
-        `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result1.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Properties table delete skipped:', e.message); }
-
-    // Also try to delete from onboarded_properties table
-    try {
-      const [result2] = await pool.execute(
-        `DELETE FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-        [id, req.fpId]
-      );
-      if (result2.affectedRows > 0) deleted = true;
-    } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
+    if (tables.includes('properties')) {
+      try {
+        const [result1] = await pool.execute(
+          `DELETE FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result1.affectedRows > 0) deleted = true;
+      } catch (e) { console.log('Properties table delete skipped:', e.message); }
+    }
+    if (tables.includes('onboarded_properties')) {
+      try {
+        const [result2] = await pool.execute(
+          `DELETE FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+          [id, req.fpId]
+        );
+        if (result2.affectedRows > 0) deleted = true;
+      } catch (e) { console.log('Onboarded_properties table delete skipped:', e.message); }
+    }
 
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Delete only the accounts/clients that lived on this property -- keyed on its
-    // unique code, or (pre-property_code rows) the row number tied to this
-    // property's contact email. A bare `WHERE email = ?` used to wipe the login of
-    // a different, surviving property that shared the contact, and a bare
-    // `property_id = <id>` collides across the two tables' independent sequences.
-    try {
-      const scope = propertyAccountScope(scopedRows, id);
-      if (scope.params.length) {
-        await pool.execute(`DELETE FROM customer_accounts WHERE ${scope.sql}`, scope.params);
-        console.log('📋 [FP] Deleted customer_account for property:', id);
-      }
-    } catch (e) {}
-    try {
-      // clients.property_code only exists once schema_v63 has applied -- scope on it
-      // only where it does, else the DELETE fails on the missing column
-      const hasCode = (await ensureClientColumns()).has('property_code');
-      const scope = propertyAccountScope(scopedRows, id, { codeColumn: hasCode });
-      if (scope.params.length) {
-        await pool.execute(`DELETE FROM clients WHERE ${scope.sql}`, scope.params);
-        console.log('📋 [FP] Deleted clients for property:', id);
-      }
-    } catch (e) {}
-
-    // Archive related estimates in fp_estimates (not delete - move to archived)
-    try {
-      const [estResult] = await pool.execute(
-        'UPDATE fp_estimates SET is_archived = 1, archived_at = NOW() WHERE property_id = ? AND franchise_partner_id = ?',
-        [id, req.fpId]
-      );
-      if (estResult.affectedRows > 0) {
-        console.log('📋 [FP] Archived', estResult.affectedRows, 'estimates for property_id:', id);
-      }
-    } catch (e) { console.log('fp_estimates archive skipped:', e.message); }
-
-    // Unlink invoices from property (preserve payment history)
-    try {
-      const [invResult] = await pool.execute(
-        'UPDATE invoices SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
-        [id, req.fpId]
-      );
-      if (invResult.affectedRows > 0) {
-        console.log('📋 [FP] Unlinked', invResult.affectedRows, 'invoices from property_id:', id);
-      }
-    } catch (e) { console.log('invoices unlink skipped:', e.message); }
-
-    // Unlink payments from property (preserve payment history)
-    try {
-      const [payResult] = await pool.execute(
-        'UPDATE payments SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
-        [id, req.fpId]
-      );
-      if (payResult.affectedRows > 0) {
-        console.log('📋 [FP] Unlinked', payResult.affectedRows, 'payments from property_id:', id);
-      }
-    } catch (e) { console.log('payments unlink skipped:', e.message); }
-
-    // Unlink work orders from property (preserve work order history)
-    try {
-      const [woResult] = await pool.execute(
-        'UPDATE work_orders SET property_id = NULL WHERE property_id = ? AND franchise_partner_id = ?',
-        [id, req.fpId]
-      );
-      if (woResult.affectedRows > 0) {
-        console.log('📋 [FP] Unlinked', woResult.affectedRows, 'work_orders from property_id:', id);
-      }
-    } catch (e) { console.log('work_orders unlink skipped:', e.message); }
-
-    // Note: schedule_series, schedule_occurrences, property_service_schedules, 
-    // and scheduled_visits are automatically deleted via ON DELETE CASCADE
+    // Live records survive the delete only as notification text -- the bell
+    // tells this partner (and admin) what was still open when it went.
+    await notifyPermanentDelete({
+      propertyCode: code,
+      propertyName: rows[0]?.name,
+      impact,
+      actorName: req.user?.company_name || req.user?.name || req.user?.username || 'a partner user',
+      fpId: req.fpId
+    });
 
     console.log('📋 [FP] Permanently deleted property:', id);
-    res.json({ success: true, message: 'Customer permanently deleted. This action cannot be undone.' });
+    res.json({
+      success: true,
+      message: 'Customer permanently deleted. This action cannot be undone.',
+      data: { impact, summary }
+    });
   } catch (error) {
     console.error('Permanent delete property error:', error);
     res.status(500).json({ success: false, message: error.message });

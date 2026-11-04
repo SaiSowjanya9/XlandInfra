@@ -418,23 +418,45 @@ const CustomerSubmissions = () => {
 
   // Permanent delete handler - permanently remove inactive customer from database
   const [permanentDeleteConfirm, setPermanentDeleteConfirm] = useState(null);
-  
+  // What the customer still has open (unpaid invoices, upcoming visits, pending
+  // payments, open work orders) -- fetched when the modal opens so the warning
+  // is visible before the delete is committed.
+  const [deleteImpact, setDeleteImpact] = useState(null);
+
+  const openPermanentDelete = async (property) => {
+    setDeleteImpact(null);
+    setPermanentDeleteConfirm(property);
+    try {
+      const propertyId = property.id?.toString().startsWith('prop-')
+        ? property.id.replace('prop-', '')
+        : property.id;
+      const source = property.sourceTable ? `?sourceTable=${encodeURIComponent(property.sourceTable)}` : '';
+      const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/delete-impact${source}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) setDeleteImpact(result.data);
+    } catch (error) {
+      console.error('Delete impact error:', error);
+    }
+  };
+
   const handlePermanentDelete = async (property) => {
     try {
-      const propertyId = property.id?.toString().startsWith('prop-') 
-        ? property.id.replace('prop-', '') 
+      const propertyId = property.id?.toString().startsWith('prop-')
+        ? property.id.replace('prop-', '')
         : property.id;
-      
+
       const source = property.sourceTable ? `?sourceTable=${encodeURIComponent(property.sourceTable)}` : '';
       const response = await fetch(`${API_BASE}/api/admin/properties/${propertyId}/permanent${source}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
-      
+
       if (result.success) {
         await loadData();
-        showToast('Customer permanently deleted!');
+        showToast(result.message || 'Customer permanently deleted!');
       } else {
         showToast(result.message || 'Failed to permanently delete customer', 'error');
       }
@@ -443,6 +465,7 @@ const CustomerSubmissions = () => {
       showToast('Failed to permanently delete customer', 'error');
     }
     setPermanentDeleteConfirm(null);
+    setDeleteImpact(null);
   };
 
   // Open edit property modal
@@ -1290,7 +1313,7 @@ const CustomerSubmissions = () => {
                                 <RotateCcw className="w-4 h-4 text-emerald-600" />
                               </button>
                               <button
-                                onClick={() => setPermanentDeleteConfirm(property)}
+                                onClick={() => openPermanentDelete(property)}
                                 className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
                                 title="Permanently Delete"
                               >
@@ -1990,7 +2013,7 @@ const CustomerSubmissions = () => {
 
       {/* Permanent Delete Confirmation Modal */}
       {permanentDeleteConfirm && (
-        <Modal onClose={() => setPermanentDeleteConfirm(null)} className="w-full max-w-sm p-6">
+        <Modal onClose={() => { setPermanentDeleteConfirm(null); setDeleteImpact(null); }} className="w-full max-w-sm p-6">
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-7 h-7 text-red-600" />
             </div>
@@ -1998,9 +2021,37 @@ const CustomerSubmissions = () => {
             <p className="text-sm text-gray-500 text-center mt-2">
               <strong>{permanentDeleteConfirm.name}</strong> ({permanentDeleteConfirm.propertyId}) will be permanently deleted from the database. <span className="text-red-600 font-semibold">This action cannot be undone.</span>
             </p>
+            <p className="text-xs text-gray-400 text-center mt-2">
+              Estimates and invoices move to Archive. Payment history is preserved.
+            </p>
+            {deleteImpact && deleteImpact.hasLiveRecords && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-left">
+                <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" /> This customer still has active records:
+                </p>
+                <ul className="text-xs text-amber-700 mt-1.5 space-y-0.5 list-disc list-inside">
+                  {deleteImpact.activeInvoices > 0 && (
+                    <li>{deleteImpact.activeInvoices} unpaid invoice(s) — ₹{Number(deleteImpact.outstandingAmount || 0).toLocaleString('en-IN')} outstanding</li>
+                  )}
+                  {deleteImpact.pendingPayments > 0 && (
+                    <li>{deleteImpact.pendingPayments} payment(s) awaiting verification</li>
+                  )}
+                  {deleteImpact.upcomingVisits > 0 && (
+                    <li>{deleteImpact.upcomingVisits} upcoming scheduled visit(s)</li>
+                  )}
+                  {deleteImpact.activeSchedules > 0 && (
+                    <li>{deleteImpact.activeSchedules} active service schedule(s)</li>
+                  )}
+                  {deleteImpact.openWorkOrders > 0 && (
+                    <li>{deleteImpact.openWorkOrders} open work order(s)</li>
+                  )}
+                </ul>
+                <p className="text-xs text-amber-700 mt-1.5">The team will be notified when you delete.</p>
+              </div>
+            )}
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setPermanentDeleteConfirm(null)}
+                onClick={() => { setPermanentDeleteConfirm(null); setDeleteImpact(null); }}
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Cancel
