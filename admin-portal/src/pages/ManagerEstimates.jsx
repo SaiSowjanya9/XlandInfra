@@ -2340,7 +2340,30 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
   );
 
   // ARCHIVED
-  const handleArchiveEstimate = async (id) => { try { const res = await fetch(`${API_BASE}/api/manager/estimates/${id}/archive`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate archived'); loadData(); } } catch (e) { showToast('Failed to archive', 'error'); } };
+  // Every one of these used to be `if (result.success) { ... }` with no else, so a request that
+  // failed -- and Restore and Delete called routes that did not exist at all, answering 404 --
+  // left the button looking dead: no toast, no error, nothing moved in the list. A failure has to
+  // say so, or the only way to find out is to reload and notice the row is still there.
+  const estimateAction = async (url, method, okMessage, failMessage, onOk) => {
+    try {
+      const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}` } });
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.success) {
+        showToast(okMessage);
+        if (onOk) onOk();
+        loadData();
+        return true;
+      }
+      showToast(result.message || failMessage, 'error');
+    } catch (e) {
+      showToast(failMessage, 'error');
+    }
+    return false;
+  };
+
+  const handleArchiveEstimate = (id) => estimateAction(
+    `${API_BASE}/api/manager/estimates/${id}/archive`, 'PUT', 'Estimate archived', 'Failed to archive'
+  );
   
   // Handle estimate status change
   const handleStatusChange = async (estimateId, newStatus) => {
@@ -2364,12 +2387,17 @@ const ManagerEstimates = ({ user, defaultTab = 'list' }) => {
     }
   };
 
-  const handleRestoreEstimate = async (id) => { try { const res = await fetch(`${API_BASE}/api/manager/estimates/${id}/restore`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Estimate restored'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleDeletePermanent = async (id) => { try { const res = await fetch(`${API_BASE}/api/manager/estimates/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted permanently'); setDeleteConfirm(null); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
+  const handleRestoreEstimate = (id) => estimateAction(
+    `${API_BASE}/api/manager/estimates/${id}/restore`, 'PUT', 'Estimate restored', 'Failed to restore the estimate'
+  );
+  const handleDeletePermanent = (id) => estimateAction(
+    `${API_BASE}/api/manager/estimates/${id}`, 'DELETE', 'Deleted permanently', 'Failed to delete the estimate',
+    () => setDeleteConfirm(null)
+  );
 
   const renderArchived = () => (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="list-table w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <Fragment key={e.id}><tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedEstimateId(e.id)} title="View details"><td className="px-4 py-3"><button type="button" onClick={() => setExpandedEstimateId(e.id)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (shortDivision(e.division) || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-gray-500 truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3 text-center text-xs text-gray-400">Archived</td></tr></Fragment>)}</tbody></table>}</div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">{archivedEstimates.length === 0 ? <div className="py-16 text-center"><Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">No archived estimates</p><p className="text-sm text-gray-400">Archived estimates will appear here</p></div> : <table className="list-table w-full text-sm"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-4 py-3 text-left font-medium text-gray-600">Estimate ID</th><th className="px-4 py-3 text-left font-medium text-gray-600">Type</th><th className="px-4 py-3 text-left font-medium text-gray-600">Division</th><th className="px-4 py-3 text-left font-medium text-gray-600">Client</th><th className="px-4 py-3 text-left font-medium text-gray-600">Archived On</th><th className="px-4 py-3 text-left font-medium text-gray-600">Total</th><th className="px-4 py-3 text-center font-medium text-gray-600">Actions</th></tr></thead><tbody className="divide-y divide-gray-100">{archivedEstimates.map(e => <Fragment key={e.id}><tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setExpandedEstimateId(e.id)} title="View details"><td className="px-4 py-3"><button type="button" onClick={() => setExpandedEstimateId(e.id)} className="font-mono text-xs text-gray-800 hover:text-blue-600" title="View details">{e.estimate_id}</button></td><td className="px-4 py-3 capitalize">{e.estimate_type?.replace('_', ' ')}</td><td className="px-4 py-3 text-gray-600">{(e.estimate_type === 'property_based' || e.property_id) ? (shortDivision(e.division) || '-') : '-'}</td><td className="px-4 py-3"><div className="font-medium text-gray-900">{e.client_name || '-'}</div>{e.client_phone && <div className="text-xs text-gray-500 whitespace-nowrap">{e.client_phone}</div>}{e.client_email && <div className="text-xs text-gray-500 truncate max-w-[180px]">{e.client_email}</div>}{e.property_code && <div className="text-xs text-gray-400">{e.property_code}</div>}</td><td className="px-4 py-3 text-gray-500">{formatDateIST(e.archived_at)}</td><td className="px-4 py-3 font-semibold">{formatCurrency(e.total_amount)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-2" onClick={ev => ev.stopPropagation()}><button type="button" onClick={() => handleRestoreEstimate(e.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Restore"><RotateCcw className="w-4 h-4" /></button><button type="button" onClick={() => setDeleteConfirm(e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete permanently"><Trash2 className="w-4 h-4" /></button></div></td></tr></Fragment>)}</tbody></table>}</div>
       {deleteConfirm && <Modal padding="" className="p-6 max-w-md m-4"><h3 className="text-lg font-semibold text-gray-800 mb-2">Delete Permanently?</h3><p className="text-gray-600 mb-4">Are you sure you want to permanently delete estimate <strong>{deleteConfirm.estimate_id}</strong>? This cannot be undone.</p><div className="flex gap-3 justify-end"><button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button><button onClick={() => handleDeletePermanent(deleteConfirm.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></Modal>}
     </div>
   );

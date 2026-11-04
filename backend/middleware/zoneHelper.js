@@ -77,6 +77,43 @@ async function getAssignedZones(employeeId, email = null) {
 }
 
 /**
+ * Normalise a creator argument into the list of identifiers to match on.
+ *
+ * `created_by` is a *name*, and which name it holds depends on which writer wrote the row:
+ * `getCreatorIdentifier` answers the username, but several writers stamped
+ * `req.user.email || req.user.username` instead, so a deployment carries both spellings for the
+ * same person. Matching on one of them silently hides the other half of their own records -- a
+ * manager could not see the work order they had just raised. Every "own created" ground below
+ * therefore takes either a single identifier or a list, and matches with IN.
+ *
+ * @param {string|string[]} createdBy - One identifier, or several for the same person
+ * @returns {string[]} Deduped, non-empty identifiers (at least one, so the SQL stays valid)
+ */
+function creatorIdentityList(createdBy) {
+  const list = (Array.isArray(createdBy) ? createdBy : [createdBy])
+    .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
+    .map(String);
+  const unique = [...new Set(list)];
+  // An empty list would render `IN ()`, which is a syntax error. '' matches no row, which is the
+  // right answer for a request that carries no identity at all.
+  return unique.length > 0 ? unique : [''];
+}
+
+/**
+ * Render the "own created" ground for one or more columns holding a creator identifier.
+ * @param {string[]} columns - Fully qualified columns (e.g. ['wo.created_by'])
+ * @param {string[]} identities - From creatorIdentityList
+ * @returns {{ sql: string, params: string[] }}
+ */
+function creatorGround(columns, identities) {
+  const placeholders = identities.map(() => '?').join(',');
+  return {
+    sql: columns.map(c => `${c} IN (${placeholders})`).join(' OR '),
+    params: columns.flatMap(() => identities)
+  };
+}
+
+/**
  * Build a SQL IN clause for zone filtering
  * @param {string[]} zones - Array of zone names
  * @param {string} columnName - The column to filter (e.g., 'zone', 'zone_id', 'zone_name')
@@ -225,16 +262,21 @@ function buildVendorZoneOrCreatorFilter(zones, createdBy, tableAlias = 'ov') {
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround(
+    [`${tableAlias}.created_by`, `${tableAlias}.created_by_id`],
+    creatorIdentityList(createdBy)
+  );
+
   // If no zones assigned, allow access to own created vendors only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created vendors only');
-    return { clause: ` AND (${tableAlias}.created_by = ? OR ${tableAlias}.created_by_id = ?)`, params: [createdBy, createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   return {
-    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${tableAlias}.created_by = ? OR ${tableAlias}.created_by_id = ?)`,
-    params: [...zones, createdBy, createdBy]
+    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${creator.sql})`,
+    params: [...zones, ...creator.params]
   };
 }
 
@@ -284,17 +326,19 @@ function buildPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias = 'p', zo
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround([`${tableAlias}.created_by`], creatorIdentityList(createdBy));
+
   // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
-    return { clause: ` AND ${tableAlias}.created_by = ?`, params: [createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   // zone_id stores zone name directly in most cases
   return {
-    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone_id IN (${placeholders}) OR ${creator.sql})`,
+    params: [...zones, ...creator.params]
   };
 }
 
@@ -313,16 +357,18 @@ function buildOnboardedPropertyZoneOrCreatorFilter(zones, createdBy, tableAlias 
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround([`${tableAlias}.created_by`], creatorIdentityList(createdBy));
+
   // If no zones assigned, allow access to own created properties only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created properties only');
-    return { clause: ` AND ${tableAlias}.created_by = ?`, params: [createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   return {
-    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${tableAlias}.created_by = ?)`,
-    params: [...zones, createdBy]
+    clause: ` AND (${tableAlias}.zone IN (${placeholders}) OR ${creator.sql})`,
+    params: [...zones, ...creator.params]
   };
 }
 
@@ -344,10 +390,12 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround([`${workOrderAlias}.created_by`], creatorIdentityList(createdBy));
+
   // If no zones assigned, allow access to own created work orders only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created work orders only');
-    return { clause: ` AND ${workOrderAlias}.created_by = ?`, params: [createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
@@ -357,9 +405,9 @@ function buildWorkOrderZoneOrCreatorFilter(zones, createdBy, propertyAlias = 'p'
     clause: ` AND (
       ${propertyAlias}.zone_id IN (${placeholders}) 
       OR ${onboardedPropertyAlias}.zone IN (${placeholders}) 
-      OR ${workOrderAlias}.created_by = ?
+      OR ${creator.sql}
     )`,
-    params: [...zones, ...zones, createdBy]
+    params: [...zones, ...zones, ...creator.params]
   };
 }
 
@@ -379,17 +427,19 @@ function buildClientZoneOrCreatorFilter(zones, createdBy, clientAlias = 'c', pro
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround([`${clientAlias}.created_by`], creatorIdentityList(createdBy));
+
   // If no zones assigned, allow access to own created clients only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created clients only');
-    return { clause: ` AND ${clientAlias}.created_by = ?`, params: [createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${clientAlias}.created_by = ?)`,
-    params: [...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${creator.sql})`,
+    params: [...zones, ...creator.params]
   };
 }
 
@@ -409,17 +459,19 @@ function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e',
     return { clause: '', params: [] };
   }
   
+  const creator = creatorGround([`${estimateAlias}.created_by`], creatorIdentityList(createdBy));
+
   // If no zones assigned, allow access to own created estimates only
   if (!zones || zones.length === 0) {
     console.log('[ZoneHelper] No zones assigned - allowing own created estimates only');
-    return { clause: ` AND ${estimateAlias}.created_by = ?`, params: [createdBy] };
+    return { clause: ` AND (${creator.sql})`, params: creator.params };
   }
   
   const placeholders = zones.map(() => '?').join(',');
   // zone_id stores zone name directly (no separate zones table)
   return {
-    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${estimateAlias}.created_by = ?)`,
-    params: [...zones, createdBy]
+    clause: ` AND (${propertyAlias}.zone_id IN (${placeholders}) OR ${creator.sql})`,
+    params: [...zones, ...creator.params]
   };
 }
 
@@ -430,6 +482,21 @@ function buildEstimateZoneOrCreatorFilter(zones, createdBy, estimateAlias = 'e',
  */
 function getCreatorIdentifier(req) {
   return req.user?.username || req.user?.email || '';
+}
+
+/**
+ * Every identifier a row of this user's may have been stamped with.
+ *
+ * `getCreatorIdentifier` answers the one a *new* row gets, which is all a writer needs. A reader
+ * needs both, because rows already in the database were written by code that preferred the email,
+ * and an "own created" ground naming only the username hides them from the person who created
+ * them. Pass this, not `getCreatorIdentifier`, to the `*ZoneOrCreatorFilter` builders.
+ *
+ * @param {object} req - Express request object
+ * @returns {string[]} username and email, in that order, both optional
+ */
+function getCreatorIdentities(req) {
+  return creatorIdentityList([req.user?.username, req.user?.email]);
 }
 
 module.exports = {
@@ -450,5 +517,7 @@ module.exports = {
   buildClientZoneOrCreatorFilter,
   buildVendorZoneOrCreatorFilter,
   buildEstimateZoneOrCreatorFilter,
-  getCreatorIdentifier
+  getCreatorIdentifier,
+  getCreatorIdentities,
+  creatorIdentityList
 };

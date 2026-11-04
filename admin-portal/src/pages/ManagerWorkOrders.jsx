@@ -1,5 +1,6 @@
 import ViewModal, { ViewSection, ViewField, ViewGrid } from '../components/common/ViewModal';
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getAuthToken } from '../utils/safeStorage';
 import {
   ClipboardList,
@@ -55,7 +56,13 @@ const ManagerWorkOrders = ({ user }) => {
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState('all');
+  // The /work-orders/<status> URLs all mount this page; the last path segment is the tab to
+  // open on, so /work-orders/completed lands on Completed instead of All.
+  const location = useLocation();
+  const urlTab = location.pathname.split('/').filter(Boolean).pop();
+  const [activeTab, setActiveTab] = useState(
+    ['pending', 'assigned', 'in-progress', 'completed', 'closed', 'cancelled'].includes(urlTab) ? urlTab : 'all'
+  );
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(null);

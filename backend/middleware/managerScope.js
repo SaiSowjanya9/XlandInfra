@@ -30,13 +30,31 @@ const attachManagerScope = (req, res, next) => {
 /**
  * Require Manager Scope
  * Ensures request has valid manager context
+ *
+ * A manager's data all hangs off its franchise partner, and a manager with no partner was served
+ * empty lists rather than an error: the property its Add Customer had just written lived in
+ * `onboarded_properties`, which the properties reader only consults for an FP; its vendors were
+ * read with `WHERE franchise_partner_id = NULL`, which matches nothing; and its estimates were
+ * never read at all. Every screen looked like a working screen with no records in it, so the
+ * account appeared to save nothing. An unlinked manager is a setup fault, not an empty branch, and
+ * it now says so once instead of lying on eight screens.
  */
+const MANAGER_NOT_LINKED = {
+  success: false,
+  code: 'MANAGER_NOT_LINKED',
+  message: 'This Manager account is not linked to a franchise partner, so it has no properties, '
+    + 'vendors or estimates to show. Ask an administrator to link the account to a franchise partner.'
+};
+
 const requireManagerScope = (req, res, next) => {
   if (!req.managerId) {
     return res.status(403).json({
       success: false,
       message: 'Manager access required'
     });
+  }
+  if (!req.franchisePartnerId) {
+    return res.status(409).json(MANAGER_NOT_LINKED);
   }
   next();
 };
@@ -216,6 +234,7 @@ const filterPricing = (data, hidePricing = false) => {
 module.exports = {
   attachManagerScope,
   requireManagerScope,
+  MANAGER_NOT_LINKED,
   getManagerIdForInsert,
   addManagerFilter,
   validateManagerOwnership,

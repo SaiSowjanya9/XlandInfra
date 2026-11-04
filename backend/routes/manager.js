@@ -16,6 +16,8 @@ const {
   pool } = require('../config/database');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+// A client's property and creator, in the types those columns actually hold
+const { clientCreatedBy, clientPropertyColumns, clientPropertyJoin } = require('../utils/clientPropertyLink');
 // A work order's property, said unambiguously: a bare row number is shared between tables
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints
@@ -63,7 +65,8 @@ const {
   buildWorkOrderZoneOrCreatorFilter,
   buildClientZoneOrCreatorFilter,
   getEmployeeIdForZoneLookup,
-  getCreatorIdentifier
+  getCreatorIdentifier,
+  getCreatorIdentities
 } = require('../middleware/zoneHelper');
 
 // ============================================
@@ -251,24 +254,6 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
     
     console.log('[Manager Dashboard] managerId:', managerId, 'fpId:', franchisePartnerId, 'assignedZones:', assignedZones, 'unrestricted:', hasUnrestrictedAccess);
 
-    // Build zone filter clause for properties (skip if unrestricted)
-    let zoneClause = '';
-    let zoneParams = [];
-    if (hasZones) {
-      const placeholders = assignedZones.map(() => '?').join(',');
-      zoneClause = ` AND (p.zone_id IN (${placeholders}) OR p.zone_id IN (SELECT name FROM zones WHERE id IN (${placeholders})))`;
-      zoneParams = [...assignedZones, ...assignedZones];
-    }
-
-    // Build zone filter for onboarded properties (skip if unrestricted)
-    let onbZoneClause = '';
-    let onbZoneParams = [];
-    if (hasZones) {
-      const placeholders = assignedZones.map(() => '?').join(',');
-      onbZoneClause = ` AND (op.zone IN (${placeholders}) OR op.zone IN (SELECT name FROM zones WHERE id IN (${placeholders})))`;
-      onbZoneParams = [...assignedZones, ...assignedZones];
-    }
-
     // Helper function to safely get count
     const safeCount = (query, params) => {
       return pool.execute(query, params)
@@ -293,46 +278,89 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
       estimatesByStatus,
       recentWorkOrders
     ] = await Promise.all([
-      // Properties count - Zone-filtered
-      safeCount(
-        `SELECT COUNT(*) as count FROM properties p
-         WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status NOT IN ('deleted', 'inactive'))${zoneClause}`,
-        [franchisePartnerId, ...zoneParams]
-      ),
+      // Properties count - same ground Property Management lists on: the property's zone, or
+      // this user having created it. A count that only knew the zone missed every property the
+      // manager had just added outside it, so the card disagreed with its own screen.
+      (() => {
+        const dashIds = getCreatorIdentities(req);
+        const idPh = dashIds.map(() => '?').join(',');
+        const zonePh = hasZones ? assignedZones.map(() => '?').join(',') : '';
+        const ground = hasZones
+          ? `(p.zone_id IN (${zonePh}) OR p.zone_id IN (SELECT name FROM zones WHERE id IN (${zonePh})) OR p.created_by IN (${idPh}))`
+          : `p.created_by IN (${idPh})`;
+        const params = hasZones
+          ? [franchisePartnerId, ...assignedZones, ...assignedZones, ...dashIds]
+          : [franchisePartnerId, ...dashIds];
+        return safeCount(
+          `SELECT COUNT(*) as count FROM properties p
+           WHERE p.franchise_partner_id = ? AND (p.status IS NULL OR p.status NOT IN ('deleted', 'inactive')) AND ${ground}`,
+          params
+        );
+      })(),
       
-      // Onboarded Properties count - Zone-filtered
-      safeCount(
-        `SELECT COUNT(*) as count FROM onboarded_properties op
-         WHERE op.franchise_partner_id = ? AND op.status = 'active'${onbZoneClause}`,
-        [franchisePartnerId, ...onbZoneParams]
-      ),
+      // Onboarded Properties count - same ground, on the table Add Customer actually writes to
+      (() => {
+        const dashIds = getCreatorIdentities(req);
+        const idPh = dashIds.map(() => '?').join(',');
+        const zonePh = hasZones ? assignedZones.map(() => '?').join(',') : '';
+        const ground = hasZones
+          ? `(op.zone IN (${zonePh}) OR op.zone IN (SELECT name FROM zones WHERE id IN (${zonePh})) OR op.created_by IN (${idPh}))`
+          : `op.created_by IN (${idPh})`;
+        const params = hasZones
+          ? [franchisePartnerId, ...assignedZones, ...assignedZones, ...dashIds]
+          : [franchisePartnerId, ...dashIds];
+        return safeCount(
+          `SELECT COUNT(*) as count FROM onboarded_properties op
+           WHERE op.franchise_partner_id = ? AND op.status = 'active' AND ${ground}`,
+          params
+        );
+      })(),
       
-      // Vendors count - Zone-filtered via property association
-      hasZones ? safeCount(
-        `SELECT COUNT(DISTINCT ov.id) as count FROM onboarded_vendors ov
-         LEFT JOIN property_vendor_assignments pva ON ov.id = pva.vendor_id
-         LEFT JOIN properties p ON pva.property_id = p.id
-         LEFT JOIN onboarded_properties op ON pva.property_id = op.id
-         WHERE ov.franchise_partner_id = ? AND ov.status = 'active' AND ov.vendor_id NOT LIKE '%SEED%'
-         AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones]
-      ) : safeCount(
-        `SELECT COUNT(*) as count FROM onboarded_vendors WHERE franchise_partner_id = ? AND (status = 'active' OR status IS NULL) AND vendor_id NOT LIKE '%SEED%'`,
-        [franchisePartnerId]
-      ),
+      // Vendors count - same ground the Vendor Details list stands on: the vendor's zone, or
+      // this user having created it. Counting only vendors assigned to a zoned property read 2
+      // against a list of 9, so the card and its screen never agreed.
+      (() => {
+        const dashIds = getCreatorIdentities(req);
+        const idPh = dashIds.map(() => '?').join(',');
+        const ownCreated = `ov.created_by IN (${idPh}) OR ov.created_by_id IN (${idPh})`;
+        if (hasZones) {
+          const placeholders = assignedZones.map(() => '?').join(',');
+          return safeCount(
+            `SELECT COUNT(*) as count FROM onboarded_vendors ov
+             WHERE ov.franchise_partner_id = ? AND (ov.status = 'active' OR ov.status IS NULL) AND ov.vendor_id NOT LIKE '%SEED%'
+             AND (ov.zone IN (${placeholders}) OR ${ownCreated})`,
+            [franchisePartnerId, ...assignedZones, ...dashIds, ...dashIds]
+          );
+        }
+        return safeCount(
+          `SELECT COUNT(*) as count FROM onboarded_vendors ov
+           WHERE ov.franchise_partner_id = ? AND (ov.status = 'active' OR ov.status IS NULL) AND ov.vendor_id NOT LIKE '%SEED%'
+           AND (${ownCreated})`,
+          [franchisePartnerId, ...dashIds, ...dashIds]
+        );
+      })(),
       
-      // Customers count - Zone-filtered via property
-      hasZones ? safeCount(
-        `SELECT COUNT(DISTINCT c.id) as count FROM clients c
-         LEFT JOIN properties p ON c.property_id = p.id
-         LEFT JOIN onboarded_properties op ON c.property_id = op.id
-         WHERE c.franchise_partner_id = ?
-         AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR op.zone IN (${assignedZones.map(() => '?').join(',')}))`,
-        [franchisePartnerId, ...assignedZones, ...assignedZones]
-      ) : safeCount(
-        `SELECT COUNT(*) as count FROM clients WHERE franchise_partner_id = ?`,
-        [franchisePartnerId]
-      ),
+      // Customers count - same ground the Customers list stands on, resolved through
+      // property_code as well as the legacy numeric link so a client written by Add Customer
+      // (property in onboarded_properties) is counted. A zone-only join read 0 against a list
+      // of every client the manager had added.
+      (async () => {
+        // clients.created_by is the users(id), not a name -- compare the id, like the list does
+        const clientCreator = clientCreatedBy(req.user);
+        const link = await clientPropertyJoin({ clientAlias: 'c', onboardedAlias: 'op', propertyAlias: 'p' });
+        const ground = hasZones
+          ? `(op.zone IN (${assignedZones.map(() => '?').join(',')}) OR p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR c.created_by = ?)`
+          : `c.created_by = ?`;
+        const params = hasZones
+          ? [franchisePartnerId, ...assignedZones, ...assignedZones, clientCreator]
+          : [franchisePartnerId, clientCreator];
+        return safeCount(
+          `SELECT COUNT(DISTINCT c.id) as count FROM clients c
+           ${link.joins}
+           WHERE c.franchise_partner_id = ? AND ${ground}`,
+          params
+        );
+      })(),
       
       // Employees count - ALL FP employees (not zone-filtered)
       safeCount(
@@ -537,7 +565,10 @@ router.get('/dashboard', requireManagerScope, async (req, res) => {
           employees: employeesCount,
           workOrders: workOrderStats.total,
           pendingWorkOrders: workOrderStats.pending,
-          completedWorkOrders: workOrderStats.completed + workOrderStats.closed,
+          // mysql2 returns SUM() as a string, so "+" concatenates: 4 completed + 4 closed read
+          // as "44". Coerce before adding. COUNT(*) comes back a number, which is why the other
+          // figures on this card were right.
+          completedWorkOrders: Number(workOrderStats.completed) + Number(workOrderStats.closed),
           directEstimates: directEstimatesCount,
           propertyEstimates: propertyEstimatesCount,
           estimatesByPropertyType,
@@ -597,7 +628,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     }
     
     // Build zone filter (zone-centric + own created)
-    const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'p');
+    const zoneFilter = buildPropertyZoneOrCreatorFilter(assignedZones, getCreatorIdentities(req), 'p');
     
     // Fetch from properties table with creator name - filter by FP for FP employees
     let propQuery = `SELECT p.*,
@@ -640,7 +671,7 @@ router.get('/properties', requireManagerScope, async (req, res) => {
     let onboardedProperties = [];
     if (franchisePartnerId) {
       try {
-        const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, creatorEmail, 'op');
+        const onbZoneFilter = buildOnboardedPropertyZoneOrCreatorFilter(assignedZones, getCreatorIdentities(req), 'op');
         let onbQuery = `SELECT op.id, op.property_id, op.community_name as name, op.property_type, op.entry_type,
                   op.zone as zone_name, op.area_name as area, 
                   COALESCE(fd.name, op.division) as division, COALESCE(fd.name, op.division) as division_name,
@@ -1084,7 +1115,7 @@ router.get('/work-orders', requireManagerScope, async (req, res) => {
     console.log('[Manager Work Orders] managerId:', managerId, 'franchisePartnerId:', franchisePartnerId, 'assignedZones:', assignedZones, 'creatorEmail:', creatorEmail);
     
     // Build zone filter for properties linked to work orders (zone-centric + own created)
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, getCreatorIdentities(req), 'p', 'wo');
     
     // FP employees see FP work orders, standalone managers see their created work orders
     // Priority: onboarded_properties first, then properties (only if no match)
@@ -1156,7 +1187,7 @@ router.get('/work-orders/pending', requireManagerScope, async (req, res) => {
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, getCreatorIdentities(req), 'p', 'wo');
     
     // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
@@ -1211,7 +1242,7 @@ router.get('/work-orders/completed', requireManagerScope, async (req, res) => {
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, creatorEmail, 'p', 'wo');
+    const zoneFilter = buildWorkOrderZoneOrCreatorFilter(assignedZones, getCreatorIdentities(req), 'p', 'wo');
     
     // Priority: onboarded_properties first, then properties (only if no match)
     const query = `SELECT wo.*, 
@@ -1363,8 +1394,11 @@ router.post('/work-orders', requireManagerScope, async (req, res) => {
       if (subcat) finalSubcategoryName = subcat.name;
     }
     
-    // Get creator identifier for zone-centric filtering
-    const createdBy = req.user?.email || req.user?.username || `manager-${managerId}`;
+    // Get creator identifier for zone-centric filtering. Must be what getCreatorIdentifier
+    // returns (username first), or the "own created" clause of every list never matches it and a
+    // manager cannot see the work order they just raised -- this stamped the email while the
+    // readers compared the username, so the two never met.
+    const createdBy = getCreatorIdentifier(req) || `manager-${managerId}`;
 
     // Get the subcategory ID (use null for "Other" category with custom subcategory)
     const finalSubcategoryId = isOtherCategory ? null : (subcategoryId || null);
@@ -1438,10 +1472,17 @@ router.patch('/work-orders/:id/status', requireManagerScope, async (req, res) =>
       params.push(closingNotes || null);
     }
     
-    updateQuery += ` WHERE id = ? AND (created_by = ? OR created_by LIKE ? OR franchise_partner_id = ?)`;
-    params.push(req.params.id, req.user?.email || '', `manager-${managerId}`, req.fpId || 0);
+    // Both identifiers, because rows written before the fix above carry the email and newer ones
+    // carry the username. Naming only one of them refuses the manager their own work order.
+    updateQuery += ` WHERE id = ? AND (created_by IN (?, ?) OR created_by LIKE ? OR franchise_partner_id = ?)`;
+    params.push(req.params.id, req.user?.username || '', req.user?.email || '', `manager-${managerId}`, req.fpId || 0);
     
-    await pool.execute(updateQuery, params);
+    const [updateResult] = await pool.execute(updateQuery, params);
+    // An UPDATE that matched nothing used to answer "Status updated" all the same, so changing the
+    // status of a work order outside the manager's scope looked like it had worked.
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Work order not found in your scope' });
+    }
 
     // Send completion email if status is completed
     if (status === 'completed') {
@@ -1702,14 +1743,34 @@ router.get('/customers', requireManagerScope, async (req, res) => {
     
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    const zoneFilter = buildClientZoneOrCreatorFilter(assignedZones, creatorEmail, 'c', 'p');
-    
-    const query = `SELECT c.*, p.name as property_name, p.zone_id as zone 
-       FROM clients c 
-       LEFT JOIN properties p ON c.property_id = p.id
-       WHERE (c.manager_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneFilter.clause}
+
+    // A manager's customer is written against a property in `onboarded_properties`, so joining
+    // only `properties` left every one of these rows with a NULL zone -- and `clients.created_by`
+    // is an int keyed on users(id), not a name, so the creator ground could not match either.
+    // Both grounds dead meant this screen was empty however many customers had been added.
+    const link = await clientPropertyJoin({ clientAlias: 'c', onboardedAlias: 'op', propertyAlias: 'p' });
+    const creatorId = clientCreatedBy(req.user);
+
+    let zoneClause = ` AND (c.created_by = ?`;
+    const zoneParams = [creatorId];
+    if (assignedZones.length > 0 && !assignedZones.includes('__ALL__')) {
+      const placeholders = assignedZones.map(() => '?').join(',');
+      zoneClause += ` OR op.zone IN (${placeholders}) OR p.zone_id IN (${placeholders})`;
+      zoneParams.push(...assignedZones, ...assignedZones);
+    }
+    zoneClause += ')';
+    // Unrestricted access reads every client in scope, as it does on every other list
+    if (assignedZones.includes('__ALL__')) {
+      zoneClause = '';
+      zoneParams.length = 0;
+    }
+
+    const query = `SELECT c.*, ${link.nameExpression} as property_name, ${link.zoneExpression} as zone
+       FROM clients c
+       ${link.joins}
+       WHERE (c.manager_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneClause}
        ORDER BY c.created_at DESC`;
-    const params = franchisePartnerId ? [managerId, franchisePartnerId, ...zoneFilter.params] : [managerId, ...zoneFilter.params];
+    const params = franchisePartnerId ? [managerId, franchisePartnerId, ...zoneParams] : [managerId, ...zoneParams];
     
     const [customers] = await pool.execute(query, params);
     res.json({ success: true, data: customers });
@@ -1802,31 +1863,29 @@ router.post('/customers', requireManagerScope, async (req, res) => {
         }
       }
 
-      // Also create a record in clients table for Property Management listing.
-      // clients.property_id FKs to properties(id) on some DBs, so retry NULL on FK failure.
+      // Also create a record in clients table for the Customers listing.
+      // The property just written lives in `onboarded_properties`, whose ids are a different
+      // space from `properties` -- so its number cannot go in `property_id` (a foreign key to
+      // properties) and the unique code goes in `property_code` instead. `created_by` is an int
+      // keyed on users(id), not a username. Writing the wrong thing in either used to fail the
+      // statement and fall through to a retry that nulled both, which is what left the Customers
+      // screen permanently empty. See utils/clientPropertyLink.js.
+      const propertyLink = await clientPropertyColumns({
+        propertyCode: propertyIdGen,
+        propertyId: propertyResult.insertId,
+        sourceTable: 'onboarded_properties'
+      });
       try {
         await pool.execute(
-          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-            property_id, manager_id, franchise_partner_id, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code,
+            manager_id, franchise_partner_id, created_by${propertyLink.names.length ? ', ' + propertyLink.names.join(', ') : ''}, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${propertyLink.names.map(() => ', ?').join('')}, NOW())`,
           [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
            address || '', city || '', state || '', postalCode || '',
-           propertyResult.insertId, managerId, franchisePartnerId, req.user?.username || req.user?.email || '']
+           managerId, franchisePartnerId, clientCreatedBy(req.user), ...propertyLink.values]
         );
       } catch (clientErr) {
-        console.error('Clients insert retry w/o property_id/created_by:', clientErr.message);
-        try {
-          await pool.execute(
-            `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-              property_id, manager_id, franchise_partner_id, created_by, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, NOW())`,
-            [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
-             address || '', city || '', state || '', postalCode || '',
-             managerId, franchisePartnerId]
-          );
-        } catch (retryErr) {
-          console.error('Clients insert failed (non-critical):', retryErr.message);
-        }
+        console.error('Clients insert failed (non-critical):', clientErr.message);
       }
 
       // Create customer account if email provided
@@ -1975,17 +2034,20 @@ router.get('/vendors', requireManagerScope, async (req, res) => {
     // Get employee's assigned zones
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
 
-    // Build zone + creator filter
+    // Build zone + creator filter. Same ground as the other lists: the vendor's zone, or any of
+    // this user's identifiers -- rows written before the username/email fix carry either one.
+    const identities = getCreatorIdentities(req);
+    const idPlaceholders = identities.map(() => '?').join(',');
     let zoneClause = '';
     let zoneParams = [];
     if (assignedZones.length > 0) {
       const placeholders = assignedZones.map(() => '?').join(',');
-      zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by = ? OR ov.created_by = ?)`;
-      zoneParams = [...assignedZones, creatorEmail, req.user?.username || ''];
+      zoneClause = ` AND (ov.zone IN (${placeholders}) OR ov.created_by IN (${idPlaceholders}))`;
+      zoneParams = [...assignedZones, ...identities];
     } else {
       // No zones = only see own created
-      zoneClause = ` AND (ov.created_by = ? OR ov.created_by = ?)`;
-      zoneParams = [creatorEmail, req.user?.username || ''];
+      zoneClause = ` AND (ov.created_by IN (${idPlaceholders}))`;
+      zoneParams = [...identities];
     }
 
     const query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
@@ -2843,25 +2905,81 @@ router.post('/estimates', requireManagerScope, attachPackageSnapshot(pool), requ
   }
 });
 
+// Archive and restore are the same UPDATE with a different flag, over whichever table this
+// manager's estimates live in: fp_estimates for an FP manager, estimates for a standalone one.
+const setEstimateArchived = async (req, archived) => {
+  const scopeId = getScopeId(req);
+  const [result] = req.isFPManager
+    ? await pool.execute(
+      `UPDATE fp_estimates SET is_archived = ?, archived_at = ${archived ? 'NOW()' : 'NULL'}, updated_at = NOW()
+       WHERE id = ? AND franchise_partner_id = ?`,
+      [archived, req.params.id, scopeId]
+    )
+    : await pool.execute(
+      `UPDATE estimates SET is_archived = ?, updated_at = NOW() WHERE id = ? AND manager_id = ?`,
+      [archived, req.params.id, scopeId]
+    );
+  return result;
+};
+
 // Archive estimate
 router.put('/estimates/:id/archive', requireManagerScope, async (req, res) => {
   try {
-    const scopeId = getScopeId(req);
-    
-    // FP Managers update fp_estimates, standalone update estimates
-    if (req.isFPManager) {
-      await pool.execute(
-        `UPDATE fp_estimates SET is_archived = 1, archived_at = NOW(), updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
-        [req.params.id, scopeId]
-      );
-    } else {
-      await pool.execute(
-        `UPDATE estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND manager_id = ?`,
-        [req.params.id, scopeId]
-      );
+    const result = await setEstimateArchived(req, 1);
+    // An UPDATE that matched nothing used to answer "Estimate archived" all the same
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Estimate not found in your scope' });
     }
     res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Restore an archived estimate. The Archived tab's Restore button called this and it did not
+// exist, so the request 404ed -- and the handler reads only `result.success`, with no else
+// branch, so the click did nothing at all: no toast, no error, nothing in the list.
+router.put('/estimates/:id/restore', requireManagerScope, async (req, res) => {
+  try {
+    const result = await setEstimateArchived(req, 0);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Estimate not found in your scope' });
+    }
+    res.json({ success: true, message: 'Estimate restored' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete an archived estimate for good. Same story as restore: the Archived tab offers it, the
+// route was missing, and the silent handler made the confirm dialog look like it had worked.
+// Only an archived estimate may be deleted -- archiving is the reversible step, and a live
+// estimate is reached through it, so a mis-click cannot destroy one that is still in play.
+router.delete('/estimates/:id', requireManagerScope, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    }
+    const scopeId = getScopeId(req);
+    const [[estimate]] = req.isFPManager
+      ? await pool.execute('SELECT id, is_archived FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, scopeId])
+      : await pool.execute('SELECT id, is_archived FROM estimates WHERE id = ? AND manager_id = ?', [id, scopeId]);
+
+    if (!estimate) {
+      return res.status(404).json({ success: false, message: 'Estimate not found in your scope' });
+    }
+    if (!estimate.is_archived) {
+      return res.status(409).json({ success: false, message: 'Archive this estimate before deleting it.' });
+    }
+
+    const [result] = req.isFPManager
+      ? await pool.execute('DELETE FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, scopeId])
+      : await pool.execute('DELETE FROM estimates WHERE id = ? AND manager_id = ?', [id, scopeId]);
+
+    res.json({ success: true, message: 'Estimate deleted', deleted: result.affectedRows });
+  } catch (error) {
+    console.error('Manager estimate delete error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

@@ -58,6 +58,7 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
   
   // Notification states
   const [notifications, setNotifications] = useState([]);
+  const [notLinkedMessage, setNotLinkedMessage] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   const token = getAuthToken();
@@ -82,6 +83,15 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const result = await response.json();
+      // A manager with no franchise partner has nothing behind any of its screens, and used to be
+      // served an empty list by every one of them -- which reads as "no records yet" rather than
+      // as the setup fault it is. The API says so once, on any request; the banner below says it
+      // on the page, so the state is explained where it is seen.
+      if (result.code === 'MANAGER_NOT_LINKED') {
+        setNotLinkedMessage(result.message);
+        return;
+      }
+      setNotLinkedMessage('');
       if (result.success && result.data) {
         const readIds = getReadNotifications();
         const dismissedIds = getDismissedNotifications();
@@ -969,6 +979,15 @@ const ManagerLayout = ({ admin, onLogout, children }) => {
       {/* Main Content */}
       <main className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} min-h-screen transition-all duration-300`}>
         <div className="p-4 lg:p-8">
+          {notLinkedMessage && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">This account is not set up yet</p>
+                <p className="mt-1 text-sm text-amber-800">{notLinkedMessage}</p>
+              </div>
+            </div>
+          )}
           {children}
         </div>
       </main>
