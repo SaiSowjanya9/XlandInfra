@@ -35,6 +35,8 @@ const {
 } = require('../middleware/fpScope');
 const { sendFPEmployeeWelcomeEmail, sendVendorAssignmentEmail, sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+const { propertyAccountScope } = require('../utils/propertyAccountScope');
+const { ensureClientColumns } = require('../utils/clientPropertyLink');
 // A work order's property, said unambiguously: a bare row number is shared between tables
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints (5 attempts per 15 minutes)
@@ -882,25 +884,32 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
     const { id } = req.params;
     let updated = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before soft-deleting (for customer account deactivation)
+    // Get each row's code and email before soft-deleting -- the code is what scopes
+    // the account change to this property; the bare id and email both overreach
+    // (see utils/propertyAccountScope.js).
     try {
       const [props] = await pool.execute(
-        `SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
         [id, req.fpId]
       );
-      if (props.length > 0) contactEmail = props[0].contact_email;
+      if (props.length > 0) {
+        contactEmail = props[0].contact_email;
+        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+      }
     } catch (e) {}
-    
-    if (!contactEmail) {
-      try {
-        const [props] = await pool.execute(
-          `SELECT contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-          [id, req.fpId]
-        );
-        if (props.length > 0) contactEmail = props[0].contact_email;
-      } catch (e) {}
-    }
+
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (props.length > 0) {
+        if (!contactEmail) contactEmail = props[0].contact_email;
+        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+      }
+    } catch (e) {}
 
     // Try to soft-delete from properties table first
     try {
@@ -924,16 +933,18 @@ router.delete('/properties/:id', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Deactivate customer account if email exists
-    if (contactEmail) {
-      try {
+    // Deactivate only the account that lived on this property -- a bare email match
+    // deactivates accounts on surviving properties that share the contact email.
+    try {
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
         await pool.execute(
-          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE email = ?`,
-          [contactEmail.toLowerCase()]
+          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE ${scope.sql}`,
+          scope.params
         );
-        console.log('👤 [FP] Deactivated customer account for:', contactEmail);
-      } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
-    }
+        console.log('👤 [FP] Deactivated customer account for property:', id);
+      }
+    } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
 
     console.log('📋 [FP] Soft-deleted (set inactive) property:', id);
     res.json({ success: true, message: 'Customer moved to inactive. Can be restored from Inactive Customers.' });
@@ -949,25 +960,31 @@ router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
     const { id } = req.params;
     let restored = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before restoring (for customer account reactivation)
+    // Same scoping as the delete: the row's code identifies its account, not the
+    // shared contact email.
     try {
       const [props] = await pool.execute(
-        `SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?`,
+        `SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?`,
         [id, req.fpId]
       );
-      if (props.length > 0) contactEmail = props[0].contact_email;
+      if (props.length > 0) {
+        contactEmail = props[0].contact_email;
+        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+      }
     } catch (e) {}
-    
-    if (!contactEmail) {
-      try {
-        const [props] = await pool.execute(
-          `SELECT contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
-          [id, req.fpId]
-        );
-        if (props.length > 0) contactEmail = props[0].contact_email;
-      } catch (e) {}
-    }
+
+    try {
+      const [props] = await pool.execute(
+        `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?`,
+        [id, req.fpId]
+      );
+      if (props.length > 0) {
+        if (!contactEmail) contactEmail = props[0].contact_email;
+        scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+      }
+    } catch (e) {}
 
     // Try to restore from properties table first
     try {
@@ -991,16 +1008,17 @@ router.put('/properties/:id/restore', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found or already active' });
     }
 
-    // Reactivate customer account if email exists
-    if (contactEmail) {
-      try {
+    // Reactivate only the account that lived on this property.
+    try {
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
         await pool.execute(
-          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE email = ?`,
-          [contactEmail.toLowerCase()]
+          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE ${scope.sql}`,
+          scope.params
         );
-        console.log('👤 [FP] Reactivated customer account for:', contactEmail);
-      } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
-    }
+        console.log('👤 [FP] Reactivated customer account for property:', id);
+      }
+    } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
 
     console.log('📋 [FP] Restored property:', id);
     res.json({ success: true, message: 'Customer restored to active successfully.' });
@@ -1016,18 +1034,24 @@ router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
     const { id } = req.params;
     let deleted = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before deleting (for customer_accounts cleanup)
+    // Get each row's code and email before deleting -- the code is what scopes the
+    // account cleanup to this property (see utils/propertyAccountScope.js).
     try {
-      const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
-      if (prop.length > 0) contactEmail = prop[0].contact_email;
+      const [prop] = await pool.query('SELECT contact_email, property_id FROM properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
+      if (prop.length > 0) {
+        contactEmail = prop[0].contact_email;
+        scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
+      }
     } catch (e) {}
-    if (!contactEmail) {
-      try {
-        const [prop] = await pool.query('SELECT contact_email FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
-        if (prop.length > 0) contactEmail = prop[0].contact_email;
-      } catch (e) {}
-    }
+    try {
+      const [prop] = await pool.query('SELECT contact_email, property_id FROM onboarded_properties WHERE id = ? AND franchise_partner_id = ?', [id, req.fpId]);
+      if (prop.length > 0) {
+        if (!contactEmail) contactEmail = prop[0].contact_email;
+        scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
+      }
+    } catch (e) {}
 
     // Try to delete from properties table first
     try {
@@ -1051,22 +1075,27 @@ router.delete('/properties/:id/permanent', requireFPScope, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Delete customer_accounts by email (so email can be reused)
-    if (contactEmail) {
-      try {
-        await pool.execute('DELETE FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
-        console.log('📋 [FP] Deleted customer_account for email:', contactEmail);
-      } catch (e) {}
-    }
-    // Also delete by property_id
+    // Delete only the accounts/clients that lived on this property -- keyed on its
+    // unique code, or (pre-property_code rows) the row number tied to this
+    // property's contact email. A bare `WHERE email = ?` used to wipe the login of
+    // a different, surviving property that shared the contact, and a bare
+    // `property_id = <id>` collides across the two tables' independent sequences.
     try {
-      await pool.execute('DELETE FROM customer_accounts WHERE property_id = ?', [id]);
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
+        await pool.execute(`DELETE FROM customer_accounts WHERE ${scope.sql}`, scope.params);
+        console.log('📋 [FP] Deleted customer_account for property:', id);
+      }
     } catch (e) {}
-
-    // Delete related clients
     try {
-      await pool.execute('DELETE FROM clients WHERE property_id = ?', [id]);
-      console.log('📋 [FP] Deleted clients for property_id:', id);
+      // clients.property_code only exists once schema_v63 has applied -- scope on it
+      // only where it does, else the DELETE fails on the missing column
+      const hasCode = (await ensureClientColumns()).has('property_code');
+      const scope = propertyAccountScope(scopedRows, id, { codeColumn: hasCode });
+      if (scope.params.length) {
+        await pool.execute(`DELETE FROM clients WHERE ${scope.sql}`, scope.params);
+        console.log('📋 [FP] Deleted clients for property:', id);
+      }
     } catch (e) {}
 
     // Archive related estimates in fp_estimates (not delete - move to archived)

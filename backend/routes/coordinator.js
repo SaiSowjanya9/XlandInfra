@@ -16,6 +16,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sendCustomerActivationEmail } = require('../services/emailService');
 const { customerEmailExists, customerEmailExistsResponse } = require('../utils/customerEmailGuard');
+// A client's property and creator, in the types those columns actually hold
+const { clientCreatedBy, clientPropertyColumns, clientPropertyJoin } = require('../utils/clientPropertyLink');
 // A work order's property, said unambiguously: a bare row number is shared between tables
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
 // Rate limiting for login endpoints
@@ -966,7 +968,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
-        LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+        LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE wo.franchise_partner_id = ?${zoneFilter.clause}
       `;
       params = [franchisePartnerId, ...zoneFilter.params];
@@ -996,7 +998,7 @@ router.get('/work-orders', requireCoordinatorScope, async (req, res) => {
         LEFT JOIN categories c ON wo.category_id = c.id
         LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
         LEFT JOIN fp_employees fpe ON wo.created_by = fpe.email OR wo.created_by = fpe.username
-        LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+        LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
         WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)${zoneFilter.clause}
       `;
       params = [coordinatorId, coordinatorId, creatorEmail, ...zoneFilter.params];
@@ -1061,7 +1063,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE wo.franchise_partner_id = ?
            AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
@@ -1083,7 +1085,7 @@ router.get('/work-orders/pending', requireCoordinatorScope, async (req, res) => 
          LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
            AND wo.status IN ('pending', 'under_review', 'assigned', 'accepted', 'in_progress')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
@@ -1140,7 +1142,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
          LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE wo.franchise_partner_id = ?
            AND wo.status IN ('completed', 'closed')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
@@ -1162,7 +1164,7 @@ router.get('/work-orders/completed', requireCoordinatorScope, async (req, res) =
          LEFT JOIN zones z ON CAST(COALESCE(op.zone, p.zone_id) AS UNSIGNED) = z.id OR COALESCE(op.zone, p.zone_id) = z.name
          LEFT JOIN categories c ON wo.category_id = c.id
          LEFT JOIN onboarded_vendors v ON wo.assigned_vendor_id = v.id
-         LEFT JOIN users u ON wo.created_by = u.email OR CAST(wo.created_by AS UNSIGNED) = u.id
+         LEFT JOIN users u ON wo.created_by = u.email OR wo.created_by = u.username OR CAST(wo.created_by AS UNSIGNED) = u.id
          WHERE (wo.coordinator_id = ? OR wo.created_by = ? OR wo.created_by = ?)
            AND wo.status IN ('completed', 'closed')${zoneFilter.clause}
          ORDER BY wo.created_at DESC`;
@@ -1291,19 +1293,23 @@ router.post('/work-orders', requireCoordinatorScope, async (req, res) => {
       if (subcat) finalSubcategoryName = subcat.name;
     }
 
-    // Get creator identifier for zone-centric filtering
-    const createdBy = req.user?.email || req.user?.username || `coordinator-${coordinatorId}`;
+    // The creator is recorded with the **same** identifier every reader compares --
+    // `getCreatorIdentifier`, which is the username. This used to be the email while the list
+    // queries and all five access checks matched on the username, so a standalone coordinator's
+    // work order vanished the moment it was created and Edit / Status / Assign each answered
+    // "Record does not belong to your account". `coordinator_id` is written for the same reason.
+    const createdBy = getCreatorIdentifier(req) || `coordinator-${coordinatorId}`;
 
     // Get the subcategory ID (use null for "Other" category with custom subcategory)
     const finalSubcategoryId = isOtherCategory ? null : (subcategoryId || null);
 
     const [result] = await pool.query(
       `INSERT INTO work_orders (work_order_id, property_id, category_id, subcategory_id, client_id, title, description, 
-        priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, status,
+        priority, permission_to_enter, has_pet, scheduled_date, franchise_partner_id, coordinator_id, status,
         property_name, category_name, subcategory_name, customer_name, customer_email, customer_phone, zone, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [workOrderId, propertyId, categoryId || null, finalSubcategoryId, clientId || null, title, description,
-        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId,
+        priority || 'medium', permissionToEnter || 'no', hasPet || 'no', scheduledDate || null, franchisePartnerId, coordinatorId,
         finalPropertyName || null, finalCategoryName || null, finalSubcategoryName || null,
         customerName || null, customerEmail || null, customerPhone || null, propertyZone, createdBy]
     );
@@ -1676,14 +1682,36 @@ router.get('/customers', requireCoordinatorScope, async (req, res) => {
 
     // Get assigned zones for zone-centric filtering (+ own created data)
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    const zoneFilter = buildClientZoneOrCreatorFilter(assignedZones, creatorEmail, 'c', 'p');
 
-    const query = `SELECT c.*, p.name as property_name, p.zone_id as zone
+    // A coordinator's customer is written against a property in `onboarded_properties`, so
+    // joining only `properties` left every one of these rows with a NULL zone -- and
+    // `clients.created_by` is an int keyed on users(id), not a name, so the creator ground
+    // could not match either. Both grounds dead meant this screen was empty however many
+    // customers had been added. See utils/clientPropertyLink.js.
+    const link = await clientPropertyJoin({ clientAlias: 'c', onboardedAlias: 'op', propertyAlias: 'p' });
+    const creatorId = clientCreatedBy(req.user);
+
+    let zoneClause = ` AND (c.created_by <=> ?`;
+    const zoneParams = [creatorId];
+    if (assignedZones.length > 0 && !assignedZones.includes('__ALL__')) {
+      const placeholders = assignedZones.map(() => '?').join(',');
+      zoneClause += ` OR op.zone IN (${placeholders}) OR p.zone_id IN (${placeholders})`;
+      zoneParams.push(...assignedZones, ...assignedZones);
+    }
+    zoneClause += ')';
+    // Unrestricted access reads every client in scope, as it does on every other list
+    if (assignedZones.includes('__ALL__')) {
+      zoneClause = '';
+      zoneParams.length = 0;
+    }
+
+    const query = `SELECT c.*, ${link.nameExpression} as property_name, ${link.zoneExpression} as zone,
+         COALESCE(op.property_type, p.property_type) as property_type
        FROM clients c
-       LEFT JOIN properties p ON c.property_id = p.id
-       WHERE (c.coordinator_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneFilter.clause}
+       ${link.joins}
+       WHERE (c.coordinator_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneClause}
        ORDER BY c.created_at DESC`;
-    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId, ...zoneFilter.params] : [coordinatorId, ...zoneFilter.params];
+    const params = franchisePartnerId ? [coordinatorId, franchisePartnerId, ...zoneParams] : [coordinatorId, ...zoneParams];
 
     const [customers] = await pool.query(query, params);
 
@@ -1773,31 +1801,29 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
         }
       }
 
-      // Also create a record in clients table for Property Management listing.
-      // clients.property_id FKs to properties(id) on some DBs, so retry NULL on FK failure.
+      // Also create a record in clients table for the Customers listing.
+      // The property just written lives in `onboarded_properties`, whose ids are a different
+      // space from `properties` -- so its number cannot go in `property_id` (a foreign key to
+      // properties) and the unique code goes in `property_code` instead. `created_by` is an int
+      // keyed on users(id), not a username. Writing the wrong thing in either used to fail the
+      // statement and fall through to a retry that nulled both, which is what left the Customers
+      // screen permanently empty. See utils/clientPropertyLink.js.
+      const propertyLink = await clientPropertyColumns({
+        propertyCode: propertyIdGen,
+        propertyId: propertyResult.insertId,
+        sourceTable: 'onboarded_properties'
+      });
       try {
         await pool.execute(
-          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-            property_id, coordinator_id, franchise_partner_id, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code,
+            coordinator_id, franchise_partner_id, created_by${propertyLink.names.length ? ', ' + propertyLink.names.join(', ') : ''}, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${propertyLink.names.map(() => ', ?').join('')}, NOW())`,
           [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
            address || '', city || '', state || '', postalCode || '',
-           propertyResult.insertId, coordinatorId, franchisePartnerId, req.user?.username || req.user?.email || '']
+           coordinatorId, franchisePartnerId, clientCreatedBy(req.user), ...propertyLink.values]
         );
       } catch (clientErr) {
-        console.error('Clients insert retry w/o property_id/created_by:', clientErr.message);
-        try {
-          await pool.execute(
-            `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-              property_id, coordinator_id, franchise_partner_id, created_by, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, NOW())`,
-            [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
-             address || '', city || '', state || '', postalCode || '',
-             coordinatorId, franchisePartnerId]
-          );
-        } catch (retryErr) {
-          console.error('Clients insert failed (non-critical):', retryErr.message);
-        }
+        console.error('Clients insert failed (non-critical):', clientErr.message);
       }
 
       let customerResult = null;
@@ -1855,7 +1881,7 @@ router.post('/customers', requireCoordinatorScope, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
           clientType || 'individual', companyName, propertyId || null, gstNumber, coordinatorId, franchisePartnerId,
-          req.user?.username || req.user?.email || '']
+          clientCreatedBy(req.user)]
       );
 
       // Create customer account and send activation email if email provided
@@ -1935,6 +1961,16 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
       zoneParams = [creatorEmail, req.user?.username || ''];
     }
 
+    // A standalone coordinator has no partner, and `franchise_partner_id = NULL` matches no row
+    // in SQL -- this screen was therefore permanently empty, including the vendor the coordinator
+    // had just created. Their own scope is the coordinator_id/creator the POST records.
+    const scopeClause = req.franchisePartnerId
+      ? 'ov.franchise_partner_id = ?'
+      : '(ov.coordinator_id = ? OR ov.created_by = ? OR ov.created_by_id = ?)';
+    const scopeParams = req.franchisePartnerId
+      ? [req.franchisePartnerId]
+      : [req.coordinatorId, creatorEmail, req.coordinatorId];
+
     const query = `SELECT ov.id, ov.vendor_id, ov.service_type, ov.service_verified,
               ov.zone, ov.zone as zone_name, ov.area_name, ov.area_name as area, ov.division,
               ov.owner_name, COALESCE(ov.company_name, ov.owner_name) as company_name, ov.owner_name as contact_person,
@@ -1954,11 +1990,11 @@ router.get('/vendors', requireCoordinatorScope, async (req, res) => {
               'own' as vendor_type
        FROM onboarded_vendors ov
        LEFT JOIN fp_employees fpe ON ov.created_by_id = fpe.id OR ov.created_by = fpe.email OR ov.created_by = fpe.username
-       WHERE ov.franchise_partner_id = ?
+       WHERE ${scopeClause}
          AND (ov.status = 'active' OR ov.status IS NULL)${zoneClause}
        ORDER BY ov.created_at DESC`;
     
-    const [vendors] = await pool.query(query, [req.franchisePartnerId, ...zoneParams]);
+    const [vendors] = await pool.query(query, [...scopeParams, ...zoneParams]);
 
     res.json({
       success: true,
@@ -2216,9 +2252,16 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
     const creatorEmail = getCreatorIdentifier(req);
     
     let estimates = [];
-    
-    // If coordinator is linked to an FP, fetch from fp_estimates table
-    if (franchisePartnerId) {
+
+    // An estimate is read back the way `POST /estimates/bulk-archive` already scopes one: an FP
+    // employee reaches their partner's rows, and a standalone coordinator reaches the rows they
+    // authored. This route used to return `[]` outright without a partner, so a standalone
+    // coordinator's All Estimates screen was empty however many estimates they had saved.
+    const scopeClause = franchisePartnerId
+      ? 'e.franchise_partner_id = ?'
+      : "(e.created_by_id = ? AND e.created_by_role = 'coordinator')";
+    const scopeParams = [franchisePartnerId || coordinatorId];
+    {
       // Build property filter if property_id is provided
       let propertyClause = '';
       let propertyParams = [];
@@ -2235,6 +2278,9 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
           propertyClause = ` AND (e.property_code = ? OR e.property_id = ?)`;
           propertyParams = [property_id, numericId];
         }
+      } else if (!franchisePartnerId) {
+        // The authorship scope above is already this coordinator's own rows; narrowing it
+        // again by zone would subtract from a set that cannot contain anyone else's work.
       } else {
         // Get assigned zones only when not filtering by property
         const assignedZones = await getAssignedZones(employeeId, creatorEmail);
@@ -2273,20 +2319,22 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
          LEFT JOIN fp_amc_packages fpamc ON e.package_id = fpamc.id
          LEFT JOIN onboarded_properties op ON e.property_id = op.id
          LEFT JOIN properties p ON e.property_id = p.id AND op.id IS NULL
-         WHERE e.franchise_partner_id = ? AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}
+         WHERE ${scopeClause} AND ${isArchived ? 'e.is_archived = 1' : '(e.is_archived = 0 OR e.is_archived IS NULL)'}${propertyClause}
          ORDER BY e.created_at DESC`,
-        [franchisePartnerId, ...propertyParams]
+        [...scopeParams, ...propertyParams]
       );
       
       // Get FP addons for description lookup
       let fpAddons = [];
-      try {
-        const [addonResults] = await pool.query(
-          `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
-          [franchisePartnerId]
-        );
-        fpAddons = addonResults;
-      } catch (e) {}
+      if (franchisePartnerId) {
+        try {
+          const [addonResults] = await pool.query(
+            `SELECT id, service_name, description, property_type, frequency_type, frequency_count FROM fp_addons WHERE franchise_partner_id = ?`,
+            [franchisePartnerId]
+          );
+          fpAddons = addonResults;
+        } catch (e) {}
+      }
 
       // Enrich estimates with property_code and parse addons
       estimates = await Promise.all(fpEstimates.map(async (est) => {
@@ -2347,12 +2395,13 @@ router.get('/estimates', requireCoordinatorScope, async (req, res) => {
               }
             }
             
-            // Try properties table (FP-created properties) if still missing
+            // Try properties table (FP-created properties) if still missing. A standalone
+            // coordinator has no partner, so their own properties are found by coordinator_id.
             if (!property_code || !client_phone || !client_email) {
               [props] = await pool.query(
                 `SELECT property_id as orig_code, contact_phone, contact_email, association_contacts FROM properties 
-                 WHERE (id = ? OR name = ?) AND franchise_partner_id = ? LIMIT 1`,
-                [propId || 0, propName, franchisePartnerId]
+                 WHERE (id = ? OR name = ?) AND ${franchisePartnerId ? 'franchise_partner_id = ?' : 'coordinator_id = ?'} LIMIT 1`,
+                [propId || 0, propName, franchisePartnerId || coordinatorId]
               );
               if (props.length > 0) {
                 if (!property_code && props[0].orig_code) property_code = props[0].orig_code;
@@ -2480,16 +2529,24 @@ router.post('/estimates', requireCoordinatorScope, attachPackageSnapshot(pool), 
   }
 });
 
+// One scope for every estimate this coordinator may touch: their partner's rows when they
+// belong to one, otherwise the rows they authored -- the same test `POST
+// /estimates/bulk-archive` uses. Archive, restore, edit, status and send-email all used to
+// require a partner, so a standalone coordinator's own estimate was unreachable: the two
+// UPDATEs below ran no statement at all and still answered "Estimate archived".
+const estimateScope = (req) => (req.franchisePartnerId
+  ? { clause: 'franchise_partner_id = ?', params: [req.franchisePartnerId] }
+  : { clause: "created_by_id = ? AND created_by_role = 'coordinator'", params: [req.coordinatorId] });
+
 // Archive estimate
 router.put('/estimates/:id/archive', requireCoordinatorScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.franchisePartnerId;
-    if (franchisePartnerId) {
-      await pool.query(
-        `UPDATE fp_estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
-        [req.params.id, franchisePartnerId]
-      );
-    }
+    const scope = estimateScope(req);
+    const [result] = await pool.query(
+      `UPDATE fp_estimates SET is_archived = 1, updated_at = NOW() WHERE id = ? AND ${scope.clause}`,
+      [req.params.id, ...scope.params]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
     res.json({ success: true, message: 'Estimate archived' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -2499,13 +2556,12 @@ router.put('/estimates/:id/archive', requireCoordinatorScope, async (req, res) =
 // Restore estimate
 router.put('/estimates/:id/restore', requireCoordinatorScope, async (req, res) => {
   try {
-    const franchisePartnerId = req.franchisePartnerId;
-    if (franchisePartnerId) {
-      await pool.query(
-        `UPDATE fp_estimates SET is_archived = 0, updated_at = NOW() WHERE id = ? AND franchise_partner_id = ?`,
-        [req.params.id, franchisePartnerId]
-      );
-    }
+    const scope = estimateScope(req);
+    const [result] = await pool.query(
+      `UPDATE fp_estimates SET is_archived = 0, updated_at = NOW() WHERE id = ? AND ${scope.clause}`,
+      [req.params.id, ...scope.params]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
     res.json({ success: true, message: 'Estimate restored' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -2516,15 +2572,11 @@ router.put('/estimates/:id/restore', requireCoordinatorScope, async (req, res) =
 router.put('/estimates/:id', requireCoordinatorScope, attachPackageSnapshot(pool), async (req, res) => {
   try {
     const estimateId = req.params.id;
-    const franchisePartnerId = req.franchisePartnerId;
-    
-    if (!franchisePartnerId) {
-      return res.status(400).json({ success: false, message: 'FP scope required' });
-    }
-    
+    const scope = estimateScope(req);
+
     const [[existing]] = await pool.execute(
-      'SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?',
-      [estimateId, franchisePartnerId]
+      `SELECT * FROM fp_estimates WHERE id = ? AND ${scope.clause}`,
+      [estimateId, ...scope.params]
     );
     
     if (!existing) {
@@ -2550,7 +2602,7 @@ router.put('/estimates/:id', requireCoordinatorScope, attachPackageSnapshot(pool
         package_id = ?, package_name = ?, package_price = ?, amc_package_description = ?, package_services = ?, billing_duration = ?,
         subtotal = ?, discount_percent = ?, discount_amount = ?, gst_percent = ?, gst_amount = ?, total_amount = ?,
         addons_data = ?, description = ?, updated_at = NOW()
-      WHERE id = ? AND franchise_partner_id = ?`,
+      WHERE id = ? AND ${scope.clause}`,
       [
         client_name || existing.client_name, client_phone || existing.client_phone, client_email || existing.client_email,
         property_name || existing.property_name, property_type || existing.property_type, zone || existing.zone, city || existing.city, address || existing.address,
@@ -2558,7 +2610,7 @@ router.put('/estimates/:id', requireCoordinatorScope, attachPackageSnapshot(pool
         amc_package_description || existing.amc_package_description, packageServicesJson || existing.package_services, billing_duration || existing.billing_duration,
         safeNum(subtotal, 0), safeNum(discount_percent, 0), safeNum(discount_amount, 0), safeNum(gst_percent, 0), safeNum(gst_amount, 0), safeNum(total_amount, 0),
         addonsJson || existing.addons_data, description !== undefined ? description : existing.description,
-        estimateId, franchisePartnerId
+        estimateId, ...scope.params
       ]
     );
     
@@ -2651,6 +2703,28 @@ router.post('/amc-packages', requireCoordinatorScope, async (req, res) => {
   }
 });
 
+// Delete an AMC package. The All Packages row's Delete button called this and the route did
+// not exist, so every delete 404ed while the confirm dialog looked like it had worked.
+// FP coordinators cannot create packages, so they cannot delete them either.
+router.delete('/amc-packages/:id', requireCoordinatorScope, async (req, res) => {
+  if (req.isFPCoordinator) {
+    return res.status(403).json({ success: false, message: 'Delete package not allowed for this role' });
+  }
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM coordinator_amc_packages WHERE id = ? AND coordinator_id = ?',
+      [req.params.id, req.coordinatorId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Package not found in your scope' });
+    }
+    res.json({ success: true, message: 'Package deleted' });
+  } catch (error) {
+    console.error('AMC package delete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete package' });
+  }
+});
+
 // =====================================================
 // ADD-ONS - FP Coordinators use FP addons (read-only)
 // =====================================================
@@ -2706,15 +2780,21 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
   try {
     const coordinatorId = req.coordinatorId;
     // The Add Service form sends `service_name`; coordinator_addons has no franchise_partner_id
-    // column (schema_v10), and naming it failed every insert.
-    const { name, service_name, description, price, unit, categoryId, hidePricing } = req.body;
-    const addonName = String(name || service_name || '').trim();
+    // column (schema_v10), and naming it failed every insert. The property type, frequency and
+    // billing cycle the form also sends now go into their own columns -- they used to be dropped,
+    // so a saved service lost the card it was filed under.
+    const { name, service_name, description, price, unit, categoryId, hidePricing,
+      property_type, frequency_count, frequency_type, billing_cycle } = req.body;
+    const addonName = String(service_name || name || '').trim();
     if (!addonName) return res.status(400).json({ success: false, message: 'Service name is required' });
 
     const [result] = await pool.query(
-      `INSERT INTO coordinator_addons (coordinator_id, name, description, price, unit, category_id, hide_pricing)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [coordinatorId, addonName, description || null, parseFloat(price) || 0, unit || 'per_service', categoryId || null, hidePricing || false]
+      `INSERT INTO coordinator_addons (coordinator_id, name, service_name, description, price, unit, category_id, hide_pricing,
+        property_type, frequency_count, frequency_type, billing_cycle)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [coordinatorId, addonName, addonName, description || null, parseFloat(price) || 0, unit || 'per_service',
+        categoryId || null, hidePricing || false,
+        property_type || null, parseInt(frequency_count) || 1, frequency_type || 'Monthly', billing_cycle || 'Monthly']
     );
 
     res.json({
@@ -2725,6 +2805,27 @@ router.post('/addons', requireCoordinatorScope, async (req, res) => {
   } catch (error) {
     console.error('Addon create error:', error);
     res.status(500).json({ success: false, message: 'Failed to create addon' });
+  }
+});
+
+// Delete an add-on. The All Services row's Delete button called this and the route did not
+// exist, so every delete 404ed while the confirm dialog looked like it had worked.
+router.delete('/addons/:id', requireCoordinatorScope, async (req, res) => {
+  if (req.isFPCoordinator) {
+    return res.status(403).json({ success: false, message: 'Delete add-on not allowed for this role' });
+  }
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM coordinator_addons WHERE id = ? AND coordinator_id = ?',
+      [req.params.id, req.coordinatorId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Service not found in your scope' });
+    }
+    res.json({ success: true, message: 'Service deleted' });
+  } catch (error) {
+    console.error('Addon delete error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete service' });
   }
 });
 
@@ -2759,13 +2860,16 @@ router.get('/zones', requireCoordinatorScope, async (req, res) => {
       [scopeId]
     );
 
-    // Get FP zones (from FP or coordinator-created)
+    // Get FP zones (from FP or coordinator-created). A standalone coordinator has no partner,
+    // so their own `coordinator_id` rows are the ones to read -- matching on
+    // `franchise_partner_id = 0` found none of them.
     let fpZones = [];
     try {
       const [fz] = await pool.query(
-        `SELECT id, name FROM fp_zones WHERE 
-         franchise_partner_id = ? AND is_active = 1`,
-        [req.franchisePartnerId || 0]
+        req.franchisePartnerId
+          ? `SELECT id, name FROM fp_zones WHERE franchise_partner_id = ? AND is_active = 1`
+          : `SELECT id, name FROM fp_zones WHERE coordinator_id = ? AND is_active = 1`,
+        [req.franchisePartnerId || req.coordinatorId]
       );
       fpZones = fz;
     } catch (_) {}
@@ -2865,9 +2969,13 @@ router.post('/zones', requireCoordinatorScope, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Zone already exists' });
     }
     
+    // `coordinator_id` is what the duplicate check above and the list below read for a
+    // standalone coordinator: a row saved without it was never offered back, so the Zone
+    // autocomplete on Add Customer and Add Vendor stayed empty and silently inserted the
+    // same zone again on every submit.
     const [result] = await pool.execute(
-      'INSERT INTO fp_zones (name, franchise_partner_id, created_by, is_active) VALUES (?, ?, ?, 1)',
-      [name, franchisePartnerId, req.user?.email || req.user?.id]
+      'INSERT INTO fp_zones (name, franchise_partner_id, coordinator_id, created_by, is_active) VALUES (?, ?, ?, ?, 1)',
+      [name, franchisePartnerId, franchisePartnerId ? null : coordinatorId, req.user?.email || req.user?.id]
     );
     
     res.json({ success: true, message: 'Zone created', data: { id: result.insertId, name } });
@@ -3464,15 +3572,19 @@ router.post('/estimates/bulk-archive', requireCoordinatorScope, async (req, res)
 router.post('/estimates/send-email', requireCoordinatorScope, async (req, res) => {
   try {
     const id = Number(req.body.estimateId);
-    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
-    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const scope = estimateScope(req);
+    const [[estimate]] = await pool.execute(`SELECT * FROM fp_estimates WHERE id = ? AND ${scope.clause}`, [id, ...scope.params]);
     const creator = getCreatorIdentifier(req);
-    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'coordinator'), creator);
-    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.coordinatorId, role: 'coordinator',
+    const zones = await getAssignedZones(getEmployeeIdForZoneLookup(req), creator);
+    if (!canEmailEstimate(estimate, { fpId: estimate?.franchise_partner_id, zones, creatorId: req.coordinatorId, role: 'coordinator',
       creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
       return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
     }
-    req.fpId = req.franchisePartnerId;
+    // The shared handler scopes by the row's own partner id -- a standalone coordinator's
+    // estimate sits under the head-office partner (the column is NOT NULL and `POST
+    // /estimates` writes `|| 1`), so it is found here, never the requester's null.
+    req.fpId = estimate.franchise_partner_id;
     req.body = { estimateId: id, email: estimate.client_email };
     return require('./franchisePartner').sendEstimateEmailHandler(req, res);
   } catch (error) {
@@ -3486,15 +3598,16 @@ router.post('/estimates/send-email', requireCoordinatorScope, async (req, res) =
 router.put('/estimates/:id/status', requireCoordinatorScope, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
-    const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
+    const scope = estimateScope(req);
+    const [[estimate]] = await pool.execute(`SELECT * FROM fp_estimates WHERE id = ? AND ${scope.clause}`, [id, ...scope.params]);
     const creator = getCreatorIdentifier(req);
-    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'coordinator'), creator);
-    if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.coordinatorId, role: 'coordinator',
+    const zones = await getAssignedZones(getEmployeeIdForZoneLookup(req), creator);
+    if (!canEmailEstimate(estimate, { fpId: estimate?.franchise_partner_id, zones, creatorId: req.coordinatorId, role: 'coordinator',
       creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
       return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
     }
-    req.fpId = req.franchisePartnerId;
+    req.fpId = estimate.franchise_partner_id;
     return require('./franchisePartner').updateEstimateStatusHandler(req, res);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Unable to update the estimate status.' });

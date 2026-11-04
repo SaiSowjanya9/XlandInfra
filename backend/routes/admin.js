@@ -2,6 +2,8 @@ const express = require('express');
 const { generateWorkOrderId } = require('../utils/workOrderId');
 // A work order's property, said unambiguously: a bare row number is shared between tables
 const { stampWorkOrderPropertyCode } = require('../utils/workOrderPropertyCode');
+const { propertyAccountScope } = require('../utils/propertyAccountScope');
+const { ensureClientColumns } = require('../utils/clientPropertyLink');
 const { normalizeEstimateData, enrichLegacyEstimateAddon, hasCatalogServices } = require('../utils/estimateData');
 const router = express.Router();
 router.use('/service-catalog', require('./serviceCatalog').router);
@@ -628,25 +630,34 @@ router.delete('/properties/:id', authenticate, adminOnly, adminWriteRoles, async
     const tables = propertySourceTables(req);
     let updated = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before soft-deleting (for customer account deactivation)
+    // Get each row's code and email before soft-deleting -- the code scopes the
+    // account change to this property; the bare id and email both overreach
+    // (see utils/propertyAccountScope.js).
     if (tables.includes('properties')) {
       try {
         const [props] = await pool.execute(
-          `SELECT contact_email FROM properties WHERE id = ?`,
+          `SELECT contact_email, property_id FROM properties WHERE id = ?`,
           [id]
         );
-        if (props.length > 0) contactEmail = props[0].contact_email;
+        if (props.length > 0) {
+          contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
       } catch (e) {}
     }
-    
-    if (!contactEmail && tables.includes('onboarded_properties')) {
+
+    if (tables.includes('onboarded_properties')) {
       try {
         const [props] = await pool.execute(
-          `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
+          `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ?`,
           [id]
         );
-        if (props.length > 0) contactEmail = props[0].contact_email;
+        if (props.length > 0) {
+          if (!contactEmail) contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
       } catch (e) {}
     }
 
@@ -679,16 +690,18 @@ router.delete('/properties/:id', authenticate, adminOnly, adminWriteRoles, async
       });
     }
 
-    // Deactivate customer account if email exists
-    if (contactEmail) {
-      try {
+    // Deactivate only the account that lived on this property -- a bare email match
+    // deactivates accounts on surviving properties that share the contact email.
+    try {
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
         await pool.execute(
-          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE email = ?`,
-          [contactEmail.toLowerCase()]
+          `UPDATE customer_accounts SET is_active = 0, updated_at = NOW() WHERE ${scope.sql}`,
+          scope.params
         );
-        console.log('👤 [Admin] Deactivated customer account for:', contactEmail);
-      } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
-    }
+        console.log('👤 [Admin] Deactivated customer account for property:', id);
+      }
+    } catch (e) { console.log('Customer account deactivation skipped:', e.message); }
 
     console.log('📋 [Admin] Soft-deleted (set inactive) property:', id);
 
@@ -713,25 +726,33 @@ router.put('/properties/:id/restore', authenticate, adminOnly, adminWriteRoles, 
     const tables = propertySourceTables(req);
     let restored = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before restoring (for customer account reactivation)
+    // Same scoping as the delete: the row's code identifies its account, not the
+    // shared contact email.
     if (tables.includes('properties')) {
       try {
         const [props] = await pool.execute(
-          `SELECT contact_email FROM properties WHERE id = ?`,
+          `SELECT contact_email, property_id FROM properties WHERE id = ?`,
           [id]
         );
-        if (props.length > 0) contactEmail = props[0].contact_email;
+        if (props.length > 0) {
+          contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
       } catch (e) {}
     }
-    
-    if (!contactEmail && tables.includes('onboarded_properties')) {
+
+    if (tables.includes('onboarded_properties')) {
       try {
         const [props] = await pool.execute(
-          `SELECT contact_email FROM onboarded_properties WHERE id = ?`,
+          `SELECT contact_email, property_id FROM onboarded_properties WHERE id = ?`,
           [id]
         );
-        if (props.length > 0) contactEmail = props[0].contact_email;
+        if (props.length > 0) {
+          if (!contactEmail) contactEmail = props[0].contact_email;
+          scopedRows.push({ code: props[0].property_id, email: props[0].contact_email });
+        }
       } catch (e) {}
     }
 
@@ -764,16 +785,17 @@ router.put('/properties/:id/restore', authenticate, adminOnly, adminWriteRoles, 
       });
     }
 
-    // Reactivate customer account if email exists
-    if (contactEmail) {
-      try {
+    // Reactivate only the account that lived on this property.
+    try {
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
         await pool.execute(
-          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE email = ?`,
-          [contactEmail.toLowerCase()]
+          `UPDATE customer_accounts SET is_active = 1, updated_at = NOW() WHERE ${scope.sql}`,
+          scope.params
         );
-        console.log('👤 [Admin] Reactivated customer account for:', contactEmail);
-      } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
-    }
+        console.log('👤 [Admin] Reactivated customer account for property:', id);
+      }
+    } catch (e) { console.log('Customer account reactivation skipped:', e.message); }
 
     console.log('📋 [Admin] Restored property:', id);
 
@@ -798,18 +820,26 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, adminWriteRo
     const tables = propertySourceTables(req);
     let deleted = false;
     let contactEmail = null;
+    const scopedRows = [];
 
-    // Get contact email before deleting (for customer_accounts cleanup)
+    // Get each row's code and email before deleting -- the code scopes the account
+    // cleanup to this property (see utils/propertyAccountScope.js).
     if (tables.includes('properties')) {
       try {
-        const [prop] = await pool.query('SELECT contact_email FROM properties WHERE id = ?', [id]);
-        if (prop.length > 0) contactEmail = prop[0].contact_email;
+        const [prop] = await pool.query('SELECT contact_email, property_id FROM properties WHERE id = ?', [id]);
+        if (prop.length > 0) {
+          contactEmail = prop[0].contact_email;
+          scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
+        }
       } catch (e) {}
     }
-    if (!contactEmail && tables.includes('onboarded_properties')) {
+    if (tables.includes('onboarded_properties')) {
       try {
-        const [prop] = await pool.query('SELECT contact_email FROM onboarded_properties WHERE id = ?', [id]);
-        if (prop.length > 0) contactEmail = prop[0].contact_email;
+        const [prop] = await pool.query('SELECT contact_email, property_id FROM onboarded_properties WHERE id = ?', [id]);
+        if (prop.length > 0) {
+          if (!contactEmail) contactEmail = prop[0].contact_email;
+          scopedRows.push({ code: prop[0].property_id, email: prop[0].contact_email });
+        }
       } catch (e) {}
     }
 
@@ -842,22 +872,27 @@ router.delete('/properties/:id/permanent', authenticate, adminOnly, adminWriteRo
       });
     }
 
-    // Delete customer_accounts by email (so email can be reused for new customer)
-    if (contactEmail) {
-      try {
-        await pool.execute('DELETE FROM customer_accounts WHERE email = ?', [contactEmail.toLowerCase()]);
-        console.log('📋 [Admin] Deleted customer_account for email:', contactEmail);
-      } catch (e) {}
-    }
-    // Also delete by property_id
+    // Delete only the accounts/clients that lived on this property -- keyed on its
+    // unique code, or (pre-property_code rows) the row number tied to this
+    // property's contact email. A bare `WHERE email = ?` used to wipe the login of
+    // a different, surviving property that shared the contact, and a bare
+    // `property_id = <id>` collides across the two tables' independent sequences.
     try {
-      await pool.execute('DELETE FROM customer_accounts WHERE property_id = ?', [id]);
+      const scope = propertyAccountScope(scopedRows, id);
+      if (scope.params.length) {
+        await pool.execute(`DELETE FROM customer_accounts WHERE ${scope.sql}`, scope.params);
+        console.log('📋 [Admin] Deleted customer_account for property:', id);
+      }
     } catch (e) {}
-
-    // Delete related clients
     try {
-      await pool.execute('DELETE FROM clients WHERE property_id = ?', [id]);
-      console.log('📋 [Admin] Deleted clients for property_id:', id);
+      // clients.property_code only exists once schema_v63 has applied -- scope on it
+      // only where it does, else the DELETE fails on the missing column
+      const hasCode = (await ensureClientColumns()).has('property_code');
+      const scope = propertyAccountScope(scopedRows, id, { codeColumn: hasCode });
+      if (scope.params.length) {
+        await pool.execute(`DELETE FROM clients WHERE ${scope.sql}`, scope.params);
+        console.log('📋 [Admin] Deleted clients for property:', id);
+      }
     } catch (e) {}
 
     // Archive related estimates in fp_estimates (not delete - move to archived)

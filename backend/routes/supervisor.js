@@ -92,8 +92,6 @@ const {
   buildPropertyZoneOrCreatorFilter,
   buildOnboardedPropertyZoneOrCreatorFilter,
   buildWorkOrderZoneOrCreatorFilter,
-  buildClientZoneOrCreatorFilter,
-  getEmployeeIdForZoneLookup,
   getCreatorIdentifier
 } = require('../middleware/zoneHelper');
 
@@ -128,6 +126,15 @@ const schemaHas = async (table, column = null) => {
 // It is not a zone name: `zone IN ('__ALL__')` matches nothing and quietly hid every row in the
 // partner's zones from a supervisor who is meant to see all of them.
 const isUnrestricted = (zones) => Array.isArray(zones) && zones.includes('__ALL__');
+
+// The fp_employees row this supervisor *is*, or null for a standalone one. attachSupervisorScope
+// resolves it by user_id and then by the login identity; what it must never do -- and what the
+// shared getEmployeeIdForZoneLookup falls back to -- is hand the token's users.id to a zone
+// lookup. `fp_employee_zones.fp_employee_id = <users.id>` matched a different employee entirely
+// (users.id 14 against fp_employees row 14, another partner's coordinator), so a supervisor with
+// no zones of their own was filtered by somebody else's. Null means "no zone assignment", which
+// the zone filters already read as "your own records only".
+const zoneEmployeeId = (req) => req.fpEmployeeId || null;
 
 // =====================================================
 // SUPERVISOR LOGIN (No auth required - rate limited)
@@ -295,8 +302,13 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
     const franchisePartnerId = req.franchisePartnerId || req.fpId;
 
     // Get employee ID and creator email for zone lookup
-    const employeeId = await getEmployeeIdForZoneLookup(req, 'supervisor');
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
+    // The zone assignment this whole dashboard is filtered by. Without it every statement below
+    // read an undefined `rawZones`, so the handler threw before its first query and the portal's
+    // first screen answered 500 for every supervisor -- the manager, coordinator and executive
+    // dashboards all fetch it here.
+    const rawZones = await getAssignedZones(employeeId, creatorEmail);
 
     // A standalone supervisor has no partner rows -- `franchise_partner_id = NULL` matched
     // nothing and painted the whole dashboard zero. Each table scopes to whatever marks the
@@ -613,7 +625,7 @@ router.get('/dashboard', requireSupervisorScope, async (req, res) => {
 router.get('/properties', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const { status } = req.query; // 'active', 'inactive', or 'all'
     
     // Build status filter clause
@@ -630,12 +642,16 @@ router.get('/properties', requireSupervisorScope, async (req, res) => {
     // Get FP ID from multiple sources
     let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
     
-    // If still no fpId, try to get it from fp_employees table
+    // If still no fpId, try to get it from fp_employees table. Resolved by user_id and then by the
+    // login identity -- the token's users.id is not an fp_employees.id, and matching it as one put
+    // this supervisor under whichever partner happened to own that row number.
     if (!franchisePartnerId && req.user?.id) {
       try {
         const [fpEmp] = await pool.execute(
-          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
-          [req.user.id, req.user.id]
+          `SELECT franchise_partner_id FROM fp_employees
+           WHERE user_id = ? OR (email <> '' AND email = ?) OR (username <> '' AND username = ?)
+           ORDER BY (user_id = ?) DESC, id ASC LIMIT 1`,
+          [req.user.id, req.user?.email || '', req.user?.username || '', req.user.id]
         );
         if (fpEmp.length > 0) {
           franchisePartnerId = fpEmp[0].franchise_partner_id;
@@ -822,8 +838,10 @@ router.post('/properties', requireSupervisorScope, async (req, res) => {
         creatorName = `${userRows[0].first_name || ''} ${userRows[0].last_name || ''}`.trim();
       } else {
         const [fpRows] = await pool.execute(
-          'SELECT first_name, last_name FROM fp_employees WHERE id = ? OR email = ? OR username = ?',
-          [req.user?.id || 0, req.user?.email || '', req.user?.username || '']
+          `SELECT first_name, last_name FROM fp_employees
+           WHERE user_id = ? OR (email <> '' AND email = ?) OR (username <> '' AND username = ?)
+           ORDER BY (user_id = ?) DESC, id ASC LIMIT 1`,
+          [req.user?.id || 0, req.user?.email || '', req.user?.username || '', req.user?.id || 0]
         );
         if (fpRows.length > 0 && (fpRows[0].first_name || fpRows[0].last_name)) {
           creatorName = `${fpRows[0].first_name || ''} ${fpRows[0].last_name || ''}`.trim();
@@ -1134,7 +1152,7 @@ router.get('/work-orders', requireSupervisorScope, async (req, res) => {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
     const { status } = req.query;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
@@ -1195,7 +1213,7 @@ router.get('/work-orders/pending', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
@@ -1247,7 +1265,7 @@ router.get('/work-orders/completed', requireSupervisorScope, async (req, res) =>
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
 
     // Get assigned zones for zone-centric filtering (+ own created data)
@@ -1784,19 +1802,33 @@ router.get('/customers', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
 
-    // Get assigned zones for zone-centric filtering (+ own created data)
+    // Zone-centric, plus the customers this supervisor added themselves. The zone clause alone
+    // could never show one of those: Add Customer writes the property to onboarded_properties,
+    // which clients cannot reference, so `p` is NULL for every row this portal creates and the
+    // customer just saved came back as "No customers found". supervisor_id is the own-created
+    // marker here -- what created_by is for properties and work orders.
     const assignedZones = await getAssignedZones(employeeId, creatorEmail);
-    const zoneFilter = buildClientZoneOrCreatorFilter(assignedZones, creatorEmail, 'c', 'p');
+    let zoneClause = '';
+    const zoneParams = [];
+    if (!isUnrestricted(assignedZones)) {
+      if (assignedZones.length) {
+        zoneClause = ` AND (p.zone_id IN (${assignedZones.map(() => '?').join(',')}) OR c.supervisor_id = ?)`;
+        zoneParams.push(...assignedZones, supervisorId);
+      } else {
+        zoneClause = ' AND c.supervisor_id = ?';
+        zoneParams.push(supervisorId);
+      }
+    }
 
     const query = `SELECT c.*, p.name as property_name, p.zone_id as zone
        FROM clients c
        LEFT JOIN properties p ON c.property_id = p.id
-       WHERE (c.supervisor_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneFilter.clause}
+       WHERE (c.supervisor_id = ?${franchisePartnerId ? ' OR c.franchise_partner_id = ?' : ''})${zoneClause}
        ORDER BY c.created_at DESC`;
-    const params = franchisePartnerId ? [supervisorId, franchisePartnerId, ...zoneFilter.params] : [supervisorId, ...zoneFilter.params];
+    const params = franchisePartnerId ? [supervisorId, franchisePartnerId, ...zoneParams] : [supervisorId, ...zoneParams];
 
     const [customers] = await pool.query(query, params);
 
@@ -1832,6 +1864,23 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
       return res.status(409).json(customerEmailExistsResponse());
     }
 
+    // clients.created_by is an INT with a foreign key to users(id) -- not a name. Every writer
+    // here passed the username, so the INSERT failed with "Incorrect integer value" on the first
+    // try and the fallback wrote the row with created_by AND property_id NULL: the customer was
+    // saved but belonged to nobody, and GET /customers (which keeps a row on its zone or its
+    // creator) could never show it again. Resolve the caller's real users.id, or write NULL --
+    // an fp_employees-only login has no users row and its token id is a different sequence.
+    const creatorUserId = await (async () => {
+      const id = parseInt(req.user?.id, 10);
+      if (!Number.isInteger(id)) return null;
+      try {
+        const [[row]] = await pool.query('SELECT id FROM users WHERE id = ? LIMIT 1', [id]);
+        return row ? row.id : null;
+      } catch (e) {
+        return null;
+      }
+    })();
+
     // Check if this is a property form submission
     if (zone && communityName) {
       const prefixMap = { GC: 'GC', APT: 'APT', VILLA: 'V', PLOT: 'PL', FLAT: 'FL' };
@@ -1859,7 +1908,9 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
         [
           propertyIdGen, communityName, entryType || propertyType || 'residential', address, city, state, postalCode || '',
           contactName, `${contactCountryCode}${contactPhone}`, contactEmail, 
-          canonicalZone, division || null,
+          // onboarded_properties.division is NOT NULL: a blank one has to be written as '',
+          // the way the zone already is, or the whole save answers 500 and nothing is created
+          canonicalZone, division || '',
           supervisorId, franchisePartnerId, req.user?.username || req.user?.email || req.user.id, 
           mapLocation?.lat || null, mapLocation?.lng || null, landmark || '', notes || '',
           entryType || null, category || null, areaName || '',
@@ -1889,29 +1940,22 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
 
       // Also create a record in clients table for Property Management listing.
       // clients.property_id FKs to properties(id) on some DBs, so retry NULL on FK failure.
+      // clients.property_id has a foreign key to properties(id) and this property was written to
+      // onboarded_properties -- two tables whose row numbers collide. Storing the onboarded id
+      // here either fails the key or, worse, points the customer at an unrelated community that
+      // happens to share the number, so the link is left out and customer_accounts carries the
+      // property (its id and its code) instead.
       try {
         await pool.execute(
           `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
             property_id, supervisor_id, franchise_partner_id, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NOW())`,
           [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
            address || '', city || '', state || '', postalCode || '',
-           propertyResult.insertId, supervisorId, franchisePartnerId, req.user?.username || req.user?.email || '']
+           supervisorId, franchisePartnerId, creatorUserId]
         );
       } catch (clientErr) {
-        console.error('Clients insert retry w/o property_id/created_by:', clientErr.message);
-        try {
-          await pool.execute(
-            `INSERT INTO clients (client_id, name, email, phone, address, city, state, zip_code, 
-              property_id, supervisor_id, franchise_partner_id, created_by, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, NOW())`,
-            [clientId, contactName || communityName, contactEmail || '', `${contactCountryCode}${contactPhone || ''}`,
-             address || '', city || '', state || '', postalCode || '',
-             supervisorId, franchisePartnerId]
-          );
-        } catch (retryErr) {
-          console.error('Clients insert failed (non-critical):', retryErr.message);
-        }
+        console.error('Clients insert failed (non-critical):', clientErr.message);
       }
 
       let customerResult = null;
@@ -1960,7 +2004,7 @@ router.post('/customers', requireSupervisorScope, async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [clientId, name, email, phone, alternatePhone, address, city, state, zipCode,
           clientType || 'individual', companyName, propertyId || null, gstNumber, supervisorId, franchisePartnerId,
-          req.user?.username || req.user?.email || '']
+          creatorUserId]
       );
 
       // Create customer account and send activation email if email provided
@@ -2018,18 +2062,22 @@ router.get('/vendors', requireSupervisorScope, async (req, res) => {
     }
     
     const supervisorId = req.supervisorId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get FP ID from multiple sources (same as properties route)
     let franchisePartnerId = req.franchisePartnerId || req.fpId || req.user?.franchisePartnerId || req.user?.fpId;
     
-    // If still no fpId, try to get it from fp_employees table
+    // If still no fpId, try to get it from fp_employees table (by user_id or the login identity,
+    // never by reading the token's users.id as an fp_employees.id)
     if (!franchisePartnerId && (req.user?.id || supervisorId)) {
       try {
+        const tokenId = req.user?.id || supervisorId;
         const [fpEmp] = await pool.execute(
-          'SELECT franchise_partner_id FROM fp_employees WHERE id = ? OR user_id = ?',
-          [req.user?.id || supervisorId, req.user?.id || supervisorId]
+          `SELECT franchise_partner_id FROM fp_employees
+           WHERE user_id = ? OR (email <> '' AND email = ?) OR (username <> '' AND username = ?)
+           ORDER BY (user_id = ?) DESC, id ASC LIMIT 1`,
+          [tokenId, req.user?.email || '', req.user?.username || '', tokenId]
         );
         if (fpEmp.length > 0) {
           franchisePartnerId = fpEmp[0].franchise_partner_id;
@@ -2225,7 +2273,7 @@ router.delete('/vendors/:id', requireSupervisorScope, async (req, res) => {
 router.get('/vendors/assignments', requireSupervisorScope, async (req, res) => {
   try {
     const supervisorId = req.supervisorId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
     
     // Get assigned zones for zone-centric filtering
@@ -2488,7 +2536,7 @@ router.get('/estimates', requireSupervisorScope, async (req, res) => {
     const isArchived = archived === 'true';
     const supervisorId = req.supervisorId;
     const franchisePartnerId = req.franchisePartnerId;
-    const employeeId = getEmployeeIdForZoneLookup(req);
+    const employeeId = zoneEmployeeId(req);
     const creatorEmail = getCreatorIdentifier(req);
     
     let estimates = [];
@@ -3713,7 +3761,7 @@ const supervisorMarketingScope = async (req) => {
       { status: 403 }
     );
   }
-  const employeeId = await getEmployeeIdForZoneLookup(req);
+  const employeeId = zoneEmployeeId(req);
   const creatorEmail = getCreatorIdentifier(req);
   const rawZones = await getAssignedZones(employeeId, creatorEmail);
   // '__ALL__' is the "every zone" assignment; anything else is the literal list, and an empty list
@@ -3777,7 +3825,7 @@ router.post('/estimates/send-email', requireSupervisorScope, async (req, res) =>
     if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
     const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
     const creator = getCreatorIdentifier(req);
-    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'supervisor'), creator);
+    const zones = await getAssignedZones(zoneEmployeeId(req), creator);
     if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.supervisorId, role: 'supervisor',
       creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
       return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });
@@ -3799,7 +3847,7 @@ router.put('/estimates/:id/status', requireSupervisorScope, async (req, res) => 
     if (!Number.isSafeInteger(id) || id <= 0 || !req.franchisePartnerId) return res.status(400).json({ success: false, message: 'Select a valid estimate.' });
     const [[estimate]] = await pool.execute('SELECT * FROM fp_estimates WHERE id = ? AND franchise_partner_id = ?', [id, req.franchisePartnerId]);
     const creator = getCreatorIdentifier(req);
-    const zones = await getAssignedZones(await getEmployeeIdForZoneLookup(req, 'supervisor'), creator);
+    const zones = await getAssignedZones(zoneEmployeeId(req), creator);
     if (!canEmailEstimate(estimate, { fpId: req.franchisePartnerId, zones, creatorId: req.supervisorId, role: 'supervisor',
       creatorNames: [creator, req.user?.username, req.user?.email, req.user?.name, [req.user?.first_name, req.user?.last_name].filter(Boolean).join(' ')] })) {
       return res.status(404).json({ success: false, message: 'Estimate not available in your scope.' });

@@ -121,23 +121,12 @@ const CoordinatorEmployees = ({ user }) => {
 
   const fetchEmployeeDetails = async (id) => {
     try {
-      if (isFPCoordinator) {
-        // For FP Coordinator, use the already loaded employee data
-        const employee = employees.find(emp => emp.id === id);
-        if (employee) {
-          setSelectedEmployee(employee);
-          setShowDetailsModal(true);
-        }
-      } else {
-        // For standalone coordinator, fetch from API
-        const response = await fetch(`${API_BASE}/api/coordinator/employees/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const result = await response.json();
-        if (result.success) {
-          setSelectedEmployee(result.data);
-          setShowDetailsModal(true);
-        }
+      // The /employees/:id endpoint refuses this role, so the details modal is filled from
+      // the row the list already loaded -- same data, no request that can only 403.
+      const employee = employees.find(emp => emp.id === id);
+      if (employee) {
+        setSelectedEmployee(employee);
+        setShowDetailsModal(true);
       }
     } catch (error) {
       console.error('Fetch employee details error:', error);
@@ -460,7 +449,9 @@ const CoordinatorEmployees = ({ user }) => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        {/* View Details - Always visible (Employee Details allowed) */}
+                        {/* View Details -- the only action a coordinator gets here. Employee
+                            management is refused by the backend for this role, so the
+                            Edit/Delete buttons it used to show only ever answered 403. */}
                         <button
                           onClick={() => fetchEmployeeDetails(employee.id)}
                           className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
@@ -468,26 +459,6 @@ const CoordinatorEmployees = ({ user }) => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        {/* Edit - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => openEditModal(employee)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit Employee"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        )}
-                        {/* Delete - Hidden for FP Coordinator */}
-                        {!isFPCoordinator && (
-                          <button
-                            onClick={() => handleDelete(employee.id)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Employee"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

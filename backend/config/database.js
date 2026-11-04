@@ -968,6 +968,47 @@ const initOnboardingTables = async () => {
       console.log('  - fp_addons column check failed:', e.message);
     }
 
+    // coordinator_addons drift (schema_v63): schema_v10 defines the table but its MariaDB-style
+    // `ADD COLUMN IF NOT EXISTS` fails on MySQL 8, and the CREATE sits after statements that do
+    // -- a deployment built from this repo can have coordinator_amc_packages without
+    // coordinator_addons. POST /api/coordinator/addons then 500ed on every Add Service save.
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS coordinator_addons (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        coordinator_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(12,2) DEFAULT 0,
+        unit VARCHAR(50) DEFAULT 'per_service',
+        category_id INT,
+        hide_pricing BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_coord_addons (coordinator_id)
+      )
+    `);
+    try {
+      const [coordAddonCols] = await conn.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'coordinator_addons'`,
+        [dbConfig.database]
+      );
+      const existing = new Set(coordAddonCols.map(c => c.COLUMN_NAME));
+      const coordAddonColumnsToAdd = [
+        ['property_type', 'VARCHAR(50) NULL'],
+        ['service_name', 'VARCHAR(255) NULL'],
+        ['frequency_count', 'INT DEFAULT 1'],
+        ['frequency_type', "VARCHAR(50) DEFAULT 'Monthly'"],
+        ['billing_cycle', "VARCHAR(50) DEFAULT 'Monthly'"]
+      ];
+      for (const [name, def] of coordAddonColumnsToAdd) {
+        if (!existing.has(name)) await conn.execute(`ALTER TABLE coordinator_addons ADD COLUMN ${name} ${def}`);
+      }
+    } catch (e) {
+      console.log('  - coordinator_addons column check failed:', e.message);
+    }
+
     console.log('  ✅ Franchise partners table initialized');
 
     // Create fp_users table (Portal users under FP)

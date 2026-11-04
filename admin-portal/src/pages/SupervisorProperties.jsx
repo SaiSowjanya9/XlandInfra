@@ -26,7 +26,6 @@ import {
   Eye,
   UserPlus,
   Truck,
-  Trash2,
   User,
   Store,
   Edit2,
@@ -219,25 +218,10 @@ const SupervisorProperties = ({ user }) => {
     fetchProperties();
   }, [statusFilter]);
 
-  const handleDeleteProperty = async (propertyId) => {
-    if (!window.confirm('Are you sure you want to delete this property?')) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/supervisor/properties/${propertyId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Property deleted successfully' });
-        fetchProperties();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Failed to delete property' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete property' });
-    }
-  };
+  // There is no delete here: DELETE /api/supervisor/properties/:id answers "Delete operation not
+  // allowed for this role" to every supervisor, so the trash icon that used to sit in the row's
+  // actions could only ever produce that refusal. The actions are View, Edit, Assign Vendor and
+  // Assign Employee -- the ones the server honours.
 
   const openAssignModal = (property, type) => {
     setSelectedProperty(property);
@@ -811,13 +795,6 @@ const SupervisorProperties = ({ user }) => {
                                 title="Assign Employee"
                               >
                                 <UserPlus className="w-4 h-4 text-green-500" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProperty(property.id)}
-                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
                               </button>
                             </>
                           )}

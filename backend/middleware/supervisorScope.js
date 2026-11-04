@@ -27,24 +27,39 @@ const attachSupervisorScope = async (req, res, next) => {
           req.franchisePartnerId = userRows[0].franchise_partner_id;
           req.fpId = userRows[0].franchise_partner_id;
           console.log('[SupervisorScope] Found FP ID from users:', userRows[0].franchise_partner_id);
-        } else {
-          // Then check fp_employees table
-          const [fpEmp] = await pool.execute(
-            `SELECT franchise_partner_id FROM fp_employees 
-             WHERE id = ? OR user_id = ? OR email = ? OR username = ?`,
-            [req.user?.id || 0, req.user?.id || 0, req.user?.email || '', req.user?.username || '']
-          );
-          if (fpEmp.length > 0 && fpEmp[0].franchise_partner_id) {
-            req.franchisePartnerId = fpEmp[0].franchise_partner_id;
-            req.fpId = fpEmp[0].franchise_partner_id;
-            console.log('[SupervisorScope] Found FP ID from fp_employees:', fpEmp[0].franchise_partner_id);
-          }
         }
       } catch (e) {
         console.log('FP lookup error:', e.message);
       }
     }
-    
+
+    // The fp_employees row this supervisor actually is, resolved by user_id and then by the login
+    // identity -- never by reading the token's users.id as an fp_employees.id. The two are separate
+    // auto-increment sequences and collide constantly: a head-office supervisor (users.id 14) was
+    // handed fp_employees row 14, which is somebody else -- another partner's coordinator -- so the
+    // portal reported that partner's properties, vendors and work orders, and the zone lookup below
+    // (fp_employee_zones.fp_employee_id) read that coordinator's zones as the supervisor's own.
+    // Stashing the resolved id on req.fpEmployeeId is what getEmployeeIdForZoneLookup prefers over
+    // the bare token id, so every zone-filtered route in this portal asks about the right person.
+    try {
+      const [fpEmp] = await pool.execute(
+        `SELECT id, franchise_partner_id FROM fp_employees
+         WHERE user_id = ? OR (email <> '' AND email = ?) OR (username <> '' AND username = ?)
+         ORDER BY (user_id = ?) DESC, id ASC LIMIT 1`,
+        [req.user?.id || 0, req.user?.email || '', req.user?.username || '', req.user?.id || 0]
+      );
+      if (fpEmp.length > 0) {
+        req.fpEmployeeId = fpEmp[0].id;
+        if (!req.franchisePartnerId && fpEmp[0].franchise_partner_id) {
+          req.franchisePartnerId = fpEmp[0].franchise_partner_id;
+          req.fpId = fpEmp[0].franchise_partner_id;
+          console.log('[SupervisorScope] Found FP ID from fp_employees:', fpEmp[0].franchise_partner_id);
+        }
+      }
+    } catch (e) {
+      console.log('FP employee lookup error:', e.message);
+    }
+
     req.supervisorScope = true;
     req.isFPSupervisor = !!req.franchisePartnerId;
   }

@@ -17,12 +17,10 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 import {
-  FREQUENCY_TYPES, FREQUENCY_COUNT_MAP, isCustomFrequency, frequencyOptionStyle,
+  FREQUENCY_COUNT_MAP,
   getEstimateContactPhone, getEstimateAddress, getEstimateCity, getEstimateZone,
   getEstimateUnits, formatAddonsForExport
 } from '../utils/estimateStore';
-import { duplicatePackageName, updatePackageRow } from '../utils/packageRows';
-import { capitalizeFirst } from '../utils/text';
 import { exportEstimateToPDF, printEstimatePDF } from '../utils/pdfExport';
 import usePrintShortcut from '../hooks/usePrintShortcut';
 import { useEstimatePrint } from '../utils/useEstimatePrint';
@@ -313,14 +311,10 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   // Managers cannot create packages - always default to all-packages
   const [amcActiveTab, setAmcActiveTab] = useState('all-packages');
-  const [selectedPropertyType, setSelectedPropertyType] = useState(null);
-  const [amcForm, setAmcForm] = useState({ packageName: '', serviceRows: [], price: '', billingDuration: 'monthly' });
   const [filterPropertyType, setFilterPropertyType] = useState('all');
   // Managers cannot create add-ons - always default to all-addons
   const [addonActiveTab, setAddonActiveTab] = useState('all-addons');
-  const [addonSelectedPropertyType, setAddonSelectedPropertyType] = useState(null);
   const [addonFilterPropertyType, setAddonFilterPropertyType] = useState('all');
-  const [addonForm, setAddonForm] = useState({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewEstimate, setViewEstimate] = useState(null);
   // Ctrl+P prints the open estimate's document, as its Print button does
@@ -1578,30 +1572,9 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
 
   // AMC PACKAGES - Use getPackagePropertyType to correctly extract property type from services JSON
   const filteredAmcPackages = filterPropertyType === 'all' ? amcPackages : amcPackages.filter(p => packageMatchesPropertyType(p, filterPropertyType));
-  const handleSaveAmcPackage = async () => {
-    if (!amcForm.packageName.trim()) { showToast('Enter package name', 'error'); return; }
-    if (amcPackageNameTaken) { showToast(`A package named "${amcPackageNameTaken.name || amcPackageNameTaken.packageName}" already exists`, 'error'); return; }
-    if (!selectedPropertyType) { showToast('Select property type', 'error'); return; }
-    if (!amcForm.price || parseFloat(amcForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
-    const validSvc = amcForm.serviceRows.filter(r => String(r.service || '').trim());
-    if (validSvc.length === 0) { showToast('Add at least one service', 'error'); return; }
-    try {
-      const res = await fetch(`${API_BASE}/api/supervisor/amc-packages`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: amcForm.packageName, property_type: selectedPropertyType, services: validSvc.map(r => ({ name: r.service, frequency_count: parseInt(r.frequencyCount) || 1, frequency_type: r.frequencyType })), price: parseFloat(amcForm.price), billing_duration: amcForm.billingDuration }) });
-      const result = await res.json();
-      if (result.success) { showToast('AMC Package created!'); setAmcForm({ packageName: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); loadData(); setAmcActiveTab('all-packages'); }
-      else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create package', 'error'); }
-  };
   const handleDeleteAmcPackage = async (id) => { if (!window.confirm('Delete this package?')) return; try { const res = await fetch(`${API_BASE}/api/supervisor/amc-packages/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
-  const handleAddServiceRow = () => setAmcForm(prev => ({ ...prev, serviceRows: [...prev.serviceRows, { service: '', frequencyCount: 12, frequencyType: 'Monthly' }] }));
-  // Functional updates on new row objects, never an assignment into the row React is holding
-  const handleUpdateServiceRow = (i, f, v) => { const next = f === 'service' || f === 'description' ? capitalizeFirst(v) : v; setAmcForm(prev => ({ ...prev, serviceRows: updatePackageRow(prev.serviceRows, i, f, next, FREQUENCY_COUNT_MAP) })); };
-  const handleRemoveServiceRow = (i) => { setAmcForm(prev => ({ ...prev, serviceRows: prev.serviceRows.filter((_, idx) => idx !== i) })); };
-  // The same package name twice is two entries nobody can tell apart in the estimate's dropdown
-  const amcPackageNameTaken = duplicatePackageName(amcPackages, amcForm.packageName);
-
-  const getPrice = () => parseFloat(amcForm.price) || 0;
-  const resetAmcForm = () => { setAmcForm({ packageName: '', serviceRows: [], price: '', billingDuration: 'monthly' }); setSelectedPropertyType(null); };
+  // The package list is read-only in this portal: a supervisor has no Create Package action,
+  // so the form's row editors, duplicate-name check and price helper went with it.
   const getBillingBadgeColor = (billing) => {
     switch (billing) {
       case 'monthly': return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -1759,237 +1732,11 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
         </div>
       )}
 
-      {/* Create Package Tab */}
-      {amcActiveTab === 'create' && (
-        <div className="space-y-6">
-          {/* Property Type Selection */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h2>
-            <p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-              {PROPERTY_TYPE_OPTIONS.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setSelectedPropertyType(type.id)}
-                  className={`px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-medium text-center ${
-                    selectedPropertyType === type.id
-                      ? 'border-slate-400 bg-slate-100 text-slate-800 shadow-sm'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Package Configuration Card - Only show after property type selected */}
-          {selectedPropertyType && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              {/* Header with Add Button */}
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Package Configuration</h2>
-                <button
-                  onClick={handleAddServiceRow}
-                  className="px-4 py-2 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  Add Row
-                </button>
-              </div>
-              
-              <div className="p-6">
-                {/* Package Name */}
-                <div className="mb-6">
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    Package Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={amcForm.packageName}
-                    onChange={(e) => { const packageName = capitalizeFirst(e.target.value); setAmcForm(prev => ({ ...prev, packageName })); }}
-                    placeholder="e.g., Gold Package"
-                    className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-100 focus:border-gray-400"
-                  />
-                </div>
-
-                {/* Service Configuration with Price on Right */}
-                <div className="flex gap-6">
-                  {/* Service Rows Section */}
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Service Configuration</h3>
-                    
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-3 px-4 py-2 bg-slate-50 rounded-lg mb-3">
-                      <div className="col-span-5">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</span>
-                      </div>
-                      <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Frequency</span>
-                      </div>
-                      <div className="col-span-3">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Visits</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</span>
-                      </div>
-                    </div>
-
-                    {/* Service Rows */}
-                    <div className="space-y-3">
-                      {amcForm.serviceRows.map((row, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          {/* Service Name */}
-                          <div className="col-span-5">
-                            <input
-                              type="text"
-                              value={row.service}
-                              onChange={(e) => handleUpdateServiceRow(index, 'service', e.target.value)}
-                              placeholder="e.g., Deep Cleaning"
-                              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
-                            />
-                          </div>
-                          
-                          {/* Frequency Type */}
-                          <div className="col-span-3 relative">
-                            <select
-                              value={row.frequencyType}
-                              onChange={(e) => handleUpdateServiceRow(index, 'frequencyType', e.target.value)}
-                              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-200 focus:border-slate-400 bg-white appearance-none"
-                            >
-                              {FREQUENCY_TYPES.map(type => (
-                                <option key={type} value={type} style={frequencyOptionStyle(type)}>{type}</option>
-                              ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                          </div>
-                          
-                          {/* Frequency Count */}
-                          <div className="col-span-3">
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.frequencyCount}
-                              onChange={(e) => handleUpdateServiceRow(index, 'frequencyCount', e.target.value)}
-                              readOnly={!isCustomFrequency(row.frequencyType)}
-                              title={isCustomFrequency(row.frequencyType) ? 'Enter the visit count' : `${row.frequencyType} means ${row.frequencyCount} visits a year. Choose Custom to set your own.`}
-                              className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm ${isCustomFrequency(row.frequencyType) ? 'bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-400' : 'bg-gray-100 cursor-not-allowed'}`}
-                            />
-                          </div>
-                          
-                          {/* Delete Button */}
-                          <div className="col-span-1 flex justify-center">
-                            <button
-                              onClick={() => handleRemoveServiceRow(index)}
-                              className="p-2 rounded-lg text-red-500 transition-colors hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price Section - Right Side */}
-                  <div className="w-72 flex-shrink-0">
-                    <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 h-full">
-                      <h3 className="text-gray-600 text-xs uppercase tracking-wider mb-4 font-semibold">Price Summary</h3>
-                      
-                      {/* Price Input */}
-                      <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Price (₹) <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={amcForm.price}
-                            onChange={(e) => setAmcForm({ ...amcForm, price: e.target.value.replace(/[^0-9]/g, '') })}
-                            placeholder="0"
-                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-2xl font-bold text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-200 focus:border-gray-400"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Service Period */}
-                      <div className="mb-6">
-                        <label className="text-gray-600 text-xs mb-2 block font-medium">Service Period</label>
-                        <div className="relative">
-                          <select
-                            value={amcForm.billingDuration}
-                            onChange={(e) => setAmcForm({ ...amcForm, billingDuration: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-gray-200 focus:border-gray-400 appearance-none"
-                          >
-                            {BILLING_DURATIONS.map(duration => (
-                              <option key={duration.value} value={duration.value}>{duration.label}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        </div>
-                      </div>
-                      
-                      {/* Summary. The package's own name is not a line of it: the field that sets
-                          it is in the form beside this panel, so repeating it said nothing. */}
-                      <div className="border-t border-gray-200 pt-4 space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-500">Services</span>
-                          <span className="font-medium text-gray-800">{amcForm.serviceRows.filter(r => r.service.trim()).length}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                          <span className="text-sm font-semibold text-gray-700">Total Rate</span>
-                          <span className="text-2xl font-bold text-gray-800">₹{getPrice().toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons - Only show after property type selected */}
-          {selectedPropertyType && (
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-gray-500">
-                <span className="text-red-500">*</span> Required fields
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={resetAmcForm}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset
-                </button>
-                <button
-                  onClick={handleSaveAmcPackage}
-                  className="px-6 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 
   // ADDONS
   const filteredAddons = addonFilterPropertyType === 'all' ? addons : addons.filter(a => matchPropertyType(a.property_type, addonFilterPropertyType));
-  const handleSaveAddon = async () => {
-    if (!addonSelectedPropertyType) { showToast('Select property type', 'error'); return; }
-    if (!addonForm.serviceName.trim()) { showToast('Enter service name', 'error'); return; }
-    if (!addonForm.price || parseFloat(addonForm.price) <= 0) { showToast('Enter valid price', 'error'); return; }
-    try {
-      const res = await fetch(`${API_BASE}/api/supervisor/addons`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ property_type: addonSelectedPropertyType, service_name: addonForm.serviceName, frequency_count: parseInt(addonForm.frequencyCount) || 1, frequency_type: addonForm.frequencyType, billing_cycle: addonForm.billingCycle, price: parseFloat(addonForm.price), description: addonForm.description || '' }) });
-      const result = await res.json();
-      if (result.success) { showToast('Service created!'); setAddonForm({ serviceName: '', frequencyCount: 12, frequencyType: 'Monthly', billingCycle: 'Monthly', price: '', description: '' }); setAddonSelectedPropertyType(null); loadData(); setAddonActiveTab('all-addons'); }
-      else showToast(result.message || 'Failed', 'error');
-    } catch (e) { showToast('Failed to create service', 'error'); }
-  };
   const handleDeleteAddon = async (id) => { if (!window.confirm('Delete this service?')) return; try { const res = await fetch(`${API_BASE}/api/supervisor/addons/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if ((await res.json()).success) { showToast('Deleted'); loadData(); } } catch (e) { showToast('Failed', 'error'); } };
 
   const renderAddons = () => (
@@ -1999,27 +1746,6 @@ const SupervisorEstimates = ({ user, defaultTab = 'list' }) => {
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         <button onClick={() => setAddonActiveTab('all-addons')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${addonActiveTab === 'all-addons' ? 'bg-white text-stone-700 shadow-sm' : 'text-gray-600'}`}><Layers className="w-4 h-4" />All Services{addons.length > 0 && <span className="px-1.5 py-0.5 bg-stone-600 text-white rounded-full text-xs">{addons.length}</span>}</button>
       </div>
-      {addonActiveTab === 'create' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6"><h3 className="text-base font-semibold text-gray-900 mb-2">Select Property Type</h3><p className="text-sm text-gray-500 mb-4">Choose the property type this package will be configured for</p><div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">{PROPERTY_TYPE_OPTIONS.map(t => <button key={t.id} onClick={() => setAddonSelectedPropertyType(t.id)} className={`px-4 py-3 rounded-lg border text-sm font-medium text-center ${addonSelectedPropertyType === t.id ? 'border-slate-400 bg-slate-100 text-slate-800' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>{t.label}</button>)}</div></div>
-          {addonSelectedPropertyType && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100"><h3 className="text-lg font-semibold text-gray-800">Create Service</h3><p className="text-sm text-gray-500">For: <span className="font-medium text-gray-700">{PROPERTY_TYPE_OPTIONS.find(t => t.id === addonSelectedPropertyType)?.label}</span></p></div>
-              <div className="p-6">
-                <div className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-3"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Service Name</label><input type="text" value={addonForm.serviceName} onChange={(e) => setAddonForm({ ...addonForm, serviceName: e.target.value })} placeholder="Service name" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Frequency</label><select value={addonForm.frequencyType} onChange={(e) => { const v = e.target.value; const auto = FREQUENCY_COUNT_MAP[v]; setAddonForm({ ...addonForm, frequencyType: v, frequencyCount: auto !== null ? auto : addonForm.frequencyCount }); }} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">{FREQUENCY_TYPES.map(f => <option key={f} value={f} style={frequencyOptionStyle(f)}>{f}</option>)}</select></div>
-                  <div className="col-span-1"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider whitespace-nowrap">Visits</label><input type="number" value={addonForm.frequencyCount} onChange={(e) => setAddonForm({ ...addonForm, frequencyCount: e.target.value })} readOnly={!isCustomFrequency(addonForm.frequencyType)} className={`w-full px-2 py-2.5 border border-gray-300 rounded-lg text-sm text-center ${isCustomFrequency(addonForm.frequencyType) ? 'bg-white' : 'bg-gray-100 cursor-not-allowed'}`} /></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Period</label><select value={addonForm.billingCycle} onChange={(e) => setAddonForm({ ...addonForm, billingCycle: e.target.value })} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white"><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Half-Yearly">Half-Yearly</option><option value="Yearly">Yearly</option></select></div>
-                  <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-2 block uppercase tracking-wider">Price (₹)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span><input type="text" value={addonForm.price} onChange={(e) => setAddonForm({ ...addonForm, price: e.target.value.replace(/[^0-9]/g, '') })} placeholder="0" className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div></div>
-                  <div className="col-span-2"><button onClick={handleSaveAddon} className="w-full px-4 py-2.5 bg-stone-700 text-white rounded-lg hover:bg-stone-800 font-medium flex items-center justify-center">Save</button></div>
-                </div>
-                <div className="mt-3"><input type="text" value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} placeholder="Add description/notes (optional)" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm" /></div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
       {addonActiveTab === 'all-addons' && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-gray-900">All Services</h3><p className="text-sm text-gray-500">{addons.length} service(s) available</p></div><div className="flex gap-2 flex-wrap"><button onClick={() => setAddonFilterPropertyType('all')} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === 'all' ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>All{addons.length > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{addons.length}</span>}</button>{PROPERTY_TYPE_OPTIONS.map(t => { const count = addons.filter(a => matchPropertyType(a.property_type, t.id)).length; return <button key={t.id} onClick={() => setAddonFilterPropertyType(t.id)} className={`px-3 py-1.5 text-sm rounded-lg ${addonFilterPropertyType === t.id ? 'bg-stone-700 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}{count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${addonFilterPropertyType === t.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}</button>; })}</div></div></div>

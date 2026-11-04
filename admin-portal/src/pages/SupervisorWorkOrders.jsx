@@ -7,7 +7,7 @@ import DismissPanel from '../components/common/DismissPanel';
 import Modal from '../components/common/Modal';
 import {
   ClipboardList, Plus, Search, RefreshCw, X, XCircle, AlertCircle,
-  CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, Trash2, List,
+  CheckCircle, Clock, CheckCircle2, Eye, Image, Camera, FileText, List,
   ChevronDown, Pencil, Truck, UserPlus, Store, User, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
@@ -404,27 +404,6 @@ const SupervisorWorkOrders = ({ user }) => {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to update status' });
-    }
-  };
-
-  // Delete Work Order
-  const handleDeleteWorkOrder = async (workOrderId) => {
-    if (!window.confirm('Are you sure you want to delete this work order?')) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/supervisor/work-orders/${workOrderId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Work order deleted successfully' });
-        fetchWorkOrders();
-      } else {
-        setMessage({ type: 'error', text: result.message || 'Failed to delete work order' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to delete work order' });
     }
   };
 

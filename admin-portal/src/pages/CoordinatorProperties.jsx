@@ -803,27 +803,9 @@ const CoordinatorProperties = ({ user }) => {
                               >
                                 <Edit2 className="w-4 h-4 text-blue-500" />
                               </button>
-                              <button
-                                onClick={() => openAssignModal(property, 'vendor')}
-                                className="p-1.5 hover:bg-purple-50 rounded-lg transition-colors"
-                                title="Assign Vendor"
-                              >
-                                <Truck className="w-4 h-4 text-purple-500" />
-                              </button>
-                              <button
-                                onClick={() => openAssignModal(property, 'employee')}
-                                className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Assign Employee"
-                              >
-                                <UserPlus className="w-4 h-4 text-green-500" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProperty(property.id)}
-                                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </button>
+                              {/* Assign vendor / assign employee / delete are refused by the
+                                  backend for this role (403 by design), so the buttons only
+                                  ever showed an error -- view and edit are the real actions. */}
                             </>
                           )}
                         </div>

@@ -237,6 +237,35 @@ Mistakes that fail silently and have each already broken live endpoints:
   from every source (scoped to `franchisePartnerId` on portal routes; `includeGlobal` on
   admin's). A bare numeric id on a portal route is a company-wide zone and is refused.
   `onboarded_properties.zone` is NOT NULL — detach with `''`, not `NULL`.
+- **A standalone coordinator's writer and reader must agree on what names the owner, or the
+  row vanishes on save.** An end-to-end pass over the Coordinator portal found this one shape
+  in four places: `POST /work-orders` stored `req.user.email` and no `coordinator_id` while the
+  list and all five access checks match `getCreatorIdentifier(req)` (the **username**) —
+  write the id, and the creator through `getCreatorIdentifier` itself, never a different
+  fallback; `GET /vendors` filtered `ov.franchise_partner_id = NULL`, which matches nothing, so
+  Vendor Details was empty forever — scope by `ov.coordinator_id / created_by / created_by_id`
+  when there is no partner; `GET /estimates` and every estimate mutation required an FP, so a
+  standalone coordinator's own estimate was unreachable — scope by
+  `created_by_id AND created_by_role = 'coordinator'` (the convention
+  `POST /estimates/bulk-archive` already used); and `POST /zones` never set
+  `fp_zones.coordinator_id`, so a created zone never came back. Regression test:
+  `node --test backend/routes/coordinatorPortal.test.js`.
+- **`coordinator_addons` existed only in schema_v10, which fails partway on MySQL 8.** Every
+  Add Service save 500ed. `config/database.js` now creates the table and drifts it like
+  `fp_addons`; the two Delete buttons on the AMC/Add Service screens pointed at routes that
+  never existed — `DELETE /amc-packages/:id` and `DELETE /addons/:id` are scoped to
+  `coordinator_id`, standalone only (FP coordinators can't create, so can't delete).
+- **A coordinator's customers were invisible because `clients.created_by` held a username.**
+  The column is INT keyed on `users(id)` and the property lives in `onboarded_properties`, so
+  the insert failed, the retry nulled the creator, and the username-keyed reader could never
+  match. Use `utils/clientPropertyLink.js` (`clientCreatedBy`, `clientPropertyColumns`,
+  `clientPropertyJoin`) exactly as `manager.js` does — `property_code` names the property
+  because `property_id` FKs to `properties` while the row was written to the other table.
+- **A coordinator is view-only on vendor/employee/property-assign/schedule actions by design.**
+  The buttons that offered them have been removed (`CoordinatorEmployees`,
+  `CoordinatorProperties`); `AllSchedulesPage`'s `getSchedulePermissions` already hides
+  reschedule/cancel/create for `portalType="coordinator"`, and `EstimatesDashboard` degrades
+  its `/api/payments/invoices` fetch, so neither needed touching.
 - **A `key={property.id}` on a merged property list leaves zombie rows.** Every portal's
   `GET …/properties` returns `[...regularProperties, ...onboardedProperties]`, and each table's
   `id` is its own auto-increment, so the same `id` appears twice in one array. React's
@@ -2132,3 +2161,48 @@ Run schema files in order:
 - `transaction_id` was written by `PUT /api/payments/:id/verify` before any schema file created it, so verifying a payment failed with "Unknown column 'transaction_id'". It is created by v31.
 - The bank list, the default payee (`XLAND INFRA PM SERVICES PVT LTD`, prefilled but always editable) and the payment-location label live once in `admin-portal/src/utils/chequePayment.js`. Both cheque screens — recording in `billing/MakePayments.jsx` and verifying in `billing/Payments.jsx` — import them, so they cannot offer different banks. Choosing "Other" reveals a text field; the word "Other" is never stored as the bank name.
 - `mysql2` returns a DATE as a `Date` at local midnight, so `JSON.stringify` moves it to the previous day anywhere east of Greenwich. Map date-only columns through the `dateOnly` helper in `backend/routes/payments.js`.
+
+## Supervisor portal (end-to-end pass, Nov 2026)
+
+- **`GET /api/supervisor/dashboard` 500ed for every supervisor** on `ReferenceError: rawZones is
+  not defined` — the `const rawZones = await getAssignedZones(employeeId, creatorEmail)` line the
+  manager/coordinator/executive dashboards all carry was missing. A mocked test cannot see this;
+  hit the route with a real supervisor token.
+- **The token's `users.id` is never an `fp_employees.id` — the collision put a head-office
+  supervisor inside another partner's account.** `attachSupervisorScope` (and three in-route
+  fallbacks in `routes/supervisor.js`) matched `fp_employees WHERE id = <users.id>`; users.id 14 is
+  fp_employees row 14, a different person, so the supervisor got that partner's FP and a
+  coordinator's zones. Resolved by `user_id` then `email`/`username`, the row id stashed on
+  `req.fpEmployeeId`, and every zone lookup goes through the local `zoneEmployeeId(req)` — never
+  `getEmployeeIdForZoneLookup`'s bare-token-id fallback. The same pattern is still live in
+  `coordinatorScope.js`, `executiveScope.js`, `coordinator.js`, `executive.js`, `manager.js`,
+  `franchisePartner.js` and `authenticate`'s fp_employees branch in `middleware/auth.js` — not
+  fixed there, flagged for a separate pass.
+- **`clients.created_by` is an INT foreign key to `users(id)`, not a name.** Add Customer passed
+  the username, the insert failed ("Incorrect integer value"), and the retry wrote
+  `created_by = NULL` too — the customer was saved but `GET /customers` (zone-or-creator scoped)
+  could never show it again: create → "No customers found". `clients.property_id` FKs to
+  `properties(id)` while the Add Customer property lives in `onboarded_properties`, whose id
+  space collides with it; the link is left NULL and `customer_accounts` carries the property
+  instead. The list keeps the supervisor's own rows by `c.supervisor_id`. The identical broken
+  insert is still in `coordinator.js`, `manager.js` and `executive.js`.
+- **`onboarded_properties.division` is NOT NULL** — write `''`, never `division || null`, the same
+  rule as `zone`. The same `|| null` sits in the four other portals' inserts.
+- **Billing is read-only for a supervisor by decision** (`PAYMENT_EDIT_ROLES` in
+  `routes/payments.js`: admin, ops manager, FP, manager). The sidebar still offers Generated
+  Invoices and Make Payments, where every write 403s — confirmed intentional for now.
+- **Dead code removed:** the unreachable Create Package / Create Service forms in
+  `SupervisorEstimates.jsx` (no tab ever opened them and an FP supervisor's POST 403s anyway),
+  the never-called `handleDeleteWorkOrder`, the properties trash icon (DELETE is 403 for every
+  supervisor), and `components/estimates/AMCPackage.jsx` — unimported and containing a `{/* */}`
+  inside a `.map()` return that broke any bundle it entered.
+- **`pages/billing/GeneratedInvoices.jsx`'s `CreateInvoiceForm` posts to
+  `/api/payments/invoices/create`, which does not exist** (real routes: `/invoices`,
+  `/invoices/create-from-estimate`, `/invoices/create-generic`) — but the component is never
+  rendered, so it is dead code, not a live bug.
+- The `/api/supervisor/export/*` endpoints are `supervisor_id`-only (no FP scope, no zones) so an
+  FP supervisor always gets empty files — dead endpoints; the screens export XLSX client-side.
+  `SupervisorEmployees.jsx` is unrouted.
+- Local QA login for the FP-scoped path: `test-supervisor-969675_mvphjdew` / `Password@123`
+  (users.id 55, fp_employees.id 15, FP 1, zone TEST-FP-Zone-969675); head-office `supervisor` /
+  `Password@123` (users.id 14, no FP) is the standalone case.
