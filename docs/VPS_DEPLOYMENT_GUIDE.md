@@ -3,7 +3,7 @@
 **Last Updated:** May 11, 2026  
 **Status:** ✅ Successfully Deployed  
 **VPS Provider:** Hostinger KVM 2  
-**Server IP:** REMOVED_VPS_IP
+**Server IP:** <your-vps-ip>
 
 Complete deployment guide for xlandinfra.com
 
@@ -933,7 +933,7 @@ curl https://admin.xlandinfra.com/api/health
 
 | Item | Value |
 |------|-------|
-| VPS IP | `REMOVED_VPS_IP` |
+| VPS IP | `<your-vps-ip>` |
 | SSH User | `root` |
 | MySQL User | `xlandinfra` |
 | MySQL Database | `customer_portal` |

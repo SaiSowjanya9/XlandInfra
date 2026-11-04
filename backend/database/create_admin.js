@@ -7,7 +7,11 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const ADMIN_PASSWORD = 'REMOVED_ADMIN_PASSWORD';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error('Set the ADMIN_PASSWORD environment variable before running this script.');
+  process.exit(1);
+}
 
 const ADMIN_USER = {
   user_id: 'XAD001',
@@ -85,7 +89,7 @@ async function createAdmin() {
     console.log('  PRODUCTION ADMIN LOGIN CREDENTIALS');
     console.log('========================================');
     console.log('  Username: XL_admin');
-    console.log('  Password: REMOVED_ADMIN_PASSWORD');
+    console.log('  Password: (as provided via ADMIN_PASSWORD)');
     console.log('========================================\n');
 
   } catch (error) {

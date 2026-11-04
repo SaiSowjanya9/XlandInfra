@@ -7,12 +7,19 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbConfig = {
-  host: process.env.DB_HOST || 'REMOVED_SERVER_IP',
-  user: process.env.DB_USER || 'xland_user',
-  password: process.env.DB_PASSWORD || 'REMOVED_DB_PASSWORD',
-  database: process.env.DB_NAME || 'xland_pm',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306
 };
+
+for (const key of ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME']) {
+  if (!process.env[key]) {
+    console.error(`Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
 
 async function deleteCharanEmployees() {
   let connection;

@@ -1,5 +1,5 @@
 -- Script to delete all employees from Charan FP portal
--- Run this on VPS: mysql -u xland_user -p'REMOVED_DB_PASSWORD' xland_pm < delete_charan_employees.sql
+-- Run this on VPS: mysql -u xland_user -p'<db_password>' xland_pm < delete_charan_employees.sql
 
 -- First, let's see all franchise partners
 SELECT id, company_name, username FROM franchise_partners;

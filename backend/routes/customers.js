@@ -1395,7 +1395,7 @@ const resolveCustomerProperty = async (storedPropertyId, storedPropertyCode, sto
  * That last rule is why account #52 (KKR Buildings `GC-1793673531543`, created 3 Nov 2026) is no
  * longer shown WO-1783455968280 and WO-1783045326823 — two customer-raised work orders from July
  * and October, against "PP" and "sdfsdfs", which reached it on `customer_email` alone because a
- * previous holder of customer@example.com had raised them. Email is additionally narrowed to
+ * previous holder of the same email address had raised them. Email is additionally narrowed to
  * rows that carry no property at all, which is the gap it was added to cover: a work order whose
  * property reference is missing, and which nothing else can find.
  */

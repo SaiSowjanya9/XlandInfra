@@ -2247,7 +2247,7 @@ Added a comprehensive Data Entry module in the Admin Portal supporting three sep
 **MySQL Installation:**
 - ✅ Installed MySQL Community Server 8.0.45
 - ✅ Configured MySQL as Windows Service (MySQL80)
-- ✅ Set root password: `REMOVED_ROOT_PASSWORD`
+- ✅ Set root password: `<strong-root-password>`
 - ✅ Created `customer_portal` database
 - ✅ Ran schema_v2.sql - created all 9 tables
 

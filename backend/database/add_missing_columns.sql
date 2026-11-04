@@ -1,5 +1,5 @@
 -- Add missing columns to database
--- Run on VPS: mysql -u xland_user -p'REMOVED_DB_PASSWORD' xland_pm < add_missing_columns.sql
+-- Run on VPS: mysql -u xland_user -p'<db_password>' xland_pm < add_missing_columns.sql
 
 -- Add estimate_type column to fp_estimates table
 ALTER TABLE fp_estimates 

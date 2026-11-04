@@ -87,8 +87,8 @@ JWT_SECRET=generate-a-strong-secret-key-256-bits
 JWT_EXPIRES_IN=24h
 
 EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=REMOVED_GMAIL_APP_PASSWORD
-NOTIFICATION_EMAIL=customer@example.com
+EMAIL_PASS=your-gmail-app-password
+NOTIFICATION_EMAIL=your-notification-email@gmail.com
 ```
 
 ### 2.4 Get Your Backend URL
